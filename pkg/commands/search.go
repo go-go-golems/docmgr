@@ -164,10 +164,13 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
-	settings := &SearchSettings{}
+    settings := &SearchSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
+
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
 
 	// If --files flag is set, suggest files instead of searching documents
 	if settings.Files {

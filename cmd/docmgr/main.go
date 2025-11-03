@@ -316,6 +316,28 @@ and validate documentation workspaces with metadata and external source support.
 	rootCmd.AddCommand(cobraGuidelinesCmd)
 	rootCmd.AddCommand(cobraRelateCmd)
 
+	// Create status command
+	statusCmd, err := commands.NewStatusCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating status command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraStatusCmd, err := cli.BuildCobraCommand(statusCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building status command: %v\n", err)
+		os.Exit(1)
+	}
+
+	rootCmd.AddCommand(cobraStatusCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

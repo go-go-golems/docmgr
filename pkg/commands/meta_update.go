@@ -91,10 +91,13 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
-	settings := &MetaUpdateSettings{}
+    settings := &MetaUpdateSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
+
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
 
 	var filesToUpdate []string
 

@@ -101,7 +101,10 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
+
+    if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 

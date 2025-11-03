@@ -239,6 +239,26 @@ Suggestion output includes both a `source` and a human-readable `reason` column,
 - git_modified/staged/untracked → "working tree modified" / "staged for commit" / "untracked new file"
 - ripgrep → "content match: <term>"
 
+### 5.10 Status (Workspace Summary)
+
+Get a quick overview of the docs root: counts, staleness, and per-ticket breakdown.
+
+```bash
+# Full status with per-ticket rows and a summary row
+docmgr status
+
+# Only print the summary row
+docmgr status --summary-only
+
+# Adjust staleness threshold
+docmgr status --stale-after 30
+
+# Focus on one ticket
+docmgr status --ticket MEN-4242
+```
+
+Status honors `.ttmp.yaml` configuration (root discovery) and uses `LastUpdated` to determine staleness.
+
 ## 5. End-to-End Workflow Example
 
 1) Initialize a ticket workspace and add documents to capture intent early.

@@ -122,6 +122,9 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
         return fmt.Errorf("failed to parse settings: %w", err)
     }
 
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
+
     // Resolve target document path
     var targetDocPath string
     var ticketDir string

@@ -80,7 +80,10 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Find the ticket directory
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
+
+    // Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)

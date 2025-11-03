@@ -75,10 +75,13 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
-	settings := &ImportFileSettings{}
+    settings := &ImportFileSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
+
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
 
 	// Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)

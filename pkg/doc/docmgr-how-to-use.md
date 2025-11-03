@@ -111,7 +111,17 @@ Warnings to expect in real projects:
 - Missing files listed in `RelatedFiles`
 - Multiple `index.md` under a ticket (use `--ignore-glob` to suppress known duplicates)
 
-## 9. Iterate and Maintain
+## 9. Check Workspace Status
+
+Use `status` to see a concise overview of the docs under the root, including staleness based on `LastUpdated`:
+
+```bash
+docmgr status
+docmgr status --summary-only
+docmgr status --stale-after 30
+```
+
+## 10. Iterate and Maintain
 
 - Keep `Owners`, `Summary`, and `RelatedFiles` current
 - Use `guidelines` to keep structure consistent

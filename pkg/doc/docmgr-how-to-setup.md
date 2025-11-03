@@ -26,6 +26,27 @@ This guide shows how to bootstrap and maintain the documentation system for a re
 - Vocabulary file lives at `doc/vocabulary.yaml`. It defines the allowed `Topics`, `DocType`, and `Intent` values.
 - Scaffolding directories at root: `ttmp/_templates/`, `ttmp/_guidelines/`. Teams customize these to encode house style.
 
+### 2.1 Repository Configuration (.ttmp.yaml)
+
+Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`.
+
+```yaml
+root: ttmp
+defaults:
+  owners: [manuel]
+  intent: long-term
+filenamePrefixPolicy: off
+docTypeToggles:
+  design-doc: true
+  reference: true
+  playbook: true
+```
+
+- `root`: default docs root (overrides the built-in `ttmp` when flags are not explicitly set)
+- `defaults.owners` / `defaults.intent`: applied when initializing ticket index metadata
+- `filenamePrefixPolicy`: reserved for future filename enforcement
+- `docTypeToggles`: reserved for controlling allowed types (not enforced yet)
+
 ## 3. Seed Vocabulary
 
 Start with a minimal, agreed vocabulary to prevent drift in metadata. These values become the shared language of your documentation; they drive search filters and keep frontmatter consistent. Keep the list short at first and evolve with consensus:

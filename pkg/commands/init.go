@@ -87,7 +87,10 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Create slug from title
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
+
+    // Create slug from title
 	slug := strings.ToLower(strings.ReplaceAll(settings.Title, " ", "-"))
 	dirName := fmt.Sprintf("%s-%s", settings.Ticket, slug)
 	ticketPath := filepath.Join(settings.Root, dirName)
@@ -112,14 +115,17 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 	}
 
 	// Create index.md with frontmatter
-	doc := models.Document{
+    // Load config defaults
+    cfg, _ := LoadTTMPConfig()
+
+    doc := models.Document{
 		Title:           settings.Title,
 		Ticket:          settings.Ticket,
 		Status:          "active",
 		Topics:          settings.Topics,
 		DocType:         "index",
-		Intent:          "long-term",
-		Owners:          []string{},
+        Intent:          func() string { if cfg != nil && cfg.Defaults.Intent != "" { return cfg.Defaults.Intent }; return "long-term" }(),
+        Owners:          func() []string { if cfg != nil && len(cfg.Defaults.Owners) > 0 { return cfg.Defaults.Owners }; return []string{} }(),
 		RelatedFiles:    []string{},
 		ExternalSources: []string{},
 		Summary:         "",

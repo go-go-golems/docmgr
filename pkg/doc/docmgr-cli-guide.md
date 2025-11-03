@@ -91,7 +91,7 @@ Each document starts with YAML frontmatter. This lightweight contract makes docs
 
 ### 4.3 Vocabulary
 
-`doc/vocabulary.yaml` defines the allowed `Topics`, `DocType`, and `Intent`. This prevents one-off spellings (“Web sockets” vs “websocket”) and keeps lists predictable for filters and automation. `doctor` warns on unknown values.
+The workspace vocabulary lives at `ttmp/vocabulary.yaml` by default (overridable via `.ttmp.yaml:vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent`. This prevents one-off spellings (“Web sockets” vs “websocket”) and keeps lists predictable for filters and automation. `doctor` warns on unknown values.
 
 ## 4. Commands
 

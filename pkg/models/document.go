@@ -1,6 +1,7 @@
 package models
 
 import (
+    "strings"
     "time"
 
     "gopkg.in/yaml.v3"
@@ -55,6 +56,31 @@ type TicketDirectory struct {
 type RelatedFile struct {
     Path string `yaml:"Path" json:"path"`
     Note string `yaml:"Note,omitempty" json:"note,omitempty"`
+}
+
+// UnmarshalYAML supports both scalar strings (legacy) and mapping nodes.
+func (rf *RelatedFile) UnmarshalYAML(value *yaml.Node) error {
+    if value == nil {
+        *rf = RelatedFile{}
+        return nil
+    }
+    switch value.Kind {
+    case yaml.ScalarNode:
+        rf.Path = strings.TrimSpace(value.Value)
+        return nil
+    case yaml.MappingNode:
+        type alias RelatedFile
+        var tmp alias
+        if err := value.Decode(&tmp); err != nil {
+            return err
+        }
+        *rf = RelatedFile(tmp)
+        return nil
+    default:
+        // Treat unknown kinds as empty
+        *rf = RelatedFile{}
+        return nil
+    }
 }
 
 // RelatedFiles is a list that supports backward-compatible YAML decoding from either

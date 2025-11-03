@@ -213,7 +213,7 @@ Doctor checks:
 `--fail-on` controls exit behavior for CI or pre-commit checks.
 
 Ignore configuration:
-- The command respects a `.docmgrignore` file at the repository root. Each non-empty line is a glob or name to ignore (comments start with `#`). Examples:
+- The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`). Each non-empty line is a glob or name to ignore (comments start with `#`). Examples:
   - `.git/`, `node_modules/`, `dist/`
   - `ttmp/*/design/index.md`
 
@@ -278,7 +278,7 @@ Status honors `.ttmp.yaml` configuration (root discovery) and uses `LastUpdated`
 3) Use `search` to reconnect context as code changes (by query, topic, or file path).
 4) Validate with `doctor` before merging; fix warnings or exclude known noise with ignore flags.
 
-See `glazed/ttmp/2025-10-03/testing-doc-manager/` for runnable scripts that exercise all features end to end (including advanced `doctor` scenarios).
+See `vibes/ttmp/2025-11-03/testing-doc-manager/` for runnable scripts that exercise all features end to end (including advanced `doctor` scenarios).
 
 ## 6. Troubleshooting
 

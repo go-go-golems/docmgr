@@ -135,7 +135,7 @@ Tip: Set `--stale-after` high initially (for example, 30–45 days) while adopti
 
 Repository ignores:
 
-Create a `.docmgrignore` at the repository root to exclude paths from validation (comments with `#`; use globs or names). Example:
+Create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude paths from validation (comments with `#`; use globs or names). Example:
 
 ```gitignore
 # VCS and build artifacts

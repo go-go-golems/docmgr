@@ -117,8 +117,16 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
     repoRoot, _ := findRepoRoot()
 
     // Load .docmgrignore patterns and merge with provided ignore-globs
+    // 1) Try repository root
     if repoRoot != "" {
         if patterns, err := loadDocmgrIgnore(repoRoot); err == nil {
+            settings.IgnoreGlobs = append(settings.IgnoreGlobs, patterns...)
+        }
+    }
+    // 2) Also try docs root (settings.Root), to support non-git environments
+    // Avoid double-loading if paths are identical
+    if settings.Root != "" && filepath.Clean(settings.Root) != filepath.Clean(repoRoot) {
+        if patterns, err := loadDocmgrIgnore(settings.Root); err == nil {
             settings.IgnoreGlobs = append(settings.IgnoreGlobs, patterns...)
         }
     }

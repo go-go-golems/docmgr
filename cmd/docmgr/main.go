@@ -39,14 +39,21 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	// Create list command
-	listCmd, err := commands.NewListCommand()
+	// Create list parent command
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List tickets and documents",
+		Long:  "List ticket workspaces or individual documents",
+	}
+
+	// Create list tickets command
+	listTicketsCmd, err := commands.NewListTicketsCommand()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating list command: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error creating list tickets command: %v\n", err)
 		os.Exit(1)
 	}
 
-	cobraListCmd, err := cli.BuildCobraCommand(listCmd,
+	cobraListTicketsCmd, err := cli.BuildCobraCommand(listTicketsCmd,
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -55,9 +62,32 @@ and validate documentation workspaces with metadata and external source support.
 		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
 	)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error building list command: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error building list tickets command: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Create list docs command
+	listDocsCmd, err := commands.NewListDocsCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating list docs command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraListDocsCmd, err := cli.BuildCobraCommand(listDocsCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building list docs command: %v\n", err)
+		os.Exit(1)
+	}
+
+	listCmd.AddCommand(cobraListTicketsCmd)
+	listCmd.AddCommand(cobraListDocsCmd)
 
 	// Create add command
 	addCmd, err := commands.NewAddCommand()
@@ -128,6 +158,35 @@ and validate documentation workspaces with metadata and external source support.
 
 	importCmd.AddCommand(cobraImportFileCmd)
 
+	// Create meta parent command
+	metaCmd := &cobra.Command{
+		Use:   "meta",
+		Short: "Manage document metadata",
+		Long:  "Update and manage document frontmatter metadata",
+	}
+
+	// Create meta update command
+	metaUpdateCmd, err := commands.NewMetaUpdateCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating meta update command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraMetaUpdateCmd, err := cli.BuildCobraCommand(metaUpdateCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building meta update command: %v\n", err)
+		os.Exit(1)
+	}
+
+	metaCmd.AddCommand(cobraMetaUpdateCmd)
+
 	// Create vocab parent command
 	vocabCmd := &cobra.Command{
 		Use:   "vocab",
@@ -178,12 +237,12 @@ and validate documentation workspaces with metadata and external source support.
 	vocabCmd.AddCommand(cobraVocabListCmd)
 	vocabCmd.AddCommand(cobraVocabAddCmd)
 
-	// Add all commands to root
 	rootCmd.AddCommand(cobraInitCmd)
-	rootCmd.AddCommand(cobraListCmd)
+	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(cobraAddCmd)
 	rootCmd.AddCommand(cobraDoctorCmd)
 	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(metaCmd)
 	rootCmd.AddCommand(vocabCmd)
 
 	if err := rootCmd.Execute(); err != nil {

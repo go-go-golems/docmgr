@@ -212,9 +212,14 @@ Doctor checks:
 
 `--fail-on` controls exit behavior for CI or pre-commit checks.
 
+Ignore configuration:
+- The command respects a `.docmgrignore` file at the repository root. Each non-empty line is a glob or name to ignore (comments start with `#`). Examples:
+  - `.git/`, `node_modules/`, `dist/`
+  - `ttmp/*/design/index.md`
+
 ### 5.9 Relate Code and Documents
 
-Use `relate` to add or remove entries in `RelatedFiles` and to discover files to link.
+Use `relate` to add or remove entries in `RelatedFiles` and to discover files to link. Each related file can carry a short note explaining why it matters.
 
 ```bash
 # Add files to the ticket index
@@ -230,6 +235,11 @@ docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat
 
 # Apply suggestions automatically to the ticket index
 docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+
+# Add notes for specific files (repeatable; format path:note or path=note)
+docmgr relate --ticket MEN-4242 \
+  --file-note "backend/chat/api/register.go:Registers chat routes (path normalization source)" \
+  --file-note "web/src/store/api/chatApi.ts=Frontend API integration; must align with backend paths"
 ```
 
 Suggestion output includes both a `source` and a human-readable `reason` column, such as:
@@ -238,6 +248,8 @@ Suggestion output includes both a `source` and a human-readable `reason` column,
 - git_history → "recent commit activity"
 - git_modified/staged/untracked → "working tree modified" / "staged for commit" / "untracked new file"
 - ripgrep → "content match: <term>"
+
+When `--apply-suggestions` is used, the combined suggestion reasons are stored as the file's note (unless overridden with `--file-note`).
 
 ### 5.10 Status (Workspace Summary)
 

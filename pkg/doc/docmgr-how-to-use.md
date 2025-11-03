@@ -70,11 +70,16 @@ docmgr relate --ticket MEN-4242 --files \
 # Get suggestions with explanations (no changes applied)
 docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat
 
-# Apply suggestions to the ticket index
+# Apply suggestions to the ticket index (reasons are saved as notes)
 docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+
+# Add or update notes for specific files
+docmgr relate --ticket MEN-4242 \
+  --file-note "backend/chat/api/register.go:Registers chat routes (path normalization source)" \
+  --file-note "web/src/store/api/chatApi.ts=Frontend API integration; must align with backend paths"
 ```
 
-Suggestion output includes both `source` and `reason` (for example, "recent commit activity", "working tree modified", "referenced by documents").
+Suggestion output includes both `source` and `reason` (for example, "recent commit activity", "working tree modified", "referenced by documents"). When applying suggestions, combined reasons are saved as the file's note unless overridden with `--file-note`.
 
 ## 7. Explore and Search
 

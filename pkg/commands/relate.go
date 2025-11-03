@@ -8,6 +8,7 @@ import (
     "sort"
     "strings"
 
+    "github.com/docmgr/docmgr/pkg/models"
     "github.com/go-go-golems/glazed/pkg/cmds"
     "github.com/go-go-golems/glazed/pkg/cmds/layers"
     "github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -25,6 +26,7 @@ type RelateSettings struct {
     Doc              string   `glazed.parameter:"doc"`
     Files            []string `glazed.parameter:"files"`
     RemoveFiles      []string `glazed.parameter:"remove-files"`
+    FileNotes        []string `glazed.parameter:"file-note"`
     Suggest          bool     `glazed.parameter:"suggest"`
     ApplySuggestions bool     `glazed.parameter:"apply-suggestions"`
     Query            string   `glazed.parameter:"query"`
@@ -75,6 +77,12 @@ Examples:
                     "remove-files",
                     parameters.ParameterTypeStringList,
                     parameters.WithHelp("Comma-separated list of files to remove from RelatedFiles"),
+                    parameters.WithDefault([]string{}),
+                ),
+                parameters.NewParameterDefinition(
+                    "file-note",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Repeatable path-to-note mapping (format: path:note or path=note)"),
                     parameters.WithDefault([]string{}),
                 ),
                 parameters.NewParameterDefinition(
@@ -146,6 +154,8 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
     // Optional: collect suggestions
     type reasonSet map[string]bool
     suggestions := map[string]reasonSet{}
+    // Optional notes from existing documents for the same file
+    existingNotes := map[string]map[string]bool{}
     if settings.Suggest {
         // Determine search root: ticket dir if available else repo root
         searchRoot := settings.Root
@@ -185,8 +195,14 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
                 }
             }
             for _, rf := range doc.RelatedFiles {
-                if rf != "" {
-                    existing[rf] = true
+                if rf.Path != "" {
+                    existing[rf.Path] = true
+                    if rf.Note != "" {
+                        if _, ok := existingNotes[rf.Path]; !ok {
+                            existingNotes[rf.Path] = map[string]bool{}
+                        }
+                        existingNotes[rf.Path][rf.Note] = true
+                    }
                 }
             }
             return nil
@@ -264,6 +280,15 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
                     reasons = append(reasons, r)
                 }
                 sort.Strings(reasons)
+                // append notes if known from existing docs
+                if notesSet, ok := existingNotes[f]; ok {
+                    var notes []string
+                    for n := range notesSet { notes = append(notes, n) }
+                    sort.Strings(notes)
+                    if len(notes) > 0 {
+                        reasons = append(reasons, "note: "+strings.Join(notes, "; "))
+                    }
+                }
                 row := types.NewRow(
                     types.MRP("file", f),
                     types.MRP("source", "suggested"),
@@ -283,11 +308,29 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
         return fmt.Errorf("failed to read document frontmatter: %w", err)
     }
 
-    // Build sets for add/remove
-    current := map[string]bool{}
-    for _, f := range doc.RelatedFiles {
-        if f != "" {
-            current[f] = true
+    // Build maps for add/remove with notes retained
+    current := map[string]models.RelatedFile{}
+    for _, rf := range doc.RelatedFiles {
+        if rf.Path != "" {
+            current[rf.Path] = rf
+        }
+    }
+
+    // Parse provided file-note mappings
+    noteMap := map[string]string{}
+    for _, m := range settings.FileNotes {
+        s := strings.TrimSpace(m)
+        if s == "" { continue }
+        var key, val string
+        if i := strings.IndexAny(s, ":="); i >= 0 {
+            key = strings.TrimSpace(s[:i])
+            val = strings.TrimSpace(s[i+1:])
+        } else {
+            // No delimiter, skip
+            continue
+        }
+        if key != "" {
+            noteMap[key] = val
         }
     }
 
@@ -298,7 +341,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
         if rf == "" {
             continue
         }
-        if current[rf] {
+        if _, ok := current[rf]; ok {
             delete(current, rf)
             removedCount++
         }
@@ -311,29 +354,42 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
         if af == "" {
             continue
         }
-        if !current[af] {
-            current[af] = true
+        if _, ok := current[af]; !ok {
+            current[af] = models.RelatedFile{Path: af, Note: noteMap[af]}
             addedCount++
+        } else if note, ok := noteMap[af]; ok && note != "" {
+            rf := current[af]
+            rf.Note = note
+            current[af] = rf
         }
     }
 
     // Apply suggestions if requested
     if settings.Suggest && settings.ApplySuggestions {
-        for f := range suggestions {
-            sf := f
-            if !current[sf] {
-                current[sf] = true
+        for f, rs := range suggestions {
+            if _, ok := current[f]; !ok {
+                // Build note from reasons unless an explicit note was provided
+                reasonList := make([]string, 0, len(rs))
+                for r := range rs { reasonList = append(reasonList, r) }
+                sort.Strings(reasonList)
+                note := noteMap[f]
+                if note == "" {
+                    note = strings.Join(reasonList, "; ")
+                }
+                current[f] = models.RelatedFile{Path: f, Note: note}
                 addedCount++
+            } else if note := noteMap[f]; note != "" {
+                rf := current[f]; rf.Note = note; current[f] = rf
             }
         }
     }
 
-    // Serialize back to slice
-    out := make([]string, 0, len(current))
-    for f := range current {
-        out = append(out, f)
-    }
-    sort.Strings(out)
+    // Serialize back to sorted slice
+    keys := make([]string, 0, len(current))
+    for f := range current { keys = append(keys, f) }
+    sort.Strings(keys)
+    out := make(models.RelatedFiles, 0, len(keys))
+    for _, k := range keys { out = append(out, current[k]) }
     doc.RelatedFiles = out
 
     // Preserve existing content: rewrite file with updated frontmatter

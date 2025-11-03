@@ -204,16 +204,16 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 			}
 		}
 		doc.Owners = owners
-	case "relatedfiles":
-		// Parse comma-separated values
-		files := []string{}
-		for _, file := range strings.Split(value, ",") {
-			file = strings.TrimSpace(file)
-			if file != "" {
-				files = append(files, file)
-			}
-		}
-		doc.RelatedFiles = files
+    case "relatedfiles":
+        // Parse comma-separated values into structured entries with empty notes
+        var rfs models.RelatedFiles
+        for _, file := range strings.Split(value, ",") {
+            file = strings.TrimSpace(file)
+            if file != "" {
+                rfs = append(rfs, models.RelatedFile{Path: file})
+            }
+        }
+        doc.RelatedFiles = rfs
 	case "externalsources":
 		// Parse comma-separated values
 		sources := []string{}

@@ -131,7 +131,7 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		DocType:         "index",
         Intent:          func() string { if cfg != nil && cfg.Defaults.Intent != "" { return cfg.Defaults.Intent }; return "long-term" }(),
         Owners:          func() []string { if cfg != nil && len(cfg.Defaults.Owners) > 0 { return cfg.Defaults.Owners }; return []string{} }(),
-		RelatedFiles:    []string{},
+        RelatedFiles:    models.RelatedFiles{},
 		ExternalSources: []string{},
 		Summary:         "",
 		LastUpdated:     time.Now(),

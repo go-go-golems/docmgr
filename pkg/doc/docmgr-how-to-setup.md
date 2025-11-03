@@ -94,7 +94,24 @@ Recommendations:
 - Use guidelines to explain intent and quality bars (what reviewers look for)
 - See `docmgr help templates-and-guidelines` for examples and best practices
 
-## 5. Enforce Health with Doctor
+## 5. Enrich RelatedFiles with Rationale (optional best practice)
+
+Encourage contributors to add a brief note explaining why each related file matters. This improves review speed and LLM context quality.
+
+```bash
+# Add files and attach notes
+docmgr relate --ticket MEN-4242 \
+  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
+  --file-note "backend/chat/api/register.go:Registers chat routes (source of path normalization)" \
+  --file-note "web/src/store/api/chatApi.ts=Frontend API integration; must align with backend paths"
+
+# When applying suggestions, reasons are stored as notes unless overridden
+docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+```
+
+`meta update --field RelatedFiles` still works and creates entries without notes; prefer `relate` for adding context.
+
+## 6. Enforce Health with Doctor
 
 Run `doctor` locally and in automation to keep the system healthy. It catches stale docs, missing fields, unknown vocabulary, and broken file references. Customize ignore patterns to reduce noise without hiding real issues:
 
@@ -116,7 +133,21 @@ Doctor checks include:
 
 Tip: Set `--stale-after` high initially (for example, 30–45 days) while adoption ramps up, then lower it as your cadence stabilizes.
 
-## 6. CI Integration
+Repository ignores:
+
+Create a `.docmgrignore` at the repository root to exclude paths from validation (comments with `#`; use globs or names). Example:
+
+```gitignore
+# VCS and build artifacts
+.git/
+node_modules/
+dist/
+
+# Suppress noisy nested index for a specific directory layout
+ttmp/*/design/index.md
+```
+
+## 7. CI Integration
 
 Add a job to fail fast on documentation regressions. Make CI strict over time (for example, start with `--fail-on error`, later consider `--fail-on warning` if noise is low):
 
@@ -128,7 +159,7 @@ Add a job to fail fast on documentation regressions. Make CI strict over time (f
       --stale-after 30 --fail-on error
 ```
 
-## 7. Operational Tips
+## 8. Operational Tips
 
 - Keep vocabulary small and stable; socialize changes via PRs
 - Encourage `Owners`, `Summary`, and `RelatedFiles` on `index.md` for every ticket

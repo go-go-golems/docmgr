@@ -38,9 +38,8 @@ These folders are part of your repository so your team can customize house style
   - If `ttmp/_guidelines/<type>.md` exists, it is used; otherwise the embedded default is shown
 
 - `docmgr add --ticket <ticket> --doc-type <type> --title <title>`
-  - Creates a new file with frontmatter and a minimal body
-  - Today, the body is a simple placeholder
-  - Roadmap: fill content from `ttmp/_templates/<type>.md` with variable substitution (for example, `{{ .Title }}`, `{{ .Ticket }}`)
+  - Creates a new file with frontmatter
+  - If `ttmp/_templates/<type>.md` exists, the body is rendered from the template with variable substitution (for example, `{{TITLE}}`, `{{TICKET}}`, `{{TOPICS}}`, `{{OWNERS}}`)
 
 Tip: Until auto-templating ships, open the template side-by-side and copy the relevant sections as you draft.
 
@@ -101,7 +100,10 @@ Explain the “why” behind decisions; enable future readers to re-derive conte
 ## Frequently Asked Questions
 
 Q: Do templates enforce structure automatically?
-A: Not yet. New docs use minimal bodies. Templates are reference content today; auto-templating with variable substitution is planned.
+A: Yes, when a matching template exists under `ttmp/_templates/`, `docmgr add` will render the body with variable substitution.
+
+Q: Any guidance for RelatedFiles?
+A: Prefer adding a short rationale note per file when possible. Use `docmgr relate --file-note "path:why it matters"` to capture the context.
 
 Q: Can guidelines differ between teams?
 A: Yes. Start with shared defaults and layer team-specific files in `ttmp/_guidelines/`.

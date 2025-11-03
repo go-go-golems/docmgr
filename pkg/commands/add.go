@@ -128,7 +128,7 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		DocType:         settings.DocType,
 		Intent:          "long-term",
 		Owners:          ticketDoc.Owners,
-		RelatedFiles:    []string{},
+        RelatedFiles:    models.RelatedFiles{},
 		ExternalSources: []string{},
 		Summary:         "",
 		LastUpdated:     time.Now(),

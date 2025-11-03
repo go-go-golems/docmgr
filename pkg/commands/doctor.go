@@ -36,8 +36,10 @@ func NewDoctorCommand() (*DoctorCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"doctor",
 			cmds.WithShort("Validate document workspaces"),
-			cmds.WithLong(`Checks document workspaces for issues like missing frontmatter,
-invalid metadata, or broken structure.
+            cmds.WithLong(`Checks document workspaces for issues like missing frontmatter,
+invalid metadata, or broken structure. Respects a repository-level .docmgrignore file
+for path exclusions (similar to .gitignore). Each non-empty line is a glob or name to
+ignore; lines starting with # are treated as comments.
 
 Example:
   docmgr doctor --ticket MEN-3475
@@ -111,8 +113,15 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
     // Track highest severity encountered to support --fail-on
     highestSeverity := 0 // 0=ok,1=warning,2=error
 
-    // Determine repository root (current working directory)
-    repoRoot, _ := os.Getwd()
+    // Determine repository root
+    repoRoot, _ := findRepoRoot()
+
+    // Load .docmgrignore patterns and merge with provided ignore-globs
+    if repoRoot != "" {
+        if patterns, err := loadDocmgrIgnore(repoRoot); err == nil {
+            settings.IgnoreGlobs = append(settings.IgnoreGlobs, patterns...)
+        }
+    }
 
     // Load vocabulary for validation (best-effort)
     vocab, _ := LoadVocabulary()
@@ -307,12 +316,12 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 
         // Validate RelatedFiles existence (relative to repo root)
         for _, rf := range doc.RelatedFiles {
-            if rf == "" {
+            if rf.Path == "" {
                 continue
             }
-            full := rf
+            full := rf.Path
             if !filepath.IsAbs(full) {
-                full = filepath.Join(repoRoot, rf)
+                full = filepath.Join(repoRoot, rf.Path)
             }
             if _, err := os.Stat(full); err != nil {
                 hasIssues = true
@@ -320,7 +329,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
                     types.MRP("ticket", doc.Ticket),
                     types.MRP("issue", "missing_related_file"),
                     types.MRP("severity", "warning"),
-                    types.MRP("message", fmt.Sprintf("related file not found: %s", rf)),
+                    types.MRP("message", fmt.Sprintf("related file not found: %s", rf.Path)),
                     types.MRP("path", indexPath),
                 )
                 if err := gp.AddRow(ctx, row); err != nil {
@@ -418,11 +427,42 @@ func containsString(list []string, s string) bool {
 // matchesAnyGlob checks if path matches any of the provided glob patterns
 func matchesAnyGlob(patterns []string, path string) bool {
     for _, p := range patterns {
+        p = normalizeIgnorePattern(p)
         if ok, _ := filepath.Match(p, path); ok {
             return true
         }
     }
     return false
+}
+
+// normalizeIgnorePattern trims whitespace and trailing separators to make simple
+// directory entries like ".git/" match both names and paths.
+func normalizeIgnorePattern(p string) string {
+    p = strings.TrimSpace(p)
+    for len(p) > 0 && (p[len(p)-1] == '/' || p[len(p)-1] == os.PathSeparator) {
+        p = p[:len(p)-1]
+    }
+    return p
+}
+
+// loadDocmgrIgnore reads ignore patterns from <repoRoot>/.docmgrignore.
+// Lines starting with '#' are comments; empty lines are skipped.
+func loadDocmgrIgnore(repoRoot string) ([]string, error) {
+    path := filepath.Join(repoRoot, ".docmgrignore")
+    b, err := os.ReadFile(path)
+    if err != nil {
+        return nil, err
+    }
+    lines := strings.Split(string(b), "\n")
+    var patterns []string
+    for _, l := range lines {
+        l = strings.TrimSpace(l)
+        if l == "" || strings.HasPrefix(l, "#") {
+            continue
+        }
+        patterns = append(patterns, l)
+    }
+    return patterns, nil
 }
 
 func maxInt(a, b int) int {

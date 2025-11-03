@@ -260,18 +260,19 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		}
 
 		// Apply file filter (reverse lookup)
-		if settings.File != "" {
-			fileMatch := false
-			for _, relatedFile := range doc.RelatedFiles {
-				if strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile) {
-					fileMatch = true
-					break
-				}
-			}
-			if !fileMatch {
-				return nil
-			}
-		}
+        if settings.File != "" {
+            fileMatch := false
+            for _, rf := range doc.RelatedFiles {
+                relatedFile := rf.Path
+                if strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile) {
+                    fileMatch = true
+                    break
+                }
+            }
+            if !fileMatch {
+                return nil
+            }
+        }
 
 		// Apply directory filter (reverse lookup)
 		if settings.Dir != "" {
@@ -282,14 +283,14 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 				dirMatch = true
 			}
 			// Check if any RelatedFiles are in the directory
-			if !dirMatch {
-				for _, relatedFile := range doc.RelatedFiles {
-					if strings.HasPrefix(relatedFile, settings.Dir) {
-						dirMatch = true
-						break
-					}
-				}
-			}
+        if !dirMatch {
+            for _, rf := range doc.RelatedFiles {
+                if strings.HasPrefix(rf.Path, settings.Dir) {
+                    dirMatch = true
+                    break
+                }
+            }
+        }
 			if !dirMatch {
 				return nil
 			}
@@ -442,11 +443,11 @@ func (c *SearchCommand) suggestFiles(
 		if err != nil {
 			return nil
 		}
-		for _, file := range doc.RelatedFiles {
-			if file != "" {
-				suggestedFiles[file] = true
-			}
-		}
+        for _, rf := range doc.RelatedFiles {
+            if rf.Path != "" {
+                suggestedFiles[rf.Path] = true
+            }
+        }
 		return nil
 	})
 

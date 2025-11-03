@@ -28,7 +28,7 @@ This guide shows how to bootstrap and maintain the documentation system for a re
 
 ### 2.1 Repository Configuration (.ttmp.yaml)
 
-Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`.
+Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`. When the config uses relative paths (for example, `root: ttmp`), they are interpreted relative to the directory that contains `.ttmp.yaml`.
 
 ```yaml
 root: ttmp

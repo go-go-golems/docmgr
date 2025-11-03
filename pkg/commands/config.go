@@ -53,19 +53,40 @@ func LoadTTMPConfig() (*TTMPConfig, error) {
     if err := yaml.Unmarshal(data, &cfg); err != nil {
         return nil, fmt.Errorf("failed to parse %s: %w", path, err)
     }
+    // Normalize relative paths in config to be relative to the config file directory
+    if cfg.Root != "" && !filepath.IsAbs(cfg.Root) {
+        cfg.Root = filepath.Join(filepath.Dir(path), cfg.Root)
+    }
     return &cfg, nil
 }
 
 // ResolveRoot applies config.Root if available and the provided root is the default ("ttmp")
 func ResolveRoot(root string) string {
-    cfg, _ := LoadTTMPConfig()
-    if cfg == nil || cfg.Root == "" {
+    // If a non-default root was explicitly provided, honor it
+    if root != "ttmp" && root != "" {
         return root
     }
-    if root == "ttmp" {
+
+    // Try to load config and resolve its root relative to the config file
+    cfgPath, err := FindTTMPConfigPath()
+    if err != nil {
+        return root
+    }
+    data, err := os.ReadFile(cfgPath)
+    if err != nil {
+        return root
+    }
+    var cfg TTMPConfig
+    if err := yaml.Unmarshal(data, &cfg); err != nil {
+        return root
+    }
+    if cfg.Root == "" {
+        return root
+    }
+    if filepath.IsAbs(cfg.Root) {
         return cfg.Root
     }
-    return root
+    return filepath.Join(filepath.Dir(cfgPath), cfg.Root)
 }
 
 

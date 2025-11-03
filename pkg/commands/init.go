@@ -114,7 +114,12 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Create index.md with frontmatter
+    // Scaffold _templates/ and _guidelines/ at root level first so index can use templates
+    if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
+        return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
+    }
+
+    // Create index.md with frontmatter
     // Load config defaults
     cfg, _ := LoadTTMPConfig()
 
@@ -132,9 +137,16 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		LastUpdated:     time.Now(),
 	}
 
-	indexPath := filepath.Join(ticketPath, "index.md")
-	indexContent := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
-	if err := writeDocumentWithFrontmatter(indexPath, &doc, indexContent, settings.Force); err != nil {
+    indexPath := filepath.Join(ticketPath, "index.md")
+    // Try to load index template body
+    indexBody := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
+    if tpl, ok := loadTemplate(settings.Root, "index"); ok {
+        _, body := extractFrontmatterAndBody(tpl)
+        // Ensure placeholders are populated from doc
+        doc.Title = settings.Title
+        indexBody = renderTemplateBody(body, &doc)
+    }
+    if err := writeDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
 		return fmt.Errorf("failed to write index.md: %w", err)
 	}
 
@@ -193,10 +205,7 @@ Use docmgr commands to manage this workspace:
 		return fmt.Errorf("failed to write changelog.md: %w", err)
 	}
 
-	// Scaffold _templates/ and _guidelines/ at root level
-	if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
-		return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
-	}
+    // (templates and guidelines already scaffolded above)
 
 	// Output result
 	row := types.NewRow(

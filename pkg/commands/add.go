@@ -119,7 +119,7 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to read ticket metadata: %w", err)
 	}
 
-	// Create document with frontmatter
+    // Create document with frontmatter
 	doc := models.Document{
 		Title:           settings.Title,
 		Ticket:          settings.Ticket,
@@ -134,10 +134,20 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		LastUpdated:     time.Now(),
 	}
 
-	content := fmt.Sprintf("# %s\n\n<!-- Add your content here -->\n", settings.Title)
-	if err := writeDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
-		return fmt.Errorf("failed to write document: %w", err)
-	}
+    // Try to load and render a template body
+    content := ""
+    if tpl, ok := loadTemplate(settings.Root, settings.DocType); ok {
+        _, body := extractFrontmatterAndBody(tpl)
+        // Ensure title is set on doc for placeholders
+        doc.Title = settings.Title
+        content = renderTemplateBody(body, &doc)
+    } else {
+        content = fmt.Sprintf("# %s\n\n<!-- Add your content here -->\n", settings.Title)
+    }
+
+    if err := writeDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
+        return fmt.Errorf("failed to write document: %w", err)
+    }
 
 	row := types.NewRow(
 		types.MRP("ticket", settings.Ticket),

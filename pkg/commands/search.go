@@ -456,6 +456,7 @@ func (c *SearchCommand) suggestFiles(
 		row := types.NewRow(
 			types.MRP("file", file),
 			types.MRP("source", "related_files"),
+			types.MRP("reason", "referenced by documents"),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err
@@ -470,6 +471,47 @@ func (c *SearchCommand) suggestFiles(
 				row := types.NewRow(
 					types.MRP("file", file),
 					types.MRP("source", "git_history"),
+					types.MRP("reason", "recent commit activity"),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// Add git status heuristics (modified, staged, untracked)
+	if modified, staged, untracked, err := suggestFilesFromGitStatus(ticketDir); err == nil {
+		for _, file := range modified {
+			if !suggestedFiles[file] {
+				row := types.NewRow(
+					types.MRP("file", file),
+					types.MRP("source", "git_modified"),
+					types.MRP("reason", "working tree modified"),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return err
+				}
+			}
+		}
+		for _, file := range staged {
+			if !suggestedFiles[file] {
+				row := types.NewRow(
+					types.MRP("file", file),
+					types.MRP("source", "git_staged"),
+					types.MRP("reason", "staged for commit"),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return err
+				}
+			}
+		}
+		for _, file := range untracked {
+			if !suggestedFiles[file] {
+				row := types.NewRow(
+					types.MRP("file", file),
+					types.MRP("source", "git_untracked"),
+					types.MRP("reason", "untracked new file"),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
 					return err
@@ -487,6 +529,7 @@ func (c *SearchCommand) suggestFiles(
 					row := types.NewRow(
 						types.MRP("file", file),
 						types.MRP("source", "ripgrep"),
+						types.MRP("reason", fmt.Sprintf("content match: %s", firstTerm(searchTerms))),
 					)
 					if err := gp.AddRow(ctx, row); err != nil {
 						return err
@@ -540,6 +583,41 @@ func suggestFilesFromGit(repoPath string, searchTerms []string) ([]string, error
 	}
 
 	return result, nil
+}
+
+// suggestFilesFromGitStatus returns modified, staged, and untracked files
+func suggestFilesFromGitStatus(repoPath string) ([]string, []string, []string, error) {
+    // Check if in a git repo
+    cmd := exec.Command("git", "rev-parse", "--git-dir")
+    cmd.Dir = repoPath
+    if err := cmd.Run(); err != nil {
+        return nil, nil, nil, fmt.Errorf("not a git repository")
+    }
+
+    // Unstaged modified
+    cmd = exec.Command("git", "diff", "--name-only")
+    cmd.Dir = repoPath
+    outMod, _ := cmd.Output()
+    modified := nonEmptyLines(string(outMod))
+
+    // Staged changes
+    cmd = exec.Command("git", "diff", "--name-only", "--cached")
+    cmd.Dir = repoPath
+    outStaged, _ := cmd.Output()
+    staged := nonEmptyLines(string(outStaged))
+
+    // Untracked files
+    cmd = exec.Command("git", "ls-files", "--others", "--exclude-standard")
+    cmd.Dir = repoPath
+    outUntracked, _ := cmd.Output()
+    untracked := nonEmptyLines(string(outUntracked))
+
+    // Filter to code-like files
+    modified = filterCodeFiles(modified)
+    staged = filterCodeFiles(staged)
+    untracked = filterCodeFiles(untracked)
+
+    return modified, staged, untracked, nil
 }
 
 // suggestFilesFromRipgrep suggests files using ripgrep
@@ -647,6 +725,35 @@ func isCodeFile(path string) bool {
 		".rb": true, ".php": true, ".swift": true,
 	}
 	return codeExts[ext]
+}
+
+func nonEmptyLines(s string) []string {
+    lines := strings.Split(s, "\n")
+    out := make([]string, 0, len(lines))
+    for _, line := range lines {
+        line = strings.TrimSpace(line)
+        if line != "" {
+            out = append(out, line)
+        }
+    }
+    return out
+}
+
+func filterCodeFiles(files []string) []string {
+    out := make([]string, 0, len(files))
+    for _, f := range files {
+        if isCodeFile(f) {
+            out = append(out, f)
+        }
+    }
+    return out
+}
+
+func firstTerm(terms []string) string {
+    if len(terms) == 0 {
+        return ""
+    }
+    return terms[0]
 }
 
 // readDocumentWithContent reads a document and returns both frontmatter and content

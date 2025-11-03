@@ -5,8 +5,11 @@ import (
 	"os"
 
 	"github.com/docmgr/docmgr/pkg/commands"
+    "github.com/docmgr/docmgr/pkg/doc"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+    "github.com/go-go-golems/glazed/pkg/help"
+    help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +21,11 @@ func main() {
 in LLM-assisted workflows. It provides commands to create, organize,
 and validate documentation workspaces with metadata and external source support.`,
 	}
+
+    // Setup Glazed help system and load embedded docs
+    helpSystem := help.NewHelpSystem()
+    _ = doc.AddDocToHelpSystem(helpSystem)
+    help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
 
 	// Create init command
 	initCmd, err := commands.NewInitCommand()
@@ -277,6 +285,26 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
+	// Create relate command
+	relateCmd, err := commands.NewRelateCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating relate command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraRelateCmd, err := cli.BuildCobraCommand(relateCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building relate command: %v\n", err)
+		os.Exit(1)
+	}
+
 	rootCmd.AddCommand(cobraInitCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(cobraAddCmd)
@@ -286,6 +314,7 @@ and validate documentation workspaces with metadata and external source support.
 	rootCmd.AddCommand(vocabCmd)
 	rootCmd.AddCommand(cobraSearchCmd)
 	rootCmd.AddCommand(cobraGuidelinesCmd)
+	rootCmd.AddCommand(cobraRelateCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

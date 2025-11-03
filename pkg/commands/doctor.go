@@ -108,6 +108,24 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
     // Track highest severity encountered to support --fail-on
     highestSeverity := 0 // 0=ok,1=warning,2=error
 
+    // Determine repository root (current working directory)
+    repoRoot, _ := os.Getwd()
+
+    // Load vocabulary for validation (best-effort)
+    vocab, _ := LoadVocabulary()
+    topicSet := map[string]struct{}{}
+    for _, it := range vocab.Topics {
+        topicSet[it.Slug] = struct{}{}
+    }
+    docTypeSet := map[string]struct{}{}
+    for _, it := range vocab.DocTypes {
+        docTypeSet[it.Slug] = struct{}{}
+    }
+    intentSet := map[string]struct{}{}
+    for _, it := range vocab.Intent {
+        intentSet[it.Slug] = struct{}{}
+    }
+
 	entries, err := os.ReadDir(settings.Root)
 	if err != nil {
 		return fmt.Errorf("failed to read root directory: %w", err)
@@ -224,6 +242,90 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		if len(doc.Topics) == 0 {
 			issues = append(issues, "missing Topics")
 		}
+
+        // Validate vocabulary: Topics, DocType, Intent
+        // Unknown topics
+        var unknownTopics []string
+        for _, t := range doc.Topics {
+            if _, ok := topicSet[t]; !ok && t != "" {
+                unknownTopics = append(unknownTopics, t)
+            }
+        }
+        if len(unknownTopics) > 0 {
+            hasIssues = true
+            row := types.NewRow(
+                types.MRP("ticket", doc.Ticket),
+                types.MRP("issue", "unknown_topics"),
+                types.MRP("severity", "warning"),
+                types.MRP("message", fmt.Sprintf("unknown topics: %v", unknownTopics)),
+                types.MRP("path", indexPath),
+            )
+            if err := gp.AddRow(ctx, row); err != nil {
+                return err
+            }
+            highestSeverity = maxInt(highestSeverity, 1)
+        }
+
+        // Unknown docType
+        if doc.DocType != "" {
+            if _, ok := docTypeSet[doc.DocType]; !ok {
+                hasIssues = true
+                row := types.NewRow(
+                    types.MRP("ticket", doc.Ticket),
+                    types.MRP("issue", "unknown_doc_type"),
+                    types.MRP("severity", "warning"),
+                    types.MRP("message", fmt.Sprintf("unknown docType: %s", doc.DocType)),
+                    types.MRP("path", indexPath),
+                )
+                if err := gp.AddRow(ctx, row); err != nil {
+                    return err
+                }
+                highestSeverity = maxInt(highestSeverity, 1)
+            }
+        }
+
+        // Unknown intent
+        if doc.Intent != "" {
+            if _, ok := intentSet[doc.Intent]; !ok {
+                hasIssues = true
+                row := types.NewRow(
+                    types.MRP("ticket", doc.Ticket),
+                    types.MRP("issue", "unknown_intent"),
+                    types.MRP("severity", "warning"),
+                    types.MRP("message", fmt.Sprintf("unknown intent: %s", doc.Intent)),
+                    types.MRP("path", indexPath),
+                )
+                if err := gp.AddRow(ctx, row); err != nil {
+                    return err
+                }
+                highestSeverity = maxInt(highestSeverity, 1)
+            }
+        }
+
+        // Validate RelatedFiles existence (relative to repo root)
+        for _, rf := range doc.RelatedFiles {
+            if rf == "" {
+                continue
+            }
+            full := rf
+            if !filepath.IsAbs(full) {
+                full = filepath.Join(repoRoot, rf)
+            }
+            if _, err := os.Stat(full); err != nil {
+                hasIssues = true
+                row := types.NewRow(
+                    types.MRP("ticket", doc.Ticket),
+                    types.MRP("issue", "missing_related_file"),
+                    types.MRP("severity", "warning"),
+                    types.MRP("message", fmt.Sprintf("related file not found: %s", rf)),
+                    types.MRP("path", indexPath),
+                )
+                if err := gp.AddRow(ctx, row); err != nil {
+                    return err
+                }
+                highestSeverity = maxInt(highestSeverity, 1)
+            }
+        }
 
 		if len(issues) > 0 {
 			hasIssues = true

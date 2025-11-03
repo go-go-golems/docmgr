@@ -63,7 +63,7 @@ Example:
 					"root",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("docs"),
+					parameters.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -132,7 +132,7 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 	}
 
 	content := fmt.Sprintf("# %s\n\n<!-- Add your content here -->\n", settings.Title)
-	if err := writeDocumentWithFrontmatter(docPath, &doc, content); err != nil {
+	if err := writeDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
 		return fmt.Errorf("failed to write document: %w", err)
 	}
 

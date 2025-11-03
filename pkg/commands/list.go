@@ -33,7 +33,7 @@ func NewListCommand() (*ListCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"list",
 			cmds.WithShort("List document workspaces"),
-			cmds.WithLong(`Lists all document workspaces in the active directory.
+			cmds.WithLong(`Lists all document workspaces in the root directory.
 
 Example:
   docmgr list
@@ -45,7 +45,7 @@ Example:
 					"root",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("docs"),
+					parameters.WithDefault("ttmp"),
 				),
 				parameters.NewParameterDefinition(
 					"ticket",
@@ -74,14 +74,13 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	activePath := filepath.Join(settings.Root, "active")
-	if _, err := os.Stat(activePath); os.IsNotExist(err) {
-		return fmt.Errorf("active directory does not exist: %s", activePath)
+	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	entries, err := os.ReadDir(activePath)
+	entries, err := os.ReadDir(settings.Root)
 	if err != nil {
-		return fmt.Errorf("failed to read active directory: %w", err)
+		return fmt.Errorf("failed to read root directory: %w", err)
 	}
 
 	for _, entry := range entries {
@@ -89,7 +88,7 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 			continue
 		}
 
-		indexPath := filepath.Join(activePath, entry.Name(), "index.md")
+		indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
 		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
 			continue
 		}
@@ -113,7 +112,7 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 			types.MRP("title", doc.Title),
 			types.MRP("status", doc.Status),
 			types.MRP("topics", strings.Join(doc.Topics, ", ")),
-			types.MRP("path", filepath.Join(activePath, entry.Name())),
+			types.MRP("path", filepath.Join(settings.Root, entry.Name())),
 			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
 		)
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -42,7 +43,7 @@ Example:
 					"root",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("docs"),
+					parameters.WithDefault("ttmp"),
 				),
 				parameters.NewParameterDefinition(
 					"ticket",
@@ -71,14 +72,13 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	activePath := filepath.Join(settings.Root, "active")
-	if _, err := os.Stat(activePath); os.IsNotExist(err) {
-		return fmt.Errorf("active directory does not exist: %s", activePath)
+	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	entries, err := os.ReadDir(activePath)
+	entries, err := os.ReadDir(settings.Root)
 	if err != nil {
-		return fmt.Errorf("failed to read active directory: %w", err)
+		return fmt.Errorf("failed to read root directory: %w", err)
 	}
 
 	for _, entry := range entries {
@@ -86,7 +86,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			continue
 		}
 
-		ticketPath := filepath.Join(activePath, entry.Name())
+		ticketPath := filepath.Join(settings.Root, entry.Name())
 		indexPath := filepath.Join(ticketPath, "index.md")
 
 		// Check if index.md exists
@@ -125,6 +125,45 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			continue
 		}
 
+		// Track all issues found
+		hasIssues := false
+
+		// Check for unique index.md (should only be one per workspace)
+		indexFiles := findIndexFiles(ticketPath)
+		if len(indexFiles) > 1 {
+			hasIssues = true
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "multiple_index"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("Multiple index.md files found (%d), should be only one", len(indexFiles))),
+				types.MRP("path", ticketPath),
+				types.MRP("index_files", fmt.Sprintf("%v", indexFiles)),
+			)
+			if err := gp.AddRow(ctx, row); err != nil {
+				return err
+			}
+		}
+
+		// Check for staleness (LastUpdated > 14 days)
+		if !doc.LastUpdated.IsZero() {
+			daysSinceUpdate := time.Since(doc.LastUpdated).Hours() / 24
+			if daysSinceUpdate > 14 {
+				hasIssues = true
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "stale"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("LastUpdated is %.0f days old (threshold: 14 days)", daysSinceUpdate)),
+					types.MRP("path", indexPath),
+					types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return err
+				}
+			}
+		}
+
 		// Validate required fields
 		issues := []string{}
 		if doc.Title == "" {
@@ -141,6 +180,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		}
 
 		if len(issues) > 0 {
+			hasIssues = true
 			for _, issue := range issues {
 				row := types.NewRow(
 					types.MRP("ticket", doc.Ticket),
@@ -153,8 +193,10 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return err
 				}
 			}
-		} else {
-			// No issues found
+		}
+
+		// Only report "All checks passed" if there are truly no issues
+		if !hasIssues {
 			row := types.NewRow(
 				types.MRP("ticket", doc.Ticket),
 				types.MRP("issue", "none"),
@@ -169,6 +211,28 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	return nil
+}
+
+// findIndexFiles recursively searches for all index.md files in a directory tree
+func findIndexFiles(rootPath string) []string {
+	var indexFiles []string
+	
+	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip errors, continue walking
+		}
+		if !info.IsDir() && info.Name() == "index.md" {
+			indexFiles = append(indexFiles, path)
+		}
+		return nil
+	})
+	
+	if err != nil {
+		// Return what we found even if there was an error
+		return indexFiles
+	}
+	
+	return indexFiles
 }
 
 var _ cmds.GlazeCommand = &DoctorCommand{}

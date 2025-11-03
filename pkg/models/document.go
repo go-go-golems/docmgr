@@ -21,10 +21,9 @@ type Document struct {
 
 // Vocabulary defines the allowed values for various fields
 type Vocabulary struct {
-	Topics      []VocabItem `yaml:"topics" json:"topics"`
-	DocTypes    []VocabItem `yaml:"docTypes" json:"docTypes"`
-	SourceTypes []VocabItem `yaml:"sourceTypes" json:"sourceTypes"`
-	Lifecycle   []VocabItem `yaml:"lifecycle" json:"lifecycle"`
+	Topics   []VocabItem `yaml:"topics" json:"topics"`
+	DocTypes []VocabItem `yaml:"docTypes" json:"docTypes"`
+	Intent   []VocabItem `yaml:"intent" json:"intent"`
 }
 
 // VocabItem represents a vocabulary entry

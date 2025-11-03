@@ -128,12 +128,63 @@ and validate documentation workspaces with metadata and external source support.
 
 	importCmd.AddCommand(cobraImportFileCmd)
 
+	// Create vocab parent command
+	vocabCmd := &cobra.Command{
+		Use:   "vocab",
+		Short: "Manage vocabulary",
+		Long:  "Manage vocabulary entries in doc/vocabulary.yaml",
+	}
+
+	// Create vocab list command
+	vocabListCmd, err := commands.NewVocabListCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating vocab list command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraVocabListCmd, err := cli.BuildCobraCommand(vocabListCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building vocab list command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create vocab add command
+	vocabAddCmd, err := commands.NewVocabAddCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating vocab add command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraVocabAddCmd, err := cli.BuildCobraCommand(vocabAddCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building vocab add command: %v\n", err)
+		os.Exit(1)
+	}
+
+	vocabCmd.AddCommand(cobraVocabListCmd)
+	vocabCmd.AddCommand(cobraVocabAddCmd)
+
 	// Add all commands to root
 	rootCmd.AddCommand(cobraInitCmd)
 	rootCmd.AddCommand(cobraListCmd)
 	rootCmd.AddCommand(cobraAddCmd)
 	rootCmd.AddCommand(cobraDoctorCmd)
 	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(vocabCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

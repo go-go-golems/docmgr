@@ -28,6 +28,7 @@ type InitSettings struct {
 	Title  string   `glazed.parameter:"title"`
 	Topics []string `glazed.parameter:"topics"`
 	Root   string   `glazed.parameter:"root"`
+	Force  bool     `glazed.parameter:"force"`
 }
 
 func NewInitCommand() (*InitCommand, error) {
@@ -63,7 +64,13 @@ Example:
 					"root",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("docs"),
+					parameters.WithDefault("ttmp"),
+				),
+				parameters.NewParameterDefinition(
+					"force",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Force overwrite of existing files"),
+					parameters.WithDefault(false),
 				),
 			),
 		),
@@ -83,7 +90,7 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 	// Create slug from title
 	slug := strings.ToLower(strings.ReplaceAll(settings.Title, " ", "-"))
 	dirName := fmt.Sprintf("%s-%s", settings.Ticket, slug)
-	ticketPath := filepath.Join(settings.Root, "active", dirName)
+	ticketPath := filepath.Join(settings.Root, dirName)
 
 	// Create directory structure
 	dirs := []string{
@@ -94,6 +101,8 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		filepath.Join(ticketPath, "scripts"),
 		filepath.Join(ticketPath, "sources"),
 		filepath.Join(ticketPath, ".meta"),
+		filepath.Join(ticketPath, "various"),
+		filepath.Join(ticketPath, "archive"),
 	}
 
 	for _, dir := range dirs {
@@ -118,7 +127,8 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 	}
 
 	indexPath := filepath.Join(ticketPath, "index.md")
-	if err := writeDocumentWithFrontmatter(indexPath, &doc, fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)); err != nil {
+	indexContent := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
+	if err := writeDocumentWithFrontmatter(indexPath, &doc, indexContent, settings.Force); err != nil {
 		return fmt.Errorf("failed to write index.md: %w", err)
 	}
 
@@ -135,6 +145,8 @@ This is the document workspace for ticket %s.
 - **playbooks/**: Operational playbooks and procedures
 - **scripts/**: Utility scripts and automation
 - **sources/**: External sources and imported documents
+- **various/**: Scratch or meeting notes, working notes
+- **archive/**: Optional space for deprecated or reference-only artifacts
 
 ## Getting Started
 
@@ -145,8 +157,34 @@ Use docmgr commands to manage this workspace:
 - Update metadata: ` + "`docmgr meta update --field Status --value review`" + `
 `, settings.Title, settings.Ticket)
 
-	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
+	if err := writeFileIfNotExists(readmePath, []byte(readmeContent), settings.Force); err != nil {
 		return fmt.Errorf("failed to write README.md: %w", err)
+	}
+
+	// Create tasks.md
+	tasksPath := filepath.Join(ticketPath, "tasks.md")
+	tasksContent := fmt.Sprintf(`# Tasks
+
+## TODO
+
+- [ ] Add tasks here
+
+`, settings.Ticket)
+	if err := writeFileIfNotExists(tasksPath, []byte(tasksContent), settings.Force); err != nil {
+		return fmt.Errorf("failed to write tasks.md: %w", err)
+	}
+
+	// Create changelog.md
+	changelogPath := filepath.Join(ticketPath, "changelog.md")
+	changelogContent := fmt.Sprintf(`# Changelog
+
+## %s
+
+- Initial workspace created
+
+`, time.Now().Format("2006-01-02"))
+	if err := writeFileIfNotExists(changelogPath, []byte(changelogContent), settings.Force); err != nil {
+		return fmt.Errorf("failed to write changelog.md: %w", err)
 	}
 
 	// Output result
@@ -160,7 +198,31 @@ Use docmgr commands to manage this workspace:
 	return gp.AddRow(ctx, row)
 }
 
-func writeDocumentWithFrontmatter(path string, doc *models.Document, content string) error {
+// writeFileIfNotExists writes content to a file only if it doesn't exist,
+// unless force is true. Returns an error if file exists and force is false.
+func writeFileIfNotExists(path string, content []byte, force bool) error {
+	if !force {
+		if _, err := os.Stat(path); err == nil {
+			// File exists, skip writing
+			return nil
+		}
+	}
+	return os.WriteFile(path, content, 0644)
+}
+
+// writeDocumentWithFrontmatter writes a document with frontmatter to a file.
+// If the file exists and force is false, it preserves existing frontmatter
+// and content without overwriting.
+func writeDocumentWithFrontmatter(path string, doc *models.Document, content string, force bool) error {
+	// Check if file exists and we're not forcing
+	if !force {
+		if _, err := os.Stat(path); err == nil {
+			// File exists, preserve it
+			return nil
+		}
+	}
+
+	// Write the document
 	f, err := os.Create(path)
 	if err != nil {
 		return err

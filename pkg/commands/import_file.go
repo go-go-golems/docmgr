@@ -57,7 +57,7 @@ Example:
 					"root",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("docs"),
+					parameters.WithDefault("ttmp"),
 				),
 				parameters.NewParameterDefinition(
 					"name",
@@ -152,7 +152,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 			return fmt.Errorf("invalid frontmatter in index.md")
 		}
 
-		if err := writeDocumentWithFrontmatter(indexPath, doc, parts[1]); err != nil {
+		if err := writeDocumentWithFrontmatter(indexPath, doc, parts[1], true); err != nil {
 			return fmt.Errorf("failed to update index.md: %w", err)
 		}
 	}
@@ -169,8 +169,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 }
 
 func findTicketDirectory(root, ticket string) (string, error) {
-	activePath := filepath.Join(root, "active")
-	entries, err := os.ReadDir(activePath)
+	entries, err := os.ReadDir(root)
 	if err != nil {
 		return "", err
 	}
@@ -180,14 +179,14 @@ func findTicketDirectory(root, ticket string) (string, error) {
 			continue
 		}
 
-		indexPath := filepath.Join(activePath, entry.Name(), "index.md")
+		indexPath := filepath.Join(root, entry.Name(), "index.md")
 		doc, err := readDocumentFrontmatter(indexPath)
 		if err != nil {
 			continue
 		}
 
 		if doc.Ticket == ticket {
-			return filepath.Join(activePath, entry.Name()), nil
+			return filepath.Join(root, entry.Name()), nil
 		}
 	}
 

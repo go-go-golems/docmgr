@@ -105,6 +105,9 @@ A: Yes, when a matching template exists under `ttmp/_templates/`, `docmgr add` w
 Q: Any guidance for RelatedFiles?
 A: Prefer adding a short rationale note per file when possible. Use `docmgr relate --file-note "path:why it matters"` to capture the context.
 
+Q: How should we maintain changelogs?
+A: Capture decisions and progress in `changelog.md`. Use `docmgr changelog update` to append dated entries and optionally include related files with notes.
+
 Q: Can guidelines differ between teams?
 A: Yes. Start with shared defaults and layer team-specific files in `ttmp/_guidelines/`.
 

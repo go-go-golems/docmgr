@@ -167,5 +167,6 @@ Add a job to fail fast on documentation regressions. Make CI strict over time (f
 - Treat `doctor` warnings as actionable tech-debt where appropriate; track follow-ups
 - Revisit templates/guidelines quarterly to reflect lessons learned
 - Manage ticket checklists with `docmgr tasks` (list/add/check/uncheck/edit/remove)
+- Append decisions and progress to `changelog.md` with `docmgr changelog update`
 
 

@@ -278,7 +278,30 @@ docmgr tasks list --tasks-file ttmp/MEN-4242-.../tasks.md
 
 Tasks are detected by lines matching the Markdown checkbox pattern (`- [ ] text` / `- [x] text`). The commands only modify the exact task line, preserving the rest of the file.
 
-### 5.11 Status (Workspace Summary)
+### 5.11 Changelog (Update changelog.md)
+
+Append dated entries to a ticket's `changelog.md`, optionally including related files (with notes) or applying file suggestions.
+
+```bash
+# Minimal entry
+docmgr changelog update --ticket MEN-4242 --entry "Normalize chat API paths"
+
+# Include related files with notes
+docmgr changelog update --ticket MEN-4242 \
+  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
+  --file-note "backend/chat/api/register.go:Source of path normalization" \
+  --file-note "web/src/store/api/chatApi.ts=Frontend integration"
+
+# Use suggestions (print suggestions only)
+docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
+
+# Apply suggestions into the entry
+docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+```
+
+When suggestions are applied, their combined reasons become the note for each file (overridable via `--file-note`).
+
+### 5.12 Status (Workspace Summary)
 
 Get a quick overview of the docs root: counts, staleness, and per-ticket breakdown.
 

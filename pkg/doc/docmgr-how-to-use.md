@@ -33,6 +33,17 @@ docmgr init --ticket MEN-4242 \
 
 This creates `ttmp/MEN-4242-.../` with `index.md` and scaffolds `_templates/` and `_guidelines/` at the root (if missing).
 
+### What this index is for
+
+This file is the ticket’s single entry point. It:
+
+- Summarizes what the ticket does (one‑line Summary in frontmatter + this Overview)
+- Points to the most important docs and code via `RelatedFiles` (frontmatter) and sections below
+- Helps newcomers navigate quickly to design, reference, playbooks, and key source files
+- Serves as the anchor for docmgr checks (health/staleness/links); keep it short and up‑to‑date
+
+Keep this index concise. Put details in design/reference docs; use notes on `RelatedFiles` to explain why a file matters.
+
 ## 4. Add Documents
 
 ```bash
@@ -104,7 +115,34 @@ docmgr search --external-source "https://example.com/ws-lifecycle"
 docmgr search --updated-since "1 day ago" --ticket MEN-4242
 ```
 
-## 8. Validate with Doctor
+## 8. Record Changes in Changelog
+
+Append dated entries to `changelog.md` and include related files when useful:
+
+```bash
+# Minimal entry
+docmgr changelog update --ticket MEN-4242 --entry "Normalized chat API paths"
+
+# With related files and notes
+docmgr changelog update --ticket MEN-4242 \
+  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
+  --file-note "backend/chat/api/register.go:Source of path normalization" \
+  --file-note "web/src/store/api/chatApi.ts=Frontend integration"
+
+# Use suggestions (print only) or apply them
+docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
+docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+```
+
+### What `changelog.md` is for
+
+- Running log of notable changes, decisions, and learnings during the ticket
+- Timestamped entries to reconstruct context later (e.g., date‑grouped notes)
+- Lightweight status anchor for reviewers; keep lines short and clear
+- Link to PRs, commits, references as relevant; add related files with short notes
+- Update frequently as work progresses; prefer many small entries over one big dump
+
+## 9. Validate with Doctor
 
 ```bash
 docmgr doctor --root ttmp --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
@@ -116,7 +154,7 @@ Warnings to expect in real projects:
 - Missing files listed in `RelatedFiles`
 - Multiple `index.md` under a ticket (use `--ignore-glob` to suppress known duplicates)
 
-## 9. Manage Tasks
+## 10. Manage Tasks
 
 Use the `tasks` commands to track the concrete steps for your ticket directly in `tasks.md`.
 
@@ -138,7 +176,14 @@ docmgr tasks remove --ticket MEN-4242 --id 3 --root ttmp
 
 Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
 
-## 10. Check Workspace Status
+### What `tasks.md` is for
+
+- Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
+- Tracks day‑to‑day execution; keep it current as tasks start/finish
+- Break work into small, actionable items; optionally tag owners inline
+- Use the `docmgr tasks` commands to add/check/edit/remove without manual formatting
+
+## 11. Check Workspace Status
 
 Use `status` to see a concise overview of the docs under the root, including staleness based on `LastUpdated`:
 
@@ -148,9 +193,10 @@ docmgr status --summary-only
 docmgr status --stale-after 30
 ```
 
-## 11. Iterate and Maintain
+## 12. Iterate and Maintain
 
 - Keep `Owners`, `Summary`, and `RelatedFiles` current
+- Regularly update `index.md`, `changelog.md`, and `tasks.md` as work progresses
 - Use `guidelines` to keep structure consistent
 - Re-run `doctor` before merging changes
 

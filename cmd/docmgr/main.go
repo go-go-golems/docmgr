@@ -338,6 +338,33 @@ and validate documentation workspaces with metadata and external source support.
 
 	rootCmd.AddCommand(cobraStatusCmd)
 
+	// Create changelog parent command
+	changelogCmd := &cobra.Command{
+		Use:   "changelog",
+		Short: "Manage ticket changelogs",
+		Long:  "Append entries and manage changelog.md within a ticket workspace",
+	}
+
+	chgUpdate, err := commands.NewChangelogUpdateCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating changelog update command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraChgUpdate, err := cli.BuildCobraCommand(chgUpdate,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building changelog update command: %v\n", err)
+		os.Exit(1)
+	}
+	changelogCmd.AddCommand(cobraChgUpdate)
+	rootCmd.AddCommand(changelogCmd)
+
 	// Create tasks parent command
 	tasksCmd := &cobra.Command{
 		Use:   "tasks",

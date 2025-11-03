@@ -34,11 +34,12 @@ func NewAddCommand() (*AddCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"add",
 			cmds.WithShort("Add a new document to a workspace"),
-			cmds.WithLong(`Creates a new document in the appropriate subdirectory of a workspace.
+            cmds.WithLong(`Creates a new document in the appropriate subdirectory of a workspace.
 
 Example:
   docmgr add --ticket MEN-3475 --doc-type design-doc --title "Draft Architecture"
   docmgr add --ticket MEN-3475 --doc-type reference --title "API Contracts"
+  docmgr add --ticket MEN-3475 --doc-type til       --title "Today I Learned — Hydration"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -48,9 +49,9 @@ Example:
 					parameters.WithRequired(true),
 				),
 				parameters.NewParameterDefinition(
-					"doc-type",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Document type (design-doc, reference, playbook)"),
+                    "doc-type",
+                    parameters.ParameterTypeString,
+                    parameters.WithHelp("Document type (per vocabulary; unknown types go to 'various/')"),
 					parameters.WithRequired(true),
 				),
 				parameters.NewParameterDefinition(
@@ -89,18 +90,19 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
 
-	// Determine subdirectory based on doc type
-	var subdir string
-	switch settings.DocType {
-	case "design-doc":
-		subdir = "design"
-	case "reference":
-		subdir = "reference"
-	case "playbook":
-		subdir = "playbooks"
-	default:
-		return fmt.Errorf("unknown document type: %s (use: design-doc, reference, playbook)", settings.DocType)
-	}
+    // Determine subdirectory based on doc type
+    var subdir string
+    switch settings.DocType {
+    case "design-doc":
+        subdir = "design"
+    case "reference":
+        subdir = "reference"
+    case "playbook":
+        subdir = "playbooks"
+    default:
+        // Accept any vocabulary doc type; place unknown/other types under 'various/'
+        subdir = "various"
+    }
 
 	// Create filename from title
 	slug := strings.ToLower(strings.ReplaceAll(settings.Title, " ", "-"))

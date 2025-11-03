@@ -64,6 +64,15 @@ docmgr vocab add --category intent   --slug long-term
 
 This writes the vocabulary file to `ttmp/vocabulary.yaml` by default (or to the path configured via `.ttmp.yaml:vocabulary`). Teams can evolve entries over time; `doctor` validates against this file.
 
+To introduce a new document type:
+
+```bash
+docmgr vocab add --category docTypes --slug til --description "Today I Learned"
+docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — <topic>" --root ttmp
+```
+
+If there is a template at `ttmp/_templates/til.md`, it will be used; otherwise the file is created under `various/` with frontmatter `DocType: til` so it still participates in filters and validation.
+
 Guidance:
 - Topics should reflect your architecture or domains (for example, `backend`, `frontend`, `websocket`, `observability`)
 - `DocType` is how readers will approach the doc (for example, `design-doc`, `reference`, `playbook`)

@@ -130,7 +130,13 @@ Creates the ticket directory, `index.md`, and `tasks.md`/`changelog.md`, and sca
 Create additional documents as needed. Use short, descriptive titles; you can refine content later.
 ```bash
 docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy" --root ttmp
+docmgr add --ticket MEN-4242 --doc-type til        --title "TIL — Hydration end-to-end"   --root ttmp
 ```
+
+Notes:
+- `doc-type` values come from your workspace vocabulary (`ttmp/vocabulary.yaml`).
+- If a doc type has a template at `ttmp/_templates/<docType>.md`, its body is rendered automatically.
+- Unknown/other doc types are accepted and placed under `various/` by default (frontmatter `DocType` is still set for filtering).
 
 ### 5.4 Guidelines
 

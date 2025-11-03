@@ -217,6 +217,11 @@ Ignore configuration:
   - `.git/`, `node_modules/`, `dist/`
   - `ttmp/*/design/index.md`
 
+Path resolution for RelatedFiles:
+- Absolute paths are checked as-is
+- If inside a git repo, paths are resolved relative to the repo root
+- Otherwise, paths are resolved relative to the `.ttmp.yaml` directory, then its parent directory (to support multi-repo workspaces), and finally the current working directory
+
 ### 5.9 Relate Code and Documents
 
 Use `relate` to add or remove entries in `RelatedFiles` and to discover files to link. Each related file can carry a short note explaining why it matters.

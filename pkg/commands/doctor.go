@@ -322,16 +322,46 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
             }
         }
 
-        // Validate RelatedFiles existence (relative to repo root)
+        // Validate RelatedFiles existence with robust resolution
         for _, rf := range doc.RelatedFiles {
             if rf.Path == "" {
                 continue
             }
-            full := rf.Path
-            if !filepath.IsAbs(full) {
-                full = filepath.Join(repoRoot, rf.Path)
+            // Build resolution candidates
+            candidates := []string{}
+            if filepath.IsAbs(rf.Path) {
+                candidates = append(candidates, rf.Path)
+            } else {
+                // 1) Repo root (if any)
+                if repoRoot != "" {
+                    candidates = append(candidates, filepath.Join(repoRoot, rf.Path))
+                }
+                // 2) .ttmp.yaml directory (config base)
+                if cfgPath, errCfg := FindTTMPConfigPath(); errCfg == nil {
+                    cfgBase := filepath.Dir(cfgPath)
+                    candidates = append(candidates, filepath.Join(cfgBase, rf.Path))
+                    // 3) Parent of config base (supports multi-repo workspace siblings)
+                    parentBase := filepath.Dir(cfgBase)
+                    if parentBase != cfgBase { // guard root
+                        candidates = append(candidates, filepath.Join(parentBase, rf.Path))
+                    }
+                }
+                // 4) Current working directory as last resort
+                if cwd, errCwd := os.Getwd(); errCwd == nil {
+                    candidates = append(candidates, filepath.Join(cwd, rf.Path))
+                }
             }
-            if _, err := os.Stat(full); err != nil {
+
+            found := false
+            for _, p := range candidates {
+                if p == "" { continue }
+                if _, err := os.Stat(p); err == nil {
+                    found = true
+                    break
+                }
+            }
+
+            if !found {
                 hasIssues = true
                 row := types.NewRow(
                     types.MRP("ticket", doc.Ticket),

@@ -116,7 +116,29 @@ Warnings to expect in real projects:
 - Missing files listed in `RelatedFiles`
 - Multiple `index.md` under a ticket (use `--ignore-glob` to suppress known duplicates)
 
-## 9. Check Workspace Status
+## 9. Manage Tasks
+
+Use the `tasks` commands to track the concrete steps for your ticket directly in `tasks.md`.
+
+```bash
+# List tasks with indexes
+docmgr tasks list --ticket MEN-4242 --root ttmp
+
+# Add a new task
+docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2" --root ttmp
+
+# Check / uncheck by id
+docmgr tasks check   --ticket MEN-4242 --id 1 --root ttmp
+docmgr tasks uncheck --ticket MEN-4242 --id 1 --root ttmp
+
+# Edit and remove
+docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend" --root ttmp
+docmgr tasks remove --ticket MEN-4242 --id 3 --root ttmp
+```
+
+Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
+
+## 10. Check Workspace Status
 
 Use `status` to see a concise overview of the docs under the root, including staleness based on `LastUpdated`:
 
@@ -126,7 +148,7 @@ docmgr status --summary-only
 docmgr status --stale-after 30
 ```
 
-## 10. Iterate and Maintain
+## 11. Iterate and Maintain
 
 - Keep `Owners`, `Summary`, and `RelatedFiles` current
 - Use `guidelines` to keep structure consistent

@@ -251,7 +251,34 @@ Suggestion output includes both a `source` and a human-readable `reason` column,
 
 When `--apply-suggestions` is used, the combined suggestion reasons are stored as the file's note (unless overridden with `--file-note`).
 
-### 5.10 Status (Workspace Summary)
+### 5.10 Tasks (Manage tasks.md)
+
+Manage checkbox tasks in a ticket's `tasks.md`. You can reference the ticket or pass a direct path to the file.
+
+```bash
+# List tasks with indexes
+docmgr tasks list --ticket MEN-4242 --root ttmp
+
+# Add a new task (append by default; use --after N to insert)
+docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2" --root ttmp
+
+# Check / uncheck by id
+docmgr tasks check   --ticket MEN-4242 --id 2 --root ttmp
+docmgr tasks uncheck --ticket MEN-4242 --id 2 --root ttmp
+
+# Edit task text
+docmgr tasks edit --ticket MEN-4242 --id 3 --text "Align frontend routes with backend" --root ttmp
+
+# Remove a task
+docmgr tasks remove --ticket MEN-4242 --id 4 --root ttmp
+
+# Operate directly on a file
+docmgr tasks list --tasks-file ttmp/MEN-4242-.../tasks.md
+```
+
+Tasks are detected by lines matching the Markdown checkbox pattern (`- [ ] text` / `- [x] text`). The commands only modify the exact task line, preserving the rest of the file.
+
+### 5.11 Status (Workspace Summary)
 
 Get a quick overview of the docs root: counts, staleness, and per-ticket breakdown.
 

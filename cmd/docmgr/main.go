@@ -338,6 +338,136 @@ and validate documentation workspaces with metadata and external source support.
 
 	rootCmd.AddCommand(cobraStatusCmd)
 
+	// Create tasks parent command
+	tasksCmd := &cobra.Command{
+		Use:   "tasks",
+		Short: "Manage tasks in tasks.md",
+		Long:  "Manage checkbox tasks in a ticket's tasks.md file",
+	}
+
+	// tasks list
+	_tasksList, err := commands.NewTasksListCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating tasks list command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraTasksList, err := cli.BuildCobraCommand(_tasksList,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building tasks list command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// tasks add
+	_tasksAdd, err := commands.NewTasksAddCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating tasks add command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraTasksAdd, err := cli.BuildCobraCommand(_tasksAdd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building tasks add command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// tasks check
+	_tasksCheck, err := commands.NewTasksCheckCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating tasks check command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraTasksCheck, err := cli.BuildCobraCommand(_tasksCheck,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building tasks check command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// tasks uncheck
+	_tasksUncheck, err := commands.NewTasksUncheckCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating tasks uncheck command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraTasksUncheck, err := cli.BuildCobraCommand(_tasksUncheck,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building tasks uncheck command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// tasks edit
+	_tasksEdit, err := commands.NewTasksEditCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating tasks edit command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraTasksEdit, err := cli.BuildCobraCommand(_tasksEdit,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building tasks edit command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// tasks remove
+	_tasksRemove, err := commands.NewTasksRemoveCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating tasks remove command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraTasksRemove, err := cli.BuildCobraCommand(_tasksRemove,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building tasks remove command: %v\n", err)
+		os.Exit(1)
+	}
+
+	tasksCmd.AddCommand(cobraTasksList)
+	tasksCmd.AddCommand(cobraTasksAdd)
+	tasksCmd.AddCommand(cobraTasksCheck)
+	tasksCmd.AddCommand(cobraTasksUncheck)
+	tasksCmd.AddCommand(cobraTasksEdit)
+	tasksCmd.AddCommand(cobraTasksRemove)
+
+	rootCmd.AddCommand(tasksCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

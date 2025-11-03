@@ -23,7 +23,7 @@ This guide shows how to bootstrap and maintain the documentation system for a re
 
 - Docs live under `ttmp/` at the repository root. This keeps work-in-progress close to code and easy to review.
 - Ticket workspaces are directories named `<TICKET>-<slug>/` under `ttmp/`. The slug is derived from the ticket title (lowercase, dashes for spaces).
-- Vocabulary file lives at `doc/vocabulary.yaml`. It defines the allowed `Topics`, `DocType`, and `Intent` values.
+- Vocabulary file lives at `ttmp/vocabulary.yaml` by default (configurable via `.ttmp.yaml` → `vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent` values.
 - Scaffolding directories at root: `ttmp/_templates/`, `ttmp/_guidelines/`. Teams customize these to encode house style.
 
 ### 2.1 Repository Configuration (.ttmp.yaml)
@@ -62,7 +62,7 @@ docmgr vocab add --category docTypes --slug playbook
 docmgr vocab add --category intent   --slug long-term
 ```
 
-This writes `doc/vocabulary.yaml`. Teams can evolve entries over time; `doctor` validates against this file.
+This writes the vocabulary file to `ttmp/vocabulary.yaml` by default (or to the path configured via `.ttmp.yaml:vocabulary`). Teams can evolve entries over time; `doctor` validates against this file.
 
 Guidance:
 - Topics should reflect your architecture or domains (for example, `backend`, `frontend`, `websocket`, `observability`)

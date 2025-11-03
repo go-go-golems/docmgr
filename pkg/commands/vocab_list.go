@@ -27,7 +27,10 @@ func NewVocabListCommand() (*VocabListCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"list",
 			cmds.WithShort("List vocabulary entries"),
-			cmds.WithLong(`Lists vocabulary entries from doc/vocabulary.yaml.
+            cmds.WithLong(`Lists vocabulary entries from the workspace vocabulary file.
+
+The vocabulary path is resolved from .ttmp.yaml if configured via 'vocabulary'.
+By default, it is '<root>/vocabulary.yaml' (root defaults to 'ttmp').
 
 Example:
   docmgr vocab list

@@ -32,7 +32,10 @@ func NewVocabAddCommand() (*VocabAddCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"add",
 			cmds.WithShort("Add a vocabulary entry"),
-			cmds.WithLong(`Adds a new entry to the vocabulary in doc/vocabulary.yaml.
+            cmds.WithLong(`Adds a new entry to the workspace vocabulary file.
+
+The vocabulary path is resolved from .ttmp.yaml if configured via 'vocabulary'.
+By default, it is '<root>/vocabulary.yaml' (root defaults to 'ttmp').
 
 Example:
   docmgr vocab add --category topics --slug observability --description "Logging and metrics"
@@ -112,8 +115,8 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 	// Add new item
 	*categoryItems = append(*categoryItems, newItem)
 
-	// Save vocabulary
-	if err := SaveVocabulary(vocab, repoRoot); err != nil {
+    // Save vocabulary (path resolved via config or defaults)
+    if err := SaveVocabulary(vocab, repoRoot); err != nil {
 		return fmt.Errorf("failed to save vocabulary: %w", err)
 	}
 

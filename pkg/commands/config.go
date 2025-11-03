@@ -17,6 +17,7 @@ type TTMPConfig struct {
     } `yaml:"defaults"`
     FilenamePrefixPolicy string            `yaml:"filenamePrefixPolicy"`
     DocTypeToggles       map[string]bool   `yaml:"docTypeToggles"`
+    Vocabulary           string            `yaml:"vocabulary"`
 }
 
 // FindTTMPConfigPath walks up from cwd to find .ttmp.yaml
@@ -57,6 +58,9 @@ func LoadTTMPConfig() (*TTMPConfig, error) {
     if cfg.Root != "" && !filepath.IsAbs(cfg.Root) {
         cfg.Root = filepath.Join(filepath.Dir(path), cfg.Root)
     }
+    if cfg.Vocabulary != "" && !filepath.IsAbs(cfg.Vocabulary) {
+        cfg.Vocabulary = filepath.Join(filepath.Dir(path), cfg.Vocabulary)
+    }
     return &cfg, nil
 }
 
@@ -87,6 +91,75 @@ func ResolveRoot(root string) string {
         return cfg.Root
     }
     return filepath.Join(filepath.Dir(cfgPath), cfg.Root)
+}
+
+// ResolveVocabularyPath returns the absolute path to the vocabulary file.
+// Priority:
+// 1) If .ttmp.yaml defines 'vocabulary', use it (relative to the config file if not absolute)
+// 2) Else, use '<root>/vocabulary.yaml' where root comes from .ttmp.yaml (default 'ttmp' relative to config)
+// 3) Else, search upwards for 'ttmp/vocabulary.yaml'
+// 4) Finally, as a legacy fallback, search for 'doc/vocabulary.yaml'
+func ResolveVocabularyPath() (string, error) {
+    // Use config if present
+    cfgPath, err := FindTTMPConfigPath()
+    if err == nil {
+        data, err := os.ReadFile(cfgPath)
+        if err == nil {
+            var cfg TTMPConfig
+            if yaml.Unmarshal(data, &cfg) == nil {
+                // If vocabulary explicitly set
+                if cfg.Vocabulary != "" {
+                    if filepath.IsAbs(cfg.Vocabulary) {
+                        return cfg.Vocabulary, nil
+                    }
+                    return filepath.Join(filepath.Dir(cfgPath), cfg.Vocabulary), nil
+                }
+                // Build from root default
+                rootPath := cfg.Root
+                if rootPath == "" {
+                    rootPath = "ttmp"
+                }
+                if !filepath.IsAbs(rootPath) {
+                    rootPath = filepath.Join(filepath.Dir(cfgPath), rootPath)
+                }
+                return filepath.Join(rootPath, "vocabulary.yaml"), nil
+            }
+        }
+    }
+
+    // Search upwards for ttmp/vocabulary.yaml
+    dir, err := os.Getwd()
+    if err == nil {
+        for {
+            p := filepath.Join(dir, "ttmp", "vocabulary.yaml")
+            if _, err2 := os.Stat(p); err2 == nil {
+                return p, nil
+            }
+            parent := filepath.Dir(dir)
+            if parent == dir {
+                break
+            }
+            dir = parent
+        }
+    }
+
+    // Legacy fallback: search for doc/vocabulary.yaml
+    dir, err = os.Getwd()
+    if err == nil {
+        for {
+            p := filepath.Join(dir, "doc", "vocabulary.yaml")
+            if _, err2 := os.Stat(p); err2 == nil {
+                return p, nil
+            }
+            parent := filepath.Dir(dir)
+            if parent == dir {
+                break
+            }
+            dir = parent
+        }
+    }
+
+    return "", fmt.Errorf("vocabulary.yaml not found")
 }
 
 

@@ -1,44 +1,33 @@
 package commands
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+    "fmt"
+    "os"
+    "path/filepath"
 
-	"github.com/docmgr/docmgr/pkg/models"
-	"gopkg.in/yaml.v3"
+    "github.com/docmgr/docmgr/pkg/models"
+    "gopkg.in/yaml.v3"
 )
 
-// LoadVocabulary loads vocabulary from doc/vocabulary.yaml
-// Searches for the file starting from current directory and walking up to repo root
+// LoadVocabulary loads vocabulary from the configured path or defaults.
+// Resolution order:
+// - .ttmp.yaml 'vocabulary' path (relative to config dir if not absolute)
+// - <root>/vocabulary.yaml, where root is from .ttmp.yaml (default 'ttmp')
+// - fallback search for 'ttmp/vocabulary.yaml' upwards
+// - legacy fallback 'doc/vocabulary.yaml' upwards
 func LoadVocabulary() (*models.Vocabulary, error) {
-	// Start from current directory and walk up to find doc/vocabulary.yaml
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current directory: %w", err)
-	}
+    if path, err := ResolveVocabularyPath(); err == nil {
+        if _, err2 := os.Stat(path); err2 == nil {
+            return loadVocabularyFromFile(path)
+        }
+    }
 
-	for {
-		vocabPath := filepath.Join(dir, "doc", "vocabulary.yaml")
-		if _, err := os.Stat(vocabPath); err == nil {
-			return loadVocabularyFromFile(vocabPath)
-		}
-
-		// Check if we've reached repo root (has .git or go.mod)
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached filesystem root
-			break
-		}
-		dir = parent
-	}
-
-	// Not found, return empty vocabulary
-	return &models.Vocabulary{
-		Topics:   []models.VocabItem{},
-		DocTypes: []models.VocabItem{},
-		Intent:   []models.VocabItem{},
-	}, nil
+    // Not found, return empty vocabulary
+    return &models.Vocabulary{
+        Topics:   []models.VocabItem{},
+        DocTypes: []models.VocabItem{},
+        Intent:   []models.VocabItem{},
+    }, nil
 }
 
 // LoadVocabularyFromPath loads vocabulary from a specific file path
@@ -56,20 +45,23 @@ func loadVocabularyFromFile(path string) (*models.Vocabulary, error) {
 	return &vocab, nil
 }
 
-// SaveVocabulary saves vocabulary to doc/vocabulary.yaml
-// Creates doc/ directory if it doesn't exist
-func SaveVocabulary(vocab *models.Vocabulary, rootDir string) error {
-	docDir := filepath.Join(rootDir, "doc")
-	if err := os.MkdirAll(docDir, 0755); err != nil {
-		return fmt.Errorf("failed to create doc directory: %w", err)
-	}
+// SaveVocabulary saves vocabulary to the resolved vocabulary path, creating directories as needed.
+// If no configuration is found, it defaults to '<repoRoot>/ttmp/vocabulary.yaml'.
+func SaveVocabulary(vocab *models.Vocabulary, repoRoot string) error {
+    // Resolve configured path or default to <repoRoot>/ttmp/vocabulary.yaml
+    vocabPath, err := ResolveVocabularyPath()
+    if err != nil || vocabPath == "" {
+        vocabPath = filepath.Join(repoRoot, "ttmp", "vocabulary.yaml")
+    }
+    dir := filepath.Dir(vocabPath)
+    if err := os.MkdirAll(dir, 0755); err != nil {
+        return fmt.Errorf("failed to create vocabulary directory: %w", err)
+    }
 
-	vocabPath := filepath.Join(docDir, "vocabulary.yaml")
 	data, err := yaml.Marshal(vocab)
 	if err != nil {
 		return fmt.Errorf("failed to marshal vocabulary: %w", err)
 	}
-
 	if err := os.WriteFile(vocabPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write vocabulary file: %w", err)
 	}
@@ -77,26 +69,4 @@ func SaveVocabulary(vocab *models.Vocabulary, rootDir string) error {
 	return nil
 }
 
-// FindVocabularyPath finds the path to doc/vocabulary.yaml starting from current directory
-func FindVocabularyPath() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get current directory: %w", err)
-	}
-
-	for {
-		vocabPath := filepath.Join(dir, "doc", "vocabulary.yaml")
-		if _, err := os.Stat(vocabPath); err == nil {
-			return vocabPath, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-
-	return "", fmt.Errorf("vocabulary.yaml not found (searched for doc/vocabulary.yaml)")
-}
 

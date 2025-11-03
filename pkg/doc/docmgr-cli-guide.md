@@ -131,6 +131,19 @@ Create additional documents as needed. Use short, descriptive titles; you can re
 ```bash
 docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy" --root ttmp
 docmgr add --ticket MEN-4242 --doc-type til        --title "TIL — Hydration end-to-end"   --root ttmp
+
+# Optional overrides (taken from ticket by default)
+docmgr add --ticket MEN-4242 \
+  --doc-type til \
+  --title "TIL conv-id vs run-id hydration curl debugging 2025-11-03" \
+  --topics hydration,persistence,conversation,bug \
+  --owners manuel,alex \
+  --status active \
+  --intent short-term \
+  --external-sources https://example.com/a,https://example.com/b \
+  --summary "debugging notes" \
+  --related-files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
+  --root ttmp
 ```
 
 Notes:
@@ -219,157 +232,4 @@ Doctor checks:
 `--fail-on` controls exit behavior for CI or pre-commit checks.
 
 Ignore configuration:
-- The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`). Each non-empty line is a glob or name to ignore (comments start with `#`). Examples:
-  - `.git/`, `node_modules/`, `dist/`
-  - `ttmp/*/design/index.md`
-
-Path resolution for RelatedFiles:
-- Absolute paths are checked as-is
-- If inside a git repo, paths are resolved relative to the repo root
-- Otherwise, paths are resolved relative to the `.ttmp.yaml` directory, then its parent directory (to support multi-repo workspaces), and finally the current working directory
-
-### 5.9 Relate Code and Documents
-
-Use `relate` to add or remove entries in `RelatedFiles` and to discover files to link. Each related file can carry a short note explaining why it matters.
-
-```bash
-# Add files to the ticket index
-docmgr relate --ticket MEN-4242 --files \
-  backend/chat/api/register.go,web/src/store/api/chatApi.ts
-
-# Add to a specific document
-docmgr relate --doc ttmp/MEN-4242-.../design/path-normalization-strategy.md \
-  --files backend/chat/ws/manager.go
-
-# See suggestions (no changes applied)
-docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat
-
-# Apply suggestions automatically to the ticket index
-docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
-
-# Add notes for specific files (repeatable; format path:note or path=note)
-docmgr relate --ticket MEN-4242 \
-  --file-note "backend/chat/api/register.go:Registers chat routes (path normalization source)" \
-  --file-note "web/src/store/api/chatApi.ts=Frontend API integration; must align with backend paths"
-```
-
-Suggestion output includes both a `source` and a human-readable `reason` column, such as:
-
-- related_files → "referenced by documents"
-- git_history → "recent commit activity"
-- git_modified/staged/untracked → "working tree modified" / "staged for commit" / "untracked new file"
-- ripgrep → "content match: <term>"
-
-When `--apply-suggestions` is used, the combined suggestion reasons are stored as the file's note (unless overridden with `--file-note`).
-
-### 5.10 Tasks (Manage tasks.md)
-
-Manage checkbox tasks in a ticket's `tasks.md`. You can reference the ticket or pass a direct path to the file.
-
-```bash
-# List tasks with indexes
-docmgr tasks list --ticket MEN-4242 --root ttmp
-
-# Add a new task (append by default; use --after N to insert)
-docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2" --root ttmp
-
-# Check / uncheck by id
-docmgr tasks check   --ticket MEN-4242 --id 2 --root ttmp
-docmgr tasks uncheck --ticket MEN-4242 --id 2 --root ttmp
-
-# Edit task text
-docmgr tasks edit --ticket MEN-4242 --id 3 --text "Align frontend routes with backend" --root ttmp
-
-# Remove a task
-docmgr tasks remove --ticket MEN-4242 --id 4 --root ttmp
-
-# Operate directly on a file
-docmgr tasks list --tasks-file ttmp/MEN-4242-.../tasks.md
-```
-
-Tasks are detected by lines matching the Markdown checkbox pattern (`- [ ] text` / `- [x] text`). The commands only modify the exact task line, preserving the rest of the file.
-
-### 5.11 Changelog (Update changelog.md)
-
-Append dated entries to a ticket's `changelog.md`, optionally including related files (with notes) or applying file suggestions.
-
-```bash
-# Minimal entry
-docmgr changelog update --ticket MEN-4242 --entry "Normalize chat API paths"
-
-# Include related files with notes
-docmgr changelog update --ticket MEN-4242 \
-  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
-  --file-note "backend/chat/api/register.go:Source of path normalization" \
-  --file-note "web/src/store/api/chatApi.ts=Frontend integration"
-
-# Use suggestions (print suggestions only)
-docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
-
-# Apply suggestions into the entry
-docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
-```
-
-When suggestions are applied, their combined reasons become the note for each file (overridable via `--file-note`).
-
-### 5.12 Status (Workspace Summary)
-
-Get a quick overview of the docs root: counts, staleness, and per-ticket breakdown.
-
-```bash
-# Full status with per-ticket rows and a summary row
-docmgr status
-
-# Only print the summary row
-docmgr status --summary-only
-
-# Adjust staleness threshold
-docmgr status --stale-after 30
-
-# Focus on one ticket
-docmgr status --ticket MEN-4242
-```
-
-Status honors `.ttmp.yaml` configuration (root discovery) and uses `LastUpdated` to determine staleness.
-
-## 5. End-to-End Workflow Example
-
-1) Initialize a ticket workspace and add documents to capture intent early.
-2) Document decisions and APIs; link to relevant code paths via `RelatedFiles`.
-3) Use `search` to reconnect context as code changes (by query, topic, or file path).
-4) Validate with `doctor` before merging; fix warnings or exclude known noise with ignore flags.
-
-See `vibes/ttmp/2025-11-03/testing-doc-manager/` for runnable scripts that exercise all features end to end (including advanced `doctor` scenarios).
-
-## 6. Troubleshooting
-
-When the CLI returns errors, it’s usually a hint about parameter style or metadata contracts:
-
-- "Too many arguments" on `init` or `search`: Both prefer explicit flags. Use `--ticket` for `init` and `--query` for content search.
-- Doctor reports issues in `_templates` or `_guidelines`: These are scaffolding folders. Exclude them with `--ignore-dir _templates --ignore-dir _guidelines`.
-- Unknown `Topics` / `DocType` / `Intent`: Either add the value with `vocab add` or correct the spelling to match the vocabulary.
-- Missing `RelatedFiles`: Update the frontmatter to point to real paths (relative to the repo root) or prune stale paths.
-
-## 7. CI Integration
-
-Treat `doctor` as a quality gate for documentation health. This keeps docs aligned with code and prevents regressions:
-
-```yaml
-- name: Validate docs
-  run: |
-    docmgr doctor --root ttmp \
-      --ignore-dir _templates --ignore-dir _guidelines \
-      --stale-after 30 --fail-on error
-```
-
-## 8. Appendix: Tips
-
-**Design-first**: Start with a brief executive summary and key decisions before details.
-
-**Cite sources**: Use `ExternalSources` to link standards, RFCs, or tracking issues so reviewers can follow rationale.
-
-**Keep ownership visible**: Maintain `Owners` and a concise `Summary` to speed up triage and handoffs.
-
-For more, run: `docmgr help how-to-use`, `docmgr help how-to-setup`, and `docmgr help templates-and-guidelines`.
-
-
+- The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`

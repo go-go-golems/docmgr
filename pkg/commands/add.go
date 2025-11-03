@@ -27,6 +27,13 @@ type AddSettings struct {
 	DocType string `glazed.parameter:"doc-type"`
 	Title   string `glazed.parameter:"title"`
 	Root    string `glazed.parameter:"root"`
+    Topics  []string `glazed.parameter:"topics"`
+    Owners  []string `glazed.parameter:"owners"`
+    Status  string   `glazed.parameter:"status"`
+    Intent  string   `glazed.parameter:"intent"`
+    ExternalSources []string `glazed.parameter:"external-sources"`
+    Summary string   `glazed.parameter:"summary"`
+    RelatedFiles []string `glazed.parameter:"related-files"`
 }
 
 func NewAddCommand() (*AddCommand, error) {
@@ -34,7 +41,7 @@ func NewAddCommand() (*AddCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"add",
 			cmds.WithShort("Add a new document to a workspace"),
-            cmds.WithLong(`Creates a new document in the appropriate subdirectory of a workspace.
+			cmds.WithLong(`Creates a new document in the appropriate subdirectory of a workspace.
 
 Example:
   docmgr add --ticket MEN-3475 --doc-type design-doc --title "Draft Architecture"
@@ -49,8 +56,8 @@ Example:
 					parameters.WithRequired(true),
 				),
 				parameters.NewParameterDefinition(
-                    "doc-type",
-                    parameters.ParameterTypeString,
+					"doc-type",
+					parameters.ParameterTypeString,
                     parameters.WithHelp("Document type (per vocabulary; unknown types go to 'various/')"),
 					parameters.WithRequired(true),
 				),
@@ -66,6 +73,48 @@ Example:
 					parameters.WithHelp("Root directory for docs"),
 					parameters.WithDefault("ttmp"),
 				),
+                parameters.NewParameterDefinition(
+                    "topics",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Comma-separated list of topics (overrides ticket defaults)"),
+                    parameters.WithDefault([]string{}),
+                ),
+                parameters.NewParameterDefinition(
+                    "owners",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Comma-separated list of owners (overrides ticket defaults)"),
+                    parameters.WithDefault([]string{}),
+                ),
+                parameters.NewParameterDefinition(
+                    "status",
+                    parameters.ParameterTypeString,
+                    parameters.WithHelp("Status (overrides ticket default)"),
+                    parameters.WithDefault(""),
+                ),
+                parameters.NewParameterDefinition(
+                    "intent",
+                    parameters.ParameterTypeString,
+                    parameters.WithHelp("Intent (overrides ticket default)"),
+                    parameters.WithDefault(""),
+                ),
+                parameters.NewParameterDefinition(
+                    "external-sources",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Comma-separated list of external sources (URLs)"),
+                    parameters.WithDefault([]string{}),
+                ),
+                parameters.NewParameterDefinition(
+                    "summary",
+                    parameters.ParameterTypeString,
+                    parameters.WithHelp("Short summary for the document"),
+                    parameters.WithDefault(""),
+                ),
+                parameters.NewParameterDefinition(
+                    "related-files",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Comma-separated list of related files to seed frontmatter"),
+                    parameters.WithDefault([]string{}),
+                ),
 			),
 		),
 	}, nil
@@ -84,37 +133,43 @@ func (c *AddCommand) RunIntoGlazeProcessor(
     // Apply config root if present
     settings.Root = ResolveRoot(settings.Root)
 
-    // Find the ticket directory
+	// Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
 
-    // Determine subdirectory based on doc type
-    var subdir string
-    switch settings.DocType {
-    case "design-doc":
-        subdir = "design"
-    case "reference":
-        subdir = "reference"
-    case "playbook":
-        subdir = "playbooks"
-    default:
+	// Determine subdirectory based on doc type
+	var subdir string
+	switch settings.DocType {
+	case "design-doc":
+		subdir = "design"
+	case "reference":
+		subdir = "reference"
+	case "playbook":
+		subdir = "playbooks"
+	default:
         // Accept any vocabulary doc type; place unknown/other types under 'various/'
         subdir = "various"
+	}
+
+    // Ensure target subdirectory exists
+    targetDir := filepath.Join(ticketDir, subdir)
+    if err := os.MkdirAll(targetDir, 0755); err != nil {
+        return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
     }
 
-	// Create filename from title
-	slug := strings.ToLower(strings.ReplaceAll(settings.Title, " ", "-"))
-	filename := fmt.Sprintf("%s.md", slug)
-	docPath := filepath.Join(ticketDir, subdir, filename)
+    // Create filename from title with slugification that removes special characters
+    slug := slugifyFilename(settings.Title)
+    filename := fmt.Sprintf("%s.md", slug)
+    docPath := filepath.Join(targetDir, filename)
 
 	// Check if file already exists
 	if _, err := os.Stat(docPath); err == nil {
 		return fmt.Errorf("document already exists: %s", docPath)
 	}
 
-	// Read ticket metadata
+    // Read ticket metadata
 	indexPath := filepath.Join(ticketDir, "index.md")
 	ticketDoc, err := readDocumentFrontmatter(indexPath)
 	if err != nil {
@@ -122,17 +177,61 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 	}
 
     // Create document with frontmatter
+    // Defaults from ticket, then override with flags if provided
+    topics := ticketDoc.Topics
+    if len(settings.Topics) > 0 {
+        var ts []string
+        for _, t := range settings.Topics {
+            t = strings.TrimSpace(t)
+            if t != "" { ts = append(ts, t) }
+        }
+        topics = ts
+    }
+
+    owners := ticketDoc.Owners
+    if len(settings.Owners) > 0 {
+        var os_ []string
+        for _, o := range settings.Owners {
+            o = strings.TrimSpace(o)
+            if o != "" { os_ = append(os_, o) }
+        }
+        owners = os_
+    }
+
+    status := ticketDoc.Status
+    if settings.Status != "" { status = settings.Status }
+
+    intent := ticketDoc.Intent
+    if intent == "" { intent = "long-term" }
+    if settings.Intent != "" { intent = settings.Intent }
+
+    external := []string{}
+    if len(settings.ExternalSources) > 0 {
+        for _, s := range settings.ExternalSources {
+            s = strings.TrimSpace(s)
+            if s != "" { external = append(external, s) }
+        }
+    }
+
+    var rfs models.RelatedFiles
+    if len(settings.RelatedFiles) > 0 {
+        for _, f := range settings.RelatedFiles {
+            f = strings.TrimSpace(f)
+            if f != "" { rfs = append(rfs, models.RelatedFile{Path: f}) }
+        }
+    }
+
 	doc := models.Document{
 		Title:           settings.Title,
 		Ticket:          settings.Ticket,
-		Status:          ticketDoc.Status,
-		Topics:          ticketDoc.Topics,
+        Status:          status,
+        Topics:          topics,
 		DocType:         settings.DocType,
-		Intent:          "long-term",
-		Owners:          ticketDoc.Owners,
-        RelatedFiles:    models.RelatedFiles{},
-		ExternalSources: []string{},
-		Summary:         "",
+        Intent:          intent,
+        Owners:          owners,
+        RelatedFiles:    rfs,
+        ExternalSources: external,
+        Summary:         settings.Summary,
 		LastUpdated:     time.Now(),
 	}
 
@@ -148,8 +247,8 @@ func (c *AddCommand) RunIntoGlazeProcessor(
     }
 
     if err := writeDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
-        return fmt.Errorf("failed to write document: %w", err)
-    }
+		return fmt.Errorf("failed to write document: %w", err)
+	}
 
 	row := types.NewRow(
 		types.MRP("ticket", settings.Ticket),
@@ -163,3 +262,34 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 }
 
 var _ cmds.GlazeCommand = &AddCommand{}
+
+// slugifyFilename converts an arbitrary title into a filesystem-friendly slug:
+// - lowercases
+// - replaces any non [a-z0-9] with '-'
+// - collapses consecutive '-'
+// - trims leading/trailing '-'
+func slugifyFilename(title string) string {
+    s := strings.ToLower(title)
+    // Replace any run of non-alphanumeric ASCII with '-'
+    var b strings.Builder
+    prevHyphen := false
+    for _, r := range s {
+        if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+            b.WriteRune(r)
+            prevHyphen = false
+            continue
+        }
+        // treat path separators and punctuation uniformly
+        if !prevHyphen {
+            b.WriteByte('-')
+            prevHyphen = true
+        }
+    }
+    out := b.String()
+    // trim leading/trailing '-'
+    out = strings.Trim(out, "-")
+    if out == "" {
+        return "document"
+    }
+    return out
+}

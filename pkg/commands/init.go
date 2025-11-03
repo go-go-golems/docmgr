@@ -187,6 +187,11 @@ Use docmgr commands to manage this workspace:
 		return fmt.Errorf("failed to write changelog.md: %w", err)
 	}
 
+	// Scaffold _templates/ and _guidelines/ at root level
+	if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
+		return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
+	}
+
 	// Output result
 	row := types.NewRow(
 		types.MRP("ticket", settings.Ticket),
@@ -247,6 +252,39 @@ func writeDocumentWithFrontmatter(path string, doc *models.Document, content str
 	// Write content
 	if _, err := f.WriteString(content); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// scaffoldTemplatesAndGuidelines creates the _templates/ and _guidelines/ directories
+// at the root level and populates them with template and guideline files
+func scaffoldTemplatesAndGuidelines(root string, force bool) error {
+	templatesDir := filepath.Join(root, "_templates")
+	guidelinesDir := filepath.Join(root, "_guidelines")
+
+	// Create directories
+	if err := os.MkdirAll(templatesDir, 0755); err != nil {
+		return fmt.Errorf("failed to create templates directory: %w", err)
+	}
+	if err := os.MkdirAll(guidelinesDir, 0755); err != nil {
+		return fmt.Errorf("failed to create guidelines directory: %w", err)
+	}
+
+	// Write template files
+	for docType, template := range TemplateContent {
+		templatePath := filepath.Join(templatesDir, fmt.Sprintf("%s.md", docType))
+		if err := writeFileIfNotExists(templatePath, []byte(template), force); err != nil {
+			return fmt.Errorf("failed to write template %s: %w", docType, err)
+		}
+	}
+
+	// Write guideline files
+	for docType, guideline := range GuidelineContent {
+		guidelinePath := filepath.Join(guidelinesDir, fmt.Sprintf("%s.md", docType))
+		if err := writeFileIfNotExists(guidelinePath, []byte(guideline), force); err != nil {
+			return fmt.Errorf("failed to write guideline %s: %w", docType, err)
+		}
 	}
 
 	return nil

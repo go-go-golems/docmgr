@@ -237,6 +237,46 @@ and validate documentation workspaces with metadata and external source support.
 	vocabCmd.AddCommand(cobraVocabListCmd)
 	vocabCmd.AddCommand(cobraVocabAddCmd)
 
+	// Create search command
+	searchCmd, err := commands.NewSearchCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating search command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraSearchCmd, err := cli.BuildCobraCommand(searchCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building search command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create guidelines command
+	guidelinesCmd, err := commands.NewGuidelinesCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating guidelines command: %v\n", err)
+		os.Exit(1)
+	}
+
+	cobraGuidelinesCmd, err := cli.BuildCobraCommand(guidelinesCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building guidelines command: %v\n", err)
+		os.Exit(1)
+	}
+
 	rootCmd.AddCommand(cobraInitCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(cobraAddCmd)
@@ -244,6 +284,8 @@ and validate documentation workspaces with metadata and external source support.
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(metaCmd)
 	rootCmd.AddCommand(vocabCmd)
+	rootCmd.AddCommand(cobraSearchCmd)
+	rootCmd.AddCommand(cobraGuidelinesCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

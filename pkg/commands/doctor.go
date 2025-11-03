@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -24,6 +25,10 @@ type DoctorSettings struct {
 	Root   string `glazed.parameter:"root"`
 	Ticket string `glazed.parameter:"ticket"`
 	All    bool   `glazed.parameter:"all"`
+    IgnoreDirs      []string `glazed.parameter:"ignore-dir"`
+    IgnoreGlobs     []string `glazed.parameter:"ignore-glob"`
+    StaleAfterDays  int      `glazed.parameter:"stale-after"`
+    FailOn          string   `glazed.parameter:"fail-on"`
 }
 
 func NewDoctorCommand() (*DoctorCommand, error) {
@@ -57,6 +62,30 @@ Example:
 					parameters.WithHelp("Check all tickets"),
 					parameters.WithDefault(false),
 				),
+                parameters.NewParameterDefinition(
+                    "ignore-dir",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Directory names at root or within tickets to ignore (can be repeated)"),
+                    parameters.WithDefault([]string{}),
+                ),
+                parameters.NewParameterDefinition(
+                    "ignore-glob",
+                    parameters.ParameterTypeStringList,
+                    parameters.WithHelp("Glob patterns (applied to path or basename) to ignore during scanning"),
+                    parameters.WithDefault([]string{}),
+                ),
+                parameters.NewParameterDefinition(
+                    "stale-after",
+                    parameters.ParameterTypeInteger,
+                    parameters.WithHelp("Days after which a document is considered stale (default 14)"),
+                    parameters.WithDefault(14),
+                ),
+                parameters.NewParameterDefinition(
+                    "fail-on",
+                    parameters.ParameterTypeString,
+                    parameters.WithHelp("Fail with non-zero exit on severity: none|warning|error (default none)"),
+                    parameters.WithDefault("none"),
+                ),
 			),
 		),
 	}, nil
@@ -76,6 +105,9 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
+    // Track highest severity encountered to support --fail-on
+    highestSeverity := 0 // 0=ok,1=warning,2=error
+
 	entries, err := os.ReadDir(settings.Root)
 	if err != nil {
 		return fmt.Errorf("failed to read root directory: %w", err)
@@ -85,6 +117,18 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		if !entry.IsDir() {
 			continue
 		}
+
+        // Skip scaffolding and ignored directories at root
+        name := entry.Name()
+        if strings.HasPrefix(name, "_") {
+            continue
+        }
+        if containsString(settings.IgnoreDirs, name) {
+            continue
+        }
+        if matchesAnyGlob(settings.IgnoreGlobs, name) || matchesAnyGlob(settings.IgnoreGlobs, filepath.Join(settings.Root, name)) {
+            continue
+        }
 
 		ticketPath := filepath.Join(settings.Root, entry.Name())
 		indexPath := filepath.Join(ticketPath, "index.md")
@@ -128,8 +172,8 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		// Track all issues found
 		hasIssues := false
 
-		// Check for unique index.md (should only be one per workspace)
-		indexFiles := findIndexFiles(ticketPath)
+        // Check for unique index.md (should only be one per workspace)
+        indexFiles := findIndexFiles(ticketPath, settings.IgnoreDirs, settings.IgnoreGlobs)
 		if len(indexFiles) > 1 {
 			hasIssues = true
 			row := types.NewRow(
@@ -143,12 +187,13 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
 			}
+            highestSeverity = maxInt(highestSeverity, 1)
 		}
 
-		// Check for staleness (LastUpdated > 14 days)
+        // Check for staleness (LastUpdated > stale-after days)
 		if !doc.LastUpdated.IsZero() {
-			daysSinceUpdate := time.Since(doc.LastUpdated).Hours() / 24
-			if daysSinceUpdate > 14 {
+            daysSinceUpdate := time.Since(doc.LastUpdated).Hours() / 24
+            if daysSinceUpdate > float64(settings.StaleAfterDays) {
 				hasIssues = true
 				row := types.NewRow(
 					types.MRP("ticket", doc.Ticket),
@@ -161,6 +206,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				if err := gp.AddRow(ctx, row); err != nil {
 					return err
 				}
+                highestSeverity = maxInt(highestSeverity, 1)
 			}
 		}
 
@@ -192,6 +238,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				if err := gp.AddRow(ctx, row); err != nil {
 					return err
 				}
+                highestSeverity = maxInt(highestSeverity, 1)
 			}
 		}
 
@@ -210,18 +257,36 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	return nil
+    // Enforce fail-on behavior
+    threshold := severityThreshold(settings.FailOn)
+    if threshold >= 0 && highestSeverity >= threshold && threshold > 0 {
+        return fmt.Errorf("doctor failed: severity >= %s", settings.FailOn)
+    }
+
+    return nil
 }
 
 // findIndexFiles recursively searches for all index.md files in a directory tree
-func findIndexFiles(rootPath string) []string {
+func findIndexFiles(rootPath string, ignoreDirNames []string, ignoreGlobs []string) []string {
 	var indexFiles []string
-	
-	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
+    
+    err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors, continue walking
 		}
-		if !info.IsDir() && info.Name() == "index.md" {
+        // Skip ignored directories
+        if info.IsDir() {
+            base := filepath.Base(path)
+            if containsString(ignoreDirNames, base) || matchesAnyGlob(ignoreGlobs, base) || matchesAnyGlob(ignoreGlobs, path) {
+                return filepath.SkipDir
+            }
+            return nil
+        }
+        // Skip ignored files
+        if matchesAnyGlob(ignoreGlobs, info.Name()) || matchesAnyGlob(ignoreGlobs, path) {
+            return nil
+        }
+        if !info.IsDir() && info.Name() == "index.md" {
 			indexFiles = append(indexFiles, path)
 		}
 		return nil
@@ -231,8 +296,50 @@ func findIndexFiles(rootPath string) []string {
 		// Return what we found even if there was an error
 		return indexFiles
 	}
-	
+
 	return indexFiles
+}
+
+// containsString returns true if s is in list
+func containsString(list []string, s string) bool {
+    for _, v := range list {
+        if v == s {
+            return true
+        }
+    }
+    return false
+}
+
+// matchesAnyGlob checks if path matches any of the provided glob patterns
+func matchesAnyGlob(patterns []string, path string) bool {
+    for _, p := range patterns {
+        if ok, _ := filepath.Match(p, path); ok {
+            return true
+        }
+    }
+    return false
+}
+
+func maxInt(a, b int) int {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+// severityThreshold maps fail-on string to numeric threshold
+// none=0 (disabled), warning=1, error=2
+func severityThreshold(s string) int {
+    switch strings.ToLower(s) {
+    case "none":
+        return 0
+    case "warning":
+        return 1
+    case "error":
+        return 2
+    default:
+        return 0
+    }
 }
 
 var _ cmds.GlazeCommand = &DoctorCommand{}

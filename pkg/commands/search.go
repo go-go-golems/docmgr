@@ -260,13 +260,18 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		}
 
 		// Apply file filter (reverse lookup)
+        var matchedFiles []string
+        var matchedNotes []string
         if settings.File != "" {
             fileMatch := false
             for _, rf := range doc.RelatedFiles {
                 relatedFile := rf.Path
-                if strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile) {
+                if relatedFile != "" && settings.File != "" && (strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile)) {
                     fileMatch = true
-                    break
+                    matchedFiles = append(matchedFiles, relatedFile)
+                    if strings.TrimSpace(rf.Note) != "" {
+                        matchedNotes = append(matchedNotes, rf.Note)
+                    }
                 }
             }
             if !fileMatch {
@@ -350,7 +355,7 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		// Extract snippet around query match
 		snippet := extractSnippet(content, settings.Query, 100)
 
-		row := types.NewRow(
+        row := types.NewRow(
 			types.MRP("ticket", doc.Ticket),
 			types.MRP("title", doc.Title),
 			types.MRP("doc_type", doc.DocType),
@@ -359,6 +364,16 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 			types.MRP("path", relPath),
 			types.MRP("snippet", snippet),
 		)
+
+        // When filtering by --file, include matched file and note columns for context
+        if settings.File != "" {
+            if len(matchedFiles) > 0 {
+                row.Set("file", strings.Join(matchedFiles, ", "))
+            }
+            if len(matchedNotes) > 0 {
+                row.Set("file_note", strings.Join(matchedNotes, " | "))
+            }
+        }
 
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err

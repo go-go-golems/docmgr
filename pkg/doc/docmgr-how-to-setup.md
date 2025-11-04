@@ -22,9 +22,16 @@ This guide shows how to bootstrap and maintain the documentation system for a re
 ## 2. Repository Conventions
 
 - Docs live under `ttmp/` at the repository root. This keeps work-in-progress close to code and easy to review.
-- Ticket workspaces are directories named `<TICKET>-<slug>/` under `ttmp/`. The slug is derived from the ticket title (lowercase, dashes for spaces).
+- Ticket workspaces are directories named `<TICKET>-<slug>/` under `ttmp/`. The slug is derived from the ticket title: lowercase; any non‑alphanumeric becomes `-`; consecutive `-` are collapsed; leading/trailing `-` are trimmed. For example, `go-go-mento: Webchat/Web hydration and integration reference` → `go-go-mento-webchat-web-hydration-and-integration-reference`.
 - Vocabulary file lives at `ttmp/vocabulary.yaml` by default (configurable via `.ttmp.yaml` → `vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent` values.
 - Scaffolding directories at root: `ttmp/_templates/`, `ttmp/_guidelines/`. Teams customize these to encode house style.
+
+Per-ticket workspace contents created by `init`:
+
+- `index.md`
+- `design/`, `reference/`, `playbooks/`
+- `scripts/`, `sources/`, `various/`, `archive/`
+- `.meta/`
 
 ### 2.1 Repository Configuration (.ttmp.yaml)
 

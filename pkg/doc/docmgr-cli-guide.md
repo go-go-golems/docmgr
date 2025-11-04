@@ -80,6 +80,11 @@ Each ticket gets its own workspace under `ttmp/` (configurable with `--root`). T
   - `.meta/` (internal data)
 - At root: `_templates/` and `_guidelines/` are scaffolded for consistency
 
+Slugification of the directory and filenames:
+
+- Lowercase; any non‑alphanumeric is replaced with `-`; multiple `-` are collapsed; trim leading/trailing `-`.
+- Example: `go-go-mento: Webchat/Web hydration and integration reference` → `go-go-mento-webchat-web-hydration-and-integration-reference`.
+
 ### 4.2 Frontmatter Metadata
 
 Each document starts with YAML frontmatter. This lightweight contract makes docs searchable and checkable. Think of it as a schema for documentation:

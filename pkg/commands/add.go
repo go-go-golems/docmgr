@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/docmgr/docmgr/pkg/models"
+	"github.com/docmgr/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -160,7 +161,7 @@ func (c *AddCommand) RunIntoGlazeProcessor(
     }
 
     // Create filename from title with slugification that removes special characters
-    slug := slugifyFilename(settings.Title)
+    slug := utils.Slugify(settings.Title)
     filename := fmt.Sprintf("%s.md", slug)
     docPath := filepath.Join(targetDir, filename)
 
@@ -263,33 +264,3 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 
 var _ cmds.GlazeCommand = &AddCommand{}
 
-// slugifyFilename converts an arbitrary title into a filesystem-friendly slug:
-// - lowercases
-// - replaces any non [a-z0-9] with '-'
-// - collapses consecutive '-'
-// - trims leading/trailing '-'
-func slugifyFilename(title string) string {
-    s := strings.ToLower(title)
-    // Replace any run of non-alphanumeric ASCII with '-'
-    var b strings.Builder
-    prevHyphen := false
-    for _, r := range s {
-        if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-            b.WriteRune(r)
-            prevHyphen = false
-            continue
-        }
-        // treat path separators and punctuation uniformly
-        if !prevHyphen {
-            b.WriteByte('-')
-            prevHyphen = true
-        }
-    }
-    out := b.String()
-    // trim leading/trailing '-'
-    out = strings.Trim(out, "-")
-    if out == "" {
-        return "document"
-    }
-    return out
-}

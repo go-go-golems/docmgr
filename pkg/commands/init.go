@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/docmgr/docmgr/pkg/models"
+	"github.com/docmgr/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -91,7 +91,7 @@ func (c *InitCommand) RunIntoGlazeProcessor(
     settings.Root = ResolveRoot(settings.Root)
 
     // Create slug from title
-	slug := strings.ToLower(strings.ReplaceAll(settings.Title, " ", "-"))
+	slug := utils.Slugify(settings.Title)
 	dirName := fmt.Sprintf("%s-%s", settings.Ticket, slug)
 	ticketPath := filepath.Join(settings.Root, dirName)
 
@@ -181,13 +181,13 @@ Use docmgr commands to manage this workspace:
 
 	// Create tasks.md
 	tasksPath := filepath.Join(ticketPath, "tasks.md")
-	tasksContent := fmt.Sprintf(`# Tasks
+    tasksContent := fmt.Sprintf(`# Tasks
 
 ## TODO
 
 - [ ] Add tasks here
 
-`, settings.Ticket)
+`)
 	if err := writeFileIfNotExists(tasksPath, []byte(tasksContent), settings.Force); err != nil {
 		return fmt.Errorf("failed to write tasks.md: %w", err)
 	}

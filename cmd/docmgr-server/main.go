@@ -13,6 +13,7 @@ import (
 
 	"github.com/adrg/frontmatter"
 	"github.com/docmgr/docmgr/pkg/models"
+	"github.com/docmgr/docmgr/pkg/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -56,7 +57,7 @@ func (s *Server) handleInit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create slug from title
-	slug := strings.ToLower(strings.ReplaceAll(req.Title, " ", "-"))
+	slug := utils.Slugify(req.Title)
 	dirName := fmt.Sprintf("%s-%s", req.Ticket, slug)
 	ticketPath := filepath.Join(s.rootDir, "active", dirName)
 
@@ -87,7 +88,7 @@ func (s *Server) handleInit(w http.ResponseWriter, r *http.Request) {
 		DocType:         "index",
 		Intent:          "long-term",
 		Owners:          []string{},
-		RelatedFiles:    []string{},
+		RelatedFiles:    models.RelatedFiles{},
 		ExternalSources: []string{},
 		Summary:         "",
 		LastUpdated:     time.Now(),
@@ -214,7 +215,7 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create filename from title
-	slug := strings.ToLower(strings.ReplaceAll(req.Title, " ", "-"))
+	slug := utils.Slugify(req.Title)
 	filename := fmt.Sprintf("%s.md", slug)
 	docPath := filepath.Join(ticketDir, subdir, filename)
 
@@ -241,7 +242,7 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 		DocType:         req.DocType,
 		Intent:          "long-term",
 		Owners:          ticketDoc.Owners,
-		RelatedFiles:    []string{},
+		RelatedFiles:    models.RelatedFiles{},
 		ExternalSources: []string{},
 		Summary:         "",
 		LastUpdated:     time.Now(),
@@ -551,7 +552,8 @@ func (s *Server) handleGetDocuments(w http.ResponseWriter, r *http.Request) {
 				docOwners = []string{}
 			}
 
-			var relatedFiles, externalSources []string
+			var relatedFiles models.RelatedFiles
+			var externalSources []string
 			var summary string
 			if err == nil {
 				relatedFiles = doc.RelatedFiles
@@ -704,7 +706,8 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-					var relatedFiles, externalSources []string
+					var relatedFiles models.RelatedFiles
+					var externalSources []string
 					var summary string
 					if err == nil {
 						relatedFiles = doc.RelatedFiles

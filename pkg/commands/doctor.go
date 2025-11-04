@@ -76,12 +76,12 @@ Example:
 					parameters.WithHelp("Glob patterns (applied to path or basename) to ignore during scanning"),
 					parameters.WithDefault([]string{}),
 				),
-                parameters.NewParameterDefinition(
-                    "stale-after",
-                    parameters.ParameterTypeInteger,
-                    parameters.WithHelp("Days after which a document is considered stale (default 30)"),
-                    parameters.WithDefault(30),
-                ),
+				parameters.NewParameterDefinition(
+					"stale-after",
+					parameters.ParameterTypeInteger,
+					parameters.WithHelp("Days after which a document is considered stale (default 30)"),
+					parameters.WithDefault(30),
+				),
 				parameters.NewParameterDefinition(
 					"fail-on",
 					parameters.ParameterTypeString,
@@ -113,8 +113,8 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// Track highest severity encountered to support --fail-on
 	highestSeverity := 0 // 0=ok,1=warning,2=error
 
-    // Determine repository root
-    repoRoot, _ := FindRepositoryRoot()
+	// Determine repository root
+	repoRoot, _ := FindRepositoryRoot()
 
 	// Load .docmgrignore patterns and merge with provided ignore-globs
 	// 1) Try repository root

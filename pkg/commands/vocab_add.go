@@ -75,27 +75,27 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-    vocab, err := LoadVocabulary()
+	vocab, err := LoadVocabulary()
 	if err != nil {
 		return fmt.Errorf("failed to load vocabulary: %w", err)
 	}
 
-    // Find repository root (git root preferred; fallbacks supported)
-    repoRoot, err := FindRepositoryRoot()
+	// Find repository root (git root preferred; fallbacks supported)
+	repoRoot, err := FindRepositoryRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-    // Echo resolved context prior to write
-    cfgPath, _ := FindTTMPConfigPath()
-    vocabPath, _ := ResolveVocabularyPath()
-    absRoot := repoRoot
-    if !filepath.IsAbs(absRoot) {
-        if cwd, err := os.Getwd(); err == nil {
-            absRoot = filepath.Join(cwd, absRoot)
-        }
-    }
-    fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
+	// Echo resolved context prior to write
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := repoRoot
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	newItem := models.VocabItem{
 		Slug:        strings.ToLower(settings.Slug),
@@ -131,11 +131,11 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to save vocabulary: %w", err)
 	}
 
-    row := types.NewRow(
+	row := types.NewRow(
 		types.MRP("category", category),
 		types.MRP("slug", newItem.Slug),
 		types.MRP("description", newItem.Description),
-        types.MRP("vocabulary_path", vocabPath),
+		types.MRP("vocabulary_path", vocabPath),
 		types.MRP("status", "added"),
 	)
 

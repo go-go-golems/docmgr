@@ -131,10 +131,11 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to save vocabulary: %w", err)
 	}
 
-	row := types.NewRow(
+    row := types.NewRow(
 		types.MRP("category", category),
 		types.MRP("slug", newItem.Slug),
 		types.MRP("description", newItem.Description),
+        types.MRP("vocabulary_path", vocabPath),
 		types.MRP("status", "added"),
 	)
 

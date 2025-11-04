@@ -86,6 +86,17 @@ docmgr help
 
 Run `docmgr --help` or `docmgr help` to see all commands and options. Use `--long-help` for detailed flags and topics.
 
+### Help topics
+
+```bash
+# Full command/topic listing
+docmgr help --all
+
+# Tutorials
+docmgr help how-to-setup
+docmgr help how-to-use
+```
+
 ## Development
 
 - Go 1.24+

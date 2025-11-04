@@ -200,8 +200,90 @@ docmgr status --summary-only
 docmgr status --stale-after 30
 ```
 
-## 12. Iterate and Maintain
+## 12. Output Modes and UX
+
+docmgr supports human-friendly defaults and structured output via Glaze.
+
+- Human-friendly (default):
+  - list tickets/docs: concise one-liners (ticket/title/status/topics/path/updated)
+  - status: summary line (+ per-ticket lines unless `--summary-only`)
+  - search: `path — title [ticket] :: snippet`; `--files` shows `file — reason (source=...)`
+  - guidelines: raw guideline text (or list types with `--list`)
+  - tasks list: `[#idx] [x| ] text (file=...)`
+  - vocab list: `category: slug — description`
+
+- Structured output:
+  - Add `--with-glaze-output --output json|yaml|csv|table`
+  - Available on: `list tickets`, `list docs`, `status`, `search`, `guidelines`, `vocab list`, `tasks list`
+
+Examples:
+```bash
+# Human
+docmgr list tickets
+docmgr status --summary-only
+docmgr search --query websocket
+docmgr guidelines --doc-type design-doc
+
+# Structured
+docmgr list tickets --with-glaze-output --output json
+docmgr status --with-glaze-output --output table
+docmgr search --query websocket --with-glaze-output --output yaml
+docmgr guidelines --doc-type design-doc --with-glaze-output --output json
+```
+
+### Root discovery and shell gotchas
+
+- `.ttmp.yaml` discovery walks up from CWD. If you need consistent behavior from nested subdirs, set an absolute `root` in `.ttmp.yaml` or run from repo root.
+- Avoid parentheses in ticket dir names; quote/escape if you must use them:
+  ```bash
+  cd "ttmp/MEN-XXXX-name-\(with-parens\)"
+  ```
+
+## 13. Iterate and Maintain
 
 - Keep `Owners`, `Summary`, and `RelatedFiles` current
 - Regularly update `index.md`, `changelog.md`, and `tasks.md` as work progresses
 - Use `guidelines`
+
+## 14. Advanced: RelatedFiles with notes and ignores
+
+### Structured RelatedFiles (with notes)
+
+Prefer structured entries with short notes to explain why a file matters.
+
+```yaml
+RelatedFiles:
+  - path: pinocchio/pkg/webchat/forwarder.go
+    note: SEM mapping; projector side-channel source
+  - path: pkg/snapshots/sqlite_store.go
+    note: SQLite SnapshotStore (MVP persistence)
+```
+
+CLI examples:
+```bash
+# Add files + notes to the ticket index
+docmgr relate --ticket MEN-3083 \
+  --files pkg/webchat/forwarder.go,pkg/snapshots/sqlite_store.go \
+  --file-note "pkg/webchat/forwarder.go:SEM mapping; projector side-channel source" \
+  --file-note "pkg/snapshots/sqlite_store.go:SQLite SnapshotStore (MVP persistence)"
+
+# Add to a specific document
+docmgr relate --doc ttmp/MEN-3083-.../design/sem-event-flow.md \
+  --files pkg/timeline/controller.go \
+  --file-note "pkg/timeline/controller.go:TUI timeline lifecycle (apply/render)"
+
+# Let docmgr suggest related files and store reasons as notes
+docmgr relate --ticket MEN-3083 --suggest --apply-suggestions --query timeline --topics conversation,events
+```
+
+### Ignore noise with .docmgrignore
+
+Place `.docmgrignore` at your docs root (e.g., `ttmp/.docmgrignore`). One pattern per line.
+
+Common entries:
+```
+.git/
+node_modules/
+dist/
+coverage/
+```

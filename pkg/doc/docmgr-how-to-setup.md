@@ -47,6 +47,8 @@ docTypeToggles:
   design-doc: true
   reference: true
   playbook: true
+  analysis: true
+  misc: true
 ```
 
 - `root`: default docs root (overrides the built-in `ttmp` when flags are not explicitly set)
@@ -109,6 +111,27 @@ Recommendations:
 - Use templates for copy-ready section scaffolds (executive summary, decisions, plan)
 - Use guidelines to explain intent and quality bars (what reviewers look for)
 - See `docmgr help templates-and-guidelines` for examples and best practices
+
+## 5. Add New Doc Types and Migrate Existing Docs
+
+You can extend doc types via vocabulary and toggles, then scaffold docs and move existing files.
+
+1) Verify vocabulary contains the new types:
+```bash
+docmgr vocab list --category docTypes
+```
+
+2) Enable toggles in `.ttmp.yaml` (see above).
+
+3) Scaffold placeholders for non-core types (created under `various/`):
+```bash
+docmgr add --ticket TCK-123 --doc-type analysis --title "Synthesis — ..."
+docmgr add --ticket TCK-123 --doc-type misc     --title "Debate: ..."
+```
+
+4) Move existing ad-hoc docs into the ticket directory and fix metadata with `docmgr meta update`.
+
+## 6. CI and Health
 
 ## 5. Enrich RelatedFiles with Rationale (optional best practice)
 
@@ -184,5 +207,10 @@ Add a job to fail fast on documentation regressions. Make CI strict over time (f
 - Revisit templates/guidelines quarterly to reflect lessons learned
 - Manage ticket checklists with `docmgr tasks` (list/add/check/uncheck/edit/remove)
 - Append decisions and progress to `changelog.md` with `docmgr changelog update`
+
+## 9. Troubleshooting & Tips
+
+- Root discovery: If invoking from nested directories yields inconsistent roots, set an absolute `root` in `.ttmp.yaml` or run from repo root.
+- Shell paths: Avoid parentheses in ticket directory names; quote or escape when cd'ing into them.
 
 

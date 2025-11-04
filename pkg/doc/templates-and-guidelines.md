@@ -29,6 +29,8 @@ When you run `docmgr init`, `docmgr` scaffolds two root-level folders:
 - `ttmp/_templates/` — One Markdown file per doc type (for example, `design-doc.md`, `reference.md`, `playbook.md`)
 - `ttmp/_guidelines/` — One Markdown file per doc type with best practices and section checklists
 
+Common doc types include: `index`, `design-doc`, `reference`, `playbook`, `til`, `analysis`, `misc`, and `code-review`.
+
 These folders are part of your repository so your team can customize house style and keep it versioned.
 
 ## How They’re Used in the CLI

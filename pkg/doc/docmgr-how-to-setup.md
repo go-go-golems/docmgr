@@ -49,6 +49,7 @@ docTypeToggles:
   playbook: true
   analysis: true
   misc: true
+  code-review: true
 ```
 
 - `root`: default docs root (overrides the built-in `ttmp` when flags are not explicitly set)
@@ -68,6 +69,10 @@ docmgr vocab add --category docTypes --slug index
 docmgr vocab add --category docTypes --slug design-doc
 docmgr vocab add --category docTypes --slug reference
 docmgr vocab add --category docTypes --slug playbook
+docmgr vocab add --category docTypes --slug til --description "Today I Learned (short notes capturing lessons and gotchas)"
+docmgr vocab add --category docTypes --slug analysis --description "Analysis documents"
+docmgr vocab add --category docTypes --slug misc --description "Miscellaneous documents"
+docmgr vocab add --category docTypes --slug code-review --description "Code review summaries with findings and follow-ups"
 docmgr vocab add --category intent   --slug long-term
 ```
 

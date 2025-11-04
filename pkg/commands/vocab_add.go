@@ -80,11 +80,22 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to load vocabulary: %w", err)
 	}
 
-	// Find repo root by looking for vocabulary file or creating doc/ directory
-	repoRoot, err := findRepoRoot()
+	// Find repository root (git root preferred; fallbacks supported)
+	repoRoot, err := FindRepositoryRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
+
+	// Echo resolved context prior to write
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := repoRoot
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	newItem := models.VocabItem{
 		Slug:        strings.ToLower(settings.Slug),
@@ -124,6 +135,7 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		types.MRP("category", category),
 		types.MRP("slug", newItem.Slug),
 		types.MRP("description", newItem.Description),
+		types.MRP("vocabulary_path", vocabPath),
 		types.MRP("status", "added"),
 	)
 
@@ -131,31 +143,6 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 }
 
 // findRepoRoot finds the repository root by walking up from current directory
-func findRepoRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		// Check for common repo root indicators
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir, nil
-		}
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		if _, err := os.Stat(filepath.Join(dir, "doc")); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached filesystem root, use current directory
-			return dir, nil
-		}
-		dir = parent
-	}
-}
+// unified repo root detection moved to FindRepositoryRoot() in config.go
 
 var _ cmds.GlazeCommand = &VocabAddCommand{}

@@ -79,8 +79,8 @@ Example:
 				parameters.NewParameterDefinition(
 					"stale-after",
 					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Days after which a document is considered stale (default 14)"),
-					parameters.WithDefault(14),
+					parameters.WithHelp("Days after which a document is considered stale (default 30)"),
+					parameters.WithDefault(30),
 				),
 				parameters.NewParameterDefinition(
 					"fail-on",
@@ -114,7 +114,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	highestSeverity := 0 // 0=ok,1=warning,2=error
 
 	// Determine repository root
-	repoRoot, _ := findRepoRoot()
+	repoRoot, _ := FindRepositoryRoot()
 
 	// Load .docmgrignore patterns and merge with provided ignore-globs
 	// 1) Try repository root

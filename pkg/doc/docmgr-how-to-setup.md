@@ -37,6 +37,12 @@ Per-ticket workspace contents created by `create-ticket`:
 
 Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`. When the config uses relative paths (for example, `root: ttmp`), they are interpreted relative to the directory that contains `.ttmp.yaml`.
 
+Quick setup:
+
+```bash
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+```
+
 Root resolution order:
 - Flag: `--root`
 - `.ttmp.yaml:root` (relative to the config file)
@@ -60,7 +66,15 @@ vocabulary: ttmp/vocabulary.yaml
 
 ## 3. Seed Vocabulary
 
-Start with a minimal, agreed vocabulary to prevent drift in metadata. These values become the shared language of your documentation; they drive search filters and keep frontmatter consistent. Keep the list short at first and evolve with consensus:
+Start with a minimal, agreed vocabulary to prevent drift in metadata. These values become the shared language of your documentation; they drive search filters and keep frontmatter consistent. Keep the list short at first and evolve with consensus.
+
+One-shot seeding during root init:
+
+```bash
+docmgr init --seed-vocabulary
+```
+
+Or add entries explicitly:
 
 ```bash
 docmgr vocab add --category topics   --slug backend --description "Backend services"
@@ -155,14 +169,14 @@ docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 
 ## 6. Enforce Health with Doctor
 
-Run `doctor` locally and in automation to keep the system healthy. It catches stale docs, missing fields, unknown vocabulary, and broken file references. Customize ignore patterns to reduce noise without hiding real issues:
+Run `doctor` locally and in automation to keep the system healthy. It catches stale docs, missing fields, unknown vocabulary, and broken file references. Prefer `.docmgrignore` for stable ignores; with it in place, you generally don’t need ignore flags:
 
 ```bash
-# Local checks (ignore scaffolding and raise on errors)
-docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+# Local checks (raise on errors)
+docmgr doctor --root ttmp --stale-after 30 --fail-on error
 
-# Ignore known duplicate index (example)
-docmgr doctor --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+# Optional ad-hoc suppression example
+docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
 ```
 
 Doctor checks include:
@@ -185,7 +199,7 @@ _templates/
 _guidelines/
 ```
 
-You can also create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude additional paths from validation (comments with `#`; use globs or names). Example:
+You can also create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude additional paths from validation (comments with `#`; supports globs). When present, `doctor` automatically applies these patterns, so you can drop `--ignore-dir`/`--ignore-glob` in CLI and CI. Example:
 
 ```gitignore
 # VCS and build artifacts
@@ -195,17 +209,20 @@ dist/
 
 # Suppress noisy nested index for a specific directory layout
 ttmp/*/design/index.md
+
+# Ignore old date folders
+2024-*
+2025-*
 ```
 
 ## 7. CI Integration
 
-Add a job to fail fast on documentation regressions. Make CI strict over time (for example, start with `--fail-on error`, later consider `--fail-on warning` if noise is low):
+Add a job to fail fast on documentation regressions. Make CI strict over time (for example, start with `--fail-on error`, later consider `--fail-on warning` if noise is low). With `.docmgrignore` in place, no ignore flags are necessary:
 
 ```yaml
 - name: Validate docs
   run: |
-    docmgr doctor \
-      --ignore-dir _templates --ignore-dir _guidelines \
+    docmgr doctor --root ttmp \
       --stale-after 30 --fail-on error
 ```
 

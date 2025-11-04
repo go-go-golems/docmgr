@@ -62,8 +62,11 @@ go run ./cmd/docmgr --help
 ## Quick Start
 
 ```bash
+# Write a repo config (.ttmp.yaml) quickly
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+
 # Initialize docs root (creates vocabulary/templates/guidelines if missing)
-docmgr init
+docmgr init --seed-vocabulary
 
 # Create a new ticket workspace
 docmgr create-ticket --ticket MEN-1234 --title "Design Overview" --topics design,backend
@@ -110,3 +113,55 @@ docmgr help how-to-use
 ## License
 
 MIT
+
+## Configuration (multi-repo friendly)
+
+`docmgr` resolves its docs root in this order:
+
+1. Flag: `--root /abs/or/relative/path`
+2. Nearest `.ttmp.yaml` walking up from CWD: `root: <path>` (relative paths are resolved relative to the config file location)
+3. Git repository root: `<git-root>/ttmp` (CLI)
+4. Fallback: `<cwd>/ttmp` (CLI) or `docs` (server)
+
+Recommended multi-repo setup: place a `.ttmp.yaml` at the workspace root and point it at the repo-local `ttmp/`. You can create this file via `docmgr configure`:
+
+```bash
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+```
+
+```yaml
+root: go-go-mento/ttmp
+defaults:
+  owners: [manuel]
+  intent: long-term
+vocabulary: go-go-mento/ttmp/vocabulary.yaml
+```
+
+Environment overrides:
+
+- `DOCMGR_ROOT`: absolute or relative path to the docs root (server and CLI). If relative, it is resolved against the current working directory.
+
+## Server (docmgr-server)
+
+The HTTP server exposes a small API around the same on-disk structure:
+
+- `POST /api/init` — create a ticket workspace under `<root>/active/`.
+- `POST /api/add` — add a document to an existing ticket. Unknown `docType` values are accepted and stored under `various/`.
+- `POST /api/import` — import a local file into `sources/local` and record metadata.
+- `GET  /api/list` — list active tickets.
+- `GET  /api/documents?ticket=...` — list documents for a ticket.
+- `GET  /api/search?q=...&topic=...&type=...` — search within a ticket set.
+- `GET  /api/status` — report resolved root/config/vocabulary and basic counts.
+- `POST /api/update` — update frontmatter for a document.
+
+Root resolution (server):
+
+- Uses `DOCMGR_ROOT` if set; otherwise searches for the nearest `.ttmp.yaml` and resolves `root:` relative to that file; falls back to `docs/` when none is found.
+  Startup logs include: `root=... config=... vocabulary=...`.
+
+Build from source:
+
+```bash
+go build -o $(which docmgr) ./docmgr/cmd/docmgr
+go build -o /usr/local/bin/docmgr-server ./docmgr/cmd/docmgr-server
+```

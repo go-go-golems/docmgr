@@ -55,8 +55,8 @@ Examples:
 				parameters.NewParameterDefinition(
 					"stale-after",
 					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Days after which a ticket is considered stale"),
-					parameters.WithDefault(14),
+					parameters.WithHelp("Days after which a ticket is considered stale (default 30)"),
+					parameters.WithDefault(30),
 				),
 				parameters.NewParameterDefinition(
 					"summary-only",
@@ -193,9 +193,37 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 		}
 	}
 
+	// Resolve config and vocabulary paths for summary
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+
+	// Emit warnings
+	cwd, _ := os.Getwd()
+	fallbackCandidate := filepath.Join(cwd, "ttmp")
+	if cfgPath == "" {
+		if _, err := FindGitRoot(); err != nil {
+			// No config and no git; if using CWD fallback, warn
+			if filepath.Clean(settings.Root) == filepath.Clean(fallbackCandidate) {
+				_ = gp.AddRow(ctx, types.NewRow(
+					types.MRP("level", "warning"),
+					types.MRP("message", "No .ttmp.yaml found; using <cwd>/ttmp fallback"),
+					types.MRP("root", settings.Root),
+				))
+			}
+		}
+	}
+	if roots, err := DetectMultipleTTMPRoots(); err == nil && len(roots) > 1 {
+		_ = gp.AddRow(ctx, types.NewRow(
+			types.MRP("level", "warning"),
+			types.MRP("message", fmt.Sprintf("Multiple ttmp/ roots detected: %s", strings.Join(roots, ", "))),
+		))
+	}
+
 	// Summary row
 	sum := types.NewRow(
 		types.MRP("root", settings.Root),
+		types.MRP("config_path", cfgPath),
+		types.MRP("vocabulary_path", vocabPath),
 		types.MRP("tickets_total", ticketsTotal),
 		types.MRP("tickets_stale", ticketsStale),
 		types.MRP("docs_total", docsTotal),
@@ -310,9 +338,11 @@ func (c *StatusCommand) Run(
 		}
 	}
 
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
 	fmt.Printf(
-		"root=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
-		settings.Root, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,
+		"root=%s config=%s vocabulary=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
+		settings.Root, cfgPath, vocabPath, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,
 	)
 	return nil
 }

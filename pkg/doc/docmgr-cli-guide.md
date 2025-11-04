@@ -65,7 +65,8 @@ docmgr meta update --doc "$INDEX_MD" --field RelatedFiles    --value "backend/ch
 
 # 6) Validate the workspace
 # Check for missing fields, staleness, and broken file references.
-docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+# When `.docmgrignore` is present, you can omit ignore flags entirely.
+docmgr doctor --root ttmp --stale-after 30 --fail-on error
 ```
 
 ### Output modes (human vs structured)
@@ -254,6 +255,12 @@ docmgr search --since "last month" --until "today"
 
 # File suggestions (heuristics: related files, git, ripgrep/grep)
 docmgr search --ticket MEN-4242 --topics chat --files
+
+# Relate changed files from git status (modified, staged, untracked)
+docmgr relate --ticket MEN-4242 --suggest --from-git
+
+# Apply changed files directly to the ticket index with notes
+docmgr relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
 ```
 
 Relative date formats supported include: `today`, `yesterday`, `last week`, `this month`, `last month`, `2 weeks ago`, as well as ISO-like absolute dates (for example, `2025-01-01`).

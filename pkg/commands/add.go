@@ -133,6 +133,16 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = ResolveRoot(settings.Root)
+	// Echo resolved context prior to write
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := settings.Root
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	// Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)

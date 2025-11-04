@@ -157,7 +157,11 @@ docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query 
 ## 9. Validate with Doctor
 
 ```bash
-docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+# Preferred (when .docmgrignore is present): flags not needed
+docmgr doctor --root ttmp --stale-after 30 --fail-on error
+
+# Ad-hoc suppression example (optional)
+docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
 ```
 
 Warnings to expect in real projects:
@@ -285,12 +289,16 @@ docmgr relate --ticket MEN-3083 --suggest --apply-suggestions --query timeline -
 
 ### Ignore noise with .docmgrignore
 
-`docmgr init` creates `ttmp/.docmgrignore` with sensible defaults (`.git/`, `_templates/`, `_guidelines/`). Place `.docmgrignore` at your docs root (e.g., `ttmp/.docmgrignore`) to add more patterns. One pattern per line.
+`docmgr init` creates `ttmp/.docmgrignore` with sensible defaults (`.git/`, `_templates/`, `_guidelines/`). Place `.docmgrignore` at your docs root (e.g., `ttmp/.docmgrignore`) to add more patterns. One pattern per line. `doctor` automatically respects these patterns, so you can omit `--ignore-dir`/`--ignore-glob` in most cases.
 
 Common entries:
 ```
 .git/
+_templates/
+_guidelines/
 node_modules/
 dist/
 coverage/
+2024-*
+2025-*
 ```

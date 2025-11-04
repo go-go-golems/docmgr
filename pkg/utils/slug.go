@@ -31,5 +31,3 @@ func Slugify(input string) string {
 	}
 	return out
 }
-
-

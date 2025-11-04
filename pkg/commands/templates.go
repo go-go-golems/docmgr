@@ -1,12 +1,12 @@
 package commands
 
 import (
-    "os"
-    "path/filepath"
-    "strings"
-    "time"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-    "github.com/go-go-golems/docmgr/pkg/models"
+	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
 // TemplateContent holds template content for different document types
@@ -398,74 +398,73 @@ func GetTemplate(docType string) (string, bool) {
 
 // loadTemplate loads a template from the filesystem first, then falls back to embedded content
 func loadTemplate(root, docType string) (string, bool) {
-    path := filepath.Join(root, "_templates", docType+".md")
-    if b, err := os.ReadFile(path); err == nil {
-        return string(b), true
-    }
-    return GetTemplate(docType)
+	path := filepath.Join(root, "_templates", docType+".md")
+	if b, err := os.ReadFile(path); err == nil {
+		return string(b), true
+	}
+	return GetTemplate(docType)
 }
 
 // splitFrontmatter splits a template into (frontmatter, body). If no frontmatter, returns ("", template)
 func extractFrontmatterAndBody(tpl string) (string, string) {
-    s := strings.TrimLeft(tpl, "\n\r ")
-    if !strings.HasPrefix(s, "---") {
-        return "", tpl
-    }
-    // Find the closing delimiter after the first line
-    // We look for "\n---\n" to be robust to content
-    idx := strings.Index(s[3:], "\n---\n")
-    if idx == -1 {
-        return "", tpl
-    }
-    fm := s[:3+idx+5] // include both delimiters
-    body := s[3+idx+5:]
-    return fm, body
+	s := strings.TrimLeft(tpl, "\n\r ")
+	if !strings.HasPrefix(s, "---") {
+		return "", tpl
+	}
+	// Find the closing delimiter after the first line
+	// We look for "\n---\n" to be robust to content
+	idx := strings.Index(s[3:], "\n---\n")
+	if idx == -1 {
+		return "", tpl
+	}
+	fm := s[:3+idx+5] // include both delimiters
+	body := s[3+idx+5:]
+	return fm, body
 }
 
 // renderTemplateBody replaces placeholders in the template body based on the document values
 func renderTemplateBody(body string, doc *models.Document) string {
-    now := time.Now().Format("2006-01-02")
+	now := time.Now().Format("2006-01-02")
 
-    // Build lists
-    topicsList := ""
-    if len(doc.Topics) > 0 {
-        var lines []string
-        for _, t := range doc.Topics {
-            lines = append(lines, "- "+t)
-        }
-        topicsList = strings.Join(lines, "\n")
-    }
+	// Build lists
+	topicsList := ""
+	if len(doc.Topics) > 0 {
+		var lines []string
+		for _, t := range doc.Topics {
+			lines = append(lines, "- "+t)
+		}
+		topicsList = strings.Join(lines, "\n")
+	}
 
-    // Indented YAML-ish lists for optional use in bodies
-    topicsYaml := "[]"
-    if len(doc.Topics) > 0 {
-        var lines []string
-        for _, t := range doc.Topics {
-            lines = append(lines, "  - "+t)
-        }
-        topicsYaml = strings.Join(lines, "\n")
-    }
+	// Indented YAML-ish lists for optional use in bodies
+	topicsYaml := "[]"
+	if len(doc.Topics) > 0 {
+		var lines []string
+		for _, t := range doc.Topics {
+			lines = append(lines, "  - "+t)
+		}
+		topicsYaml = strings.Join(lines, "\n")
+	}
 
-    ownersYaml := "[]"
-    if len(doc.Owners) > 0 {
-        var lines []string
-        for _, o := range doc.Owners {
-            lines = append(lines, "  - "+o)
-        }
-        ownersYaml = strings.Join(lines, "\n")
-    }
+	ownersYaml := "[]"
+	if len(doc.Owners) > 0 {
+		var lines []string
+		for _, o := range doc.Owners {
+			lines = append(lines, "  - "+o)
+		}
+		ownersYaml = strings.Join(lines, "\n")
+	}
 
-    r := strings.NewReplacer(
-        "{{TITLE}}", doc.Title,
-        "{{TICKET}}", doc.Ticket,
-        "{{STATUS}}", doc.Status,
-        "{{DATE}}", now,
-        "{{SUMMARY}}", doc.Summary,
-        "{{TOPICS_LIST}}", topicsList,
-        "{{TOPICS}}", topicsYaml,
-        "{{OWNERS}}", ownersYaml,
-    )
+	r := strings.NewReplacer(
+		"{{TITLE}}", doc.Title,
+		"{{TICKET}}", doc.Ticket,
+		"{{STATUS}}", doc.Status,
+		"{{DATE}}", now,
+		"{{SUMMARY}}", doc.Summary,
+		"{{TOPICS_LIST}}", topicsList,
+		"{{TOPICS}}", topicsYaml,
+		"{{OWNERS}}", ownersYaml,
+	)
 
-    return r.Replace(body)
+	return r.Replace(body)
 }
-

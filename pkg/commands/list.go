@@ -129,7 +129,7 @@ func readDocumentFrontmatter(path string) (*models.Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var doc models.Document
 	_, err = frontmatter.Parse(f, &doc)

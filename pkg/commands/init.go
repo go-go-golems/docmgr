@@ -87,10 +87,10 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-    // Apply config root if present
-    settings.Root = ResolveRoot(settings.Root)
+	// Apply config root if present
+	settings.Root = ResolveRoot(settings.Root)
 
-    // Create slug from title
+	// Create slug from title
 	slug := utils.Slugify(settings.Title)
 	dirName := fmt.Sprintf("%s-%s", settings.Ticket, slug)
 	ticketPath := filepath.Join(settings.Root, dirName)
@@ -114,39 +114,49 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-    // Scaffold _templates/ and _guidelines/ at root level first so index can use templates
-    if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
-        return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
-    }
+	// Scaffold _templates/ and _guidelines/ at root level first so index can use templates
+	if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
+		return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
+	}
 
-    // Create index.md with frontmatter
-    // Load config defaults
-    cfg, _ := LoadTTMPConfig()
+	// Create index.md with frontmatter
+	// Load config defaults
+	cfg, _ := LoadTTMPConfig()
 
-    doc := models.Document{
-		Title:           settings.Title,
-		Ticket:          settings.Ticket,
-		Status:          "active",
-		Topics:          settings.Topics,
-		DocType:         "index",
-        Intent:          func() string { if cfg != nil && cfg.Defaults.Intent != "" { return cfg.Defaults.Intent }; return "long-term" }(),
-        Owners:          func() []string { if cfg != nil && len(cfg.Defaults.Owners) > 0 { return cfg.Defaults.Owners }; return []string{} }(),
-        RelatedFiles:    models.RelatedFiles{},
+	doc := models.Document{
+		Title:   settings.Title,
+		Ticket:  settings.Ticket,
+		Status:  "active",
+		Topics:  settings.Topics,
+		DocType: "index",
+		Intent: func() string {
+			if cfg != nil && cfg.Defaults.Intent != "" {
+				return cfg.Defaults.Intent
+			}
+			return "long-term"
+		}(),
+		Owners: func() []string {
+			if cfg != nil && len(cfg.Defaults.Owners) > 0 {
+				return cfg.Defaults.Owners
+			}
+			return []string{}
+		}(),
+		RelatedFiles:    models.RelatedFiles{},
 		ExternalSources: []string{},
 		Summary:         "",
 		LastUpdated:     time.Now(),
 	}
 
-    indexPath := filepath.Join(ticketPath, "index.md")
-    // Try to load index template body
-    indexBody := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
-    if tpl, ok := loadTemplate(settings.Root, "index"); ok {
-        _, body := extractFrontmatterAndBody(tpl)
-        // Ensure placeholders are populated from doc
-        doc.Title = settings.Title
-        indexBody = renderTemplateBody(body, &doc)
-    }
-    if err := writeDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
+	indexPath := filepath.Join(ticketPath, "index.md")
+	// Try to load index template body
+	indexBody := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
+	if tpl, ok := loadTemplate(settings.Root, "index"); ok {
+		_, body := extractFrontmatterAndBody(tpl)
+		// Ensure placeholders are populated from doc
+		doc.Title = settings.Title
+		indexBody = renderTemplateBody(body, &doc)
+	}
+	if err := writeDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
 		return fmt.Errorf("failed to write index.md: %w", err)
 	}
 
@@ -170,9 +180,9 @@ This is the document workspace for ticket %s.
 
 Use docmgr commands to manage this workspace:
 
-- Add documents: ` + "`docmgr add design-doc \"My Design\"`" + `
-- Import sources: ` + "`docmgr import file path/to/doc.md`" + `
-- Update metadata: ` + "`docmgr meta update --field Status --value review`" + `
+- Add documents: `+"`docmgr add design-doc \"My Design\"`"+`
+- Import sources: `+"`docmgr import file path/to/doc.md`"+`
+- Update metadata: `+"`docmgr meta update --field Status --value review`"+`
 `, settings.Title, settings.Ticket)
 
 	if err := writeFileIfNotExists(readmePath, []byte(readmeContent), settings.Force); err != nil {
@@ -181,13 +191,13 @@ Use docmgr commands to manage this workspace:
 
 	// Create tasks.md
 	tasksPath := filepath.Join(ticketPath, "tasks.md")
-    tasksContent := fmt.Sprintf(`# Tasks
+	tasksContent := `# Tasks
 
 ## TODO
 
 - [ ] Add tasks here
 
-`)
+`
 	if err := writeFileIfNotExists(tasksPath, []byte(tasksContent), settings.Force); err != nil {
 		return fmt.Errorf("failed to write tasks.md: %w", err)
 	}
@@ -205,7 +215,7 @@ Use docmgr commands to manage this workspace:
 		return fmt.Errorf("failed to write changelog.md: %w", err)
 	}
 
-    // (templates and guidelines already scaffolded above)
+	// (templates and guidelines already scaffolded above)
 
 	// Output result
 	row := types.NewRow(
@@ -247,7 +257,7 @@ func writeDocumentWithFrontmatter(path string, doc *models.Document, content str
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Write frontmatter
 	if _, err := f.WriteString("---\n"); err != nil {
@@ -258,7 +268,9 @@ func writeDocumentWithFrontmatter(path string, doc *models.Document, content str
 	if err := encoder.Encode(doc); err != nil {
 		return err
 	}
-	encoder.Close()
+	if err := encoder.Close(); err != nil {
+		return err
+	}
 
 	if _, err := f.WriteString("---\n\n"); err != nil {
 		return err

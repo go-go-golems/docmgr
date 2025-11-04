@@ -129,7 +129,10 @@ This is the document workspace for ticket %s.
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +143,9 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 
 	activePath := filepath.Join(s.rootDir, "active")
 	if _, err := os.Stat(activePath); os.IsNotExist(err) {
-		json.NewEncoder(w).Encode([]interface{}{})
+		if err := json.NewEncoder(w).Encode([]interface{}{}); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -178,7 +183,10 @@ func (s *Server) handleList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(documents)
+	if err := json.NewEncoder(w).Encode(documents); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
@@ -263,7 +271,10 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleImportFile(w http.ResponseWriter, r *http.Request) {
@@ -328,7 +339,10 @@ func (s *Server) handleImportFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func writeDocumentWithFrontmatter(path string, doc *models.Document, content string) error {
@@ -336,7 +350,7 @@ func writeDocumentWithFrontmatter(path string, doc *models.Document, content str
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Write frontmatter
 	if _, err := f.WriteString("---\n"); err != nil {
@@ -347,7 +361,9 @@ func writeDocumentWithFrontmatter(path string, doc *models.Document, content str
 	if err := encoder.Encode(doc); err != nil {
 		return err
 	}
-	encoder.Close()
+	if err := encoder.Close(); err != nil {
+		return err
+	}
 
 	if _, err := f.WriteString("---\n\n"); err != nil {
 		return err
@@ -366,7 +382,7 @@ func readDocumentFrontmatter(path string) (*models.Document, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var doc models.Document
 	_, err = frontmatter.Parse(f, &doc)
@@ -518,13 +534,13 @@ func (s *Server) handleGetDocuments(w http.ResponseWriter, r *http.Request) {
 			}
 
 			relPath, _ := filepath.Rel(ticketDir, path)
-			
+
 			// Try to read frontmatter, but don't fail if it doesn't exist
 			var title string
 			var docTopics []string
 			var docStatus, docIntent, docTypeStr string
 			var docOwners []string
-			
+
 			doc, err := readDocumentFrontmatter(path)
 			if err == nil && doc.Title != "" {
 				title = doc.Title
@@ -584,7 +600,10 @@ func (s *Server) handleGetDocuments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(documents)
+	if err := json.NewEncoder(w).Encode(documents); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
@@ -599,7 +618,9 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 	activePath := filepath.Join(s.rootDir, "active")
 	if _, err := os.Stat(activePath); os.IsNotExist(err) {
-		json.NewEncoder(w).Encode([]interface{}{})
+		if err := json.NewEncoder(w).Encode([]interface{}{}); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -618,7 +639,7 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 
 		ticketDir := filepath.Join(activePath, entry.Name())
 		indexPath := filepath.Join(ticketDir, "index.md")
-		
+
 		// Read workspace metadata
 		workspaceDoc, err := readDocumentFrontmatter(indexPath)
 		if err != nil {
@@ -658,18 +679,18 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			filepath.Walk(subdirPath, func(path string, info os.FileInfo, err error) error {
+			if err := filepath.Walk(subdirPath, func(path string, info os.FileInfo, err error) error {
 				if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".md") {
 					return nil
 				}
 
 				relPath, _ := filepath.Rel(ticketDir, path)
-				
+
 				var title string
 				var docTopics []string
 				var status, intent, docType string
 				var owners []string
-				
+
 				doc, err := readDocumentFrontmatter(path)
 				if err == nil && doc.Title != "" {
 					title = doc.Title
@@ -700,52 +721,56 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 					queryLower := strings.ToLower(query)
 					titleLower := strings.ToLower(title)
 					pathLower := strings.ToLower(relPath)
-					
+
 					if !strings.Contains(titleLower, queryLower) && !strings.Contains(pathLower, queryLower) {
 						return nil
 					}
 				}
 
-					var relatedFiles models.RelatedFiles
-					var externalSources []string
-					var summary string
-					if err == nil {
-						relatedFiles = doc.RelatedFiles
-						externalSources = doc.ExternalSources
-						summary = doc.Summary
-					}
+				var relatedFiles models.RelatedFiles
+				var externalSources []string
+				var summary string
+				if err == nil {
+					relatedFiles = doc.RelatedFiles
+					externalSources = doc.ExternalSources
+					summary = doc.Summary
+				}
 
-					results = append(results, map[string]interface{}{
-						"name":            title,
-						"type":            dt,
-						"path":            relPath,
-						"workspace":       workspaceDoc.Ticket,
-						"workspaceTitle":  workspaceDoc.Title,
-						"topics":          docTopics,
-						"status":          status,
-						"intent":          intent,
-						"docType":         docType,
-						"owners":          owners,
-						"summary":         summary,
-						"relatedFiles":    relatedFiles,
-						"externalSources": externalSources,
-					})
+				results = append(results, map[string]interface{}{
+					"name":            title,
+					"type":            dt,
+					"path":            relPath,
+					"workspace":       workspaceDoc.Ticket,
+					"workspaceTitle":  workspaceDoc.Title,
+					"topics":          docTopics,
+					"status":          status,
+					"intent":          intent,
+					"docType":         docType,
+					"owners":          owners,
+					"summary":         summary,
+					"relatedFiles":    relatedFiles,
+					"externalSources": externalSources,
+				})
 
 				return nil
-			})
+			}); err != nil {
+				log.Printf("Error walking directory %s: %v", subdirPath, err)
+			}
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(results)
+	if err := json.NewEncoder(w).Encode(results); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }
-
 
 func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	
+
 	if r.Method == "OPTIONS" {
 		return
 	}
@@ -756,13 +781,13 @@ func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Ticket   string   `json:"ticket"`
-		Path     string   `json:"path"`
-		Topics   []string `json:"topics"`
-		Status   string   `json:"status"`
-		Intent   string   `json:"intent"`
-		Owners   []string `json:"owners"`
-		Summary  string   `json:"summary"`
+		Ticket  string   `json:"ticket"`
+		Path    string   `json:"path"`
+		Topics  []string `json:"topics"`
+		Status  string   `json:"status"`
+		Intent  string   `json:"intent"`
+		Owners  []string `json:"owners"`
+		Summary string   `json:"summary"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -814,7 +839,7 @@ func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 	// Serialize frontmatter
 	var buf bytes.Buffer
 	buf.WriteString("---\n")
-	
+
 	if doc.Title != "" {
 		buf.WriteString(fmt.Sprintf("title: %s\n", doc.Title))
 	}
@@ -866,9 +891,12 @@ func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "updated",
 		"path":    fullPath,
 		"message": "Document metadata updated successfully",
-	})
+	}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
 }

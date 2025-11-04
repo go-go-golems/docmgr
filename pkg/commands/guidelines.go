@@ -201,4 +201,3 @@ func ListGuidelineTypes() []string {
 	}
 	return types
 }
-

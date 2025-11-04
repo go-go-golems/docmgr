@@ -27,7 +27,7 @@ func NewVocabListCommand() (*VocabListCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"list",
 			cmds.WithShort("List vocabulary entries"),
-            cmds.WithLong(`Lists vocabulary entries from the workspace vocabulary file.
+			cmds.WithLong(`Lists vocabulary entries from the workspace vocabulary file.
 
 The vocabulary path is resolved from .ttmp.yaml if configured via 'vocabulary'.
 By default, it is '<root>/vocabulary.yaml' (root defaults to 'ttmp').
@@ -112,38 +112,37 @@ var _ cmds.GlazeCommand = &VocabListCommand{}
 
 // Implement BareCommand for human-friendly output
 func (c *VocabListCommand) Run(
-    ctx context.Context,
-    parsedLayers *layers.ParsedLayers,
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
 ) error {
-    settings := &VocabListSettings{}
-    if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
-        return fmt.Errorf("failed to parse settings: %w", err)
-    }
+	settings := &VocabListSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
 
-    vocab, err := LoadVocabulary()
-    if err != nil {
-        return fmt.Errorf("failed to load vocabulary: %w", err)
-    }
+	vocab, err := LoadVocabulary()
+	if err != nil {
+		return fmt.Errorf("failed to load vocabulary: %w", err)
+	}
 
-    category := strings.ToLower(settings.Category)
+	category := strings.ToLower(settings.Category)
 
-    if category == "" || category == "topics" {
-        for _, item := range vocab.Topics {
-            fmt.Printf("topics: %s — %s\n", item.Slug, item.Description)
-        }
-    }
-    if category == "" || category == "doctypes" || category == "doc-types" {
-        for _, item := range vocab.DocTypes {
-            fmt.Printf("docTypes: %s — %s\n", item.Slug, item.Description)
-        }
-    }
-    if category == "" || category == "intent" {
-        for _, item := range vocab.Intent {
-            fmt.Printf("intent: %s — %s\n", item.Slug, item.Description)
-        }
-    }
-    return nil
+	if category == "" || category == "topics" {
+		for _, item := range vocab.Topics {
+			fmt.Printf("topics: %s — %s\n", item.Slug, item.Description)
+		}
+	}
+	if category == "" || category == "doctypes" || category == "doc-types" {
+		for _, item := range vocab.DocTypes {
+			fmt.Printf("docTypes: %s — %s\n", item.Slug, item.Description)
+		}
+	}
+	if category == "" || category == "intent" {
+		for _, item := range vocab.Intent {
+			fmt.Printf("intent: %s — %s\n", item.Slug, item.Description)
+		}
+	}
+	return nil
 }
 
 var _ cmds.BareCommand = &VocabListCommand{}
-

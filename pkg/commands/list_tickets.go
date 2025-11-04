@@ -72,10 +72,10 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-    // Apply config root if present
-    settings.Root = ResolveRoot(settings.Root)
+	// Apply config root if present
+	settings.Root = ResolveRoot(settings.Root)
 
-    if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
@@ -88,10 +88,10 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		if !entry.IsDir() {
 			continue
 		}
-        // Skip scaffolding directories
-        if strings.HasPrefix(entry.Name(), "_") {
-            continue
-        }
+		// Skip scaffolding directories
+		if strings.HasPrefix(entry.Name(), "_") {
+			continue
+		}
 
 		indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
 		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
@@ -133,46 +133,57 @@ var _ cmds.GlazeCommand = &ListTicketsCommand{}
 
 // Implement BareCommand for human-friendly output
 func (c *ListTicketsCommand) Run(
-    ctx context.Context,
-    parsedLayers *layers.ParsedLayers,
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
 ) error {
-    settings := &ListTicketsSettings{}
-    if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
-        return fmt.Errorf("failed to parse settings: %w", err)
-    }
+	settings := &ListTicketsSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
 
-    // Apply config root if present
-    settings.Root = ResolveRoot(settings.Root)
+	// Apply config root if present
+	settings.Root = ResolveRoot(settings.Root)
 
-    if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
-        return fmt.Errorf("root directory does not exist: %s", settings.Root)
-    }
+	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+		return fmt.Errorf("root directory does not exist: %s", settings.Root)
+	}
 
-    entries, err := os.ReadDir(settings.Root)
-    if err != nil {
-        return fmt.Errorf("failed to read root directory: %w", err)
-    }
+	entries, err := os.ReadDir(settings.Root)
+	if err != nil {
+		return fmt.Errorf("failed to read root directory: %w", err)
+	}
 
-    for _, entry := range entries {
-        if !entry.IsDir() { continue }
-        if strings.HasPrefix(entry.Name(), "_") { continue }
-        indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
-        if _, err := os.Stat(indexPath); os.IsNotExist(err) { continue }
-        doc, err := readDocumentFrontmatter(indexPath)
-        if err != nil { continue }
-        if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) { continue }
-        if settings.Status != "" && doc.Status != settings.Status { continue }
-        fmt.Printf("%s ‘%s’ status=%s topics=%s updated=%s path=%s\n",
-            doc.Ticket,
-            doc.Title,
-            doc.Status,
-            strings.Join(doc.Topics, ", "),
-            doc.LastUpdated.Format("2006-01-02"),
-            filepath.Join(settings.Root, entry.Name()),
-        )
-    }
-    return nil
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(entry.Name(), "_") {
+			continue
+		}
+		indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
+		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+			continue
+		}
+		doc, err := readDocumentFrontmatter(indexPath)
+		if err != nil {
+			continue
+		}
+		if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) {
+			continue
+		}
+		if settings.Status != "" && doc.Status != settings.Status {
+			continue
+		}
+		fmt.Printf("%s ‘%s’ status=%s topics=%s updated=%s path=%s\n",
+			doc.Ticket,
+			doc.Title,
+			doc.Status,
+			strings.Join(doc.Topics, ", "),
+			doc.LastUpdated.Format("2006-01-02"),
+			filepath.Join(settings.Root, entry.Name()),
+		)
+	}
+	return nil
 }
 
 var _ cmds.BareCommand = &ListTicketsCommand{}
-

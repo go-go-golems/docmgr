@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/go-go-golems/docmgr/pkg/commands"
-    "github.com/go-go-golems/docmgr/pkg/doc"
+	"github.com/go-go-golems/docmgr/pkg/doc"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-    "github.com/go-go-golems/glazed/pkg/help"
-    help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
+	"github.com/go-go-golems/glazed/pkg/help"
+	help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
 	"github.com/spf13/cobra"
 )
 
@@ -22,10 +22,10 @@ in LLM-assisted workflows. It provides commands to create, organize,
 and validate documentation workspaces with metadata and external source support.`,
 	}
 
-    // Setup Glazed help system and load embedded docs
-    helpSystem := help.NewHelpSystem()
-    _ = doc.AddDocToHelpSystem(helpSystem)
-    help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
+	// Setup Glazed help system and load embedded docs
+	helpSystem := help.NewHelpSystem()
+	_ = doc.AddDocToHelpSystem(helpSystem)
+	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
 
 	// Create init command
 	initCmd, err := commands.NewInitCommand()
@@ -61,9 +61,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-cobraListTicketsCmd, err := cli.BuildCobraCommand(listTicketsCmd,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraListTicketsCmd, err := cli.BuildCobraCommand(listTicketsCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -83,9 +83,9 @@ cobraListTicketsCmd, err := cli.BuildCobraCommand(listTicketsCmd,
 		os.Exit(1)
 	}
 
-cobraListDocsCmd, err := cli.BuildCobraCommand(listDocsCmd,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraListDocsCmd, err := cli.BuildCobraCommand(listDocsCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -213,9 +213,9 @@ cobraListDocsCmd, err := cli.BuildCobraCommand(listDocsCmd,
 		os.Exit(1)
 	}
 
-cobraVocabListCmd, err := cli.BuildCobraCommand(vocabListCmd,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraVocabListCmd, err := cli.BuildCobraCommand(vocabListCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -258,9 +258,9 @@ cobraVocabListCmd, err := cli.BuildCobraCommand(vocabListCmd,
 		os.Exit(1)
 	}
 
-cobraSearchCmd, err := cli.BuildCobraCommand(searchCmd,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraSearchCmd, err := cli.BuildCobraCommand(searchCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -280,9 +280,9 @@ cobraSearchCmd, err := cli.BuildCobraCommand(searchCmd,
 		os.Exit(1)
 	}
 
-cobraGuidelinesCmd, err := cli.BuildCobraCommand(guidelinesCmd,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraGuidelinesCmd, err := cli.BuildCobraCommand(guidelinesCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -333,9 +333,9 @@ cobraGuidelinesCmd, err := cli.BuildCobraCommand(guidelinesCmd,
 		os.Exit(1)
 	}
 
-cobraStatusCmd, err := cli.BuildCobraCommand(statusCmd,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraStatusCmd, err := cli.BuildCobraCommand(statusCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -390,9 +390,9 @@ cobraStatusCmd, err := cli.BuildCobraCommand(statusCmd,
 		fmt.Fprintf(os.Stderr, "Error creating tasks list command: %v\n", err)
 		os.Exit(1)
 	}
-cobraTasksList, err := cli.BuildCobraCommand(_tasksList,
-        cli.WithDualMode(true),
-        cli.WithGlazeToggleFlag("with-glaze-output"),
+	cobraTasksList, err := cli.BuildCobraCommand(_tasksList,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,

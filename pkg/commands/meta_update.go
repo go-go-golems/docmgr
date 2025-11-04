@@ -24,12 +24,12 @@ type MetaUpdateCommand struct {
 
 // MetaUpdateSettings holds the parameters for the meta update command
 type MetaUpdateSettings struct {
-	Doc      string   `glazed.parameter:"doc"`
-	Ticket   string   `glazed.parameter:"ticket"`
-	DocType  string   `glazed.parameter:"doc-type"`
-	Field    string   `glazed.parameter:"field"`
-	Value    string   `glazed.parameter:"value"`
-	Root     string   `glazed.parameter:"root"`
+	Doc     string `glazed.parameter:"doc"`
+	Ticket  string `glazed.parameter:"ticket"`
+	DocType string `glazed.parameter:"doc-type"`
+	Field   string `glazed.parameter:"field"`
+	Value   string `glazed.parameter:"value"`
+	Root    string `glazed.parameter:"root"`
 }
 
 func NewMetaUpdateCommand() (*MetaUpdateCommand, error) {
@@ -91,13 +91,13 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
-    settings := &MetaUpdateSettings{}
+	settings := &MetaUpdateSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-    // Apply config root if present
-    settings.Root = ResolveRoot(settings.Root)
+	// Apply config root if present
+	settings.Root = ResolveRoot(settings.Root)
 
 	var filesToUpdate []string
 
@@ -110,7 +110,7 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 		if err != nil {
 			return fmt.Errorf("failed to find ticket directory: %w", err)
 		}
-		
+
 		// Find all markdown files in ticket directory
 		files, err := findMarkdownFiles(ticketDir, settings.DocType)
 		if err != nil {
@@ -157,7 +157,7 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Parse frontmatter
 	var doc models.Document
@@ -204,16 +204,16 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 			}
 		}
 		doc.Owners = owners
-    case "relatedfiles":
-        // Parse comma-separated values into structured entries with empty notes
-        var rfs models.RelatedFiles
-        for _, file := range strings.Split(value, ",") {
-            file = strings.TrimSpace(file)
-            if file != "" {
-                rfs = append(rfs, models.RelatedFile{Path: file})
-            }
-        }
-        doc.RelatedFiles = rfs
+	case "relatedfiles":
+		// Parse comma-separated values into structured entries with empty notes
+		var rfs models.RelatedFiles
+		for _, file := range strings.Split(value, ",") {
+			file = strings.TrimSpace(file)
+			if file != "" {
+				rfs = append(rfs, models.RelatedFile{Path: file})
+			}
+		}
+		doc.RelatedFiles = rfs
 	case "externalsources":
 		// Parse comma-separated values
 		sources := []string{}
@@ -271,4 +271,3 @@ func findMarkdownFiles(rootDir string, docTypeFilter string) ([]string, error) {
 }
 
 var _ cmds.GlazeCommand = &MetaUpdateCommand{}
-

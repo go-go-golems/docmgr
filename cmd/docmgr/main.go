@@ -47,6 +47,25 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
+	// Create configure command (write .ttmp.yaml)
+	configureCmd, err := commands.NewConfigureCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating configure command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraConfigureCmd, err := cli.BuildCobraCommand(configureCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building configure command: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Create create-ticket command
 	createTicketCmd, err := commands.NewCreateTicketCommand()
 	if err != nil {
@@ -335,6 +354,7 @@ and validate documentation workspaces with metadata and external source support.
 	}
 
 	rootCmd.AddCommand(cobraInitCmd)
+	rootCmd.AddCommand(cobraConfigureCmd)
 	rootCmd.AddCommand(cobraCreateTicketCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(cobraAddCmd)

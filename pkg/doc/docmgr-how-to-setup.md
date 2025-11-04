@@ -37,6 +37,12 @@ Per-ticket workspace contents created by `create-ticket`:
 
 Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`. When the config uses relative paths (for example, `root: ttmp`), they are interpreted relative to the directory that contains `.ttmp.yaml`.
 
+Quick setup:
+
+```bash
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+```
+
 Root resolution order:
 - Flag: `--root`
 - `.ttmp.yaml:root` (relative to the config file)
@@ -60,7 +66,15 @@ vocabulary: ttmp/vocabulary.yaml
 
 ## 3. Seed Vocabulary
 
-Start with a minimal, agreed vocabulary to prevent drift in metadata. These values become the shared language of your documentation; they drive search filters and keep frontmatter consistent. Keep the list short at first and evolve with consensus:
+Start with a minimal, agreed vocabulary to prevent drift in metadata. These values become the shared language of your documentation; they drive search filters and keep frontmatter consistent. Keep the list short at first and evolve with consensus.
+
+One-shot seeding during root init:
+
+```bash
+docmgr init --seed-vocabulary
+```
+
+Or add entries explicitly:
 
 ```bash
 docmgr vocab add --category topics   --slug backend --description "Backend services"

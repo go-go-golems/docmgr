@@ -62,8 +62,11 @@ go run ./cmd/docmgr --help
 ## Quick Start
 
 ```bash
+# Write a repo config (.ttmp.yaml) quickly
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+
 # Initialize docs root (creates vocabulary/templates/guidelines if missing)
-docmgr init
+docmgr init --seed-vocabulary
 
 # Create a new ticket workspace
 docmgr create-ticket --ticket MEN-1234 --title "Design Overview" --topics design,backend
@@ -120,7 +123,11 @@ MIT
 3. Git repository root: `<git-root>/ttmp` (CLI)
 4. Fallback: `<cwd>/ttmp` (CLI) or `docs` (server)
 
-Recommended multi-repo setup: place a `.ttmp.yaml` at the workspace root and point it at the repo-local `ttmp/`.
+Recommended multi-repo setup: place a `.ttmp.yaml` at the workspace root and point it at the repo-local `ttmp/`. You can create this file via `docmgr configure`:
+
+```bash
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+```
 
 ```yaml
 root: go-go-mento/ttmp

@@ -14,5 +14,6 @@ bash ./04-relate-and-doctor.sh "${ROOT_DIR}"
 bash ./05-search-scenarios.sh "${ROOT_DIR}"
 bash ./06-doctor-advanced.sh "${ROOT_DIR}"
 bash ./07-status.sh "${ROOT_DIR}"
+bash ./08-configure.sh "${ROOT_DIR}"
 
 echo "[ok] Scenario completed at ${ROOT_DIR}/acme-chat-app"

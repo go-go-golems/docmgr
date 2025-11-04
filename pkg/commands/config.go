@@ -1,11 +1,11 @@
 package commands
 
 import (
-    "fmt"
-    "os"
-    "path/filepath"
+	"fmt"
+	"os"
+	"path/filepath"
 
-    "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 // TTMPConfig defines repository-level configuration for docmgr
@@ -15,8 +15,8 @@ type TTMPConfig struct {
 		Owners []string `yaml:"owners"`
 		Intent string   `yaml:"intent"`
 	} `yaml:"defaults"`
-	FilenamePrefixPolicy string          `yaml:"filenamePrefixPolicy"`
-	Vocabulary           string          `yaml:"vocabulary"`
+	FilenamePrefixPolicy string `yaml:"filenamePrefixPolicy"`
+	Vocabulary           string `yaml:"vocabulary"`
 }
 
 // FindTTMPConfigPath walks up from cwd to find .ttmp.yaml
@@ -65,64 +65,64 @@ func LoadTTMPConfig() (*TTMPConfig, error) {
 
 // ResolveRoot applies config.Root if available and the provided root is the default ("ttmp")
 func ResolveRoot(root string) string {
-    // If a non-default root was explicitly provided and absolute, honor it
-    if root != "ttmp" && root != "" {
-        if filepath.IsAbs(root) {
-            return root
-        }
-        // For relative non-default roots, anchor on current working directory
-        if cwd, err := os.Getwd(); err == nil {
-            return filepath.Join(cwd, root)
-        }
-        return root
-    }
+	// If a non-default root was explicitly provided and absolute, honor it
+	if root != "ttmp" && root != "" {
+		if filepath.IsAbs(root) {
+			return root
+		}
+		// For relative non-default roots, anchor on current working directory
+		if cwd, err := os.Getwd(); err == nil {
+			return filepath.Join(cwd, root)
+		}
+		return root
+	}
 
-    // Try to load config and resolve its root relative to the config file
-    if cfgPath, err := FindTTMPConfigPath(); err == nil {
-        data, err := os.ReadFile(cfgPath)
-        if err == nil {
-            var cfg TTMPConfig
-            if yaml.Unmarshal(data, &cfg) == nil {
-                if cfg.Root != "" {
-                    if filepath.IsAbs(cfg.Root) {
-                        return cfg.Root
-                    }
-                    return filepath.Join(filepath.Dir(cfgPath), cfg.Root)
-                }
-            }
-        }
-    }
+	// Try to load config and resolve its root relative to the config file
+	if cfgPath, err := FindTTMPConfigPath(); err == nil {
+		data, err := os.ReadFile(cfgPath)
+		if err == nil {
+			var cfg TTMPConfig
+			if yaml.Unmarshal(data, &cfg) == nil {
+				if cfg.Root != "" {
+					if filepath.IsAbs(cfg.Root) {
+						return cfg.Root
+					}
+					return filepath.Join(filepath.Dir(cfgPath), cfg.Root)
+				}
+			}
+		}
+	}
 
-    // Fallback: anchor default root on the git repository root if present
-    if gitRoot, err := FindGitRoot(); err == nil && gitRoot != "" {
-        return filepath.Join(gitRoot, "ttmp")
-    }
+	// Fallback: anchor default root on the git repository root if present
+	if gitRoot, err := FindGitRoot(); err == nil && gitRoot != "" {
+		return filepath.Join(gitRoot, "ttmp")
+	}
 
-    // Final fallback: anchor on current working directory
-    if cwd, err := os.Getwd(); err == nil {
-        return filepath.Join(cwd, "ttmp")
-    }
-    return root
+	// Final fallback: anchor on current working directory
+	if cwd, err := os.Getwd(); err == nil {
+		return filepath.Join(cwd, "ttmp")
+	}
+	return root
 }
 
 // FindGitRoot walks up from the current working directory to find the nearest .git directory
 func FindGitRoot() (string, error) {
-    dir, err := os.Getwd()
-    if err != nil {
-        return "", err
-    }
-    for {
-        gitDir := filepath.Join(dir, ".git")
-        if fi, err := os.Stat(gitDir); err == nil && fi.IsDir() {
-            return dir, nil
-        }
-        parent := filepath.Dir(dir)
-        if parent == dir {
-            break
-        }
-        dir = parent
-    }
-    return "", fmt.Errorf(".git directory not found")
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	for {
+		gitDir := filepath.Join(dir, ".git")
+		if fi, err := os.Stat(gitDir); err == nil && fi.IsDir() {
+			return dir, nil
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "", fmt.Errorf(".git directory not found")
 }
 
 // ResolveVocabularyPath returns the absolute path to the vocabulary file.

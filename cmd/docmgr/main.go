@@ -27,7 +27,7 @@ and validate documentation workspaces with metadata and external source support.
 	_ = doc.AddDocToHelpSystem(helpSystem)
 	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
 
-	// Create init command
+	// Create init command (initialize docs root)
 	initCmd, err := commands.NewInitCommand()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating init command: %v\n", err)
@@ -44,6 +44,25 @@ and validate documentation workspaces with metadata and external source support.
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error building init command: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Create create-ticket command
+	createTicketCmd, err := commands.NewCreateTicketCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating create-ticket command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraCreateTicketCmd, err := cli.BuildCobraCommand(createTicketCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building create-ticket command: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -316,6 +335,7 @@ and validate documentation workspaces with metadata and external source support.
 	}
 
 	rootCmd.AddCommand(cobraInitCmd)
+	rootCmd.AddCommand(cobraCreateTicketCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(cobraAddCmd)
 	rootCmd.AddCommand(cobraDoctorCmd)

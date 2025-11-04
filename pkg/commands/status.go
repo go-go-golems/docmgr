@@ -197,6 +197,28 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
     cfgPath, _ := FindTTMPConfigPath()
     vocabPath, _ := ResolveVocabularyPath()
 
+    // Emit warnings
+    cwd, _ := os.Getwd()
+    fallbackCandidate := filepath.Join(cwd, "ttmp")
+    if cfgPath == "" {
+        if _, err := FindGitRoot(); err != nil {
+            // No config and no git; if using CWD fallback, warn
+            if filepath.Clean(settings.Root) == filepath.Clean(fallbackCandidate) {
+                _ = gp.AddRow(ctx, types.NewRow(
+                    types.MRP("level", "warning"),
+                    types.MRP("message", "No .ttmp.yaml found; using <cwd>/ttmp fallback"),
+                    types.MRP("root", settings.Root),
+                ))
+            }
+        }
+    }
+    if roots, err := DetectMultipleTTMPRoots(); err == nil && len(roots) > 1 {
+        _ = gp.AddRow(ctx, types.NewRow(
+            types.MRP("level", "warning"),
+            types.MRP("message", fmt.Sprintf("Multiple ttmp/ roots detected: %s", strings.Join(roots, ", "))),
+        ))
+    }
+
     // Summary row
 	sum := types.NewRow(
 		types.MRP("root", settings.Root),

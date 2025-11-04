@@ -4,6 +4,7 @@ import (
     "fmt"
     "os"
     "path/filepath"
+    "strings"
 
     "gopkg.in/yaml.v3"
 )
@@ -125,10 +126,26 @@ func FindGitRoot() (string, error) {
 		return "", err
 	}
 	for {
-		gitDir := filepath.Join(dir, ".git")
-		if fi, err := os.Stat(gitDir); err == nil && fi.IsDir() {
-			return dir, nil
-		}
+        gitPath := filepath.Join(dir, ".git")
+        if fi, err := os.Stat(gitPath); err == nil {
+            if fi.IsDir() {
+                return dir, nil
+            }
+            // .git is a file; parse gitdir:
+            if b, err := os.ReadFile(gitPath); err == nil {
+                line := strings.TrimSpace(string(b))
+                lower := strings.ToLower(line)
+                if strings.HasPrefix(lower, "gitdir:") {
+                    gd := strings.TrimSpace(line[len("gitdir:"):])
+                    if !filepath.IsAbs(gd) {
+                        gd = filepath.Join(dir, gd)
+                    }
+                    if _, err := os.Stat(gd); err == nil {
+                        return dir, nil
+                    }
+                }
+            }
+        }
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			break
@@ -136,6 +153,31 @@ func FindGitRoot() (string, error) {
 		dir = parent
 	}
 	return "", fmt.Errorf(".git directory not found")
+}
+
+// DetectMultipleTTMPRoots walks up from CWD and records directories containing a 'ttmp' folder
+func DetectMultipleTTMPRoots() ([]string, error) {
+    dir, err := os.Getwd()
+    if err != nil {
+        return nil, err
+    }
+    var roots []string
+    seen := map[string]bool{}
+    for {
+        candidate := filepath.Join(dir, "ttmp")
+        if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+            if !seen[candidate] {
+                roots = append(roots, candidate)
+                seen[candidate] = true
+            }
+        }
+        parent := filepath.Dir(dir)
+        if parent == dir {
+            break
+        }
+        dir = parent
+    }
+    return roots, nil
 }
 
 // ResolveVocabularyPath returns the absolute path to the vocabulary file.

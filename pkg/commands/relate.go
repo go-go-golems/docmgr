@@ -29,6 +29,7 @@ type RelateSettings struct {
 	FileNotes        []string `glazed.parameter:"file-note"`
 	Suggest          bool     `glazed.parameter:"suggest"`
 	ApplySuggestions bool     `glazed.parameter:"apply-suggestions"`
+    FromGit          bool     `glazed.parameter:"from-git"`
 	Query            string   `glazed.parameter:"query"`
 	Topics           []string `glazed.parameter:"topics"`
 	Root             string   `glazed.parameter:"root"`
@@ -97,6 +98,12 @@ Examples:
 					parameters.WithHelp("Apply suggested files to the target document (requires --suggest)"),
 					parameters.WithDefault(false),
 				),
+                parameters.NewParameterDefinition(
+                    "from-git",
+                    parameters.ParameterTypeBool,
+                    parameters.WithHelp("Limit suggestions to changed files from git status (modified, staged, untracked)"),
+                    parameters.WithDefault(false),
+                ),
 				parameters.NewParameterDefinition(
 					"query",
 					parameters.ParameterTypeString,
@@ -156,7 +163,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	suggestions := map[string]reasonSet{}
 	// Optional notes from existing documents for the same file
 	existingNotes := map[string]map[string]bool{}
-	if settings.Suggest {
+    if settings.Suggest {
 		// Determine search root: ticket dir if available else repo root
 		searchRoot := settings.Root
 		if ticketDir == "" && settings.Ticket != "" {
@@ -166,101 +173,120 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			searchRoot = ticketDir
 		}
 
-		// From existing docs' RelatedFiles within the search root
-		existing := map[string]bool{}
-		_ = filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-				return nil
-			}
-			doc, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			// If topics provided, filter
-			if len(settings.Topics) > 0 {
-				match := false
-				for _, ft := range settings.Topics {
-					for _, dt := range doc.Topics {
-						if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
-							match = true
-							break
-						}
-					}
-					if match {
-						break
-					}
-				}
-				if !match {
-					return nil
-				}
-			}
-			for _, rf := range doc.RelatedFiles {
-				if rf.Path != "" {
-					existing[rf.Path] = true
-					if rf.Note != "" {
-						if _, ok := existingNotes[rf.Path]; !ok {
-							existingNotes[rf.Path] = map[string]bool{}
-						}
-						existingNotes[rf.Path][rf.Note] = true
-					}
-				}
-			}
-			return nil
-		})
+        if settings.FromGit {
+            // Only from git status (changed files)
+            if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
+                for _, f := range modified {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["working tree modified"] = true
+                }
+                for _, f := range staged {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["staged for commit"] = true
+                }
+                for _, f := range untracked {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["untracked new file"] = true
+                }
+            }
+        } else {
+            // Default heuristic blend: existing docs, git history, ripgrep, git status
+            existing := map[string]bool{}
+            _ = filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
+                if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
+                    return nil
+                }
+                doc, err := readDocumentFrontmatter(path)
+                if err != nil {
+                    return nil
+                }
+                // If topics provided, filter
+                if len(settings.Topics) > 0 {
+                    match := false
+                    for _, ft := range settings.Topics {
+                        for _, dt := range doc.Topics {
+                            if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
+                                match = true
+                                break
+                            }
+                        }
+                        if match {
+                            break
+                        }
+                    }
+                    if !match {
+                        return nil
+                    }
+                }
+                for _, rf := range doc.RelatedFiles {
+                    if rf.Path != "" {
+                        existing[rf.Path] = true
+                        if rf.Note != "" {
+                            if _, ok := existingNotes[rf.Path]; !ok {
+                                existingNotes[rf.Path] = map[string]bool{}
+                            }
+                            existingNotes[rf.Path][rf.Note] = true
+                        }
+                    }
+                }
+                return nil
+            })
 
-		for f := range existing {
-			if _, ok := suggestions[f]; !ok {
-				suggestions[f] = reasonSet{}
-			}
-			suggestions[f]["referenced by documents"] = true
-		}
+            for f := range existing {
+                if _, ok := suggestions[f]; !ok {
+                    suggestions[f] = reasonSet{}
+                }
+                suggestions[f]["referenced by documents"] = true
+            }
 
-		// From git history
-		terms := []string{}
-		if settings.Query != "" {
-			terms = append(terms, settings.Query)
-		}
-		terms = append(terms, settings.Topics...)
-		if files, err := suggestFilesFromGit(searchRoot, terms); err == nil {
-			for _, f := range files {
-				if _, ok := suggestions[f]; !ok {
-					suggestions[f] = reasonSet{}
-				}
-				suggestions[f]["recent commit activity"] = true
-			}
-		}
-
-		// From ripgrep/grep
-		if files, err := suggestFilesFromRipgrep(searchRoot, terms); err == nil {
-			for _, f := range files {
-				if _, ok := suggestions[f]; !ok {
-					suggestions[f] = reasonSet{}
-				}
-				suggestions[f][fmt.Sprintf("content match: %s", firstTerm(terms))] = true
-			}
-		}
-
-		// From git status (modified, staged, untracked)
-		if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
-			for _, f := range modified {
-				if _, ok := suggestions[f]; !ok {
-					suggestions[f] = reasonSet{}
-				}
-				suggestions[f]["working tree modified"] = true
-			}
-			for _, f := range staged {
-				if _, ok := suggestions[f]; !ok {
-					suggestions[f] = reasonSet{}
-				}
-				suggestions[f]["staged for commit"] = true
-			}
-			for _, f := range untracked {
-				if _, ok := suggestions[f]; !ok {
-					suggestions[f] = reasonSet{}
-				}
-				suggestions[f]["untracked new file"] = true
-			}
-		}
+            terms := []string{}
+            if settings.Query != "" {
+                terms = append(terms, settings.Query)
+            }
+            terms = append(terms, settings.Topics...)
+            if files, err := suggestFilesFromGit(searchRoot, terms); err == nil {
+                for _, f := range files {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["recent commit activity"] = true
+                }
+            }
+            if files, err := suggestFilesFromRipgrep(searchRoot, terms); err == nil {
+                for _, f := range files {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f][fmt.Sprintf("content match: %s", firstTerm(terms))] = true
+                }
+            }
+            if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
+                for _, f := range modified {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["working tree modified"] = true
+                }
+                for _, f := range staged {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["staged for commit"] = true
+                }
+                for _, f := range untracked {
+                    if _, ok := suggestions[f]; !ok {
+                        suggestions[f] = reasonSet{}
+                    }
+                    suggestions[f]["untracked new file"] = true
+                }
+            }
+        }
 
 		// Deduplicate suggestions
 		var dedup []string

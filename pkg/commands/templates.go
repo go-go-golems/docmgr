@@ -6,7 +6,7 @@ import (
     "strings"
     "time"
 
-    "github.com/docmgr/docmgr/pkg/models"
+    "github.com/go-go-golems/docmgr/pkg/models"
 )
 
 // TemplateContent holds template content for different document types

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/docmgr/docmgr/pkg/commands"
-    "github.com/docmgr/docmgr/pkg/doc"
+	"github.com/go-go-golems/docmgr/pkg/commands"
+    "github.com/go-go-golems/docmgr/pkg/doc"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
     "github.com/go-go-golems/glazed/pkg/help"

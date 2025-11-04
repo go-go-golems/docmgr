@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/adrg/frontmatter"
-	"github.com/docmgr/docmgr/pkg/models"
+	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"

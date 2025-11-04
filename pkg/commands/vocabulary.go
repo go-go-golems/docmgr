@@ -5,7 +5,7 @@ import (
     "os"
     "path/filepath"
 
-    "github.com/docmgr/docmgr/pkg/models"
+    "github.com/go-go-golems/docmgr/pkg/models"
     "gopkg.in/yaml.v3"
 )
 

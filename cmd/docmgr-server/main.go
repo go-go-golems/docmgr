@@ -18,7 +18,9 @@ import (
 )
 
 type Server struct {
-	rootDir string
+    rootDir        string
+    configPath     string
+    vocabularyPath string
 }
 
 type InitRequest struct {
@@ -40,8 +42,81 @@ type ImportFileRequest struct {
 	Name     string `json:"name"`
 }
 
-func NewServer(rootDir string) *Server {
-	return &Server{rootDir: rootDir}
+func NewServer(rootDir, configPath, vocabularyPath string) *Server {
+    return &Server{rootDir: rootDir, configPath: configPath, vocabularyPath: vocabularyPath}
+}
+
+type ttmpConfig struct {
+    Root       string `yaml:"root"`
+    Vocabulary string `yaml:"vocabulary"`
+}
+
+// resolveRootAndConfig returns the docs root, the .ttmp.yaml path (if any), and the vocabulary path (if any)
+func resolveRootAndConfig(envRoot string) (string, string, string) {
+    // 1) Environment variable wins
+    if envRoot != "" {
+        if !filepath.IsAbs(envRoot) {
+            if cwd, err := os.Getwd(); err == nil {
+                envRoot = filepath.Join(cwd, envRoot)
+            }
+        }
+        return envRoot, "", ""
+    }
+
+    // 2) Search for nearest .ttmp.yaml up the tree
+    cfgPath := findNearestTTMPConfig()
+    if cfgPath != "" {
+        data, err := os.ReadFile(cfgPath)
+        if err == nil {
+            var cfg ttmpConfig
+            if yaml.Unmarshal(data, &cfg) == nil {
+                baseDir := filepath.Dir(cfgPath)
+                var root string
+                if cfg.Root != "" {
+                    if filepath.IsAbs(cfg.Root) {
+                        root = cfg.Root
+                    } else {
+                        root = filepath.Join(baseDir, cfg.Root)
+                    }
+                }
+
+                var vocab string
+                if cfg.Vocabulary != "" {
+                    if filepath.IsAbs(cfg.Vocabulary) {
+                        vocab = cfg.Vocabulary
+                    } else {
+                        vocab = filepath.Join(baseDir, cfg.Vocabulary)
+                    }
+                }
+
+                if root != "" {
+                    return root, cfgPath, vocab
+                }
+            }
+        }
+    }
+
+    // 3) Fallback
+    return "docs", "", ""
+}
+
+func findNearestTTMPConfig() string {
+    cwd, err := os.Getwd()
+    if err != nil {
+        return ""
+    }
+    for {
+        candidate := filepath.Join(cwd, ".ttmp.yaml")
+        if _, err := os.Stat(candidate); err == nil {
+            return candidate
+        }
+        parent := filepath.Dir(cwd)
+        if parent == cwd {
+            break
+        }
+        cwd = parent
+    }
+    return ""
 }
 
 func (s *Server) handleInit(w http.ResponseWriter, r *http.Request) {
@@ -59,18 +134,20 @@ func (s *Server) handleInit(w http.ResponseWriter, r *http.Request) {
 	// Create slug from title
 	slug := utils.Slugify(req.Title)
 	dirName := fmt.Sprintf("%s-%s", req.Ticket, slug)
-	ticketPath := filepath.Join(s.rootDir, "active", dirName)
+    ticketPath := filepath.Join(s.rootDir, "active", dirName)
 
 	// Create directory structure
-	dirs := []string{
-		ticketPath,
-		filepath.Join(ticketPath, "design"),
-		filepath.Join(ticketPath, "reference"),
-		filepath.Join(ticketPath, "playbooks"),
-		filepath.Join(ticketPath, "scripts"),
-		filepath.Join(ticketPath, "sources"),
-		filepath.Join(ticketPath, ".meta"),
-	}
+    dirs := []string{
+        ticketPath,
+        filepath.Join(ticketPath, "design"),
+        filepath.Join(ticketPath, "reference"),
+        filepath.Join(ticketPath, "playbooks"),
+        filepath.Join(ticketPath, "scripts"),
+        filepath.Join(ticketPath, "sources"),
+        filepath.Join(ticketPath, "various"),
+        filepath.Join(ticketPath, "archive"),
+        filepath.Join(ticketPath, ".meta"),
+    }
 
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -208,19 +285,18 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine subdirectory based on doc type
-	var subdir string
-	switch req.DocType {
-	case "design-doc":
-		subdir = "design"
-	case "reference":
-		subdir = "reference"
-	case "playbook":
-		subdir = "playbooks"
-	default:
-		http.Error(w, "Unknown document type", http.StatusBadRequest)
-		return
-	}
+    // Determine subdirectory based on doc type; unknown types go to various/
+    var subdir string
+    switch req.DocType {
+    case "design-doc":
+        subdir = "design"
+    case "reference":
+        subdir = "reference"
+    case "playbook":
+        subdir = "playbooks"
+    default:
+        subdir = "various"
+    }
 
 	// Create filename from title
 	slug := utils.Slugify(req.Title)
@@ -262,7 +338,7 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := map[string]interface{}{
+    response := map[string]interface{}{
 		"ticket":  req.Ticket,
 		"docType": req.DocType,
 		"title":   req.Title,
@@ -459,19 +535,18 @@ func enableCORS(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
-	rootDir := os.Getenv("DOCMGR_ROOT")
-	if rootDir == "" {
-		rootDir = "docs"
-	}
+    envRoot := os.Getenv("DOCMGR_ROOT")
+    rootDir, cfgPath, vocabPath := resolveRootAndConfig(envRoot)
 
-	server := NewServer(rootDir)
+    server := NewServer(rootDir, cfgPath, vocabPath)
 
-	http.HandleFunc("/api/init", enableCORS(server.handleInit))
+    http.HandleFunc("/api/init", enableCORS(server.handleInit))
 	http.HandleFunc("/api/list", enableCORS(server.handleList))
 	http.HandleFunc("/api/add", enableCORS(server.handleAdd))
 	http.HandleFunc("/api/import", enableCORS(server.handleImportFile))
 	http.HandleFunc("/api/documents", enableCORS(server.handleGetDocuments))
 	http.HandleFunc("/api/search", enableCORS(server.handleSearch))
+    http.HandleFunc("/api/status", enableCORS(server.handleStatus))
 	http.HandleFunc("/api/update", handleUpdateDocument)
 
 	port := os.Getenv("PORT")
@@ -479,7 +554,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Starting docmgr server on port %s with root directory: %s\n", port, rootDir)
+    log.Printf("Starting docmgr server on port %s with root=%s config=%s vocabulary=%s env.DOCMGR_ROOT=%t\n", port, rootDir, cfgPath, vocabPath, envRoot != "")
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
 	}
@@ -506,13 +581,14 @@ func (s *Server) handleGetDocuments(w http.ResponseWriter, r *http.Request) {
 
 	var documents []map[string]interface{}
 
-	// Scan design, reference, playbooks, and sources directories
-	subdirs := map[string]string{
-		"design":    "design",
-		"reference": "reference",
-		"playbooks": "playbook",
-		"sources":   "source",
-	}
+    // Scan design, reference, playbooks, sources, and various directories
+    subdirs := map[string]string{
+        "design":    "design",
+        "reference": "reference",
+        "playbooks": "playbook",
+        "sources":   "source",
+        "various":   "various",
+    }
 
 	for subdir, dt := range subdirs {
 		subdirPath := filepath.Join(ticketDir, subdir)
@@ -660,13 +736,14 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Scan documents in this workspace
-		subdirs := map[string]string{
-			"design":    "design",
-			"reference": "reference",
-			"playbooks": "playbook",
-			"sources":   "source",
-		}
+    // Scan documents in this workspace
+    subdirs := map[string]string{
+        "design":    "design",
+        "reference": "reference",
+        "playbooks": "playbook",
+        "sources":   "source",
+        "various":   "various",
+    }
 
 		for subdir, dt := range subdirs {
 			// Filter by document type if specified
@@ -766,6 +843,58 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    activePath := filepath.Join(s.rootDir, "active")
+    tickets := 0
+    docs := 0
+
+    if entries, err := os.ReadDir(activePath); err == nil {
+        for _, entry := range entries {
+            if !entry.IsDir() {
+                continue
+            }
+            idx := filepath.Join(activePath, entry.Name(), "index.md")
+            if _, err := os.Stat(idx); err == nil {
+                tickets++
+            }
+
+            // count markdown docs under known subdirs
+            subdirs := []string{"design", "reference", "playbooks", "sources", "various"}
+            for _, sd := range subdirs {
+                sdPath := filepath.Join(activePath, entry.Name(), sd)
+                _ = filepath.Walk(sdPath, func(path string, info os.FileInfo, err error) error {
+                    if err != nil || info == nil || info.IsDir() {
+                        return nil
+                    }
+                    if strings.HasSuffix(info.Name(), ".md") {
+                        docs++
+                    }
+                    return nil
+                })
+            }
+        }
+    }
+
+    resp := map[string]interface{}{
+        "root":           s.rootDir,
+        "configPath":     s.configPath,
+        "vocabularyPath": s.vocabularyPath,
+        "tickets":        tickets,
+        "docs":           docs,
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(resp); err != nil {
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
+}
+
 func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
@@ -795,13 +924,11 @@ func handleUpdateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read the current document
-	docRoot := os.Getenv("DOCMGR_ROOT")
-	if docRoot == "" {
-		docRoot = "docs"
-	}
+    // Read the current document (respect env and .ttmp.yaml discovery)
+    envRoot := os.Getenv("DOCMGR_ROOT")
+    docRoot, _, _ := resolveRootAndConfig(envRoot)
 
-	fullPath := filepath.Join(docRoot, "active", req.Ticket+"-"+strings.ToLower(strings.ReplaceAll(req.Path, " ", "-")))
+    fullPath := filepath.Join(docRoot, "active", req.Ticket+"-"+strings.ToLower(strings.ReplaceAll(req.Path, " ", "-")))
 	if !strings.HasPrefix(req.Path, req.Ticket) {
 		// Path is relative to ticket directory
 		fullPath = filepath.Join(docRoot, "active", req.Ticket+"-*", req.Path)

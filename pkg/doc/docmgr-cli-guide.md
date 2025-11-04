@@ -65,7 +65,8 @@ docmgr meta update --doc "$INDEX_MD" --field RelatedFiles    --value "backend/ch
 
 # 6) Validate the workspace
 # Check for missing fields, staleness, and broken file references.
-docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+# When `.docmgrignore` is present, you can omit ignore flags entirely.
+docmgr doctor --root ttmp --stale-after 30 --fail-on error
 ```
 
 ### Output modes (human vs structured)

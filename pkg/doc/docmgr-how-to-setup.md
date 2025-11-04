@@ -155,14 +155,14 @@ docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 
 ## 6. Enforce Health with Doctor
 
-Run `doctor` locally and in automation to keep the system healthy. It catches stale docs, missing fields, unknown vocabulary, and broken file references. Customize ignore patterns to reduce noise without hiding real issues:
+Run `doctor` locally and in automation to keep the system healthy. It catches stale docs, missing fields, unknown vocabulary, and broken file references. Prefer `.docmgrignore` for stable ignores; with it in place, you generally don’t need ignore flags:
 
 ```bash
-# Local checks (ignore scaffolding and raise on errors)
-docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+# Local checks (raise on errors)
+docmgr doctor --root ttmp --stale-after 30 --fail-on error
 
-# Ignore known duplicate index (example)
-docmgr doctor --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+# Optional ad-hoc suppression example
+docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
 ```
 
 Doctor checks include:
@@ -185,7 +185,7 @@ _templates/
 _guidelines/
 ```
 
-You can also create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude additional paths from validation (comments with `#`; use globs or names). Example:
+You can also create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude additional paths from validation (comments with `#`; supports globs). When present, `doctor` automatically applies these patterns, so you can drop `--ignore-dir`/`--ignore-glob` in CLI and CI. Example:
 
 ```gitignore
 # VCS and build artifacts
@@ -195,17 +195,20 @@ dist/
 
 # Suppress noisy nested index for a specific directory layout
 ttmp/*/design/index.md
+
+# Ignore old date folders
+2024-*
+2025-*
 ```
 
 ## 7. CI Integration
 
-Add a job to fail fast on documentation regressions. Make CI strict over time (for example, start with `--fail-on error`, later consider `--fail-on warning` if noise is low):
+Add a job to fail fast on documentation regressions. Make CI strict over time (for example, start with `--fail-on error`, later consider `--fail-on warning` if noise is low). With `.docmgrignore` in place, no ignore flags are necessary:
 
 ```yaml
 - name: Validate docs
   run: |
-    docmgr doctor \
-      --ignore-dir _templates --ignore-dir _guidelines \
+    docmgr doctor --root ttmp \
       --stale-after 30 --fail-on error
 ```
 

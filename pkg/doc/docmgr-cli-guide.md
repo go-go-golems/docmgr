@@ -65,6 +65,24 @@ docmgr meta update --doc "$INDEX_MD" --field RelatedFiles    --value "backend/ch
 docmgr doctor --root ttmp --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
 ```
 
+### Output modes (human vs structured)
+
+Many verbs now support dual output modes:
+
+- Default: human-friendly text (ideal for terminals and LLM prompts)
+- Structured: enable with `--with-glaze-output`, then select format via `--output json|yaml|csv|table`
+
+Examples:
+
+```bash
+# Human-readable (default)
+docmgr list tickets
+
+# Structured
+docmgr list tickets --with-glaze-output --output json
+docmgr search --query websocket --with-glaze-output --output yaml
+```
+
 ## 3. Core Concepts
 
 ### 4.1 Workspace Structure
@@ -160,7 +178,11 @@ Notes:
 
 Guidelines provide structure and “what good looks like” for each doc type. They help new contributors produce consistent, reviewable docs.
 ```bash
-docmgr guidelines --doc-type design-doc --output markdown
+# Human-readable guideline text
+docmgr guidelines --doc-type design-doc
+
+# Structured output (for tooling)
+docmgr guidelines --doc-type design-doc --with-glaze-output --output json
 ```
 
 Prints the guideline text for the given type. Files in `ttmp/_guidelines/` override embedded defaults.
@@ -238,3 +260,52 @@ Doctor checks:
 
 Ignore configuration:
 - The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`
+
+## 13. Testing the CLI (Dual Mode)
+
+Use a temporary root to avoid touching your repo during tests. The following matrix exercises both human-friendly output (default) and structured outputs (with `--with-glaze-output`).
+
+```bash
+# Build
+go build -o /tmp/docmgr ./cmd/docmgr
+
+# Create temp root and seed a workspace
+ROOT=$(mktemp -d /tmp/docmgr-tests-XXXXXXXX)
+/tmp/docmgr init --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
+/tmp/docmgr add  --ticket TST-1000 --doc-type design-doc --title "Design One" --root "$ROOT"
+
+# list tickets
+/tmp/docmgr list tickets --root "$ROOT"
+/tmp/docmgr list tickets --root "$ROOT" --with-glaze-output --output json
+
+# list docs
+/tmp/docmgr list docs --root "$ROOT" --ticket TST-1000
+/tmp/docmgr list docs --root "$ROOT" --ticket TST-1000 --with-glaze-output --output table
+
+# status
+/tmp/docmgr status --root "$ROOT"
+/tmp/docmgr status --root "$ROOT" --with-glaze-output --output json
+
+# guidelines
+/tmp/docmgr guidelines --list --root "$ROOT"
+/tmp/docmgr guidelines --doc-type design-doc --root "$ROOT"
+/tmp/docmgr guidelines --doc-type design-doc --root "$ROOT" --with-glaze-output --output json
+
+# tasks list
+/tmp/docmgr tasks list --ticket TST-1000 --root "$ROOT"
+/tmp/docmgr tasks list --ticket TST-1000 --root "$ROOT" --with-glaze-output --output csv
+
+# search
+/tmp/docmgr search --root "$ROOT" --ticket TST-1000 --query workspace
+/tmp/docmgr search --root "$ROOT" --ticket TST-1000 --query workspace --with-glaze-output --output yaml
+
+# cleanup (optional)
+rm -rf "$ROOT"
+```
+
+Expected high-level behavior:
+
+- Human mode prints readable one-liners or markdown text.
+- Structured mode honors `--output` (json/yaml/csv/table) with the same data.
+- Guidelines print the raw guideline content in human mode; list mode enumerates available types.
+- Tasks list shows at least one seeded task from `init`.

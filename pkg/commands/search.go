@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+    "sort"
 	"regexp"
 	"strconv"
 	"strings"
@@ -951,4 +952,174 @@ func parseDate(dateStr string) (time.Time, error) {
 }
 
 var _ cmds.GlazeCommand = &SearchCommand{}
+
+// Implement BareCommand for human-friendly output
+func (c *SearchCommand) Run(
+    ctx context.Context,
+    parsedLayers *layers.ParsedLayers,
+) error {
+    settings := &SearchSettings{}
+    if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+        return fmt.Errorf("failed to parse settings: %w", err)
+    }
+    settings.Root = ResolveRoot(settings.Root)
+
+    // Suggest files mode
+    if settings.Files {
+        // derive ticketDir
+        ticketDir := settings.Root
+        if settings.Ticket != "" {
+            if td, err := findTicketDirectory(settings.Root, settings.Ticket); err == nil { ticketDir = td }
+        }
+        // collect search terms
+        terms := []string{}
+        if settings.Query != "" { terms = append(terms, settings.Query) }
+        terms = append(terms, settings.Topics...)
+
+        // existing docs' RelatedFiles
+        existing := map[string]bool{}
+        existingNotes := map[string]map[string]bool{}
+        _ = filepath.Walk(ticketDir, func(path string, info os.FileInfo, err error) error {
+            if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") { return nil }
+            doc, err := readDocumentFrontmatter(path)
+            if err != nil { return nil }
+            if len(settings.Topics) > 0 {
+                match := false
+                for _, ft := range settings.Topics {
+                    for _, dt := range doc.Topics { if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) { match = true; break } }
+                    if match { break }
+                }
+                if !match { return nil }
+            }
+            for _, rf := range doc.RelatedFiles {
+                if rf.Path != "" { existing[rf.Path] = true; if rf.Note != "" { if _, ok := existingNotes[rf.Path]; !ok { existingNotes[rf.Path] = map[string]bool{} }; existingNotes[rf.Path][rf.Note] = true } }
+            }
+            return nil
+        })
+        for f := range existing {
+            if f == "" { continue }
+            note := "referenced by documents"
+            if notes, ok := existingNotes[f]; ok {
+                var ns []string
+                for n := range notes { ns = append(ns, n) }
+                sort.Strings(ns)
+                if len(ns) > 0 { note += "; note: " + strings.Join(ns, "; ") }
+            }
+            fmt.Printf("%s — %s (source=related_files)\n", f, note)
+        }
+        if files, err := suggestFilesFromGit(ticketDir, terms); err == nil {
+            for _, f := range files { fmt.Printf("%s — recent commit activity (source=git_history)\n", f) }
+        }
+        if files, err := suggestFilesFromRipgrep(ticketDir, terms); err == nil {
+            reason := fmt.Sprintf("content match: %s", firstTerm(terms))
+            for _, f := range files { fmt.Printf("%s — %s (source=ripgrep)\n", f, reason) }
+        }
+        if modified, staged, untracked, err := suggestFilesFromGitStatus(ticketDir); err == nil {
+            for _, f := range modified { fmt.Printf("%s — working tree modified (source=git_modified)\n", f) }
+            for _, f := range staged { fmt.Printf("%s — staged for commit (source=git_staged)\n", f) }
+            for _, f := range untracked { fmt.Printf("%s — untracked new file (source=git_untracked)\n", f) }
+        }
+        return nil
+    }
+
+    // Validate query/filters presence
+    if settings.Query == "" && settings.Ticket == "" && len(settings.Topics) == 0 && settings.DocType == "" && settings.Status == "" &&
+        settings.File == "" && settings.Dir == "" && settings.ExternalSource == "" &&
+        settings.Since == "" && settings.Until == "" && settings.CreatedSince == "" && settings.UpdatedSince == "" {
+        return fmt.Errorf("must provide at least a query or filter")
+    }
+
+    sinceTime, err := parseDate(settings.Since); if err != nil { return fmt.Errorf("invalid --since date: %w", err) }
+    untilTime, err := parseDate(settings.Until); if err != nil { return fmt.Errorf("invalid --until date: %w", err) }
+    createdSinceTime, err := parseDate(settings.CreatedSince); if err != nil { return fmt.Errorf("invalid --created-since date: %w", err) }
+    updatedSinceTime, err := parseDate(settings.UpdatedSince); if err != nil { return fmt.Errorf("invalid --updated-since date: %w", err) }
+    if _, err := os.Stat(settings.Root); os.IsNotExist(err) { return fmt.Errorf("root directory does not exist: %s", settings.Root) }
+
+    queryLower := strings.ToLower(settings.Query)
+
+    _ = filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
+        if err != nil { return nil }
+        if info.IsDir() { return nil }
+        if !strings.HasSuffix(path, ".md") { return nil }
+        if strings.Contains(path, "/_templates/") || strings.Contains(path, "/_guidelines/") { return nil }
+
+        doc, content, err := readDocumentWithContent(path)
+        if err != nil { return nil }
+
+        if settings.Ticket != "" && doc.Ticket != settings.Ticket { return nil }
+        if settings.Status != "" && doc.Status != settings.Status { return nil }
+        if settings.DocType != "" && doc.DocType != settings.DocType { return nil }
+        if len(settings.Topics) > 0 {
+            match := false
+            for _, ft := range settings.Topics {
+                for _, dt := range doc.Topics { if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) { match = true; break } }
+                if match { break }
+            }
+            if !match { return nil }
+        }
+
+        var matchedFiles []string
+        var matchedNotes []string
+        if settings.File != "" {
+            fileMatch := false
+            for _, rf := range doc.RelatedFiles {
+                relatedFile := rf.Path
+                if relatedFile != "" && (strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile)) {
+                    fileMatch = true
+                    matchedFiles = append(matchedFiles, relatedFile)
+                    if strings.TrimSpace(rf.Note) != "" { matchedNotes = append(matchedNotes, rf.Note) }
+                }
+            }
+            if !fileMatch { return nil }
+        }
+
+        if settings.Dir != "" {
+            dirMatch := false
+            relPath, _ := filepath.Rel(settings.Root, path)
+            if strings.HasPrefix(relPath, settings.Dir) { dirMatch = true }
+            if !dirMatch {
+                for _, rf := range doc.RelatedFiles { if strings.HasPrefix(rf.Path, settings.Dir) { dirMatch = true; break } }
+            }
+            if !dirMatch { return nil }
+        }
+
+        if settings.ExternalSource != "" {
+            sourceMatch := false
+            for _, es := range doc.ExternalSources { if strings.Contains(es, settings.ExternalSource) || strings.Contains(settings.ExternalSource, es) { sourceMatch = true; break } }
+            if !sourceMatch { return nil }
+        }
+
+        if fi, err := os.Stat(path); err == nil {
+            createdTime := fi.ModTime()
+            if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) { return nil }
+        }
+        if !doc.LastUpdated.IsZero() {
+            if !sinceTime.IsZero() && doc.LastUpdated.Before(sinceTime) { return nil }
+            if !untilTime.IsZero() && doc.LastUpdated.After(untilTime) { return nil }
+            if !updatedSinceTime.IsZero() && doc.LastUpdated.Before(updatedSinceTime) { return nil }
+        }
+
+        if settings.Query != "" {
+            if !strings.Contains(strings.ToLower(content), queryLower) { return nil }
+        }
+
+        relPath, err := filepath.Rel(settings.Root, path)
+        if err != nil { relPath = path }
+        snippet := extractSnippet(content, settings.Query, 100)
+
+        if settings.File != "" {
+            extra := ""
+            if len(matchedFiles) > 0 { extra += " file=" + strings.Join(matchedFiles, ", ") }
+            if len(matchedNotes) > 0 { extra += " note=" + strings.Join(matchedNotes, " | ") }
+            fmt.Printf("%s — %s [%s] :: %s%s\n", relPath, doc.Title, doc.Ticket, snippet, extra)
+        } else {
+            fmt.Printf("%s — %s [%s] :: %s\n", relPath, doc.Title, doc.Ticket, snippet)
+        }
+        return nil
+    })
+
+    return nil
+}
+
+var _ cmds.BareCommand = &SearchCommand{}
 

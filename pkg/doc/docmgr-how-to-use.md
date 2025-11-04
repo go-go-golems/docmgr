@@ -55,7 +55,11 @@ docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat
 Optionally consult guidelines for structure:
 
 ```bash
-docmgr guidelines --doc-type design-doc --output markdown
+# Human-readable guideline text (default)
+docmgr guidelines --doc-type design-doc
+
+# Structured output (for tooling)
+docmgr guidelines --doc-type design-doc --with-glaze-output --output yaml
 ```
 See also: `docmgr help templates-and-guidelines` for customization and best practices.
 
@@ -97,6 +101,9 @@ Suggestion output includes both `source` and `reason` (for example, "recent comm
 ```bash
 docmgr list tickets --root ttmp --ticket MEN-4242
 docmgr list docs    --root ttmp --ticket MEN-4242
+
+# Structured
+docmgr list tickets --root ttmp --with-glaze-output --output json
 
 # Content search
 docmgr search --query "WebSocket" --ticket MEN-4242
@@ -197,7 +204,4 @@ docmgr status --stale-after 30
 
 - Keep `Owners`, `Summary`, and `RelatedFiles` current
 - Regularly update `index.md`, `changelog.md`, and `tasks.md` as work progresses
-- Use `guidelines` to keep structure consistent
-- Re-run `doctor` before merging changes
-
-
+- Use `guidelines`

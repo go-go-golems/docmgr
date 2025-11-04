@@ -173,3 +173,63 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 
 var _ cmds.GlazeCommand = &ListDocsCommand{}
 
+// Implement BareCommand for human-friendly output
+func (c *ListDocsCommand) Run(
+    ctx context.Context,
+    parsedLayers *layers.ParsedLayers,
+) error {
+    settings := &ListDocsSettings{}
+    if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+        return fmt.Errorf("failed to parse settings: %w", err)
+    }
+
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
+
+    if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+        return fmt.Errorf("root directory does not exist: %s", settings.Root)
+    }
+
+    err := filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
+        if err != nil { return nil }
+        if info.IsDir() { return nil }
+        if !strings.HasSuffix(path, ".md") { return nil }
+        if info.Name() == "index.md" { return nil }
+
+        doc, err := readDocumentFrontmatter(path)
+        if err != nil { return nil }
+
+        if settings.Ticket != "" && doc.Ticket != settings.Ticket { return nil }
+        if settings.Status != "" && doc.Status != settings.Status { return nil }
+        if settings.DocType != "" && doc.DocType != settings.DocType { return nil }
+        if len(settings.Topics) > 0 {
+            topicMatch := false
+            for _, filterTopic := range settings.Topics {
+                for _, docTopic := range doc.Topics {
+                    if strings.EqualFold(strings.TrimSpace(filterTopic), strings.TrimSpace(docTopic)) { topicMatch = true; break }
+                }
+                if topicMatch { break }
+            }
+            if !topicMatch { return nil }
+        }
+
+        relPath, err := filepath.Rel(settings.Root, path)
+        if err != nil { relPath = path }
+
+        fmt.Printf("%s %s ‘%s’ status=%s topics=%s updated=%s path=%s\n",
+            doc.Ticket,
+            doc.DocType,
+            doc.Title,
+            doc.Status,
+            strings.Join(doc.Topics, ", "),
+            doc.LastUpdated.Format("2006-01-02"),
+            relPath,
+        )
+        return nil
+    })
+
+    return err
+}
+
+var _ cmds.BareCommand = &ListDocsCommand{}
+

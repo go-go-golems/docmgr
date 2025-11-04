@@ -210,4 +210,90 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 
 var _ cmds.GlazeCommand = &StatusCommand{}
 
+// Implement BareCommand for human-friendly output
+func (c *StatusCommand) Run(
+    ctx context.Context,
+    parsedLayers *layers.ParsedLayers,
+    
+) error {
+    settings := &StatusSettings{}
+    if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+        return fmt.Errorf("failed to parse settings: %w", err)
+    }
+
+    settings.Root = ResolveRoot(settings.Root)
+    if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+        return fmt.Errorf("root directory does not exist: %s", settings.Root)
+    }
+
+    ticketsTotal := 0
+    ticketsStale := 0
+    docsTotal := 0
+    designDocs := 0
+    referenceDocs := 0
+    playbooks := 0
+
+    entries, err := os.ReadDir(settings.Root)
+    if err != nil {
+        return fmt.Errorf("failed to read root directory: %w", err)
+    }
+
+    for _, entry := range entries {
+        if !entry.IsDir() { continue }
+        if strings.HasPrefix(entry.Name(), "_") { continue }
+
+        ticketPath := filepath.Join(settings.Root, entry.Name())
+        indexPath := filepath.Join(ticketPath, "index.md")
+        if _, err := os.Stat(indexPath); os.IsNotExist(err) { continue }
+
+        doc, err := readDocumentFrontmatter(indexPath)
+        if err != nil { continue }
+        if settings.Ticket != "" && doc.Ticket != settings.Ticket { continue }
+
+        ticketsTotal++
+
+        stale := false
+        if !doc.LastUpdated.IsZero() {
+            days := time.Since(doc.LastUpdated).Hours() / 24
+            if int(days) > settings.StaleAfterDays { stale = true }
+        }
+        if stale { ticketsStale++ }
+
+        ticketDocs := 0
+        dd, rd, pb := 0, 0, 0
+        _ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
+            if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") { return nil }
+            if info.Name() == "index.md" { return nil }
+            d, err := readDocumentFrontmatter(path)
+            if err != nil { return nil }
+            ticketDocs++
+            switch d.DocType {
+            case "design-doc": dd++
+            case "reference": rd++
+            case "playbook": pb++
+            }
+            return nil
+        })
+
+        docsTotal += ticketDocs
+        designDocs += dd
+        referenceDocs += rd
+        playbooks += pb
+
+        if !settings.SummaryOnly {
+            fmt.Printf("%s ‘%s’ status=%s stale=%t docs=%d path=%s\n",
+                doc.Ticket, doc.Title, doc.Status, stale, ticketDocs, ticketPath,
+            )
+        }
+    }
+
+    fmt.Printf(
+        "root=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
+        settings.Root, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,
+    )
+    return nil
+}
+
+var _ cmds.BareCommand = &StatusCommand{}
+
 

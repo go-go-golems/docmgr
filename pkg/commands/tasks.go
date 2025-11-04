@@ -148,6 +148,22 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 
 var _ cmds.GlazeCommand = &TasksListCommand{}
 
+// Implement BareCommand for human-friendly output
+func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+    s := &TasksListSettings{}
+    if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil { return err }
+    path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+    if err != nil { return err }
+    for _, t := range tasks {
+        mark := " "
+        if t.Checked { mark = "x" }
+        fmt.Printf("[%d] [%s] %s (file=%s)\n", t.TaskIndex, mark, t.Text, path)
+    }
+    return nil
+}
+
+var _ cmds.BareCommand = &TasksListCommand{}
+
 // tasks add
 type TasksAddCommand struct { *cmds.CommandDescription }
 

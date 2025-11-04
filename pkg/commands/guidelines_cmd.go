@@ -125,3 +125,48 @@ func (c *GuidelinesCommand) RunIntoGlazeProcessor(
 
 var _ cmds.GlazeCommand = &GuidelinesCommand{}
 
+// Implement BareCommand for human-friendly output
+func (c *GuidelinesCommand) Run(
+    ctx context.Context,
+    parsedLayers *layers.ParsedLayers,
+) error {
+    settings := &GuidelinesSettings{}
+    if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+        return fmt.Errorf("failed to parse settings: %w", err)
+    }
+
+    // Apply config root if present
+    settings.Root = ResolveRoot(settings.Root)
+
+    if settings.List {
+        docTypes := ListGuidelineTypes()
+        for _, dt := range docTypes {
+            fmt.Println(dt)
+        }
+        return nil
+    }
+
+    if settings.DocType == "" {
+        return fmt.Errorf("must specify --doc-type or use --list to see available types")
+    }
+
+    // Try filesystem guideline first
+    guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
+    if _, err := os.Stat(guidelinePath); err == nil {
+        content, err := os.ReadFile(guidelinePath)
+        if err != nil { return fmt.Errorf("failed to read guideline file: %w", err) }
+        fmt.Printf("%s\n", string(content))
+        return nil
+    }
+
+    // Fallback to embedded
+    guideline, ok := GetGuideline(settings.DocType)
+    if !ok {
+        return fmt.Errorf("unknown document type: %s (use --list to see available types)", settings.DocType)
+    }
+    fmt.Printf("%s\n", guideline)
+    return nil
+}
+
+var _ cmds.BareCommand = &GuidelinesCommand{}
+

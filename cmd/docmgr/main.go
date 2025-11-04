@@ -61,7 +61,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	cobraListTicketsCmd, err := cli.BuildCobraCommand(listTicketsCmd,
+cobraListTicketsCmd, err := cli.BuildCobraCommand(listTicketsCmd,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -81,7 +83,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	cobraListDocsCmd, err := cli.BuildCobraCommand(listDocsCmd,
+cobraListDocsCmd, err := cli.BuildCobraCommand(listDocsCmd,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -209,7 +213,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	cobraVocabListCmd, err := cli.BuildCobraCommand(vocabListCmd,
+cobraVocabListCmd, err := cli.BuildCobraCommand(vocabListCmd,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -252,7 +258,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	cobraSearchCmd, err := cli.BuildCobraCommand(searchCmd,
+cobraSearchCmd, err := cli.BuildCobraCommand(searchCmd,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -272,7 +280,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	cobraGuidelinesCmd, err := cli.BuildCobraCommand(guidelinesCmd,
+cobraGuidelinesCmd, err := cli.BuildCobraCommand(guidelinesCmd,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -323,7 +333,9 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 
-	cobraStatusCmd, err := cli.BuildCobraCommand(statusCmd,
+cobraStatusCmd, err := cli.BuildCobraCommand(statusCmd,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
@@ -378,7 +390,9 @@ and validate documentation workspaces with metadata and external source support.
 		fmt.Fprintf(os.Stderr, "Error creating tasks list command: %v\n", err)
 		os.Exit(1)
 	}
-	cobraTasksList, err := cli.BuildCobraCommand(_tasksList,
+cobraTasksList, err := cli.BuildCobraCommand(_tasksList,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,

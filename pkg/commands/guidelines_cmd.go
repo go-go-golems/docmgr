@@ -35,7 +35,7 @@ func NewGuidelinesCommand() (*GuidelinesCommand, error) {
 Example:
   docmgr guidelines --doc-type design-doc
   docmgr guidelines --list
-  docmgr guidelines --doc-type reference --root ttmp
+  docmgr guidelines --doc-type reference
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

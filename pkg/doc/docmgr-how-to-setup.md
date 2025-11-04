@@ -26,7 +26,7 @@ This guide shows how to bootstrap and maintain the documentation system for a re
 - Vocabulary file lives at `ttmp/vocabulary.yaml` by default (configurable via `.ttmp.yaml` → `vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent` values.
 - Scaffolding directories at root: `ttmp/_templates/`, `ttmp/_guidelines/`. Teams customize these to encode house style.
 
-Per-ticket workspace contents created by `init`:
+Per-ticket workspace contents created by `create-ticket`:
 
 - `index.md`
 - `design/`, `reference/`, `playbooks/`
@@ -37,25 +37,26 @@ Per-ticket workspace contents created by `init`:
 
 Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`. When the config uses relative paths (for example, `root: ttmp`), they are interpreted relative to the directory that contains `.ttmp.yaml`.
 
+Root resolution order:
+- Flag: `--root`
+- `.ttmp.yaml:root` (relative to the config file)
+- Git root: `<git-root>/ttmp` if `.git/` is found while walking up
+- Fallback: `<cwd>/ttmp`
+
+Note: `.ttmp.yaml` does not have to live in the repository root. In multi-repo/monorepo setups, you can place it at a parent directory to centralize configuration. Use `root` (and optional `vocabulary`) to point different repos at distinct `ttmp/` locations.
+
 ```yaml
 root: ttmp
 defaults:
   owners: [manuel]
   intent: long-term
 filenamePrefixPolicy: off
-docTypeToggles:
-  design-doc: true
-  reference: true
-  playbook: true
-  analysis: true
-  misc: true
-  code-review: true
+vocabulary: ttmp/vocabulary.yaml
 ```
 
 - `root`: default docs root (overrides the built-in `ttmp` when flags are not explicitly set)
 - `defaults.owners` / `defaults.intent`: applied when initializing ticket index metadata
 - `filenamePrefixPolicy`: reserved for future filename enforcement
-- `docTypeToggles`: reserved for controlling allowed types (not enforced yet)
 
 ## 3. Seed Vocabulary
 
@@ -82,7 +83,7 @@ To introduce a new document type:
 
 ```bash
 docmgr vocab add --category docTypes --slug til --description "Today I Learned"
-docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — <topic>" --root ttmp
+docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — <topic>"
 ```
 
 If there is a template at `ttmp/_templates/til.md`, it will be used; otherwise the file is created under `various/` with frontmatter `DocType: til` so it still participates in filters and validation.
@@ -94,11 +95,10 @@ Guidance:
 
 ## 4. Scaffold Templates and Guidelines
 
-The `_templates/` and `_guidelines/` directories are created automatically the first time you run `init`. If you don't want to create a real ticket yet, initialize a temp workspace and delete it afterwards — the scaffolds remain:
+Initialize the docs root once per repository (or shared parent) to create `vocabulary.yaml`, `_templates/`, `_guidelines/`, and a default `.docmgrignore`:
 
 ```bash
-docmgr init --ticket TMP-BOOTSTRAP --title "Bootstrap doc system" --root ttmp
-rm -rf ttmp/TMP-BOOTSTRAP-bootstrap-doc-system
+docmgr init
 ```
 
 Now place house-style templates and guidelines under:
@@ -119,16 +119,14 @@ Recommendations:
 
 ## 5. Add New Doc Types and Migrate Existing Docs
 
-You can extend doc types via vocabulary and toggles, then scaffold docs and move existing files.
+You can extend doc types via the workspace vocabulary, then scaffold docs and move existing files.
 
 1) Verify vocabulary contains the new types:
 ```bash
 docmgr vocab list --category docTypes
 ```
 
-2) Enable toggles in `.ttmp.yaml` (see above).
-
-3) Scaffold placeholders for non-core types (created under `various/`):
+2) Scaffold placeholders for non-core types (created under `various/`):
 ```bash
 docmgr add --ticket TCK-123 --doc-type analysis --title "Synthesis — ..."
 docmgr add --ticket TCK-123 --doc-type misc     --title "Debate: ..."
@@ -161,10 +159,10 @@ Run `doctor` locally and in automation to keep the system healthy. It catches st
 
 ```bash
 # Local checks (ignore scaffolding and raise on errors)
-docmgr doctor --root ttmp --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
 
 # Ignore known duplicate index (example)
-docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+docmgr doctor --ignore-glob "ttmp/*/design/index.md" --fail-on warning
 ```
 
 Doctor checks include:
@@ -179,7 +177,15 @@ Tip: Set `--stale-after` high initially (for example, 30–45 days) while adopti
 
 Repository ignores:
 
-Create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude paths from validation (comments with `#`; use globs or names). Example:
+`docmgr init` creates `ttmp/.docmgrignore` with sensible defaults:
+
+```
+.git/
+_templates/
+_guidelines/
+```
+
+You can also create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude additional paths from validation (comments with `#`; use globs or names). Example:
 
 ```gitignore
 # VCS and build artifacts
@@ -198,7 +204,7 @@ Add a job to fail fast on documentation regressions. Make CI strict over time (f
 ```yaml
 - name: Validate docs
   run: |
-    docmgr doctor --root ttmp \
+    docmgr doctor \
       --ignore-dir _templates --ignore-dir _guidelines \
       --stale-after 30 --fail-on error
 ```

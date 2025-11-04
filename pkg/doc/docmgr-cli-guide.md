@@ -40,19 +40,22 @@ docmgr vocab add --category docTypes --slug reference
 docmgr vocab add --category docTypes --slug playbook
 docmgr vocab add --category intent   --slug long-term
 
-# 2) Initialize a ticket workspace under ttmp/
-# Creates a dedicated directory with an index and standard subfolders.
-docmgr init --ticket MEN-4242 \
+# 2) Initialize the docs root (creates vocabulary/templates/guidelines if missing)
+docmgr init
+
+# 3) Create a ticket workspace under ttmp/
+# Creates a dedicated directory with index, tasks, changelog, and standard subfolders.
+docmgr create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
-  --topics chat,backend,websocket --root ttmp
+  --topics chat,backend,websocket
 
-# 3) Add documents
+# 4) Add documents
 # Add a design doc, a reference doc, and a playbook to start capturing context.
-docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy" --root ttmp
-docmgr add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"    --root ttmp
-docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"        --root ttmp
+docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"
+docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"
 
-# 4) Update metadata on the ticket index
+# 5) Update metadata on the ticket index
 # Owners and Summary improve discoverability; RelatedFiles enable reverse lookup.
 INDEX_MD="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/index.md"
 docmgr meta update --doc "$INDEX_MD" --field Owners          --value "manuel,alex"
@@ -60,9 +63,9 @@ docmgr meta update --doc "$INDEX_MD" --field Summary         --value "Unify chat
 docmgr meta update --doc "$INDEX_MD" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
 docmgr meta update --doc "$INDEX_MD" --field RelatedFiles    --value "backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts"
 
-# 5) Validate the workspace
+# 6) Validate the workspace
 # Check for missing fields, staleness, and broken file references.
-docmgr doctor --root ttmp --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
 ```
 
 ### Output modes (human vs structured)
@@ -84,6 +87,17 @@ docmgr search --query websocket --with-glaze-output --output yaml
 ```
 
 ## 3. Core Concepts
+### 4.0 Root configuration and discovery
+
+You rarely need `--root`. docmgr resolves the docs root in this order:
+
+- Flag: `--root /abs/or/relative/path` (relative paths are anchored to CWD)
+- `.ttmp.yaml` nearest to CWD: `root: ttmp` (interpreted relative to the config file location)
+- Git repository root: `<git-root>/ttmp` if a `.git/` directory is found while walking up
+- Fallback: `<cwd>/ttmp`
+
+Vocabulary path is resolved similarly via `.ttmp.yaml:vocabulary` (absolute or relative to the config); otherwise defaults to `<root>/vocabulary.yaml`.
+
 
 ### 4.1 Workspace Structure
 
@@ -136,24 +150,33 @@ docmgr vocab add --category topics --slug observability --description "Logging a
 docmgr vocab add --category docTypes --slug adr --description "Architecture Decision Record"
 ```
 
-### 5.2 Initialize a Workspace
+### 5.2 Initialize a Docs Root
 
-Run this when you start a ticket. It creates a consistent place to capture thinking and decisions. The structure is intentionally simple for quick adoption.
+Run this once per repository (or shared parent) to create the docs root with vocabulary, templates, guidelines, and a default `.docmgrignore`.
 ```bash
-docmgr init --ticket MEN-4242 \
-  --title "Normalize chat API paths and WebSocket lifecycle" \
-  --topics chat,backend,websocket \
-  --root ttmp [--force]
+docmgr init [--force]
 ```
 
-Creates the ticket directory, `index.md`, and `tasks.md`/`changelog.md`, and scaffolds `_templates/` and `_guidelines/` at the root.
+Creates the `ttmp/` directory if missing, writes an empty `vocabulary.yaml` (if absent), and scaffolds `_templates/` and `_guidelines/`.
 
-### 5.3 Add Documents
+### 5.3 Create a Ticket Workspace
+
+Run this when you start a ticket. It creates a consistent place to capture thinking and decisions.
+```bash
+docmgr create-ticket --ticket MEN-4242 \
+  --title "Normalize chat API paths and WebSocket lifecycle" \
+  --topics chat,backend,websocket \
+  [--force]
+```
+
+Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` under a standard structure.
+
+### 5.4 Add Documents
 
 Create additional documents as needed. Use short, descriptive titles; you can refine content later.
 ```bash
-docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy" --root ttmp
-docmgr add --ticket MEN-4242 --doc-type til        --title "TIL — Hydration end-to-end"   --root ttmp
+docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr add --ticket MEN-4242 --doc-type til        --title "TIL — Hydration end-to-end"
 
 # Optional overrides (taken from ticket by default)
 docmgr add --ticket MEN-4242 \
@@ -165,8 +188,7 @@ docmgr add --ticket MEN-4242 \
   --intent short-term \
   --external-sources https://example.com/a,https://example.com/b \
   --summary "debugging notes" \
-  --related-files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
-  --root ttmp
+  --related-files backend/chat/api/register.go,web/src/store/api/chatApi.ts
 ```
 
 Notes:
@@ -174,7 +196,7 @@ Notes:
 - If a doc type has a template at `ttmp/_templates/<docType>.md`, its body is rendered automatically.
 - Unknown/other doc types are accepted and placed under `various/` by default (frontmatter `DocType` is still set for filtering).
 
-### 5.4 Guidelines
+### 5.5 Guidelines
 
 Guidelines provide structure and “what good looks like” for each doc type. They help new contributors produce consistent, reviewable docs.
 ```bash
@@ -188,7 +210,7 @@ docmgr guidelines --doc-type design-doc --with-glaze-output --output json
 Prints the guideline text for the given type. Files in `ttmp/_guidelines/` override embedded defaults.
 See also: `docmgr help templates-and-guidelines` for how templates and guidelines fit together and how to customize them.
 
-### 5.5 Update Metadata
+### 5.6 Update Metadata
 
 Keep `Owners`, `Summary`, and `RelatedFiles` current. This makes search, review, and onboarding faster.
 ```bash
@@ -201,15 +223,15 @@ docmgr meta update --ticket MEN-4242 --doc-type design-doc --field Topics --valu
 
 Supported fields: Title, Ticket, Status, Topics, DocType, Intent, Owners, RelatedFiles, ExternalSources, Summary.
 
-### 5.6 List Tickets and Docs
+### 5.7 List Tickets and Docs
 
 Use listing commands to navigate by ticket. This is useful in reviews and when returning to paused work.
 ```bash
-docmgr list tickets --root ttmp [--ticket MEN-4242]
-docmgr list docs    --root ttmp --ticket MEN-4242
+docmgr list tickets [--ticket MEN-4242]
+docmgr list docs    --ticket MEN-4242
 ```
 
-### 5.7 Search (Content + Metadata)
+### 5.8 Search (Content + Metadata)
 
 Search supports both content queries and metadata filters. Reverse lookups (`--file`, `--dir`) help you find docs from code paths; `--external-source` helps find docs tied to external references. Date filters surface recent activity.
 ```bash
@@ -236,15 +258,15 @@ docmgr search --ticket MEN-4242 --topics chat --files
 
 Relative date formats supported include: `today`, `yesterday`, `last week`, `this month`, `last month`, `2 weeks ago`, as well as ISO-like absolute dates (for example, `2025-01-01`).
 
-### 5.8 Doctor (Validation)
+### 5.9 Doctor (Validation)
 
 Run `doctor` during development and reviews. It’s a safety net to catch drift (stale docs), broken relationships (missing files), and inconsistent metadata (unknown vocabulary).
 ```bash
 # Typical validation
-docmgr doctor --root ttmp --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
 
 # Ignore specific paths using glob patterns
-docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+docmgr doctor --ignore-glob "ttmp/*/design/index.md" --fail-on warning
 ```
 
 Doctor checks:
@@ -271,7 +293,8 @@ go build -o /tmp/docmgr ./cmd/docmgr
 
 # Create temp root and seed a workspace
 ROOT=$(mktemp -d /tmp/docmgr-tests-XXXXXXXX)
-/tmp/docmgr init --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
+/tmp/docmgr init --root "$ROOT"
+/tmp/docmgr create-ticket --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
 /tmp/docmgr add  --ticket TST-1000 --doc-type design-doc --title "Design One" --root "$ROOT"
 
 # list tickets

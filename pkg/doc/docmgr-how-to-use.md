@@ -26,12 +26,17 @@ This tutorial walks a developer through using `docmgr` to manage the documentati
 ## 3. Initialize the Ticket Workspace
 
 ```bash
-docmgr init --ticket MEN-4242 \
+docmgr create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
-  --topics chat,backend,websocket --root ttmp
+  --topics chat,backend,websocket
 ```
 
-This creates `ttmp/MEN-4242-.../` with `index.md` and scaffolds `_templates/` and `_guidelines/` at the root (if missing).
+This creates `ttmp/MEN-4242-.../` with `index.md`, `tasks.md`, and `changelog.md` under a standard structure.
+If your repository doesn’t have a docs root yet (with `vocabulary.yaml`, `_templates/`, `_guidelines/`), run:
+
+```bash
+docmgr init
+```
 
 ### What this index is for
 
@@ -47,9 +52,9 @@ Keep this index concise. Put details in design/reference docs; use notes on `Rel
 ## 4. Add Documents
 
 ```bash
-docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy" --root ttmp
-docmgr add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"    --root ttmp
-docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"        --root ttmp
+docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"
+docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"
 ```
 
 Optionally consult guidelines for structure:
@@ -99,11 +104,11 @@ Suggestion output includes both `source` and `reason` (for example, "recent comm
 ## 7. Explore and Search
 
 ```bash
-docmgr list tickets --root ttmp --ticket MEN-4242
-docmgr list docs    --root ttmp --ticket MEN-4242
+docmgr list tickets --ticket MEN-4242
+docmgr list docs    --ticket MEN-4242
 
 # Structured
-docmgr list tickets --root ttmp --with-glaze-output --output json
+docmgr list tickets --with-glaze-output --output json
 
 # Content search
 docmgr search --query "WebSocket" --ticket MEN-4242
@@ -152,7 +157,7 @@ docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query 
 ## 9. Validate with Doctor
 
 ```bash
-docmgr doctor --root ttmp --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
 ```
 
 Warnings to expect in real projects:
@@ -167,18 +172,18 @@ Use the `tasks` commands to track the concrete steps for your ticket directly in
 
 ```bash
 # List tasks with indexes
-docmgr tasks list --ticket MEN-4242 --root ttmp
+docmgr tasks list --ticket MEN-4242
 
 # Add a new task
-docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2" --root ttmp
+docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2"
 
 # Check / uncheck by id
-docmgr tasks check   --ticket MEN-4242 --id 1 --root ttmp
-docmgr tasks uncheck --ticket MEN-4242 --id 1 --root ttmp
+docmgr tasks check   --ticket MEN-4242 --id 1
+docmgr tasks uncheck --ticket MEN-4242 --id 1
 
 # Edit and remove
-docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend" --root ttmp
-docmgr tasks remove --ticket MEN-4242 --id 3 --root ttmp
+docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
+docmgr tasks remove --ticket MEN-4242 --id 3
 ```
 
 Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
@@ -234,6 +239,8 @@ docmgr guidelines --doc-type design-doc --with-glaze-output --output json
 ### Root discovery and shell gotchas
 
 - `.ttmp.yaml` discovery walks up from CWD. If you need consistent behavior from nested subdirs, set an absolute `root` in `.ttmp.yaml` or run from repo root.
+- When neither flag nor `.ttmp.yaml` is present, docmgr anchors the default root to the Git repository root if found (`<git-root>/ttmp`), else uses `<cwd>/ttmp`.
+- `.ttmp.yaml` does not need to live in the repository root. In multi-repo or monorepo setups, place it at a parent directory to centralize a shared docs root and point different repos at distinct `ttmp/` directories as needed via `root` or `vocabulary`.
 - Avoid parentheses in ticket dir names; quote/escape if you must use them:
   ```bash
   cd "ttmp/MEN-XXXX-name-\(with-parens\)"
@@ -278,7 +285,7 @@ docmgr relate --ticket MEN-3083 --suggest --apply-suggestions --query timeline -
 
 ### Ignore noise with .docmgrignore
 
-Place `.docmgrignore` at your docs root (e.g., `ttmp/.docmgrignore`). One pattern per line.
+`docmgr init` creates `ttmp/.docmgrignore` with sensible defaults (`.git/`, `_templates/`, `_guidelines/`). Place `.docmgrignore` at your docs root (e.g., `ttmp/.docmgrignore`) to add more patterns. One pattern per line.
 
 Common entries:
 ```

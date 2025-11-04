@@ -155,6 +155,36 @@ func FindGitRoot() (string, error) {
 	return "", fmt.Errorf(".git directory not found")
 }
 
+// FindRepositoryRoot returns the best-effort repository root by preferring the git root,
+// then falling back to markers like go.mod or doc/ as anchors.
+func FindRepositoryRoot() (string, error) {
+    if gr, err := FindGitRoot(); err == nil && gr != "" {
+        return gr, nil
+    }
+    dir, err := os.Getwd()
+    if err != nil {
+        return "", err
+    }
+    for {
+        if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+            return dir, nil
+        }
+        if _, err := os.Stat(filepath.Join(dir, "doc")); err == nil {
+            return dir, nil
+        }
+        parent := filepath.Dir(dir)
+        if parent == dir {
+            break
+        }
+        dir = parent
+    }
+    // As a last resort, use current working directory
+    if cwd, err := os.Getwd(); err == nil {
+        return cwd, nil
+    }
+    return "", fmt.Errorf("could not determine repository root")
+}
+
 // DetectMultipleTTMPRoots walks up from CWD and records directories containing a 'ttmp' folder
 func DetectMultipleTTMPRoots() ([]string, error) {
     dir, err := os.Getwd()

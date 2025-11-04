@@ -52,12 +52,12 @@ Examples:
 					parameters.WithHelp("Limit to a specific ticket"),
 					parameters.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
-					"stale-after",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Days after which a ticket is considered stale"),
-					parameters.WithDefault(14),
-				),
+                parameters.NewParameterDefinition(
+                    "stale-after",
+                    parameters.ParameterTypeInteger,
+                    parameters.WithHelp("Days after which a ticket is considered stale (default 30)"),
+                    parameters.WithDefault(30),
+                ),
 				parameters.NewParameterDefinition(
 					"summary-only",
 					parameters.ParameterTypeBool,

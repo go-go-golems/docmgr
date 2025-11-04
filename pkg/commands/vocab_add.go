@@ -80,8 +80,8 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to load vocabulary: %w", err)
 	}
 
-	// Find repo root by looking for vocabulary file or creating doc/ directory
-	repoRoot, err := findRepoRoot()
+    // Find repository root (git root preferred; fallbacks supported)
+    repoRoot, err := FindRepositoryRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
@@ -142,47 +142,6 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 }
 
 // findRepoRoot finds the repository root by walking up from current directory
-func findRepoRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	for {
-        // Check for common repo root indicators
-        gitPath := filepath.Join(dir, ".git")
-        if fi, err := os.Stat(gitPath); err == nil {
-            if fi.IsDir() {
-                return dir, nil
-            }
-            // .git is a file; parse gitdir
-            if b, err := os.ReadFile(gitPath); err == nil {
-                line := strings.TrimSpace(string(b))
-                if strings.HasPrefix(strings.ToLower(line), "gitdir:") {
-                    gd := strings.TrimSpace(strings.TrimPrefix(line, "gitdir:"))
-                    if !filepath.IsAbs(gd) {
-                        gd = filepath.Join(dir, gd)
-                    }
-                    if _, err := os.Stat(gd); err == nil {
-                        return dir, nil
-                    }
-                }
-            }
-        }
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		if _, err := os.Stat(filepath.Join(dir, "doc")); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached filesystem root, use current directory
-			return dir, nil
-		}
-		dir = parent
-	}
-}
+// unified repo root detection moved to FindRepositoryRoot() in config.go
 
 var _ cmds.GlazeCommand = &VocabAddCommand{}

@@ -90,7 +90,7 @@ func (c *ConfigureCommand) RunIntoGlazeProcessor(
     }
 
     // Find repository root (shared helper from vocab_add)
-    repoRoot, err := findRepoRoot()
+    repoRoot, err := FindRepositoryRoot()
     if err != nil {
         return fmt.Errorf("failed to find repository root: %w", err)
     }

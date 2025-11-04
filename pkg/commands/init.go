@@ -165,7 +165,7 @@ func seedDefaultVocabulary() error {
     addItem(&vocab.Intent, "long-term", "Likely to persist")
 
     // Persist
-    repoRoot, err := findRepoRoot()
+    repoRoot, err := FindRepositoryRoot()
     if err != nil {
         return err
     }

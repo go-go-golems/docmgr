@@ -75,7 +75,7 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	vocab, err := LoadVocabulary()
+    vocab, err := LoadVocabulary()
 	if err != nil {
 		return fmt.Errorf("failed to load vocabulary: %w", err)
 	}
@@ -85,6 +85,17 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
+
+    // Echo resolved context prior to write
+    cfgPath, _ := FindTTMPConfigPath()
+    vocabPath, _ := ResolveVocabularyPath()
+    absRoot := repoRoot
+    if !filepath.IsAbs(absRoot) {
+        if cwd, err := os.Getwd(); err == nil {
+            absRoot = filepath.Join(cwd, absRoot)
+        }
+    }
+    fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	newItem := models.VocabItem{
 		Slug:        strings.ToLower(settings.Slug),
@@ -138,10 +149,26 @@ func findRepoRoot() (string, error) {
 	}
 
 	for {
-		// Check for common repo root indicators
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir, nil
-		}
+        // Check for common repo root indicators
+        gitPath := filepath.Join(dir, ".git")
+        if fi, err := os.Stat(gitPath); err == nil {
+            if fi.IsDir() {
+                return dir, nil
+            }
+            // .git is a file; parse gitdir
+            if b, err := os.ReadFile(gitPath); err == nil {
+                line := strings.TrimSpace(string(b))
+                if strings.HasPrefix(strings.ToLower(line), "gitdir:") {
+                    gd := strings.TrimSpace(strings.TrimPrefix(line, "gitdir:"))
+                    if !filepath.IsAbs(gd) {
+                        gd = filepath.Join(dir, gd)
+                    }
+                    if _, err := os.Stat(gd); err == nil {
+                        return dir, nil
+                    }
+                }
+            }
+        }
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			return dir, nil
 		}

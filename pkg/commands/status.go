@@ -86,7 +86,7 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	ticketsTotal := 0
+    ticketsTotal := 0
 	ticketsStale := 0
 	docsTotal := 0
 	designDocs := 0
@@ -193,9 +193,15 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Summary row
+    // Resolve config and vocabulary paths for summary
+    cfgPath, _ := FindTTMPConfigPath()
+    vocabPath, _ := ResolveVocabularyPath()
+
+    // Summary row
 	sum := types.NewRow(
 		types.MRP("root", settings.Root),
+        types.MRP("config_path", cfgPath),
+        types.MRP("vocabulary_path", vocabPath),
 		types.MRP("tickets_total", ticketsTotal),
 		types.MRP("tickets_stale", ticketsStale),
 		types.MRP("docs_total", docsTotal),
@@ -310,10 +316,12 @@ func (c *StatusCommand) Run(
 		}
 	}
 
-	fmt.Printf(
-		"root=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
-		settings.Root, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,
-	)
+    cfgPath, _ := FindTTMPConfigPath()
+    vocabPath, _ := ResolveVocabularyPath()
+    fmt.Printf(
+        "root=%s config=%s vocabulary=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
+        settings.Root, cfgPath, vocabPath, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,
+    )
 	return nil
 }
 

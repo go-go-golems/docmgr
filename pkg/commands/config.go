@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
+    "fmt"
+    "os"
+    "path/filepath"
 
-	"gopkg.in/yaml.v3"
+    "gopkg.in/yaml.v3"
 )
 
 // TTMPConfig defines repository-level configuration for docmgr
@@ -21,22 +21,35 @@ type TTMPConfig struct {
 
 // FindTTMPConfigPath walks up from cwd to find .ttmp.yaml
 func FindTTMPConfigPath() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	for {
-		cfg := filepath.Join(dir, ".ttmp.yaml")
-		if _, err := os.Stat(cfg); err == nil {
-			return cfg, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf(".ttmp.yaml not found")
+    // 0) Explicit override via environment
+    if env := os.Getenv("DOCMGR_CONFIG"); env != "" {
+        if !filepath.IsAbs(env) {
+            if cwd, err := os.Getwd(); err == nil {
+                env = filepath.Join(cwd, env)
+            }
+        }
+        if _, err := os.Stat(env); err == nil {
+            return env, nil
+        }
+    }
+
+    // 1) Walk up from CWD for .ttmp.yaml
+    dir, err := os.Getwd()
+    if err != nil {
+        return "", err
+    }
+    for {
+        cfg := filepath.Join(dir, ".ttmp.yaml")
+        if _, err := os.Stat(cfg); err == nil {
+            return cfg, nil
+        }
+        parent := filepath.Dir(dir)
+        if parent == dir {
+            break
+        }
+        dir = parent
+    }
+    return "", fmt.Errorf(".ttmp.yaml not found")
 }
 
 // LoadTTMPConfig loads the nearest .ttmp.yaml, or returns nil if not found

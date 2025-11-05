@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -256,7 +257,7 @@ type TasksCheckSettings struct {
 	Ticket    string `glazed.parameter:"ticket"`
 	Root      string `glazed.parameter:"root"`
 	TasksFile string `glazed.parameter:"tasks-file"`
-	ID        int    `glazed.parameter:"id"`
+	IDs       []int  `glazed.parameter:"id"`
 	Match     string `glazed.parameter:"match"`
 }
 
@@ -269,7 +270,7 @@ func NewTasksCheckCommand() (*TasksCheckCommand, error) {
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
 			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeInteger, parameters.WithHelp("Task index (from 'tasks list')"), parameters.WithDefault(0)),
+			parameters.NewParameterDefinition("id", parameters.ParameterTypeIntegerList, parameters.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
 			parameters.NewParameterDefinition("match", parameters.ParameterTypeString, parameters.WithHelp("Substring to match a task if --id not set"), parameters.WithDefault("")),
 		),
 	)
@@ -285,31 +286,50 @@ func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layer
 	if err != nil {
 		return err
 	}
-	target := -1
-	if s.ID > 0 {
-		target = s.ID
+	var targets []int
+	if len(s.IDs) > 0 {
+		targets = s.IDs
 	} else if s.Match != "" {
-		// pick first containing
 		for _, t := range tasks {
 			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
-				target = t.TaskIndex
+				targets = []int{t.TaskIndex}
 				break
 			}
 		}
 	}
-	if target <= 0 {
+	if len(targets) == 0 {
 		return fmt.Errorf("no target task specified")
 	}
+	found := map[int]bool{}
 	for _, t := range tasks {
-		if t.TaskIndex == target {
-			lines[t.LineIndex] = formatTaskLine(true, t.Text)
-			break
+		for _, id := range targets {
+			if t.TaskIndex == id {
+				lines[t.LineIndex] = formatTaskLine(true, t.Text)
+				found[id] = true
+			}
 		}
+	}
+	var missing []int
+	for _, id := range targets {
+		if !found[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("task id(s) not found: %v", missing)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
 		return err
 	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task checked"), types.MRP("id", target))
+	idsStr := make([]string, 0, len(targets))
+	for _, id := range targets {
+		idsStr = append(idsStr, fmt.Sprintf("%d", id))
+	}
+	status := "task checked"
+	if len(targets) > 1 {
+		status = "tasks checked"
+	}
+	row := types.NewRow(types.MRP("file", path), types.MRP("status", status), types.MRP("ids", strings.Join(idsStr, ",")))
 	return gp.AddRow(ctx, row)
 }
 
@@ -322,7 +342,7 @@ type TasksUncheckSettings struct {
 	Ticket    string `glazed.parameter:"ticket"`
 	Root      string `glazed.parameter:"root"`
 	TasksFile string `glazed.parameter:"tasks-file"`
-	ID        int    `glazed.parameter:"id"`
+	IDs       []int  `glazed.parameter:"id"`
 	Match     string `glazed.parameter:"match"`
 }
 
@@ -335,7 +355,7 @@ func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
 			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeInteger, parameters.WithHelp("Task index (from 'tasks list')"), parameters.WithDefault(0)),
+			parameters.NewParameterDefinition("id", parameters.ParameterTypeIntegerList, parameters.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
 			parameters.NewParameterDefinition("match", parameters.ParameterTypeString, parameters.WithHelp("Substring to match a task if --id not set"), parameters.WithDefault("")),
 		),
 	)
@@ -351,30 +371,50 @@ func (c *TasksUncheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *lay
 	if err != nil {
 		return err
 	}
-	target := -1
-	if s.ID > 0 {
-		target = s.ID
+	var targets []int
+	if len(s.IDs) > 0 {
+		targets = s.IDs
 	} else if s.Match != "" {
 		for _, t := range tasks {
 			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
-				target = t.TaskIndex
+				targets = []int{t.TaskIndex}
 				break
 			}
 		}
 	}
-	if target <= 0 {
+	if len(targets) == 0 {
 		return fmt.Errorf("no target task specified")
 	}
+	found := map[int]bool{}
 	for _, t := range tasks {
-		if t.TaskIndex == target {
-			lines[t.LineIndex] = formatTaskLine(false, t.Text)
-			break
+		for _, id := range targets {
+			if t.TaskIndex == id {
+				lines[t.LineIndex] = formatTaskLine(false, t.Text)
+				found[id] = true
+			}
 		}
+	}
+	var missing []int
+	for _, id := range targets {
+		if !found[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("task id(s) not found: %v", missing)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
 		return err
 	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task unchecked"), types.MRP("id", target))
+	idsStr := make([]string, 0, len(targets))
+	for _, id := range targets {
+		idsStr = append(idsStr, fmt.Sprintf("%d", id))
+	}
+	status := "task unchecked"
+	if len(targets) > 1 {
+		status = "tasks unchecked"
+	}
+	row := types.NewRow(types.MRP("file", path), types.MRP("status", status), types.MRP("ids", strings.Join(idsStr, ",")))
 	return gp.AddRow(ctx, row)
 }
 
@@ -443,7 +483,7 @@ type TasksRemoveSettings struct {
 	Ticket    string `glazed.parameter:"ticket"`
 	Root      string `glazed.parameter:"root"`
 	TasksFile string `glazed.parameter:"tasks-file"`
-	ID        int    `glazed.parameter:"id"`
+	IDs       []int  `glazed.parameter:"id"`
 }
 
 func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
@@ -455,7 +495,7 @@ func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
 			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeInteger, parameters.WithHelp("Task index (from 'tasks list')"), parameters.WithRequired(true)),
+			parameters.NewParameterDefinition("id", parameters.ParameterTypeIntegerList, parameters.WithHelp("Task index(es), comma-separated (from 'tasks list')"), parameters.WithRequired(true)),
 		),
 	)
 	return &TasksRemoveCommand{CommandDescription: cmd}, nil
@@ -470,24 +510,46 @@ func (c *TasksRemoveCommand) RunIntoGlazeProcessor(ctx context.Context, pl *laye
 	if err != nil {
 		return err
 	}
-	// find line index to remove
-	lineIdx := -1
-	for _, t := range tasks {
-		if t.TaskIndex == s.ID {
-			lineIdx = t.LineIndex
-			break
+	if len(s.IDs) == 0 {
+		return fmt.Errorf("no target task specified")
+	}
+	lineIdxs := make([]int, 0, len(s.IDs))
+	found := map[int]bool{}
+	for _, id := range s.IDs {
+		for _, t := range tasks {
+			if t.TaskIndex == id {
+				lineIdxs = append(lineIdxs, t.LineIndex)
+				found[id] = true
+				break
+			}
 		}
 	}
-	if lineIdx < 0 {
-		return fmt.Errorf("task id not found: %d", s.ID)
+	var missing []int
+	for _, id := range s.IDs {
+		if !found[id] {
+			missing = append(missing, id)
+		}
 	}
-	// remove line
-	newLines := append([]string{}, lines[:lineIdx]...)
-	newLines = append(newLines, lines[lineIdx+1:]...)
+	if len(missing) > 0 {
+		return fmt.Errorf("task id(s) not found: %v", missing)
+	}
+	sort.Sort(sort.Reverse(sort.IntSlice(lineIdxs)))
+	newLines := append([]string{}, lines...)
+	for _, idx := range lineIdxs {
+		newLines = append(newLines[:idx], newLines[idx+1:]...)
+	}
 	if err := os.WriteFile(path, []byte(strings.Join(newLines, "\n")+"\n"), 0644); err != nil {
 		return err
 	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task removed"), types.MRP("id", s.ID))
+	idsStr := make([]string, 0, len(s.IDs))
+	for _, id := range s.IDs {
+		idsStr = append(idsStr, fmt.Sprintf("%d", id))
+	}
+	status := "task removed"
+	if len(s.IDs) > 1 {
+		status = "tasks removed"
+	}
+	row := types.NewRow(types.MRP("file", path), types.MRP("status", status), types.MRP("ids", strings.Join(idsStr, ",")))
 	return gp.AddRow(ctx, row)
 }
 

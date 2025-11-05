@@ -192,13 +192,15 @@ docmgr tasks list --ticket MEN-4242
 # Add a new task
 docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2"
 
-# Check / uncheck by id
-docmgr tasks check   --ticket MEN-4242 --id 1
-docmgr tasks uncheck --ticket MEN-4242 --id 1
+# Check / uncheck by id or ids (comma-separated)
+docmgr tasks check   --ticket MEN-4242 --id 1,2,4
+docmgr tasks uncheck --ticket MEN-4242 --id 1,2,4
 
 # Edit and remove
 docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
-docmgr tasks remove --ticket MEN-4242 --id 3
+docmgr tasks remove --ticket MEN-4242 --id 3,5
+
+Note: `--id` accepts a comma-separated list for operations that target IDs (check, uncheck, remove).
 ```
 
 Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.

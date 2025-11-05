@@ -115,10 +115,21 @@ type TasksListSettings struct {
 }
 
 func NewTasksListCommand() (*TasksListCommand, error) {
-	cmd := cmds.NewCommandDescription(
+    cmd := cmds.NewCommandDescription(
 		"list",
-		cmds.WithShort("List tasks from tasks.md"),
-		cmds.WithLong(`List checkbox tasks found in the ticket's tasks.md.`),
+        cmds.WithShort("List tasks from tasks.md"),
+        cmds.WithLong(`List checkbox tasks found in the ticket's tasks.md.
+
+Columns:
+  index,checked,text,file
+
+Examples:
+  # Human output
+  docmgr tasks list --ticket MEN-4242
+
+  # Scriptable (CSV without headers)
+  docmgr tasks list --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields index,text
+`),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
@@ -138,12 +149,12 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 		return err
 	}
 	for _, t := range tasks {
-		row := types.NewRow(
-			types.MRP("index", t.TaskIndex),
-			types.MRP("checked", t.Checked),
-			types.MRP("text", t.Text),
-			types.MRP("file", path),
-		)
+        row := types.NewRow(
+            types.MRP(ColIndex, t.TaskIndex),
+            types.MRP(ColChecked, t.Checked),
+            types.MRP(ColText, t.Text),
+            types.MRP(ColFile, path),
+        )
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err
 		}

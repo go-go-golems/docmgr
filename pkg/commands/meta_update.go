@@ -37,11 +37,21 @@ func NewMetaUpdateCommand() (*MetaUpdateCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"update",
 			cmds.WithShort("Update document metadata"),
-			cmds.WithLong(`Updates frontmatter fields in document files.
+            cmds.WithLong(`Updates frontmatter fields in document files.
 
-Example:
+Behavior:
+  • If --doc is provided: update that file.
+  • If --ticket is provided without --doc-type: update the ticket's index.md only (default).
+  • If --ticket and --doc-type are provided: update all docs of that type under the ticket.
+
+Examples:
+  # Update a specific file
   docmgr meta update --doc ttmp/MEN-1234-slug/index.md --field Status --value review
+
+  # Update ticket index.md (default when only --ticket is specified)
   docmgr meta update --ticket MEN-1234 --field Status --value active
+
+  # Update all design-docs under a ticket
   docmgr meta update --ticket MEN-1234 --doc-type design-doc --field Topics --value chat,backend
 `),
 			cmds.WithFlags(
@@ -114,19 +124,24 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 	if settings.Doc != "" {
 		// Update specific file
 		filesToUpdate = []string{settings.Doc}
-	} else if settings.Ticket != "" {
-		// Find all files for ticket
-		ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
-		if err != nil {
-			return fmt.Errorf("failed to find ticket directory: %w", err)
-		}
+    } else if settings.Ticket != "" {
+        // Resolve the ticket directory
+        ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+        if err != nil {
+            return fmt.Errorf("failed to find ticket directory: %w", err)
+        }
 
-		// Find all markdown files in ticket directory
-		files, err := findMarkdownFiles(ticketDir, settings.DocType)
-		if err != nil {
-			return fmt.Errorf("failed to find files: %w", err)
-		}
-		filesToUpdate = files
+        if settings.DocType == "" {
+            // Default: update only index.md for the ticket
+            filesToUpdate = []string{filepath.Join(ticketDir, "index.md")}
+        } else {
+            // Update all markdown files matching the doc type
+            files, err := findMarkdownFiles(ticketDir, settings.DocType)
+            if err != nil {
+                return fmt.Errorf("failed to find files: %w", err)
+            }
+            filesToUpdate = files
+        }
 	} else {
 		return fmt.Errorf("must specify either --doc or --ticket")
 	}

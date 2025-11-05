@@ -184,7 +184,7 @@ Doctor checks include:
 - Missing/invalid `index.md`
 - Stale documents (configurable threshold)
 - Required fields (Title, Ticket, Status, Topics)
-- Unknown Topics/DocType/Intent (validated against `doc/vocabulary.yaml`)
+- Unknown Topics/DocType/Intent (validated against `ttmp/vocabulary.yaml`)
 - Missing `RelatedFiles` on disk
 
 Tip: Set `--stale-after` high initially (for example, 30–45 days) while adoption ramps up, then lower it as your cadence stabilizes.
@@ -240,5 +240,30 @@ Add a job to fail fast on documentation regressions. Make CI strict over time (f
 
 - Root discovery: If invoking from nested directories yields inconsistent roots, set an absolute `root` in `.ttmp.yaml` or run from repo root.
 - Shell paths: Avoid parentheses in ticket directory names; quote or escape when cd'ing into them.
+
+
+## 10. CLI Outputs & Scripting (reference)
+
+List commands expose stable columns and a “Columns:” section in `--help`. See the “Using docmgr” tutorial for full recipes.
+
+- Stable columns:
+  - tickets: `ticket,title,status,topics,path,last_updated`
+  - docs:    `ticket,doc_type,title,status,topics,path,last_updated`
+  - tasks:   `index,checked,text,file`
+  - vocab:   `category,slug,description`
+
+Quick examples:
+
+```bash
+# Paths only
+docmgr list tickets --with-glaze-output --select path
+docmgr list docs --ticket MEN-4242 --with-glaze-output --select path
+
+# CSV without headers
+docmgr list docs --ticket MEN-4242 \
+  --with-glaze-output --output csv --with-headers=false --fields path
+```
+
+For more, open `docmgr help how-to-use` or the embedded doc “Tutorial — Using docmgr to Drive a Ticket Workflow”.
 
 

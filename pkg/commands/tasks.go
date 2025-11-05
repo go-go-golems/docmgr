@@ -115,10 +115,10 @@ type TasksListSettings struct {
 }
 
 func NewTasksListCommand() (*TasksListCommand, error) {
-    cmd := cmds.NewCommandDescription(
+	cmd := cmds.NewCommandDescription(
 		"list",
-        cmds.WithShort("List tasks from tasks.md"),
-        cmds.WithLong(`List checkbox tasks found in the ticket's tasks.md.
+		cmds.WithShort("List tasks from tasks.md"),
+		cmds.WithLong(`List checkbox tasks found in the ticket's tasks.md.
 
 Columns:
   index,checked,text,file
@@ -149,12 +149,12 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 		return err
 	}
 	for _, t := range tasks {
-        row := types.NewRow(
-            types.MRP(ColIndex, t.TaskIndex),
-            types.MRP(ColChecked, t.Checked),
-            types.MRP(ColText, t.Text),
-            types.MRP(ColFile, path),
-        )
+		row := types.NewRow(
+			types.MRP(ColIndex, t.TaskIndex),
+			types.MRP(ColChecked, t.Checked),
+			types.MRP(ColText, t.Text),
+			types.MRP(ColFile, path),
+		)
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err
 		}

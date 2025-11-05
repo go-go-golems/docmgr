@@ -31,7 +31,7 @@ func NewListTicketsCommand() (*ListTicketsCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"tickets",
 			cmds.WithShort("List ticket workspaces"),
-            cmds.WithLong(`Lists all ticket workspaces in the root directory.
+			cmds.WithLong(`Lists all ticket workspaces in the root directory.
 
 Columns:
   ticket,title,status,topics,path,last_updated
@@ -122,14 +122,14 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 			continue
 		}
 
-        row := types.NewRow(
-            types.MRP(ColTicket, doc.Ticket),
-            types.MRP(ColTitle, doc.Title),
-            types.MRP(ColStatus, doc.Status),
-            types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
-            types.MRP(ColPath, filepath.Join(settings.Root, entry.Name())),
-            types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
-        )
+		row := types.NewRow(
+			types.MRP(ColTicket, doc.Ticket),
+			types.MRP(ColTitle, doc.Title),
+			types.MRP(ColStatus, doc.Status),
+			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
+			types.MRP(ColPath, filepath.Join(settings.Root, entry.Name())),
+			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
+		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err

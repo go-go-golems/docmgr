@@ -27,7 +27,7 @@ func NewVocabListCommand() (*VocabListCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"list",
 			cmds.WithShort("List vocabulary entries"),
-            cmds.WithLong(`Lists vocabulary entries from the workspace vocabulary file.
+			cmds.WithLong(`Lists vocabulary entries from the workspace vocabulary file.
 
 The vocabulary path is resolved from .ttmp.yaml if configured via 'vocabulary'.
 By default, it is '<root>/vocabulary.yaml' (root defaults to 'ttmp').
@@ -75,11 +75,11 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 
 	if category == "" || category == "topics" {
 		for _, item := range vocab.Topics {
-            row := types.NewRow(
-                types.MRP(ColCategory, "topics"),
-                types.MRP(ColSlug, item.Slug),
-                types.MRP(ColDescription, item.Description),
-            )
+			row := types.NewRow(
+				types.MRP(ColCategory, "topics"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
+			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
 			}
@@ -88,11 +88,11 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 
 	if category == "" || category == "doctypes" || category == "doc-types" {
 		for _, item := range vocab.DocTypes {
-            row := types.NewRow(
-                types.MRP(ColCategory, "docTypes"),
-                types.MRP(ColSlug, item.Slug),
-                types.MRP(ColDescription, item.Description),
-            )
+			row := types.NewRow(
+				types.MRP(ColCategory, "docTypes"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
+			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
 			}
@@ -101,11 +101,11 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 
 	if category == "" || category == "intent" {
 		for _, item := range vocab.Intent {
-            row := types.NewRow(
-                types.MRP(ColCategory, "intent"),
-                types.MRP(ColSlug, item.Slug),
-                types.MRP(ColDescription, item.Description),
-            )
+			row := types.NewRow(
+				types.MRP(ColCategory, "intent"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
+			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
 			}

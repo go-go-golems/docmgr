@@ -51,6 +51,13 @@ This file is the ticket’s single entry point. It:
 
 Keep this index concise. Put details in design/reference docs; use notes on `RelatedFiles` to explain why a file matters.
 
+Update the body of `index.md` throughout the ticket — not just frontmatter via `meta update`. Maintain:
+
+- Overview (goal, scope, constraints)
+- Key Links (docs, code, data assets)
+- Status (one‑line)
+- Next steps (short checklist)
+
 ## 4. Add Documents
 
 ```bash

@@ -33,10 +33,20 @@ func NewListTicketsCommand() (*ListTicketsCommand, error) {
 			cmds.WithShort("List ticket workspaces"),
 			cmds.WithLong(`Lists all ticket workspaces in the root directory.
 
-Example:
+Columns:
+  ticket,title,status,topics,path,last_updated
+
+Examples:
+  # Human output
   docmgr list tickets
   docmgr list tickets --ticket MEN-3475
   docmgr list tickets --status active
+
+  # Scriptable (paths only)
+  docmgr list tickets --with-glaze-output --select path
+
+  # CSV of selected fields without headers
+  docmgr list tickets --with-glaze-output --output csv --with-headers=false --fields ticket,path
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -113,12 +123,12 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		}
 
 		row := types.NewRow(
-			types.MRP("ticket", doc.Ticket),
-			types.MRP("title", doc.Title),
-			types.MRP("status", doc.Status),
-			types.MRP("topics", strings.Join(doc.Topics, ", ")),
-			types.MRP("path", filepath.Join(settings.Root, entry.Name())),
-			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
+			types.MRP(ColTicket, doc.Ticket),
+			types.MRP(ColTitle, doc.Title),
+			types.MRP(ColStatus, doc.Status),
+			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
+			types.MRP(ColPath, filepath.Join(settings.Root, entry.Name())),
+			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {

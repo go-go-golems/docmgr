@@ -19,7 +19,13 @@ func main() {
 		Short: "Document Manager for LLM Workflows",
 		Long: `docmgr is a structured document manager for managing documentation
 in LLM-assisted workflows. It provides commands to create, organize,
-and validate documentation workspaces with metadata and external source support.`,
+and validate documentation workspaces with metadata and external source support.
+
+Helpful docs (built-in):
+
+  - Quick usage:          docmgr help how-to-use
+  - Initial setup guide:  docmgr help how-to-setup
+  - List all embedded docs: docmgr help --all`,
 	}
 
 	// Setup Glazed help system and load embedded docs

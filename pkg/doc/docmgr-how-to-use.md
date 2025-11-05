@@ -16,6 +16,8 @@ SectionType: Tutorial
 
 This tutorial walks a developer through using `docmgr` to manage the documentation for a single ticket from start to finish: initialize a workspace, add documents, link code, search, and validate.
 
+Working discipline: As you work, keep `tasks.md` and `changelog.md` current via the CLI. Prefer `docmgr tasks ...` and `docmgr changelog update` over manual edits so indexes and dates stay consistent.
+
 ## 2. Prerequisites
 
 - `docmgr` available on PATH
@@ -48,6 +50,13 @@ This file is the ticket’s single entry point. It:
 - Serves as the anchor for docmgr checks (health/staleness/links); keep it short and up‑to‑date
 
 Keep this index concise. Put details in design/reference docs; use notes on `RelatedFiles` to explain why a file matters.
+
+Update the body of `index.md` throughout the ticket — not just frontmatter via `meta update`. Maintain:
+
+- Overview (goal, scope, constraints)
+- Key Links (docs, code, data assets)
+- Status (one‑line)
+- Next steps (short checklist)
 
 ## 4. Add Documents
 
@@ -146,6 +155,8 @@ docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
 docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 ```
 
+Use the changelog continuously during development (small, frequent entries). Treat it as your working log of decisions and progress, not just an end-of-ticket summary.
+
 ### What `changelog.md` is for
 
 - Running log of notable changes, decisions, and learnings during the ticket
@@ -197,7 +208,7 @@ Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only ed
 - Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
 - Tracks day‑to‑day execution; keep it current as tasks start/finish
 - Break work into small, actionable items; optionally tag owners inline
-- Use the `docmgr tasks` commands to add/check/edit/remove without manual formatting
+- Use the `docmgr tasks` commands to add/check/edit/remove without manual formatting; update tasks as you start/finish work items so reviewers can track progress in real time
 
 ## 11. Check Workspace Status
 
@@ -238,6 +249,60 @@ docmgr list tickets --with-glaze-output --output json
 docmgr status --with-glaze-output --output table
 docmgr search --query websocket --with-glaze-output --output yaml
 docmgr guidelines --doc-type design-doc --with-glaze-output --output json
+```
+
+### Glazed scripting recipes (no jq)
+
+Use Glazed flags with `--with-glaze-output` to get machine-friendly output directly from docmgr commands.
+
+- Paths only (newline-separated)
+  - Tickets (all):
+    ```bash
+    docmgr list tickets --with-glaze-output --select path
+    ```
+  - Docs in a ticket:
+    ```bash
+    docmgr list docs --ticket MEN-4242 --with-glaze-output --select path
+    ```
+
+- CSV/TSV with specific columns
+  - Single column (no header):
+    ```bash
+    docmgr list docs --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields path
+    ```
+  - Multiple columns (tab-separated):
+    ```bash
+    docmgr list docs --ticket MEN-4242 --with-glaze-output --output tsv --with-headers=true --fields doc_type,title,path
+    ```
+
+- Hide columns you don't need
+  ```bash
+  docmgr list docs --ticket MEN-4242 --with-glaze-output --output csv --fields ticket,doc_type,title,path --filter ticket
+  ```
+
+- One-line templated output per row
+  ```bash
+  docmgr list docs --ticket MEN-4242 --with-glaze-output \
+    --select-template '{{.doc_type}} {{.title}}: {{.path}}' --select _0
+  ```
+
+### Stable column contracts (for scripting)
+
+Use these field names with `--fields`, `--filter`, and `--select`.
+
+- Tickets (`docmgr list tickets`):
+  - `ticket,title,status,topics,path,last_updated`
+- Docs (`docmgr list docs --ticket TICKET`):
+  - `ticket,doc_type,title,status,topics,path,last_updated`
+- Tasks (`docmgr tasks list --ticket TICKET`):
+  - `index,checked,text,file`
+- Vocabulary (`docmgr vocab list`):
+  - `category,slug,description`
+
+Discover quickly:
+
+```bash
+docmgr list docs --with-glaze-output --output csv --with-headers=true | sed -n '1p'
 ```
 
 ### Root discovery and shell gotchas

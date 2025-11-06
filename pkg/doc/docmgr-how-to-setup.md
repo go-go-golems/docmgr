@@ -56,13 +56,18 @@ root: ttmp
 defaults:
   owners: [manuel]
   intent: long-term
-filenamePrefixPolicy: off
 vocabulary: ttmp/vocabulary.yaml
 ```
 
 - `root`: default docs root (overrides the built-in `ttmp` when flags are not explicitly set)
 - `defaults.owners` / `defaults.intent`: applied when initializing ticket index metadata
-- `filenamePrefixPolicy`: reserved for future filename enforcement
+- `vocabulary`: path to the shared vocabulary file
+
+### 2.2 Prefixing (heads‑up)
+
+- New documents created by scaffolding are prefixed with 2‑digit numeric prefixes (01-, 02-, …) in all ticket subdirectories; switches to 3 digits after 99 files.
+- `doctor` warns when a subdirectory Markdown file is missing a numeric prefix (ticket‑root `index.md`, `README.md`, `tasks.md`, `changelog.md` are exempt).
+- Use `docmgr renumber --ticket <TICKET>` to resequence and update intra‑ticket links when needed.
 
 ## 3. Seed Vocabulary
 
@@ -74,7 +79,7 @@ One-shot seeding during root init:
 docmgr init --seed-vocabulary
 ```
 
-Or add entries explicitly:
+Or add entries explicitly (you can pass `--root` to anchor resolution):
 
 ```bash
 docmgr vocab add --category topics   --slug backend --description "Backend services"
@@ -186,6 +191,7 @@ Doctor checks include:
 - Required fields (Title, Ticket, Status, Topics)
 - Unknown Topics/DocType/Intent (validated against `ttmp/vocabulary.yaml`)
 - Missing `RelatedFiles` on disk
+ - Missing numeric prefix for subdirectory Markdown files (prefixing policy)
 
 Tip: Set `--stale-after` high initially (for example, 30–45 days) while adoption ramps up, then lower it as your cadence stabilizes.
 

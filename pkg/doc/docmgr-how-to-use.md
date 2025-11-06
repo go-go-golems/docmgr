@@ -94,7 +94,7 @@ Link code paths to your ticket so reviewers can jump from code to context:
 ```bash
 # Add files to the ticket index
 docmgr relate --ticket MEN-4242 --files \
-  backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts
+  backend/api/register.go,backend/ws/manager.go,web/src/store/api/chatApi.ts
 
 # Get suggestions with explanations (no changes applied)
 docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat
@@ -104,11 +104,66 @@ docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 
 # Add or update notes for specific files
 docmgr relate --ticket MEN-4242 \
-  --file-note "backend/chat/api/register.go:Registers chat routes (path normalization source)" \
-  --file-note "web/src/store/api/chatApi.ts=Frontend API integration; must align with backend paths"
+  --file-note "backend/api/register.go:Registers routes (normalization source)" \
+  --file-note "web/src/store/api/chatApi.ts=Frontend API integration"
 ```
 
-Suggestion output includes both `source` and `reason` (for example, "recent commit activity", "working tree modified", "referenced by documents"). When applying suggestions, combined reasons are saved as the file's note unless overridden with `--file-note`.
+Tips:
+- Use short notes to explain why a file matters ("router wiring", "hydration API").
+- Prefer repo‑relative paths.
+
+### Index Playbook (quick checklist)
+
+1) Relate files (with notes) to the ticket index
+
+```bash
+docmgr relate --ticket MEN-4242 \
+  --files reference/overview.md,backend/api/register.go \
+  --file-note "reference/overview.md:Reference — architecture and design overview" \
+  --file-note "backend/api/register.go:Router wiring"
+```
+
+2) Refresh the one‑line Summary
+
+```bash
+docmgr meta update \
+  --doc ttmp/MEN-4242-.../index.md \
+  --field Summary \
+  --value "MEN-4242: normalize API paths; update WS lifecycle; docs + tests."
+```
+
+3) Validate
+
+```bash
+docmgr doctor --ticket MEN-4242 --stale-after 30 --fail-on error
+```
+
+### Changelog hygiene (always link files)
+
+When you add a changelog entry, also relate the exact files you changed to the ticket’s index with short notes, then validate.
+
+- Relate with notes (index):
+  ```bash
+  docmgr relate --ticket MEN-4242 \
+    --files backend/api/register.go,web/src/store/api/chatApi.ts \
+    --file-note "backend/api/register.go:Path normalization source" \
+    --file-note "web/src/store/api/chatApi.ts:Frontend integration"
+  ```
+
+- Append changelog entry (keep it short; mention linked files):
+  ```bash
+  docmgr changelog update --ticket MEN-4242 \
+    --entry "Normalized API paths; linked backend/api/register.go and chatApi.ts with notes."
+  ```
+
+- Validate:
+  ```bash
+  docmgr doctor --ticket MEN-4242 --stale-after 30 --fail-on error
+  ```
+
+Notes:
+- `RelatedFiles` supports both `Path`/`Note` and `path`/`note` in YAML.
+- Prefer repo‑relative paths (avoid prefixing with the docs root like `ttmp/...`).
 
 ## 7. Explore and Search
 
@@ -142,12 +197,12 @@ Append dated entries to `changelog.md` and include related files when useful:
 
 ```bash
 # Minimal entry
-docmgr changelog update --ticket MEN-4242 --entry "Normalized chat API paths"
+docmgr changelog update --ticket MEN-4242 --entry "Normalized API paths"
 
 # With related files and notes
 docmgr changelog update --ticket MEN-4242 \
-  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
-  --file-note "backend/chat/api/register.go:Source of path normalization" \
+  --files backend/api/register.go,web/src/store/api/chatApi.ts \
+  --file-note "backend/api/register.go:Path normalization source" \
   --file-note "web/src/store/api/chatApi.ts=Frontend integration"
 
 # Use suggestions (print only) or apply them
@@ -155,15 +210,7 @@ docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
 docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 ```
 
-Use the changelog continuously during development (small, frequent entries). Treat it as your working log of decisions and progress, not just an end-of-ticket summary.
-
-### What `changelog.md` is for
-
-- Running log of notable changes, decisions, and learnings during the ticket
-- Timestamped entries to reconstruct context later (e.g., date‑grouped notes)
-- Lightweight status anchor for reviewers; keep lines short and clear
-- Link to PRs, commits, references as relevant; add related files with short notes
-- Update frequently as work progresses; prefer many small entries over one big dump
+Bare mode reminder: after updating, docmgr prints a reminder to update the ticket index (relate/meta) and refresh file relationships in impacted docs.
 
 ## 9. Validate with Doctor
 
@@ -181,6 +228,17 @@ Warnings to expect in real projects:
 - Missing files listed in `RelatedFiles`
 - Multiple `index.md` under a ticket (use `--ignore-glob` to suppress known duplicates)
 
+### Ignore noise with .docmgrignore (heads‑up)
+
+- Place `.docmgrignore` at your docs root (e.g., `ttmp/.docmgrignore`). One pattern per line.
+- Doctor reads `.docmgrignore` from both the repository root and the docs root; patterns are glob‑like and matched against names and paths.
+
+### Prefixing (heads‑up)
+
+- Newly scaffolded docs get 2‑digit numeric prefixes (01-, 02-, …) in all ticket subdirectories; switches to 3 digits after 99 files.
+- Doctor warns when a subdirectory Markdown file is missing a numeric prefix (ticket‑root `index.md`, `README.md`, `tasks.md`, `changelog.md` are exempt).
+- Use `docmgr renumber --ticket <TICKET>` to resequence and update intra‑ticket links when needed.
+
 ## 10. Manage Tasks
 
 Use the `tasks` commands to track the concrete steps for your ticket directly in `tasks.md`.
@@ -190,27 +248,23 @@ Use the `tasks` commands to track the concrete steps for your ticket directly in
 docmgr tasks list --ticket MEN-4242
 
 # Add a new task
-docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2"
+docmgr tasks add --ticket MEN-4242 --text "Update API docs for /v2"
 
 # Check / uncheck by id or ids (comma-separated)
 docmgr tasks check   --ticket MEN-4242 --id 1,2,4
 docmgr tasks uncheck --ticket MEN-4242 --id 1,2,4
 
+# Or check by substring match
+docmgr tasks check --ticket MEN-4242 --match "api docs"
+
 # Edit and remove
 docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
 docmgr tasks remove --ticket MEN-4242 --id 3,5
-
-Note: `--id` accepts a comma-separated list for operations that target IDs (check, uncheck, remove).
 ```
 
-Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
-
-### What `tasks.md` is for
-
-- Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
-- Tracks day‑to‑day execution; keep it current as tasks start/finish
-- Break work into small, actionable items; optionally tag owners inline
-- Use the `docmgr tasks` commands to add/check/edit/remove without manual formatting; update tasks as you start/finish work items so reviewers can track progress in real time
+Notes:
+- `--id` accepts a comma-separated list for operations that target IDs (check, uncheck, remove).
+- After add/check/uncheck, docmgr prints a reminder to update the changelog and relate changed files with notes if needed.
 
 ## 11. Check Workspace Status
 
@@ -317,13 +371,20 @@ docmgr list docs --with-glaze-output --output csv --with-headers=true | sed -n '
   cd "ttmp/MEN-XXXX-name-\(with-parens\)"
   ```
 
-## 13. Iterate and Maintain
+## 13. Root Discovery and Vocabulary
+
+- `.ttmp.yaml` discovery walks up from CWD. If you need consistent behavior from nested subdirs, set an absolute `root` in `.ttmp.yaml` or run from repo root.
+- The vocabulary path is resolved from `.ttmp.yaml` (`vocabulary`) or defaults to `<root>/vocabulary.yaml`.
+- `docmgr vocab list` and `docmgr vocab add` support `--root` to anchor resolution explicitly.
+- Toggles: you no longer need doc type "toggles" — the vocabulary is the source of truth for topics/docTypes/intent. Unknown doc types are accepted and placed under `various/`; the document’s `DocType` still reflects the requested slug.
+
+## 14. Iterate and Maintain
 
 - Keep `Owners`, `Summary`, and `RelatedFiles` current
 - Regularly update `index.md`, `changelog.md`, and `tasks.md` as work progresses
 - Use `guidelines`
 
-## 14. Advanced: RelatedFiles with notes and ignores
+## 15. Advanced: RelatedFiles with notes and ignores
 
 ### Structured RelatedFiles (with notes)
 

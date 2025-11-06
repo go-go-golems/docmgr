@@ -208,6 +208,8 @@ The `index.md` file is your ticket's single entry point. It:
 - Keep index.md body content concise (~50 lines of markdown)
 - Update frontmatter via `docmgr meta update` commands
 - Write Overview, Status, Next Steps in the body content (below frontmatter)
+- Prefer a subdocument-first linking pattern: relate most implementation files to focused subdocuments (design/reference/playbook), and have `index.md` link to those subdocuments instead of listing every file directly.
+- When relating files (anywhere), always include notes (`--file-note "path:why-this-file-matters"`); file notes are required in our workflow.
 
 > **Smart Default:** Documents you add will automatically inherit topics (`chat,backend,websocket`), owners, and status from the ticket. No need to repeat them!
 
@@ -296,12 +298,17 @@ Metadata (frontmatter) defines how docs are discovered, filtered, and validated.
 ### Update Specific Document
 
 ```bash
-# Update one field on one doc
-INDEX="ttmp/MEN-4242-normalize-chat-api/index.md"
-docmgr meta update --doc "$INDEX" --field Summary --value "Unify API paths"
-docmgr meta update --doc "$INDEX" --field Status --value review
-docmgr meta update --doc "$INDEX" --field Owners --value "manuel,alex"
+# Update index.md (default target when using --ticket; no --doc needed)
+docmgr meta update --ticket MEN-4242 --field Summary --value "Unify API paths"
+docmgr meta update --ticket MEN-4242 --field Status --value review
+docmgr meta update --ticket MEN-4242 --field Owners --value "manuel,alex"
+
+# Update a specific subdocument (use --doc with explicit path)
+DOC="ttmp/MEN-4242-normalize-chat-api/reference/03-foobar.md"
+docmgr meta update --doc "$DOC" --field Summary --value "Unify API paths"
 ```
+
+Note: When you omit --doc and provide --ticket, commands like `meta update` target the ticket’s `index.md` by default.
 
 ### Bulk Updates Across Documents
 
@@ -366,9 +373,9 @@ docmgr relate --ticket MEN-4242 --files \
   backend/api/register.go,backend/ws/manager.go
 ```
 
-### Relating with Notes (RECOMMENDED)
+### Relating with Notes (ALWAYS)
 
-**Notes turn file lists into navigation maps:**
+**Notes are required.** Always provide a note for each file when running `docmgr relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked.
 
 ```bash
 docmgr relate --ticket MEN-4242 --files \
@@ -432,6 +439,22 @@ MEN-4242/design/01-path-normalization.md — Path Normalization [MEN-4242] ::
 
 **Template:** `[What it does]; [Key responsibilities or functions]`
 
+### Subdocument-first linking
+
+Prefer relating most files to the specific subdocument that explains them (design/reference/playbook) rather than directly to `index.md`. Keep `index.md` minimal and use it to reference those subdocuments.
+
+- Why: Subdocuments keep context close to code and prevent `index.md` bloat.
+- How: Add `RelatedFiles` on the subdocument; in `index.md`, add a short link to that subdocument.
+- Exception: Truly ticket-wide anchors (e.g., top-level diagrams or scripts) can live on `index.md`.
+
+Example:
+```bash
+# Relate implementation files to the design doc (preferred)
+docmgr relate --doc ttmp/MEN-4242/design/01-path-normalization-strategy.md \
+  --files backend/api/register.go \
+  --file-note "backend/api/register.go:Normalization entrypoint and router setup"
+```
+
 ### Index Playbook (Quick Checklist)
 
 **Keep your ticket index clean and current with this 3-step workflow:**
@@ -448,8 +471,7 @@ docmgr relate --ticket MEN-4242 \
 2) **Update the one-line Summary** in frontmatter
 
 ```bash
-docmgr meta update \
-  --doc ttmp/MEN-4242-.../index.md \
+docmgr meta update --ticket MEN-4242 \
   --field Summary \
   --value "MEN-4242: normalize API paths; update WS lifecycle; docs + tests."
 ```
@@ -477,9 +499,9 @@ docmgr changelog update --ticket MEN-4242 \
 
 Changelogs are dated automatically. Keep entries short — mention what changed and link relevant files.
 
-### Changelog Hygiene (Always Link Files)
+### Changelog Hygiene (Always Link Files and Provide Notes)
 
-**Best practice:** When you add a changelog entry, also relate the exact files you changed to the ticket's index with notes, then validate.
+**Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
 
 **The workflow:**
 

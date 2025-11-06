@@ -24,3 +24,13 @@ Resilience: RelatedFiles supports Path/Note and path/note keys; rebuilt docmgr; 
 
 Vocab verbs: added --root flag to list/add and printed resolved root/config/vocabulary; linked changes.
 
+
+## 2025-11-06
+
+Bare mode reminder test
+
+
+## 2025-11-06
+
+Changelog update: dual-mode + reminder; linked changelog.go and main.go.
+

@@ -428,14 +428,16 @@ Helpful docs (built-in):
 		fmt.Fprintf(os.Stderr, "Error creating changelog update command: %v\n", err)
 		os.Exit(1)
 	}
-	cobraChgUpdate, err := cli.BuildCobraCommand(chgUpdate,
-		cli.WithParserConfig(cli.CobraParserConfig{
-			ShortHelpLayers: []string{layers.DefaultSlug},
-			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
-		}),
-		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
-		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
-	)
+    cobraChgUpdate, err := cli.BuildCobraCommand(chgUpdate,
+        cli.WithDualMode(true),
+        cli.WithGlazeToggleFlag("with-glaze-output"),
+        cli.WithParserConfig(cli.CobraParserConfig{
+            ShortHelpLayers: []string{layers.DefaultSlug},
+            MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+        }),
+        cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+        cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+    )
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error building changelog update command: %v\n", err)
 		os.Exit(1)

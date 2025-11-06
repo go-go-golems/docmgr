@@ -11,9 +11,11 @@ Owners:
     - manuel
 RelatedFiles:
     - Path: docmgr/cmd/docmgr/main.go
-      Note: CLI entrypoint; register renumber
+      Note: Changelog update now dual-mode
     - Path: docmgr/pkg/commands/add.go
       Note: Apply 2-digit prefixes on scaffold
+    - Path: docmgr/pkg/commands/changelog.go
+      Note: Added BareCommand; prints reminder after update
     - Path: docmgr/pkg/commands/doctor.go
       Note: Warn missing numeric prefix
     - Path: docmgr/pkg/commands/filename_prefix.go
@@ -30,6 +32,7 @@ ExternalSources: []
 Summary: Apply 2‑digit numeric prefixes (01-, 02-) to all newly scaffolded docs across all subdirectories; doctor warns on missing prefix; add a renumber verb that also updates intra‑ticket references.
 LastUpdated: 2025-11-06T12:12:40.671526961-05:00
 ---
+
 
 
 

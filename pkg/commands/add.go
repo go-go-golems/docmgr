@@ -170,12 +170,14 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
 	}
 
-	// Create filename from title with slugification that removes special characters
+	// Create filename from title with slugification and numeric prefix
 	slug := utils.Slugify(settings.Title)
-	filename := fmt.Sprintf("%s.md", slug)
-	docPath := filepath.Join(targetDir, filename)
+	docPath, err := buildPrefixedDocPath(targetDir, slug)
+	if err != nil {
+		return fmt.Errorf("failed to allocate prefixed filename: %w", err)
+	}
 
-	// Check if file already exists
+	// Final guard: ensure file does not already exist (buildPrefixedDocPath should avoid collisions)
 	if _, err := os.Stat(docPath); err == nil {
 		return fmt.Errorf("document already exists: %s", docPath)
 	}

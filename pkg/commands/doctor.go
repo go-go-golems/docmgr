@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -394,6 +395,48 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
+		}
+
+		// Enforce numeric prefix policy: all subdirectory .md files must start with NN- or NNN-
+		{
+			prefixRe := regexp.MustCompile(`^(\d{2,3})-`)
+			_ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return nil
+				}
+				if info.IsDir() {
+					return nil
+				}
+				// Only consider markdown files
+				if !strings.HasSuffix(strings.ToLower(info.Name()), ".md") {
+					return nil
+				}
+				// Skip root-level control files
+				dir := filepath.Dir(path)
+				if filepath.Clean(dir) == filepath.Clean(ticketPath) {
+					bn := info.Name()
+					if bn == "index.md" || bn == "README.md" || bn == "tasks.md" || bn == "changelog.md" {
+						return nil
+					}
+				}
+				// Enforce prefix on subdirectory files
+				bn := info.Name()
+				if !prefixRe.MatchString(bn) {
+					hasIssues = true
+					row := types.NewRow(
+						types.MRP("ticket", doc.Ticket),
+						types.MRP("issue", "missing_numeric_prefix"),
+						types.MRP("severity", "warning"),
+						types.MRP("message", "file without numeric prefix"),
+						types.MRP("path", path),
+					)
+					if err := gp.AddRow(ctx, row); err != nil {
+						return err
+					}
+					highestSeverity = maxInt(highestSeverity, 1)
+				}
+				return nil
+			})
 		}
 
 		// Only report "All checks passed" if there are truly no issues

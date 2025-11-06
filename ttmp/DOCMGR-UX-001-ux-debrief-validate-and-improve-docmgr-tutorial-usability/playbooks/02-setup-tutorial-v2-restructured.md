@@ -1,19 +1,26 @@
 ---
-Title: Tutorial — Setting up docmgr in a Codebase
-Slug: how-to-setup
-Short: Initialize docmgr in your repository, configure vocabulary, customize templates, and manage the documentation workspace.
+Title: Setup Tutorial v2 - Restructured
+Ticket: DOCMGR-UX-001
+Status: draft
 Topics:
-- docmgr
-- setup
-- configuration
-- repository
-IsTemplate: false
-IsTopLevel: true
-ShowPerDefault: true
-SectionType: Tutorial
+    - ux
+    - documentation
+    - usability
+DocType: playbook
+Intent: long-term
+Owners:
+    - manuel
+RelatedFiles:
+    - path: pkg/doc/docmgr-how-to-setup.md
+      note: Original setup tutorial (276 lines)
+    - path: design/01-ux-findings-report-executive-summary.md
+      note: UX findings that informed this restructure
+ExternalSources: []
+Summary: "Improved docmgr setup tutorial: repository initialization, vocabulary management, CI integration"
+LastUpdated: 2025-11-06
 ---
 
-# Tutorial — Setting up docmgr in a Codebase
+# Tutorial — Setting up docmgr in a Codebase (v2)
 
 **For repository maintainers and team leads setting up docmgr.**
 
@@ -43,13 +50,15 @@ SectionType: Tutorial
 
 ## Overview
 
-Setting up docmgr establishes a shared documentation infrastructure for your entire team. This one-time initialization creates the vocabulary (your team's documentation language), templates (structure scaffolds), and guidelines (quality standards) that ensure consistency across all tickets and contributors. The setup process balances sensible defaults with customization points, allowing teams to adopt docmgr quickly while evolving their documentation standards over time.
+This guide shows how to bootstrap and maintain the documentation system for a repository using `docmgr`. You'll:
+- Initialize the workspace once per repository
+- Set up vocabulary (topics, doc types)
+- Configure templates and guidelines
+- Integrate validation into CI
 
-**This guide covers:** Repository initialization, vocabulary management, template customization, and configuration for multi-repo setups.
+**Who this is for:** Repository maintainers, tech leads, documentation champions setting up docmgr for their team.
 
-**Intended audience:** Repository maintainers, tech leads, and documentation champions responsible for setting up shared tooling.
-
-**Daily users:** If you just want to create tickets and add docs, see `docmgr help how-to-use` instead. This guide is for the person setting up the workspace for the team.
+**Not for you?** If you just want to USE docmgr (create tickets, add docs), see `docmgr help how-to-use` instead.
 
 ---
 
@@ -812,7 +821,25 @@ docmgr status --summary-only
 # Shows: root=... config=... vocabulary=...
 ```
 
+---
 
+## What Changed from v1?
+
+**Improvements based on UX principles:**
+
+1. ✅ **Navigation box** — Setup vs usage vs CI paths clear
+2. ✅ **Check initialization first** — Use `docmgr status` not `ls`
+3. ✅ **3-part structure** — Setup → CI → Reference
+4. ✅ **Milestone markers** — Know when setup is complete
+5. ✅ **Practical examples** — GitHub Actions, GitLab, pre-commit, Makefile
+6. ✅ **Migration workflow** — How to move existing docs
+7. ✅ **Troubleshooting** — Common issues with solutions
+8. ✅ **Philosophy section** — Why vocabulary works the way it does
+9. ✅ **Commands emphasized** — Use docmgr verbs, not file editing
+
+**Length:** ~500 lines (vs 276 original), much better organized
+
+---
 
 ## Related Documentation
 
@@ -820,3 +847,12 @@ docmgr status --summary-only
 - **CI/automation:** See **CI and Automation Guide** (playbooks/03-ci-and-automation-guide.md) — GitHub Actions, hooks, reporting
 - **Templates:** `docmgr help templates-and-guidelines` — Customization guide
 - **CLI reference:** `docmgr help cli-guide` — Command overview
+
+---
+
+## Feedback
+
+This is v2 based on UX findings from ticket DOCMGR-UX-001. For questions:
+- Run `docmgr COMMAND --help` for command-specific details
+- Check the other tutorials via `docmgr help --all`
+- File issues with maintainers

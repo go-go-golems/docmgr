@@ -1,19 +1,26 @@
 ---
-Title: Tutorial — Using docmgr to Drive a Ticket Workflow
-Slug: how-to-use
-Short: Complete guide to creating tickets, adding docs, searching, and managing documentation workflows with docmgr.
+Title: Tutorial v2 - Restructured Based on UX Findings
+Ticket: DOCMGR-UX-001
+Status: draft
 Topics:
-- docmgr
-- tutorial
-- workflow
-- documentation
-IsTemplate: false
-IsTopLevel: true
-ShowPerDefault: true
-SectionType: Tutorial
+    - ux
+    - documentation
+    - usability
+DocType: playbook
+Intent: long-term
+Owners:
+    - manuel
+RelatedFiles:
+    - path: pkg/doc/docmgr-how-to-use.md
+      note: Original 432-line tutorial
+    - path: design/01-ux-findings-report-executive-summary.md
+      note: UX findings that informed this restructure
+ExternalSources: []
+Summary: "Improved docmgr tutorial based on UX debrief: restructured into 3 parts with navigation, P0 fixes applied"
+LastUpdated: 2025-11-06
 ---
 
-# Tutorial — Using docmgr to Drive a Ticket Workflow
+# Tutorial — Using docmgr to Drive a Ticket Workflow (v2)
 
 **Based on UX findings from 10-round heated debrief with 7 participants.**
 
@@ -45,15 +52,15 @@ SectionType: Tutorial
 
 ## Overview
 
-docmgr transforms ad-hoc markdown documentation into a structured, searchable knowledge base by organizing docs into ticket workspaces with consistent metadata. This structure enables powerful features like bidirectional code-to-doc linking, full-text search with metadata filtering, automated validation, and scriptable output for CI/CD integration. The tool enforces just enough structure to make documentation discoverable and maintainable without imposing rigid constraints on your workflow.
+This tutorial walks you through using `docmgr` to manage documentation for your tickets: initialize a workspace, create tickets, add documents, link code, search, and validate.
 
-**Core value proposition:**
-- **Structure without rigidity** — Consistent metadata and organization, but unknown topics/doc-types are allowed
-- **Bidirectional linking** — Find docs from code files (code review) and code from docs (implementation)
-- **Automated quality** — Validation catches broken links, missing files, and stale docs before they accumulate
-- **Automation-ready** — Stable JSON/CSV output for scripts, CI/CD, and reporting
+**Why use docmgr?**
+- **Structure** — Consistent metadata that LLMs and tools can navigate
+- **Searchability** — Find docs by content, metadata, or code relationships
+- **Validation** — Catch broken links, missing files, stale docs
+- **Automation** — Scriptable output for CI/CD and reporting
 
-If you're used to unstructured markdown files, docmgr adds metadata and command overhead but pays back through discoverability, team collaboration, and quality enforcement. Break-even is typically 10-20 tickets or when multiple people need to navigate the documentation.
+If you're used to `mkdir` and manual markdown files, docmgr adds structure overhead but pays back with discoverability and quality checks. Break-even is typically around 10-20 tickets or when you need team collaboration.
 
 **Working discipline:** 
 - Use `docmgr` commands to update frontmatter (metadata)
@@ -291,7 +298,7 @@ This part covers common workflows beyond the basics.
 
 ## 6. Managing Metadata [INTERMEDIATE]
 
-Metadata (frontmatter) defines how docs are discovered, filtered, and validated. docmgr provides the `meta update` command to modify frontmatter fields programmatically, ensuring valid YAML syntax, consistent formatting, and automated timestamp updates. This approach is particularly powerful for bulk operations (updating status across all design docs) and automation (syncing metadata from external systems), while keeping single-doc updates simple through command shortcuts.
+Documents have metadata (frontmatter) that you update using `docmgr meta update` commands.
 
 ### Update Specific Document
 
@@ -349,7 +356,7 @@ docmgr add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
 
 ## 7. Relating Files to Docs [INTERMEDIATE]
 
-Bidirectional linking between documentation and code is one of docmgr's most powerful features. By relating code files to docs with explanatory notes, you create a navigation map that answers two critical questions: "What's the design for this code file?" (code review context) and "Which code implements this design?" (implementation reference). The `docmgr relate` command manages these relationships in frontmatter, while `docmgr search --file` provides instant reverse lookup from any code file to its related documentation.
+Link code files to docs so reviewers can find design context from code.
 
 ### The Workflow
 
@@ -591,7 +598,7 @@ This part covers advanced features for power users and automation.
 
 ## 11. Structured Output (Glaze) [ADVANCED]
 
-Every docmgr command that produces output can render it in multiple structured formats (JSON, CSV, YAML, TSV) through the Glaze framework. This design decouples the command's business logic from its output format, enabling the same command to serve both human users (with readable tables and text) and automation scripts (with parseable JSON or CSV). The stable field contracts ensure your scripts won't break when docmgr is updated, making it safe to build CI/CD integrations, reporting dashboards, and bulk operation scripts on top of docmgr.
+docmgr supports structured output for automation, CI/CD, and scripts.
 
 ### Quick Examples
 
@@ -1012,3 +1019,46 @@ docmgr list docs --with-glaze-output --output json
 - `RelatedFiles` — Array of paths (with optional notes)
 - `ExternalSources` — Array of URLs
 - `Summary` — One-line description
+
+---
+
+## What Changed from v1?
+
+**Improvements based on UX debrief findings:**
+
+1. ✅ **Navigation box** — Clear paths for different user types
+2. ✅ **3-part structure** — Essentials, Workflows, Power Features
+3. ✅ **Init in Prerequisites** — No more first-use failures
+4. ✅ **Glossary** — Jargon defined upfront
+5. ✅ **Frontmatter via commands** — Emphasizes docmgr verbs for metadata
+6. ✅ **Show-then-explain** — See output before philosophy
+7. ✅ **Milestone markers** — Know when you're "done" with a section
+8. ✅ **Front-loaded automation** — Jump link for power users
+9. ✅ **Usecase examples** — Code review, refactoring, CI
+10. ✅ **Best practices** — Relate notes, file selection, timing guidance
+
+**Length:** ~400 lines (vs 432 original), better organized
+
+**Reading time:**
+- Part 1: 10 minutes → Ready to use
+- Part 2: 15 minutes → Learn workflows
+- Part 3: 15 minutes → Master automation
+- Total: 40 minutes for full mastery (vs. 60+ with original)
+
+---
+
+## Feedback and Issues
+
+This is v2 based on UX findings from ticket DOCMGR-UX-001. Issues found?
+
+- Check `docmgr help COMMAND` for command-specific details
+- See `docmgr help how-to-setup` for advanced setup options
+- File issues or suggestions with maintainers
+
+**Key changes from UX debrief:**
+- Rounds 1-2: Init and prerequisites fixes
+- Round 3: Acknowledged --ticket repetition (CWD inference coming)
+- Round 4: Clarified frontmatter via commands, body content via editor
+- Round 5: Improved relate workflow and note examples
+- Round 6: Search usecases added
+- Round 7: Restructured with 3 parts and navigation

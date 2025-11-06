@@ -1,0 +1,23 @@
+topics:
+    - slug: infrastructure
+      description: Infra, devops, tooling
+    - slug: tools
+      description: Tooling and CLI
+    - slug: ux
+      description: User experience and usability
+    - slug: usability
+      description: Usability testing and improvement
+    - slug: documentation
+      description: Documentation writing and maintenance
+docTypes:
+    - slug: index
+      description: Ticket index
+    - slug: design-doc
+      description: Design document
+    - slug: reference
+      description: API/reference
+    - slug: playbook
+      description: Operational playbook
+intent:
+    - slug: long-term
+      description: Long-term documentation

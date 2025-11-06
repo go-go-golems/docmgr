@@ -372,6 +372,26 @@ Helpful docs (built-in):
 	rootCmd.AddCommand(cobraGuidelinesCmd)
 	rootCmd.AddCommand(cobraRelateCmd)
 
+	// Create renumber command
+	renumberCmd, err := commands.NewRenumberCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating renumber command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraRenumberCmd, err := cli.BuildCobraCommand(renumberCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building renumber command: %v\n", err)
+		os.Exit(1)
+	}
+	rootCmd.AddCommand(cobraRenumberCmd)
+
 	// Create status command
 	statusCmd, err := commands.NewStatusCommand()
 	if err != nil {
@@ -409,6 +429,8 @@ Helpful docs (built-in):
 		os.Exit(1)
 	}
 	cobraChgUpdate, err := cli.BuildCobraCommand(chgUpdate,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,

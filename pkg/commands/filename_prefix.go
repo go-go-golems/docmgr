@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -18,12 +18,14 @@ func hasNumericPrefix(name string) bool {
 
 // stripNumericPrefix removes a leading NN-/NNN- and returns the remainder.
 // It also returns the parsed prefix number (or 0 if none) and the width used.
-func stripNumericPrefix(name string) (base string, num int, width int) {
+func stripNumericPrefix(name string) (string, int, int) {
 	m := numericPrefixRe.FindStringSubmatch(name)
 	if len(m) == 2 {
-		width = len(m[1])
-		// best-effort parse; ignore error -> num=0
-		fmt.Sscanf(m[1], "%d", &num)
+		width := len(m[1])
+		num := 0
+		if n, err := strconv.Atoi(m[1]); err == nil {
+			num = n
+		}
 		return name[len(m[0]):], num, width
 	}
 	return name, 0, 0
@@ -32,7 +34,7 @@ func stripNumericPrefix(name string) (base string, num int, width int) {
 // nextPrefixForDir scans a directory for .md files with numeric prefixes and
 // returns the next prefix string (e.g., "01-" or "100-") along with the next
 // integer and width selected (2 unless next >= 100, then 3).
-func nextPrefixForDir(dir string) (prefix string, next int, width int, err error) {
+func nextPrefixForDir(dir string) (string, int, int, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return "", 0, 0, err
@@ -47,20 +49,19 @@ func nextPrefixForDir(dir string) (prefix string, next int, width int, err error
 			continue
 		}
 		if m := numericPrefixRe.FindStringSubmatch(name); len(m) == 2 {
-			var n int
-			fmt.Sscanf(m[1], "%d", &n)
-			if n > maxNum {
-				maxNum = n
+			if n, err := strconv.Atoi(m[1]); err == nil {
+				if n > maxNum {
+					maxNum = n
+				}
 			}
 		}
 	}
-	next = maxNum + 1
+	next := maxNum + 1
+	width := 2
 	if next >= 100 {
 		width = 3
-	} else {
-		width = 2
 	}
-	prefix = fmt.Sprintf("%0*d-", width, next)
+	prefix := fmt.Sprintf("%0*d-", width, next)
 	return prefix, next, width, nil
 }
 
@@ -69,7 +70,7 @@ func nextPrefixForDir(dir string) (prefix string, next int, width int, err error
 func buildPrefixedDocPath(dir string, slug string) (string, error) {
 	// Ensure slug has no leading numeric prefix already
 	clean := slug
-	if _, _, _ = stripNumericPrefix(slug); hasNumericPrefix(slug) {
+	if hasNumericPrefix(slug) {
 		// strip to avoid double-prefixing
 		b, _, _ := stripNumericPrefix(slug)
 		clean = b
@@ -100,11 +101,4 @@ func buildPrefixedDocPath(dir string, slug string) (string, error) {
 	return "", fmt.Errorf("could not find free filename in %s for slug %s", dir, slug)
 }
 
-// sortByStrippedName lexicographically sorts file names by their stripped (no numeric prefix) names.
-func sortByStrippedName(names []string) {
-	sort.Slice(names, func(i, j int) bool {
-		bi, _, _ := stripNumericPrefix(names[i])
-		bj, _, _ := stripNumericPrefix(names[j])
-		return bi < bj
-	})
-}
+// (helper removed as unused)

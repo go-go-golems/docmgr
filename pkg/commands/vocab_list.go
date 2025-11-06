@@ -3,9 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
-    "os"
-    "path/filepath"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -22,7 +22,7 @@ type VocabListCommand struct {
 // VocabListSettings holds the parameters for the vocab list command
 type VocabListSettings struct {
 	Category string `glazed.parameter:"category"`
-    Root     string `glazed.parameter:"root"`
+	Root     string `glazed.parameter:"root"`
 }
 
 func NewVocabListCommand() (*VocabListCommand, error) {
@@ -54,12 +54,12 @@ Examples:
 					parameters.WithHelp("Category to list (topics, docTypes, intent). Leave empty to list all."),
 					parameters.WithDefault(""),
 				),
-                parameters.NewParameterDefinition(
-                    "root",
-                    parameters.ParameterTypeString,
-                    parameters.WithHelp("Root directory for docs"),
-                    parameters.WithDefault("ttmp"),
-                ),
+				parameters.NewParameterDefinition(
+					"root",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Root directory for docs"),
+					parameters.WithDefault("ttmp"),
+				),
 			),
 		),
 	}, nil
@@ -74,17 +74,17 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
-    // Echo resolved context
-    root := ResolveRoot(settings.Root)
-    cfgPath, _ := FindTTMPConfigPath()
-    vocabPath, _ := ResolveVocabularyPath()
-    absRoot := root
-    if !filepath.IsAbs(absRoot) {
-        if cwd, err := os.Getwd(); err == nil {
-            absRoot = filepath.Join(cwd, absRoot)
-        }
-    }
-    fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
+	// Echo resolved context
+	root := ResolveRoot(settings.Root)
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := root
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	vocab, err := LoadVocabulary()
 	if err != nil {
@@ -146,17 +146,17 @@ func (c *VocabListCommand) Run(
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
-    // Echo resolved context
-    root := ResolveRoot(settings.Root)
-    cfgPath, _ := FindTTMPConfigPath()
-    vocabPath, _ := ResolveVocabularyPath()
-    absRoot := root
-    if !filepath.IsAbs(absRoot) {
-        if cwd, err := os.Getwd(); err == nil {
-            absRoot = filepath.Join(cwd, absRoot)
-        }
-    }
-    fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
+	// Echo resolved context
+	root := ResolveRoot(settings.Root)
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := root
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	vocab, err := LoadVocabulary()
 	if err != nil {

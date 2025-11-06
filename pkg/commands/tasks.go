@@ -215,36 +215,36 @@ func NewTasksAddCommand() (*TasksAddCommand, error) {
 }
 
 func (c *TasksAddCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
-    s := &TasksAddSettings{}
-    if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-        return err
-    }
-    path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
-    if err != nil {
-        return err
-    }
-    newLine := formatTaskLine(false, s.Text)
-    if s.After <= 0 || len(tasks) == 0 {
-        lines = append(lines, newLine)
-    } else {
-        insertAt := len(lines)
-        for _, t := range tasks {
-            if t.TaskIndex == s.After {
-                insertAt = t.LineIndex + 1
-            }
-        }
-        if insertAt >= len(lines) {
-            lines = append(lines, newLine)
-        } else {
-            lines = append(lines[:insertAt], append([]string{newLine}, lines[insertAt:]...)...)
-        }
-    }
-    if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-        return err
-    }
-    fmt.Printf("Task added to %s\n", path)
-    fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
-    return nil
+	s := &TasksAddSettings{}
+	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+		return err
+	}
+	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return err
+	}
+	newLine := formatTaskLine(false, s.Text)
+	if s.After <= 0 || len(tasks) == 0 {
+		lines = append(lines, newLine)
+	} else {
+		insertAt := len(lines)
+		for _, t := range tasks {
+			if t.TaskIndex == s.After {
+				insertAt = t.LineIndex + 1
+			}
+		}
+		if insertAt >= len(lines) {
+			lines = append(lines, newLine)
+		} else {
+			lines = append(lines[:insertAt], append([]string{newLine}, lines[insertAt:]...)...)
+		}
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return err
+	}
+	fmt.Printf("Task added to %s\n", path)
+	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	return nil
 }
 
 var _ cmds.BareCommand = &TasksAddCommand{}
@@ -324,13 +324,13 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) er
 	for _, id := range targets {
 		idsStr = append(idsStr, fmt.Sprintf("%d", id))
 	}
-    if len(targets) > 1 {
-        fmt.Printf("Tasks checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
-    } else {
-        fmt.Printf("Task checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
-    }
-    fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
-    return nil
+	if len(targets) > 1 {
+		fmt.Printf("Tasks checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	} else {
+		fmt.Printf("Task checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	}
+	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	return nil
 }
 
 var _ cmds.BareCommand = &TasksCheckCommand{}
@@ -410,13 +410,13 @@ func (c *TasksUncheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) 
 	for _, id := range targets {
 		idsStr = append(idsStr, fmt.Sprintf("%d", id))
 	}
-    if len(targets) > 1 {
-        fmt.Printf("Tasks unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
-    } else {
-        fmt.Printf("Task unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
-    }
-    fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
-    return nil
+	if len(targets) > 1 {
+		fmt.Printf("Tasks unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	} else {
+		fmt.Printf("Task unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	}
+	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	return nil
 }
 
 var _ cmds.BareCommand = &TasksUncheckCommand{}
@@ -546,12 +546,12 @@ func (c *TasksRemoveCommand) Run(ctx context.Context, pl *layers.ParsedLayers) e
 	for _, id := range s.IDs {
 		idsStr = append(idsStr, fmt.Sprintf("%d", id))
 	}
-    if len(s.IDs) > 1 {
-        fmt.Printf("Tasks removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
-    } else {
-        fmt.Printf("Task removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
-    }
-    return nil
+	if len(s.IDs) > 1 {
+		fmt.Printf("Tasks removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	} else {
+		fmt.Printf("Task removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	}
+	return nil
 }
 
 var _ cmds.BareCommand = &TasksRemoveCommand{}

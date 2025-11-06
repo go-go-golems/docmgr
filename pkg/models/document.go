@@ -1,10 +1,10 @@
 package models
 
 import (
-    "strings"
-    "time"
+	"strings"
+	"time"
 
-    "gopkg.in/yaml.v3"
+	"gopkg.in/yaml.v3"
 )
 
 // Document represents a managed document with metadata
@@ -60,49 +60,49 @@ type RelatedFile struct {
 
 // UnmarshalYAML supports both scalar strings (legacy) and mapping nodes.
 func (rf *RelatedFile) UnmarshalYAML(value *yaml.Node) error {
-    if value == nil {
-        *rf = RelatedFile{}
-        return nil
-    }
-    switch value.Kind {
-    case yaml.ScalarNode:
-        rf.Path = strings.TrimSpace(value.Value)
-        return nil
-    case yaml.MappingNode:
-        // Manually decode to support both Path/Note and path/note keys (case-insensitive)
-        var path string
-        var note string
-        // value.Content contains [key, value, key, value, ...]
-        for i := 0; i+1 < len(value.Content); i += 2 {
-            k := strings.ToLower(strings.TrimSpace(value.Content[i].Value))
-            v := strings.TrimSpace(value.Content[i+1].Value)
-            switch k {
-            case "path":
-                path = v
-            case "note":
-                note = v
-            }
-        }
-        rf.Path = path
-        rf.Note = note
-        return nil
-    case yaml.DocumentNode:
-        // unsupported for this type; treat as empty
-        *rf = RelatedFile{}
-        return nil
-    case yaml.SequenceNode:
-        // unsupported for this type; treat as empty
-        *rf = RelatedFile{}
-        return nil
-    case yaml.AliasNode:
-        // unsupported for this type; treat as empty
-        *rf = RelatedFile{}
-        return nil
-    default:
-        // Treat unknown kinds as empty
-        *rf = RelatedFile{}
-        return nil
-    }
+	if value == nil {
+		*rf = RelatedFile{}
+		return nil
+	}
+	switch value.Kind {
+	case yaml.ScalarNode:
+		rf.Path = strings.TrimSpace(value.Value)
+		return nil
+	case yaml.MappingNode:
+		// Manually decode to support both Path/Note and path/note keys (case-insensitive)
+		var path string
+		var note string
+		// value.Content contains [key, value, key, value, ...]
+		for i := 0; i+1 < len(value.Content); i += 2 {
+			k := strings.ToLower(strings.TrimSpace(value.Content[i].Value))
+			v := strings.TrimSpace(value.Content[i+1].Value)
+			switch k {
+			case "path":
+				path = v
+			case "note":
+				note = v
+			}
+		}
+		rf.Path = path
+		rf.Note = note
+		return nil
+	case yaml.DocumentNode:
+		// unsupported for this type; treat as empty
+		*rf = RelatedFile{}
+		return nil
+	case yaml.SequenceNode:
+		// unsupported for this type; treat as empty
+		*rf = RelatedFile{}
+		return nil
+	case yaml.AliasNode:
+		// unsupported for this type; treat as empty
+		*rf = RelatedFile{}
+		return nil
+	default:
+		// Treat unknown kinds as empty
+		*rf = RelatedFile{}
+		return nil
+	}
 }
 
 // RelatedFiles is a list that supports backward-compatible YAML decoding from either

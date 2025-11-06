@@ -214,41 +214,40 @@ func NewTasksAddCommand() (*TasksAddCommand, error) {
 	return &TasksAddCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksAddCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
-	s := &TasksAddSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
-	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
-	if err != nil {
-		return err
-	}
-	newLine := formatTaskLine(false, s.Text)
-	if s.After <= 0 || len(tasks) == 0 {
-		lines = append(lines, newLine)
-	} else {
-		// insert after task with TaskIndex == s.After
-		insertAt := len(lines)
-		for _, t := range tasks {
-			if t.TaskIndex == s.After {
-				insertAt = t.LineIndex + 1
-			}
-		}
-		if insertAt >= len(lines) {
-			lines = append(lines, newLine)
-		} else {
-			// insert in place
-			lines = append(lines[:insertAt], append([]string{newLine}, lines[insertAt:]...)...)
-		}
-	}
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return err
-	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task added"))
-	return gp.AddRow(ctx, row)
+func (c *TasksAddCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+    s := &TasksAddSettings{}
+    if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+        return err
+    }
+    path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+    if err != nil {
+        return err
+    }
+    newLine := formatTaskLine(false, s.Text)
+    if s.After <= 0 || len(tasks) == 0 {
+        lines = append(lines, newLine)
+    } else {
+        insertAt := len(lines)
+        for _, t := range tasks {
+            if t.TaskIndex == s.After {
+                insertAt = t.LineIndex + 1
+            }
+        }
+        if insertAt >= len(lines) {
+            lines = append(lines, newLine)
+        } else {
+            lines = append(lines[:insertAt], append([]string{newLine}, lines[insertAt:]...)...)
+        }
+    }
+    if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+        return err
+    }
+    fmt.Printf("Task added to %s\n", path)
+    fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+    return nil
 }
 
-var _ cmds.GlazeCommand = &TasksAddCommand{}
+var _ cmds.BareCommand = &TasksAddCommand{}
 
 // tasks check
 type TasksCheckCommand struct{ *cmds.CommandDescription }
@@ -277,7 +276,7 @@ func NewTasksCheckCommand() (*TasksCheckCommand, error) {
 	return &TasksCheckCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksCheckSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return err
@@ -325,15 +324,16 @@ func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layer
 	for _, id := range targets {
 		idsStr = append(idsStr, fmt.Sprintf("%d", id))
 	}
-	status := "task checked"
-	if len(targets) > 1 {
-		status = "tasks checked"
-	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", status), types.MRP("ids", strings.Join(idsStr, ",")))
-	return gp.AddRow(ctx, row)
+    if len(targets) > 1 {
+        fmt.Printf("Tasks checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+    } else {
+        fmt.Printf("Task checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+    }
+    fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+    return nil
 }
 
-var _ cmds.GlazeCommand = &TasksCheckCommand{}
+var _ cmds.BareCommand = &TasksCheckCommand{}
 
 // tasks uncheck
 type TasksUncheckCommand struct{ *cmds.CommandDescription }
@@ -362,7 +362,7 @@ func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
 	return &TasksUncheckCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksUncheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TasksUncheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksUncheckSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return err
@@ -410,15 +410,16 @@ func (c *TasksUncheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *lay
 	for _, id := range targets {
 		idsStr = append(idsStr, fmt.Sprintf("%d", id))
 	}
-	status := "task unchecked"
-	if len(targets) > 1 {
-		status = "tasks unchecked"
-	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", status), types.MRP("ids", strings.Join(idsStr, ",")))
-	return gp.AddRow(ctx, row)
+    if len(targets) > 1 {
+        fmt.Printf("Tasks unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+    } else {
+        fmt.Printf("Task unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+    }
+    fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+    return nil
 }
 
-var _ cmds.GlazeCommand = &TasksUncheckCommand{}
+var _ cmds.BareCommand = &TasksUncheckCommand{}
 
 // tasks edit
 type TasksEditCommand struct{ *cmds.CommandDescription }
@@ -501,7 +502,7 @@ func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
 	return &TasksRemoveCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksRemoveCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TasksRemoveCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksRemoveSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return err
@@ -545,12 +546,12 @@ func (c *TasksRemoveCommand) RunIntoGlazeProcessor(ctx context.Context, pl *laye
 	for _, id := range s.IDs {
 		idsStr = append(idsStr, fmt.Sprintf("%d", id))
 	}
-	status := "task removed"
-	if len(s.IDs) > 1 {
-		status = "tasks removed"
-	}
-	row := types.NewRow(types.MRP("file", path), types.MRP("status", status), types.MRP("ids", strings.Join(idsStr, ",")))
-	return gp.AddRow(ctx, row)
+    if len(s.IDs) > 1 {
+        fmt.Printf("Tasks removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+    } else {
+        fmt.Printf("Task removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+    }
+    return nil
 }
 
-var _ cmds.GlazeCommand = &TasksRemoveCommand{}
+var _ cmds.BareCommand = &TasksRemoveCommand{}

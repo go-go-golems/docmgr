@@ -20,10 +20,18 @@ RelatedFiles:
       Note: Prefix helpers
     - Path: docmgr/pkg/commands/renumber.go
       Note: Resequence prefixes; update references
+    - Path: docmgr/pkg/commands/vocab_add.go
+      Note: Add --root flag and context print
+    - Path: docmgr/pkg/commands/vocab_list.go
+      Note: Add --root flag and context print
+    - Path: docmgr/pkg/models/document.go
+      Note: Parse RelatedFiles with Path/Note and path/note (case-insensitive)
 ExternalSources: []
-Summary: Apply 2‑digit numeric prefixes (01-, 02-) to all newly scaffolded docs across all subdirectories; doctor warns on missing prefix; add a renumber verb that also updates intra‑ticket references. 
+Summary: Apply 2‑digit numeric prefixes (01-, 02-) to all newly scaffolded docs across all subdirectories; doctor warns on missing prefix; add a renumber verb that also updates intra‑ticket references.
 LastUpdated: 2025-11-06T12:12:40.671526961-05:00
 ---
+
+
 
 
 

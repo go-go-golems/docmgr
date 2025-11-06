@@ -25,6 +25,7 @@ type VocabAddSettings struct {
 	Category    string `glazed.parameter:"category"`
 	Slug        string `glazed.parameter:"slug"`
 	Description string `glazed.parameter:"description"`
+    Root        string `glazed.parameter:"root"`
 }
 
 func NewVocabAddCommand() (*VocabAddCommand, error) {
@@ -60,6 +61,12 @@ Example:
 					parameters.WithHelp("Description of the vocabulary entry"),
 					parameters.WithRequired(true),
 				),
+                parameters.NewParameterDefinition(
+                    "root",
+                    parameters.ParameterTypeString,
+                    parameters.WithHelp("Root directory for docs"),
+                    parameters.WithDefault("ttmp"),
+                ),
 			),
 		),
 	}, nil
@@ -86,10 +93,11 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Echo resolved context prior to write
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
-	absRoot := repoRoot
+    // Echo resolved context prior to write
+    cfgPath, _ := FindTTMPConfigPath()
+    vocabPath, _ := ResolveVocabularyPath()
+    root := ResolveRoot(settings.Root)
+    absRoot := root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {
 			absRoot = filepath.Join(cwd, absRoot)

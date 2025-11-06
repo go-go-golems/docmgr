@@ -79,3 +79,18 @@ Created Setup Tutorial v2 (500 lines): navigation box, 3-part structure, docmgr 
 
 Extracted CI/CD content from Setup Tutorial v2 into separate CI and Automation Guide (670 lines); refocused setup tutorial on initialization and configuration only
 
+
+## 2025-11-06
+
+Replaced original tutorials with v2 versions in pkg/doc/: updated frontmatter to match glazed structure, improved section intros to be topic-focused per documentation guidelines
+
+
+## 2025-11-06
+
+Updated docmgr-cli-guide.md: fixed section numbering, added --seed-vocabulary to quick start, added relate/changelog/tasks commands, completed .docmgrignore sentence
+
+
+## 2025-11-06
+
+Added Related Documentation section to CLI guide pointing to all tutorials; CLI guide now serves as quick reference complementing detailed tutorials
+

@@ -26,36 +26,33 @@ This guide explains the core ideas and shows the main commands you’ll use day 
 
 ## 2. Quick Start
 
-The commands below seed a controlled vocabulary, create a new ticket workspace, add a few documents, enrich metadata, and validate the workspace. Run them from your repository root.
+The commands below initialize a documentation workspace with seeded vocabulary, create a ticket workspace, add documents, enrich metadata, and validate. Run them from your repository root.
 
 ```bash
-# 1) Seed vocabulary (optional but recommended)
-# These entries act as a shared language across docs for filtering and validation.
-docmgr vocab add --category topics   --slug backend --description "Backend services"
-docmgr vocab add --category topics   --slug chat    --description "Chat features"
-docmgr vocab add --category topics   --slug websocket
-docmgr vocab add --category docTypes --slug index
-docmgr vocab add --category docTypes --slug design-doc
-docmgr vocab add --category docTypes --slug reference
-docmgr vocab add --category docTypes --slug playbook
-docmgr vocab add --category intent   --slug long-term
+# 1) Check if already initialized
+docmgr status --summary-only
+# If error "root directory does not exist", proceed with init
 
-# 2) Initialize the docs root (creates vocabulary/templates/guidelines if missing)
-docmgr init
+# 2) Initialize the docs root with seeded vocabulary
+# Creates ttmp/, vocabulary.yaml (with defaults), templates, and guidelines
+docmgr init --seed-vocabulary
 
-# 3) Create a ticket workspace under ttmp/
+# 3) Verify initialization
+docmgr vocab list  # Should show seeded topics (chat, backend, websocket)
+
+# 4) Create a ticket workspace under ttmp/
 # Creates a dedicated directory with index, tasks, changelog, and standard subfolders.
 docmgr create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket
 
-# 4) Add documents
+# 5) Add documents
 # Add a design doc, a reference doc, and a playbook to start capturing context.
 docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
 docmgr add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"
 docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"
 
-# 5) Update metadata on the ticket index
+# 6) Update metadata on the ticket index
 # Owners and Summary improve discoverability; RelatedFiles enable reverse lookup.
 INDEX_MD="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/index.md"
 docmgr meta update --doc "$INDEX_MD" --field Owners          --value "manuel,alex"
@@ -63,7 +60,7 @@ docmgr meta update --doc "$INDEX_MD" --field Summary         --value "Unify chat
 docmgr meta update --doc "$INDEX_MD" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
 docmgr meta update --doc "$INDEX_MD" --field RelatedFiles    --value "backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts"
 
-# 6) Validate the workspace
+# 7) Validate the workspace
 # Check for missing fields, staleness, and broken file references.
 # When `.docmgrignore` is present, you can omit ignore flags entirely.
 docmgr doctor --root ttmp --stale-after 30 --fail-on error
@@ -88,7 +85,8 @@ docmgr search --query websocket --with-glaze-output --output yaml
 ```
 
 ## 3. Core Concepts
-### 4.0 Root configuration and discovery
+
+### 3.1 Root Configuration and Discovery
 
 You rarely need `--root`. docmgr resolves the docs root in this order:
 
@@ -100,7 +98,7 @@ You rarely need `--root`. docmgr resolves the docs root in this order:
 Vocabulary path is resolved similarly via `.ttmp.yaml:vocabulary` (absolute or relative to the config); otherwise defaults to `<root>/vocabulary.yaml`.
 
 
-### 4.1 Workspace Structure
+### 3.2 Workspace Structure
 
 Each ticket gets its own workspace under `ttmp/` (configurable with `--root`). This keeps short-lived artifacts connected to code while avoiding sprawling wiki pages. Workspaces are easy to archive or pivot as tickets evolve.
 
@@ -118,7 +116,7 @@ Slugification of the directory and filenames:
 - Lowercase; any non‑alphanumeric is replaced with `-`; multiple `-` are collapsed; trim leading/trailing `-`.
 - Example: `go-go-mento: Webchat/Web hydration and integration reference` → `go-go-mento-webchat-web-hydration-and-integration-reference`.
 
-### 4.2 Frontmatter Metadata
+### 3.3 Frontmatter Metadata
 
 Each document starts with YAML frontmatter. This lightweight contract makes docs searchable and checkable. Think of it as a schema for documentation:
 
@@ -127,13 +125,13 @@ Each document starts with YAML frontmatter. This lightweight contract makes docs
 
 `meta update` edits frontmatter safely and updates `LastUpdated` for you.
 
-### 4.3 Vocabulary
+### 3.4 Vocabulary
 
 The workspace vocabulary lives at `ttmp/vocabulary.yaml` by default (overridable via `.ttmp.yaml:vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent`. This prevents one-off spellings (“Web sockets” vs “websocket”) and keeps lists predictable for filters and automation. `doctor` warns on unknown values.
 
 ## 4. Commands
 
-### 5.1 Vocabulary
+### 4.1 Vocabulary
 
 Use vocabulary commands to establish the shared language of your project. Start small and grow with consensus. Unknown values will show up as warnings in `doctor`.
 List entries:
@@ -151,16 +149,24 @@ docmgr vocab add --category topics --slug observability --description "Logging a
 docmgr vocab add --category docTypes --slug adr --description "Architecture Decision Record"
 ```
 
-### 5.2 Initialize a Docs Root
+### 4.2 Initialize a Docs Root
 
 Run this once per repository (or shared parent) to create the docs root with vocabulary, templates, guidelines, and a default `.docmgrignore`.
+
 ```bash
-docmgr init [--force]
+# Recommended: seed with common defaults
+docmgr init --seed-vocabulary
+
+# Or initialize with empty vocabulary
+docmgr init
+
+# Force re-scaffold templates/guidelines
+docmgr init --force
 ```
 
-Creates the `ttmp/` directory if missing, writes an empty `vocabulary.yaml` (if absent), and scaffolds `_templates/` and `_guidelines/`.
+Creates the `ttmp/` directory if missing, and scaffolds `_templates/` and `_guidelines/`. With `--seed-vocabulary`, populates `vocabulary.yaml` with common topics (chat, backend, websocket), doc types (design-doc, reference, playbook), and intents (long-term).
 
-### 5.3 Create a Ticket Workspace
+### 4.3 Create a Ticket Workspace
 
 Run this when you start a ticket. It creates a consistent place to capture thinking and decisions.
 ```bash
@@ -172,7 +178,7 @@ docmgr create-ticket --ticket MEN-4242 \
 
 Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` under a standard structure.
 
-### 5.4 Add Documents
+### 4.4 Add Documents
 
 Create additional documents as needed. Use short, descriptive titles; you can refine content later.
 ```bash
@@ -197,7 +203,7 @@ Notes:
 - If a doc type has a template at `ttmp/_templates/<docType>.md`, its body is rendered automatically.
 - Unknown/other doc types are accepted and placed under `various/` by default (frontmatter `DocType` is still set for filtering).
 
-### 5.5 Guidelines
+### 4.5 Guidelines
 
 Guidelines provide structure and “what good looks like” for each doc type. They help new contributors produce consistent, reviewable docs.
 ```bash
@@ -211,7 +217,7 @@ docmgr guidelines --doc-type design-doc --with-glaze-output --output json
 Prints the guideline text for the given type. Files in `ttmp/_guidelines/` override embedded defaults.
 See also: `docmgr help templates-and-guidelines` for how templates and guidelines fit together and how to customize them.
 
-### 5.6 Update Metadata
+### 4.6 Update Metadata
 
 Keep `Owners`, `Summary`, and `RelatedFiles` current. This makes search, review, and onboarding faster.
 ```bash
@@ -224,7 +230,7 @@ docmgr meta update --ticket MEN-4242 --doc-type design-doc --field Topics --valu
 
 Supported fields: Title, Ticket, Status, Topics, DocType, Intent, Owners, RelatedFiles, ExternalSources, Summary.
 
-### 5.7 List Tickets and Docs
+### 4.7 List Tickets and Docs
 
 Use listing commands to navigate by ticket. This is useful in reviews and when returning to paused work.
 ```bash
@@ -232,7 +238,7 @@ docmgr list tickets [--ticket MEN-4242]
 docmgr list docs    --ticket MEN-4242
 ```
 
-### 5.8 Search (Content + Metadata)
+### 4.8 Search (Content + Metadata)
 
 Search supports both content queries and metadata filters. Reverse lookups (`--file`, `--dir`) help you find docs from code paths; `--external-source` helps find docs tied to external references. Date filters surface recent activity.
 ```bash
@@ -265,15 +271,71 @@ docmgr relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
 
 Relative date formats supported include: `today`, `yesterday`, `last week`, `this month`, `last month`, `2 weeks ago`, as well as ISO-like absolute dates (for example, `2025-01-01`).
 
-### 5.9 Doctor (Validation)
+### 4.9 Relate Files
 
-Run `doctor` during development and reviews. It’s a safety net to catch drift (stale docs), broken relationships (missing files), and inconsistent metadata (unknown vocabulary).
+Link code files to documentation for bidirectional navigation. Relating files enables powerful reverse lookup: find design docs from code files during review.
+
+```bash
+# Relate files to ticket index with explanatory notes
+docmgr relate --ticket MEN-4242 --files \
+  backend/api/register.go,backend/ws/manager.go \
+  --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
+  --file-note "backend/ws/manager.go:WebSocket lifecycle management"
+
+# Suggest files from git changes
+docmgr relate --ticket MEN-4242 --suggest --from-git
+
+# Apply suggestions automatically
+docmgr relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
+
+# Remove files
+docmgr relate --ticket MEN-4242 --remove-files old/file.go
+```
+
+Notes explain WHY each file matters, turning file lists into navigation maps.
+
+### 4.10 Changelog
+
+Track progress and decisions in `changelog.md`:
+
+```bash
+# Simple entry
+docmgr changelog update --ticket MEN-4242 --entry "Normalized API paths"
+
+# With related files
+docmgr changelog update --ticket MEN-4242 \
+  --files backend/api/register.go \
+  --file-note "backend/api/register.go:Path normalization source"
+```
+
+### 4.11 Tasks
+
+Manage concrete steps in `tasks.md`:
+
+```bash
+# Add tasks
+docmgr tasks add --ticket MEN-4242 --text "Update API docs"
+
+# Check off tasks
+docmgr tasks check --ticket MEN-4242 --id 1,2
+
+# List tasks
+docmgr tasks list --ticket MEN-4242
+```
+
+### 4.12 Doctor (Validation)
+
+Run `doctor` during development and reviews. It's a safety net to catch drift (stale docs), broken relationships (missing files), and inconsistent metadata (unknown vocabulary).
+
 ```bash
 # Typical validation
-docmgr doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
+docmgr doctor --all --stale-after 30 --fail-on error
 
 # Ignore specific paths using glob patterns
 docmgr doctor --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+
+# Validate specific ticket
+docmgr doctor --ticket MEN-4242
 ```
 
 Doctor checks:
@@ -287,12 +349,13 @@ Doctor checks:
 
 `--fail-on` controls exit behavior for CI or pre-commit checks.
 
-Ignore configuration:
-- The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`
+**Ignore configuration:**
+- The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`)
+- Common patterns: `.git/`, `_templates/`, `_guidelines/`, `archive/`, date-based tickets like `2023-*/`
 
-## 13. Testing the CLI (Dual Mode)
+## 5. Testing the CLI (Dual Mode)
 
-Use a temporary root to avoid touching your repo during tests. The following matrix exercises both human-friendly output (default) and structured outputs (with `--with-glaze-output`).
+For docmgr contributors or power users: use a temporary root to avoid touching your repo during tests. The following matrix exercises both human-friendly output (default) and structured outputs (with `--with-glaze-output`).
 
 ```bash
 # Build
@@ -339,3 +402,16 @@ Expected high-level behavior:
 - Structured mode honors `--output` (json/yaml/csv/table) with the same data.
 - Guidelines print the raw guideline content in human mode; list mode enumerates available types.
 - Tasks list shows at least one seeded task from `init`.
+
+---
+
+## Related Documentation
+
+For more detailed guides:
+
+- **Daily usage:** `docmgr help how-to-use` — Complete tutorial with workflows, search, and power features
+- **Repository setup:** `docmgr help how-to-setup` — Initialize workspace, configure vocabulary, customize templates
+- **CI/automation:** `docmgr help ci-and-automation` — GitHub Actions, GitLab CI, hooks, Makefile, reporting
+- **Templates:** `docmgr help templates-and-guidelines` — Customization guide
+
+This CLI guide provides a quick reference. For step-by-step workflows and detailed explanations, see the tutorials above.

@@ -1,275 +1,822 @@
 ---
 Title: Tutorial — Setting up docmgr in a Codebase
 Slug: how-to-setup
-Short: Initialize vocabulary, scaffold templates and guidelines, and enforce health checks with doctor.
+Short: Initialize docmgr in your repository, configure vocabulary, customize templates, and manage the documentation workspace.
 Topics:
 - docmgr
 - setup
-- operations
+- configuration
+- repository
 IsTemplate: false
 IsTopLevel: true
 ShowPerDefault: true
 SectionType: Tutorial
 ---
 
-## 1. Purpose
+# Tutorial — Setting up docmgr in a Codebase
 
-This guide shows how to bootstrap and maintain the documentation system for a repository using `docmgr`. It explains not only the commands to run but also the rationale behind them, so new contributors understand the “why” as well as the “how”. You’ll set up vocabulary, scaffold templates/guidelines, and integrate `doctor` checks for ongoing health. For a deeper dive into writing experience and expectations, see:
+**For repository maintainers and team leads setting up docmgr.**
 
-- `docmgr help templates-and-guidelines` — how templates and guidelines work, and how to customize them
-- `docmgr help cli-guide` — overview of core commands and concepts
+## Quick Navigation
 
-## 2. Repository Conventions
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ **Choose your path:**                                                        │
+│                                                                              │
+│ 📚 **First-time setup?**                                                    │
+│    → Read [Part 1: Repository Setup](#part-1-repository-setup-📚)           │
+│    → Initialize, configure, seed vocabulary (15 minutes)                    │
+│                                                                              │
+│ 🔧 **Need CI/automation?**                                                  │
+│    → See separate guide: `docmgr help ci-and-automation`                    │
+│    → Covers: GitHub Actions, GitLab, hooks, Makefile, reporting            │
+│                                                                              │
+│ 📖 **Need reference?**                                                      │
+│    → See [Part 2: Reference](#part-2-reference-📖)                          │
+│    → Configuration, vocabulary, troubleshooting                             │
+│                                                                              │
+│ 🚀 **Just using docmgr?**                                                   │
+│    → See `docmgr help how-to-use` instead                                   │
+│    → This doc is for maintainers setting up the workspace                   │
+└──────────────────────────────────────────────────────────────────────────────┘
 
-- Docs live under `ttmp/` at the repository root. This keeps work-in-progress close to code and easy to review.
-- Ticket workspaces are directories named `<TICKET>-<slug>/` under `ttmp/`. The slug is derived from the ticket title: lowercase; any non‑alphanumeric becomes `-`; consecutive `-` are collapsed; leading/trailing `-` are trimmed. For example, `go-go-mento: Webchat/Web hydration and integration reference` → `go-go-mento-webchat-web-hydration-and-integration-reference`.
-- Vocabulary file lives at `ttmp/vocabulary.yaml` by default (configurable via `.ttmp.yaml` → `vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent` values.
-- Scaffolding directories at root: `ttmp/_templates/`, `ttmp/_guidelines/`. Teams customize these to encode house style.
+---
 
-Per-ticket workspace contents created by `create-ticket`:
+## Overview
 
-- `index.md`
-- `design/`, `reference/`, `playbooks/`
-- `scripts/`, `sources/`, `various/`, `archive/`
-- `.meta/`
+Setting up docmgr establishes a shared documentation infrastructure for your entire team. This one-time initialization creates the vocabulary (your team's documentation language), templates (structure scaffolds), and guidelines (quality standards) that ensure consistency across all tickets and contributors. The setup process balances sensible defaults with customization points, allowing teams to adopt docmgr quickly while evolving their documentation standards over time.
 
-### 2.1 Repository Configuration (.ttmp.yaml)
+**This guide covers:** Repository initialization, vocabulary management, template customization, and configuration for multi-repo setups.
 
-Place a `.ttmp.yaml` at the repository root to configure defaults. The CLI searches for this file by walking up from the current directory until it finds the nearest `.ttmp.yaml`. When the config uses relative paths (for example, `root: ttmp`), they are interpreted relative to the directory that contains `.ttmp.yaml`.
+**Intended audience:** Repository maintainers, tech leads, and documentation champions responsible for setting up shared tooling.
 
-Quick setup:
+**Daily users:** If you just want to create tickets and add docs, see `docmgr help how-to-use` instead. This guide is for the person setting up the workspace for the team.
+
+---
+
+## Key Concepts for Setup
+
+Setup-specific terms used in this guide:
+
+- **Docs root** — The `ttmp/` directory containing all documentation (default location)
+- **Vocabulary** — Central `vocabulary.yaml` defining valid topics, doc types, and intents
+- **Templates** — Markdown files in `_templates/` used by `docmgr add` to scaffold new docs
+- **Guidelines** — Writing guidance in `_guidelines/` shown via `docmgr guidelines`
+- **.ttmp.yaml** — Optional config file for custom root paths or multi-repo setups
+- **Slugification** — How ticket titles become directory names (lowercase, dashes, normalized)
+
+---
+
+# Part 1: Repository Setup 📚
+
+**[15 minute read — Start here for new repositories]**
+
+---
+
+## 1. Check Current Setup [BASIC]
+
+Before initializing, check if docmgr is already set up:
 
 ```bash
-docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+docmgr status --summary-only
 ```
 
-Root resolution order:
-- Flag: `--root`
-- `.ttmp.yaml:root` (relative to the config file)
-- Git root: `<git-root>/ttmp` if `.git/` is found while walking up
-- Fallback: `<cwd>/ttmp`
-
-Note: `.ttmp.yaml` does not have to live in the repository root. In multi-repo/monorepo setups, you can place it at a parent directory to centralize configuration. Use `root` (and optional `vocabulary`) to point different repos at distinct `ttmp/` locations.
-
-```yaml
-root: ttmp
-defaults:
-  owners: [manuel]
-  intent: long-term
-vocabulary: ttmp/vocabulary.yaml
+**If initialized:**
+```
+root=/path/ttmp vocabulary=/path/vocabulary.yaml tickets=N docs=M
 ```
 
-- `root`: default docs root (overrides the built-in `ttmp` when flags are not explicitly set)
-- `defaults.owners` / `defaults.intent`: applied when initializing ticket index metadata
-- `vocabulary`: path to the shared vocabulary file
+**If NOT initialized:**
+```
+Error: root directory does not exist: /path/ttmp
+```
 
-### 2.2 Prefixing (heads‑up)
+If already initialized, skip to [Section 3 (Vocabulary)](#3-managing-vocabulary-intermediate) to customize or verify your vocabulary.
 
-- New documents created by scaffolding are prefixed with 2‑digit numeric prefixes (01-, 02-, …) in all ticket subdirectories; switches to 3 digits after 99 files.
-- `doctor` warns when a subdirectory Markdown file is missing a numeric prefix (ticket‑root `index.md`, `README.md`, `tasks.md`, `changelog.md` are exempt).
-- Use `docmgr renumber --ticket <TICKET>` to resequence and update intra‑ticket links when needed.
+---
 
-## 3. Seed Vocabulary
+## 2. Initialize Repository [BASIC]
 
-Start with a minimal, agreed vocabulary to prevent drift in metadata. These values become the shared language of your documentation; they drive search filters and keep frontmatter consistent. Keep the list short at first and evolve with consensus.
-
-One-shot seeding during root init:
+**Run once per repository:**
 
 ```bash
 docmgr init --seed-vocabulary
 ```
 
-Or add entries explicitly (you can pass `--root` to anchor resolution):
+**What this creates:**
 
-```bash
-docmgr vocab add --category topics   --slug backend --description "Backend services"
-docmgr vocab add --category topics   --slug frontend --description "Frontend app"
-docmgr vocab add --category topics   --slug infrastructure
-docmgr vocab add --category docTypes --slug index
-docmgr vocab add --category docTypes --slug design-doc
-docmgr vocab add --category docTypes --slug reference
-docmgr vocab add --category docTypes --slug playbook
-docmgr vocab add --category docTypes --slug til --description "Today I Learned (short notes capturing lessons and gotchas)"
-docmgr vocab add --category docTypes --slug analysis --description "Analysis documents"
-docmgr vocab add --category docTypes --slug misc --description "Miscellaneous documents"
-docmgr vocab add --category docTypes --slug code-review --description "Code review summaries with findings and follow-ups"
-docmgr vocab add --category intent   --slug long-term
+```
+ttmp/
+├── vocabulary.yaml     # Seeded with common topics/docTypes/intent
+├── _templates/         # Document scaffolds (design-doc.md, reference.md, etc.)
+├── _guidelines/        # Writing guidelines for each doc type
+└── .docmgrignore       # Validation exclusions (.git/, _templates/, etc.)
 ```
 
-This writes the vocabulary file to `ttmp/vocabulary.yaml` by default (or to the path configured via `.ttmp.yaml:vocabulary`). Teams can evolve entries over time; `doctor` validates against this file.
-
-To introduce a new document type:
+**Verify initialization:**
 
 ```bash
-docmgr vocab add --category docTypes --slug til --description "Today I Learned"
-docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — <topic>"
+# Check status
+docmgr status --summary-only
+
+# View seeded vocabulary
+docmgr vocab list
+
+# See templates
+docmgr list tickets  # Will be empty but proves root exists
 ```
 
-If there is a template at `ttmp/_templates/til.md`, it will be used; otherwise the file is created under `various/` with frontmatter `DocType: til` so it still participates in filters and validation.
+**Understanding what was created:**
 
-Guidance:
-- Topics should reflect your architecture or domains (for example, `backend`, `frontend`, `websocket`, `observability`)
-- `DocType` is how readers will approach the doc (for example, `design-doc`, `reference`, `playbook`)
-- `Intent` reflects longevity (for example, `long-term` for docs meant to persist)
+- **vocabulary.yaml** — Defines valid topics (backend, frontend, websocket), doc types (design-doc, reference, playbook), and intents (long-term). Used for validation warnings, not enforcement.
 
-## 4. Scaffold Templates and Guidelines
+- **_templates/** — Contains markdown templates for each doc type with placeholders (`{{TITLE}}`, `{{TICKET}}`, etc.) that `docmgr add` fills automatically.
 
-Initialize the docs root once per repository (or shared parent) to create `vocabulary.yaml`, `_templates/`, `_guidelines/`, and a default `.docmgrignore`:
+- **_guidelines/** — Writing guidance shown via `docmgr guidelines --doc-type TYPE`. Customize these to encode your team's standards.
+
+- **.docmgrignore** — Like `.gitignore` but for docmgr validation. Excludes `.git/`, `_templates/`, `_guidelines/` by default.
+
+**Note:** Running `docmgr init` is idempotent (safe to run multiple times). It won't overwrite existing files unless you use `--force`.
+
+---
+
+## 3. Managing Vocabulary [INTERMEDIATE]
+
+Vocabulary defines your team's shared language for documentation.
+
+### View Current Vocabulary
 
 ```bash
-docmgr init
+# List all vocabulary
+docmgr vocab list
+
+# List specific category
+docmgr vocab list --category topics
+docmgr vocab list --category docTypes
 ```
 
-Now place house-style templates and guidelines under:
-
-- `ttmp/_templates/<docType>.md`
-- `ttmp/_guidelines/<docType>.md`
-
-Developers can preview guidelines:
+### Add Custom Entries
 
 ```bash
-docmgr guidelines --doc-type design-doc --output markdown
+# Add topics for your architecture
+docmgr vocab add --category topics --slug frontend \
+  --description "Frontend app and components"
+
+docmgr vocab add --category topics --slug infrastructure \
+  --description "Infrastructure and deployment"
+
+# Add custom doc types
+docmgr vocab add --category docTypes --slug til \
+  --description "Today I Learned (short notes capturing lessons)"
+
+docmgr vocab add --category docTypes --slug analysis \
+  --description "Analysis documents and research"
+
+# Add intent values
+docmgr vocab add --category intent --slug temporary \
+  --description "Short-lived documentation"
 ```
 
-Recommendations:
-- Use templates for copy-ready section scaffolds (executive summary, decisions, plan)
-- Use guidelines to explain intent and quality bars (what reviewers look for)
-- See `docmgr help templates-and-guidelines` for examples and best practices
+**Guidance for vocabulary:**
+- **Topics** — Reflect your architecture/domains (backend, frontend, database, api, etc.)
+- **DocTypes** — How readers approach the doc (design-doc, reference, playbook, til, etc.)
+- **Intent** — Longevity expectations (long-term for persistent docs, temporary for experiments)
 
-## 5. Add New Doc Types and Migrate Existing Docs
+**Keep vocabulary small initially** (5-8 topics, 5-7 doc types). Evolve with team consensus via PRs.
 
-You can extend doc types via the workspace vocabulary, then scaffold docs and move existing files.
+### Using Custom Doc Types
 
-1) Verify vocabulary contains the new types:
+```bash
+# After adding 'til' to vocabulary
+docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
+```
+
+If a template exists at `ttmp/_templates/til.md`, it will be used. Otherwise the doc is created in `various/` with `DocType: til` so it still participates in search and validation.
+
+---
+
+## 4. Customizing Templates and Guidelines [INTERMEDIATE]
+
+Templates and guidelines enforce house style and quality standards.
+
+### Templates
+
+Templates are in `ttmp/_templates/<docType>.md` and use placeholders:
+
+- `{{TITLE}}` — Document title
+- `{{TICKET}}` — Ticket identifier  
+- `{{DATE}}` — Current timestamp
+- `{{TOPICS}}` — YAML-formatted topics array
+- `{{OWNERS}}` — YAML-formatted owners array
+- `{{SUMMARY}}` — Summary text
+
+**When you run `docmgr add`, these placeholders are automatically filled.**
+
+**Customize templates** by editing files in `_templates/`. Use `docmgr init --force` to re-scaffold if you want to reset to defaults.
+
+### Guidelines
+
+Guidelines are shown via `docmgr guidelines --doc-type TYPE` and help writers understand:
+- What sections to include
+- What quality standards to meet
+- What reviewers look for
+
+**Preview guidelines:**
+
+```bash
+docmgr guidelines --doc-type design-doc
+docmgr guidelines --doc-type reference
+docmgr guidelines --list  # Show all available types
+```
+
+**Customize guidelines** by editing files in `_guidelines/`.
+
+**Best practices:**
+- Templates give structure (sections, scaffolds)
+- Guidelines give intent (what to write in each section, quality expectations)
+- See `docmgr help templates-and-guidelines` for detailed customization guidance
+
+---
+
+✅ **Milestone: Repository is Set Up!**
+
+Your team can now:
+- Create tickets with `docmgr create-ticket`
+- Add docs with `docmgr add`
+- Search with `docmgr search`
+
+**What's next?**
+- Set up CI validation (see separate **CI and Automation Guide**)
+- Customize vocabulary for your domain
+- Share setup with your team
+
+> **For CI integration:** See the separate **CI and Automation Guide** for GitHub Actions, GitLab CI, pre-commit hooks, Makefile integration, reporting, and monitoring.
+
+---
+
+# Part 2: Reference 📖
+
+**[Advanced configuration and troubleshooting]**
+
+---
+
+## 5. Repository Configuration (.ttmp.yaml) [ADVANCED]
+
+**Most teams don't need this** — defaults work well. Use `.ttmp.yaml` for:
+- Custom root directory names
+- Multi-repo/monorepo setups
+- Centralized vocabulary across repos
+
+### Create Configuration
+
+```bash
+docmgr configure --root ttmp --owners manuel --intent long-term --vocabulary ttmp/vocabulary.yaml
+```
+
+Or manually create `.ttmp.yaml` at repository root:
+
+```yaml
+root: ttmp
+defaults:
+  owners: [manuel, alex]
+  intent: long-term
+vocabulary: ttmp/vocabulary.yaml
+```
+
+**Fields:**
+- `root` — Default docs root (overrides built-in `ttmp`)
+- `defaults.owners` — Applied to new ticket indexes
+- `defaults.intent` — Default intent for new docs
+- `vocabulary` — Path to vocabulary file
+
+### Root Resolution Order
+
+1. `--root` flag (explicit)
+2. `.ttmp.yaml:root` (relative to config file location)
+3. `<git-root>/ttmp` (if `.git/` found walking up)
+4. `<cwd>/ttmp` (fallback)
+
+**Note:** `.ttmp.yaml` doesn't need to live at repository root. In monorepos, place it at a parent directory to centralize configuration.
+
+---
+
+## 6. Repository Conventions [BASIC]
+
+**Directory structure:**
+
+```
+repository/
+├── .ttmp.yaml              # Optional configuration
+├── ttmp/                   # Docs root (default name)
+│   ├── vocabulary.yaml     # Shared vocabulary
+│   ├── .docmgrignore       # Validation exclusions
+│   ├── _templates/         # Doc scaffolds
+│   ├── _guidelines/        # Writing guidance
+│   │
+│   ├── TICKET-001-slug/    # Ticket workspace
+│   │   ├── index.md
+│   │   ├── tasks.md
+│   │   ├── changelog.md
+│   │   ├── design/
+│   │   ├── reference/
+│   │   └── various/
+│   │
+│   └── TICKET-002-slug/    # Another ticket
+│       └── ...
+```
+
+**Ticket workspace naming:**
+- Format: `<TICKET>-<slug>/`
+- Slug from title: lowercase, alphanumerics and dashes only
+- Example: "Chat WebSocket Lifecycle" → `chat-websocket-lifecycle`
+
+**Per-ticket directories created by `create-ticket`:**
+- `index.md` — Ticket overview
+- `design/`, `reference/`, `playbooks/` — Typed docs
+- `scripts/`, `sources/`, `various/`, `archive/` — Other content
+- `.meta/` — Internal metadata
+
+---
+
+## 7. Numeric Prefixes [INTERMEDIATE]
+
+**Automatic prefixing:**
+- New docs get prefixes: `01-`, `02-`, `03-`
+- Keeps files ordered in listings
+- Switches to 3 digits after 99 files
+- Exempt files: `index.md`, `README.md`, `tasks.md`, `changelog.md`
+
+**Resequencing:**
+
+```bash
+# After deleting files, renumber and update internal links
+docmgr renumber --ticket MEN-4242
+```
+
+**Doctor behavior:**
+- Warns when subdirectory markdown files are missing numeric prefixes
+- Exempt files don't trigger warnings
+- Suppress with `.docmgrignore` patterns if needed
+
+---
+
+## 8. Adding New Doc Types [INTERMEDIATE]
+
+Extend doc types via vocabulary, then use immediately.
+
+**Workflow:**
+
+1) **Add to vocabulary:**
+
+```bash
+docmgr vocab add --category docTypes --slug til \
+  --description "Today I Learned entries"
+```
+
+2) **Verify it's there:**
+
 ```bash
 docmgr vocab list --category docTypes
 ```
 
-2) Scaffold placeholders for non-core types (created under `various/`):
-```bash
-docmgr add --ticket TCK-123 --doc-type analysis --title "Synthesis — ..."
-docmgr add --ticket TCK-123 --doc-type misc     --title "Debate: ..."
-```
+3) **Create template (optional):**
 
-4) Move existing ad-hoc docs into the ticket directory and fix metadata with `docmgr meta update`.
+Edit `ttmp/_templates/til.md` with your preferred structure. If no template exists, docs are created in `various/` but still have `DocType: til`.
 
-## 6. CI and Health
-
-## 5. Enrich RelatedFiles with Rationale (optional best practice)
-
-Encourage contributors to add a brief note explaining why each related file matters. This improves review speed and LLM context quality.
+4) **Use it:**
 
 ```bash
-# Add files and attach notes
-docmgr relate --ticket MEN-4242 \
-  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
-  --file-note "backend/chat/api/register.go:Registers chat routes (source of path normalization)" \
-  --file-note "web/src/store/api/chatApi.ts=Frontend API integration; must align with backend paths"
-
-# When applying suggestions, reasons are stored as notes unless overridden
-docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
 ```
 
-`meta update --field RelatedFiles` still works and creates entries without notes; prefer `relate` for adding context.
+**Common custom doc types teams add:**
+- `til` — Today I Learned notes
+- `analysis` — Deep-dive research and analysis
+- `code-review` — Code review summaries
+- `decision` — Architecture decision records (ADRs)
+- `retro` — Sprint retrospectives
 
-## 6. Enforce Health with Doctor
+---
 
-Run `doctor` locally and in automation to keep the system healthy. It catches stale docs, missing fields, unknown vocabulary, and broken file references. Prefer `.docmgrignore` for stable ignores; with it in place, you generally don’t need ignore flags:
+## 9. Migrating Existing Docs [INTERMEDIATE]
+
+**If you have existing markdown docs, migrate them into docmgr structure:**
+
+**Workflow:**
+
+1) **Create ticket workspace:**
 
 ```bash
-# Local checks (raise on errors)
-docmgr doctor --root ttmp --stale-after 30 --fail-on error
-
-# Optional ad-hoc suppression example
-docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+docmgr create-ticket --ticket MIGRATE-001 --title "Existing Docs" --topics migration
 ```
 
-Doctor checks include:
+2) **Move files into ticket directory:**
 
-- Missing/invalid `index.md`
-- Stale documents (configurable threshold)
-- Required fields (Title, Ticket, Status, Topics)
-- Unknown Topics/DocType/Intent (validated against `ttmp/vocabulary.yaml`)
-- Missing `RelatedFiles` on disk
- - Missing numeric prefix for subdirectory Markdown files (prefixing policy)
+```bash
+# Move to appropriate subdirectory
+mv docs/old-design.md ttmp/MIGRATE-001-existing-docs/design/01-old-design.md
+mv docs/api-ref.md ttmp/MIGRATE-001-existing-docs/reference/01-api-ref.md
+```
 
-Tip: Set `--stale-after` high initially (for example, 30–45 days) while adoption ramps up, then lower it as your cadence stabilizes.
+3) **Add or fix frontmatter via commands:**
 
-Repository ignores:
+```bash
+# Set ticket
+docmgr meta update --doc ttmp/MIGRATE-001-.../design/01-old-design.md \
+  --field Ticket --value MIGRATE-001
 
-`docmgr init` creates `ttmp/.docmgrignore` with sensible defaults:
+# Set topics
+docmgr meta update --doc ttmp/MIGRATE-001-.../design/01-old-design.md \
+  --field Topics --value "backend,api"
+
+# Add summary
+docmgr meta update --doc ttmp/MIGRATE-001-.../design/01-old-design.md \
+  --field Summary --value "Original API design documentation"
+```
+
+4) **Validate:**
+
+```bash
+docmgr doctor --ticket MIGRATE-001 --fail-on error
+```
+
+5) **Repeat for other docs**, organizing into appropriate tickets.
+
+---
+
+✅ **Milestone: Repository Fully Initialized!**
+
+Your repository now has:
+- ✅ Docs root with vocabulary
+- ✅ Templates and guidelines  
+- ✅ Validation configured
+- ✅ Ready for team use
+
+**What's next?**
+- Set up CI (see [Part 2](#part-2-ci-integration-🔧))
+- Share setup with team
+- Create first ticket: `docmgr create-ticket`
+
+---
+
+# Part 2: CI Integration 🔧
+
+**[Enforce documentation quality automatically]**
+
+---
+
+## 10. Suppressing Validation Noise [INTERMEDIATE]
+
+Use `.docmgrignore` to suppress validation warnings for specific files or patterns.
+
+**Common patterns for `ttmp/.docmgrignore`:**
 
 ```
+# VCS and tooling
 .git/
 _templates/
 _guidelines/
-```
-
-You can also create a `.docmgrignore` at the repository root (or inside the docs root, e.g., `ttmp/.docmgrignore`) to exclude additional paths from validation (comments with `#`; supports globs). When present, `doctor` automatically applies these patterns, so you can drop `--ignore-dir`/`--ignore-glob` in CLI and CI. Example:
-
-```gitignore
-# VCS and build artifacts
-.git/
 node_modules/
 dist/
+coverage/
 
-# Suppress noisy nested index for a specific directory layout
+# Archive old tickets (don't validate)
+archive/
+2023-*/
+2024-*/
+
+# Ignore specific problematic files
 ttmp/*/design/index.md
+ttmp/LEGACY-*/
 
-# Ignore old date folders
-2024-*
-2025-*
+# Ignore drafts and experiments
+**/draft-*.md
+**/scratch-*.md
 ```
 
-## 7. CI Integration
+**Doctor automatically respects `.docmgrignore`** from both repository root and docs root. No `--ignore-glob` flags needed.
 
-Add a job to fail fast on documentation regressions. Make CI strict over time (for example, start with `--fail-on error`, later consider `--fail-on warning` if noise is low). With `.docmgrignore` in place, no ignore flags are necessary:
+---
 
-```yaml
-- name: Validate docs
-  run: |
-    docmgr doctor --root ttmp \
-      --stale-after 30 --fail-on error
-```
+## 11. Operational Tips [INTERMEDIATE]
 
-## 8. Operational Tips
+**Ongoing maintenance for repository maintainers:**
 
-- Keep vocabulary small and stable; socialize changes via PRs
-- Encourage `Owners`, `Summary`, and `RelatedFiles` on `index.md` for every ticket
-- Use `search` regularly (content, reverse lookup, external sources) during reviews
-- Treat `doctor` warnings as actionable tech-debt where appropriate; track follow-ups
-- Revisit templates/guidelines quarterly to reflect lessons learned
-- Manage ticket checklists with `docmgr tasks` (list/add/check/uncheck/edit/remove)
-- Append decisions and progress to `changelog.md` with `docmgr changelog update`
+### Keep Vocabulary Stable
+- Socialize vocabulary changes via PRs
+- Don't add topics/doc-types ad-hoc
+- Review quarterly, prune unused entries
 
-## 9. Troubleshooting & Tips
+### Enforce Index Quality
+- Require `Owners`, `Summary`, and `RelatedFiles` on every `index.md`
+- Use `docmgr doctor` to catch missing fields
+- Template the reminder in PR templates
 
-- Root discovery: If invoking from nested directories yields inconsistent roots, set an absolute `root` in `.ttmp.yaml` or run from repo root.
-- Shell paths: Avoid parentheses in ticket directory names; quote or escape when cd'ing into them.
+### Revisit Templates/Guidelines
+- Review quarterly
+- Incorporate lessons learned
+- Adjust based on team feedback
 
-
-## 10. CLI Outputs & Scripting (reference)
-
-List commands expose stable columns and a “Columns:” section in `--help`. See the “Using docmgr” tutorial for full recipes.
-
-- Stable columns:
-  - tickets: `ticket,title,status,topics,path,last_updated`
-  - docs:    `ticket,doc_type,title,status,topics,path,last_updated`
-  - tasks:   `index,checked,text,file`
-  - vocab:   `category,slug,description`
-
-Quick examples:
+### Monitor Workspace Health
 
 ```bash
-# Paths only
-docmgr list tickets --with-glaze-output --select path
-docmgr list docs --ticket MEN-4242 --with-glaze-output --select path
+# Quick health check
+docmgr status
 
-# CSV without headers
-docmgr list docs --ticket MEN-4242 \
-  --with-glaze-output --output csv --with-headers=false --fields path
+# Detailed status
+docmgr doctor --all --fail-on none  # Show all warnings
 ```
 
-For more, open `docmgr help how-to-use` or the embedded doc “Tutorial — Using docmgr to Drive a Ticket Workflow”.
+---
+
+## 12. Troubleshooting [INTERMEDIATE]
+
+**Basic validation job:**
+
+```yaml
+validate-docs:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v3
+    - name: Install docmgr
+      run: go install github.com/go-go-golems/docmgr@latest
+    - name: Validate
+      run: docmgr doctor --all --stale-after 30 --fail-on error
+```
+
+### Adjusting Strictness
+
+**Start lenient, increase over time:**
+
+```bash
+# Phase 1: Only errors (broken links, missing files)
+docmgr doctor --all --fail-on error
+
+# Phase 2: Add staleness check
+docmgr doctor --all --stale-after 60 --fail-on error
+
+# Phase 3: Make staleness stricter
+docmgr doctor --all --stale-after 30 --fail-on error
+
+# Phase 4: Treat warnings as errors (strict)
+docmgr doctor --all --stale-after 30 --fail-on warning
+```
+
+**Use `.docmgrignore`** to suppress false positives rather than lowering standards.
+
+---
+
+## 13. Reporting in CI [INTERMEDIATE]
+
+Generate documentation health reports:
+
+```yaml
+doc-report:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v3
+    - name: Install docmgr
+      run: go install github.com/go-go-golems/docmgr@latest
+    
+    - name: Generate report
+      run: |
+        echo "=== Documentation Status ==="
+        docmgr status
+        
+        echo ""
+        echo "=== Stale Docs (>30 days) ==="
+        docmgr status --stale-after 30 --with-glaze-output --output json | \
+          jq -r '.docs[] | select(.stale) | "[\(.ticket)] \(.title) — \(.days_since_update) days"'
+        
+        echo ""
+        echo "=== Recent Activity (Last 7 Days) ==="
+        docmgr search --updated-since "7 days ago"
+```
+
+---
+
+## 14. Operational Tips [INTERMEDIATE]
+
+**Ongoing maintenance:**
+
+### Keep Vocabulary Stable
+- Socialize vocabulary changes via PRs
+- Don't add topics/doc-types ad-hoc
+- Review quarterly, prune unused entries
+
+### Enforce Index Quality
+- Require `Owners`, `Summary`, and `RelatedFiles` on every `index.md`
+- Use doctor to catch missing fields
+- Template the index.md reminder in PR templates
+
+### Use Search in Reviews
+```bash
+# During code review: find design context
+docmgr search --file path/to/changed-file.go
+
+# During architecture review: find related docs
+docmgr search --query "authentication" --doc-type design-doc
+```
+
+### Treat Doctor Warnings as Tech Debt
+- Unknown topics → Add to vocabulary or fix typo
+- Stale docs → Update or mark as evergreen (use `.docmgrignore`)
+- Missing files → Fix path or remove from RelatedFiles
+- Track follow-ups in issues
+
+### Revisit Templates/Guidelines
+- Review quarterly
+- Incorporate lessons learned
+- Adjust based on team feedback
+
+### Use Tasks and Changelog
+```bash
+# Encourage consistent tracking
+docmgr tasks add --ticket T --text "Task description"
+docmgr changelog update --ticket T --entry "What changed"
+```
+
+---
+
+# Part 3: Reference 📖
+
+**[Advanced topics and troubleshooting]**
+
+---
+
+### Issue: Commands Can't Find Root
+
+**Symptom:** `Error: root directory does not exist`
+
+**Solutions:**
+```bash
+# Check status to see what root it's looking for
+docmgr status --summary-only
+
+# Run from repository root
+cd /path/to/repo && docmgr status
+
+# Or set absolute path in .ttmp.yaml
+# In .ttmp.yaml:
+root: /absolute/path/to/ttmp
+```
+
+### Issue: Vocabulary Not Found
+
+**Symptom:** Using topics but doctor warns "unknown topics"
+
+**Solutions:**
+```bash
+# Check vocabulary location
+docmgr status --summary-only
+# Look at vocabulary= path
+
+# List what's in vocabulary
+docmgr vocab list --category topics
+
+# Add missing topics
+docmgr vocab add --category topics --slug YOUR-TOPIC
+```
+
+### Issue: Too Many Doctor Warnings
+
+**Solutions:**
+1. Add patterns to `.docmgrignore`
+2. Adjust `--stale-after` threshold
+3. Fix legitimate issues flagged
+
+```bash
+# See what's being flagged
+docmgr doctor --all --with-glaze-output --output json | \
+  jq -r '.[] | select(.issue != "none") | "\(.path): \(.message)"'
+```
+
+### Issue: Parentheses in Ticket Names
+
+**Symptom:** Shell errors when cd'ing into ticket directories
+
+**Solutions:**
+```bash
+# Quote/escape directory names with parens
+cd "ttmp/MEN-XXXX-name-\(with-parens\)"
+
+# Or avoid parens in ticket titles
+```
+
+---
+
+## 13. Multi-Repo and Monorepo Setup [ADVANCED]
+
+**Scenario:** Multiple repos sharing vocabulary.
+
+### Option A: Centralized Config
+
+Place `.ttmp.yaml` at parent directory:
+
+```
+parent/
+├── .ttmp.yaml              # Points to shared vocabulary
+├── repo-a/
+│   └── ttmp-a/
+└── repo-b/
+    └── ttmp-b/
+```
+
+`.ttmp.yaml`:
+```yaml
+root: %(repo)/ttmp-%(repo-name)
+vocabulary: /absolute/path/to/shared/vocabulary.yaml
+```
+
+### Option B: Separate Roots, Shared Vocabulary
+
+Each repo has its own `ttmp/` but references shared vocabulary:
+
+```
+repo/
+├── .ttmp.yaml
+└── ttmp/
+```
+
+`.ttmp.yaml`:
+```yaml
+root: ttmp
+vocabulary: /shared/path/vocabulary.yaml
+```
+
+**Most teams use default setup.** Only use `.ttmp.yaml` if you have specific needs.
+
+---
+
+## 14. Vocabulary Philosophy [REFERENCE]
+
+**What vocabulary does:**
+- Defines valid topics, doc types, intents
+- Used by `docmgr doctor` for validation warnings
+- NOT enforced — you can use any topics/doc-types
+- Helps team maintain consistency
+
+**Why it's not enforced:**
+- Allows exploratory work (try new topics without approval)
+- Unknown doc-types go to `various/` (flexible)
+- Warnings better than errors (doesn't block progress)
+
+**Think of vocabulary as:**
+- Documentation of team conventions
+- Input for autocomplete (future feature)
+- Basis for validation warnings (not blockers)
+
+---
+
+## 15. Quick Reference
+
+### Initialization Commands
+
+```bash
+# Initialize with seeded vocabulary
+docmgr init --seed-vocabulary
+
+# Initialize empty
+docmgr init
+
+# Force re-scaffold templates/guidelines
+docmgr init --force
+
+# Check if initialized
+docmgr status --summary-only
+```
+
+### Vocabulary Commands
+
+```bash
+# List all
+docmgr vocab list
+
+# List category
+docmgr vocab list --category topics
+
+# Add entry
+docmgr vocab add --category topics --slug NAME --description "..."
+
+# Structured output
+docmgr vocab list --with-glaze-output --output json
+```
+
+### Configuration Commands
+
+```bash
+# Create .ttmp.yaml
+docmgr configure --root ttmp --owners USER --vocabulary ttmp/vocabulary.yaml
+
+# Check configuration
+docmgr status --summary-only
+# Shows: root=... config=... vocabulary=...
+```
 
 
+
+## Related Documentation
+
+- **Daily usage:** `docmgr help how-to-use` — Creating tickets, adding docs, searching
+- **CI/automation:** See **CI and Automation Guide** (playbooks/03-ci-and-automation-guide.md) — GitHub Actions, hooks, reporting
+- **Templates:** `docmgr help templates-and-guidelines` — Customization guide
+- **CLI reference:** `docmgr help cli-guide` — Command overview

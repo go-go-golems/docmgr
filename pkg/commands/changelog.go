@@ -19,11 +19,12 @@ import (
 type ChangelogUpdateCommand struct{ *cmds.CommandDescription }
 
 type ChangelogUpdateSettings struct {
-	Ticket           string   `glazed.parameter:"ticket"`
-	Root             string   `glazed.parameter:"root"`
-	ChangelogFile    string   `glazed.parameter:"changelog-file"`
-	Title            string   `glazed.parameter:"title"`
-	Entry            string   `glazed.parameter:"entry"`
+	Ticket        string `glazed.parameter:"ticket"`
+	Root          string `glazed.parameter:"root"`
+	ChangelogFile string `glazed.parameter:"changelog-file"`
+	Title         string `glazed.parameter:"title"`
+	Entry         string `glazed.parameter:"entry"`
+	// Deprecated: kept only to emit a friendly migration error if provided
 	Files            []string `glazed.parameter:"files"`
 	FileNotes        []string `glazed.parameter:"file-note"`
 	Suggest          bool     `glazed.parameter:"suggest"`
@@ -44,7 +45,6 @@ Examples:
 
   # Include related files with notes
   docmgr changelog update --ticket MEN-4242 \
-    --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
     --file-note "backend/chat/api/register.go:Source of path normalization" \
     --file-note "web/src/store/api/chatApi.ts=Frontend integration"
 
@@ -60,7 +60,7 @@ Examples:
 			parameters.NewParameterDefinition("changelog-file", parameters.ParameterTypeString, parameters.WithHelp("Path to changelog.md (overrides --ticket)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("title", parameters.ParameterTypeString, parameters.WithHelp("Optional entry title"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("entry", parameters.ParameterTypeString, parameters.WithHelp("Entry text to append"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("files", parameters.ParameterTypeStringList, parameters.WithHelp("Comma-separated list of related files to include"), parameters.WithDefault([]string{})),
+			parameters.NewParameterDefinition("files", parameters.ParameterTypeStringList, parameters.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"), parameters.WithDefault([]string{})),
 			parameters.NewParameterDefinition("file-note", parameters.ParameterTypeStringList, parameters.WithHelp("Repeatable path-to-note mapping (path:note or path=note)"), parameters.WithDefault([]string{})),
 			parameters.NewParameterDefinition("suggest", parameters.ParameterTypeBool, parameters.WithHelp("Suggest related files using heuristics (git + ripgrep + existing docs)"), parameters.WithDefault(false)),
 			parameters.NewParameterDefinition("apply-suggestions", parameters.ParameterTypeBool, parameters.WithHelp("Apply suggested files to this changelog entry"), parameters.WithDefault(false)),
@@ -79,6 +79,11 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	s := &ChangelogUpdateSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	// Enforce deprecation: --files is no longer supported for changelog updates.
+	if len(s.Files) > 0 {
+		return fmt.Errorf("--files has been removed from 'docmgr changelog update'. Use repeated --file-note 'path:note' instead. Example: docmgr changelog update --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
 	}
 
 	// Resolve changelog path
@@ -260,12 +265,19 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Build final list of related files to include in the entry
+	// Validate that provided file-note mappings contain non-empty notes
+	for p, n := range noteMap {
+		if strings.TrimSpace(n) == "" {
+			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
+		}
+	}
+
+	// Build final list of related files to include in the entry from noteMap only
 	final := map[string]string{} // path -> note
-	for _, f := range s.Files {
-		f = strings.TrimSpace(f)
-		if f != "" {
-			final[f] = noteMap[f]
+	for p, n := range noteMap {
+		pp := strings.TrimSpace(p)
+		if pp != "" {
+			final[pp] = n
 		}
 	}
 	if s.Suggest && s.ApplySuggestions {
@@ -356,6 +368,11 @@ func (c *ChangelogUpdateCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
+	// Enforce deprecation: --files is no longer supported for changelog updates.
+	if len(s.Files) > 0 {
+		return fmt.Errorf("--files has been removed from 'docmgr changelog update'. Use repeated --file-note 'path:note' instead. Example: docmgr changelog update --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
+	}
+
 	// Resolve changelog path
 	var changelogPath string
 	if s.ChangelogFile != "" {
@@ -436,12 +453,19 @@ func (c *ChangelogUpdateCommand) Run(
 		}
 	}
 
-	// Final list
+	// Validate notes are present for provided mappings
+	for p, n := range noteMap {
+		if strings.TrimSpace(n) == "" {
+			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
+		}
+	}
+
+	// Final list (from noteMap only)
 	final := map[string]string{}
-	for _, f := range s.Files {
-		f = strings.TrimSpace(f)
-		if f != "" {
-			final[f] = noteMap[f]
+	for p, n := range noteMap {
+		pp := strings.TrimSpace(p)
+		if pp != "" {
+			final[pp] = n
 		}
 	}
 

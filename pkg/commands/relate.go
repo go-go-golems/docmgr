@@ -22,8 +22,9 @@ type RelateCommand struct {
 }
 
 type RelateSettings struct {
-	Ticket           string   `glazed.parameter:"ticket"`
-	Doc              string   `glazed.parameter:"doc"`
+	Ticket string `glazed.parameter:"ticket"`
+	Doc    string `glazed.parameter:"doc"`
+	// Deprecated: kept only to emit a friendly migration error if provided
 	Files            []string `glazed.parameter:"files"`
 	RemoveFiles      []string `glazed.parameter:"remove-files"`
 	FileNotes        []string `glazed.parameter:"file-note"`
@@ -43,11 +44,14 @@ func NewRelateCommand() (*RelateCommand, error) {
 			cmds.WithLong(`Update RelatedFiles in a document's frontmatter or the ticket index.
 
 Examples:
-  # Relate files to the ticket index
-  docmgr relate --ticket MEN-4242 --files backend/chat/api/register.go,web/src/store/api/chatApi.ts
+  # Relate files to the ticket index (notes required)
+  docmgr relate --ticket MEN-4242 \
+    --file-note "backend/chat/api/register.go:Registers API routes" \
+    --file-note "web/src/store/api/chatApi.ts:Frontend integration"
 
-  # Relate files to a specific document
-  docmgr relate --doc ttmp/MEN-4242-.../design/path-normalization-strategy.md --files backend/chat/ws/manager.go
+  # Relate files to a specific document (notes required)
+  docmgr relate --doc ttmp/MEN-4242-.../design/path-normalization-strategy.md \
+    --file-note "backend/chat/ws/manager.go:WebSocket lifecycle management"
 
   # Suggest files using heuristics (git + ripgrep + existing RelatedFiles)
   docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat,backend
@@ -68,10 +72,11 @@ Examples:
 					parameters.WithHelp("Path to a specific document to update"),
 					parameters.WithDefault(""),
 				),
+				// Deprecated flag: still declared to provide a clearer migration error when used
 				parameters.NewParameterDefinition(
 					"files",
 					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of files to add to RelatedFiles"),
+					parameters.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"),
 					parameters.WithDefault([]string{}),
 				),
 				parameters.NewParameterDefinition(
@@ -364,6 +369,20 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		}
 	}
 
+	// Enforce deprecation: --files is no longer supported for additions
+	// We keep the flag definition at the CLI layer for a friendlier error.
+	// If any values are provided, fail fast with guidance.
+	if len(settings.Files) > 0 {
+		return fmt.Errorf("--files has been removed from 'docmgr relate'. Use repeated --file-note 'path:note' instead. Example: docmgr relate --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
+	}
+
+	// Validate that all provided file-note mappings contain a non-empty note
+	for p, n := range noteMap {
+		if strings.TrimSpace(n) == "" {
+			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
+		}
+	}
+
 	// Apply removals
 	removedCount := 0
 	for _, rf := range settings.RemoveFiles {
@@ -377,20 +396,22 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Apply additions
+	// Apply additions / updates from file-note mappings only
 	addedCount := 0
-	for _, af := range settings.Files {
-		af = strings.TrimSpace(af)
-		if af == "" {
+	for path, note := range noteMap {
+		p := strings.TrimSpace(path)
+		if p == "" {
 			continue
 		}
-		if _, ok := current[af]; !ok {
-			current[af] = models.RelatedFile{Path: af, Note: noteMap[af]}
+		if rf, ok := current[p]; ok {
+			// Update note if changed and non-empty
+			if strings.TrimSpace(note) != "" && rf.Note != note {
+				rf.Note = note
+				current[p] = rf
+			}
+		} else {
+			current[p] = models.RelatedFile{Path: p, Note: note}
 			addedCount++
-		} else if note, ok := noteMap[af]; ok && note != "" {
-			rf := current[af]
-			rf.Note = note
-			current[af] = rf
 		}
 	}
 
@@ -416,6 +437,11 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 				current[f] = rf
 			}
 		}
+	}
+
+	// When not in suggestion-listing mode, ensure at least one change was requested
+	if !settings.Suggest && addedCount == 0 && removedCount == 0 {
+		return fmt.Errorf("no changes specified. Use --file-note 'path:note' to add/update, --remove-files to remove, or --suggest --apply-suggestions to apply suggestions")
 	}
 
 	// Serialize back to sorted slice

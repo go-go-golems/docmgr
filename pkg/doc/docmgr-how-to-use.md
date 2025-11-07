@@ -369,9 +369,10 @@ Bidirectional linking between documentation and code is one of docmgr's most pow
 ### Basic Usage
 
 ```bash
-# Relate files to ticket index
-docmgr relate --ticket MEN-4242 --files \
-  backend/api/register.go,backend/ws/manager.go
+# Relate files to ticket index with notes (repeat --file-note)
+docmgr relate --ticket MEN-4242 \
+  --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
+  --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 ```
 
 ### Relating with Notes (ALWAYS)
@@ -379,8 +380,7 @@ docmgr relate --ticket MEN-4242 --files \
 **Notes are required.** Always provide a note for each file when running `docmgr relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked.
 
 ```bash
-docmgr relate --ticket MEN-4242 --files \
-  backend/api/register.go,backend/ws/manager.go \
+docmgr relate --ticket MEN-4242 \
   --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 ```
@@ -452,7 +452,6 @@ Example:
 ```bash
 # Relate implementation files to the design doc (preferred)
 docmgr relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
-  --files backend/api/register.go \
   --file-note "backend/api/register.go:Normalization entrypoint and router setup"
 ```
 
@@ -464,9 +463,8 @@ docmgr relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
 
 ```bash
 docmgr relate --ticket MEN-4242 \
-  --files backend/api/register.go,web/src/store/api/chatApi.ts \
-  --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
-  --file-note "web/src/store/api/chatApi.ts:Frontend API integration"
+  --file-note \"backend/api/register.go:Registers API routes (normalization logic)\" \
+  --file-note \"web/src/store/api/chatApi.ts:Frontend API integration\"
 ```
 
 2) **Update the one-line Summary** in frontmatter
@@ -494,7 +492,6 @@ Track progress in `changelog.md`:
 ```bash
 # With related files and notes
 docmgr changelog update --ticket MEN-4242 \
-  --files backend/api/register.go \
   --file-note "backend/api/register.go:Path normalization source"
 ```
 
@@ -510,9 +507,8 @@ Changelogs are dated automatically. Keep entries short — mention what changed 
 
 ```bash
 docmgr relate --ticket MEN-4242 \
-  --files backend/api/register.go,web/src/store/api/chatApi.ts \
-  --file-note "backend/api/register.go:Path normalization source" \
-  --file-note "web/src/store/api/chatApi.ts:Frontend integration"
+  --file-note \"backend/api/register.go:Path normalization source\" \
+  --file-note \"web/src/store/api/chatApi.ts:Frontend integration\"
 ```
 
 2) Add changelog entry (mention linked files):
@@ -569,6 +565,7 @@ docmgr doctor --ticket MEN-4242
 **What doctor checks:**
 - ✅ Missing or invalid frontmatter
 - ✅ Unknown topics/doc-types (warns, doesn't fail)
+- ✅ Missing Note on RelatedFiles entries (warns)
 - ✅ Missing files in RelatedFiles
 - ✅ Stale docs (older than --stale-after days)
 
@@ -1006,7 +1003,7 @@ docmgr search --query "..."
 docmgr search --file path/to/file.go
 
 # Relate files
-docmgr relate --ticket YOUR-123 --files ... --file-note "path:note"
+docmgr relate --ticket YOUR-123 --file-note "path:note" --file-note "path2:note2"
 
 # Validate
 docmgr doctor --ticket YOUR-123

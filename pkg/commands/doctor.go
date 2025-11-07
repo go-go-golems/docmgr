@@ -328,6 +328,21 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			if rf.Path == "" {
 				continue
 			}
+			// Warn when a related file is missing an explanatory Note
+			if strings.TrimSpace(rf.Note) == "" {
+				hasIssues = true
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "missing_related_file_note"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("related file has no Note: %s", rf.Path)),
+					types.MRP("path", indexPath),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return err
+				}
+				highestSeverity = maxInt(highestSeverity, 1)
+			}
 			// Build resolution candidates
 			candidates := []string{}
 			if filepath.IsAbs(rf.Path) {

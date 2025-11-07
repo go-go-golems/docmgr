@@ -278,8 +278,7 @@ Link code files to documentation for bidirectional navigation. Relating files en
 
 ```bash
 # Relate files to ticket index with explanatory notes
-docmgr relate --ticket MEN-4242 --files \
-  backend/api/register.go,backend/ws/manager.go \
+docmgr relate --ticket MEN-4242 \
   --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 
@@ -305,7 +304,6 @@ docmgr changelog update --ticket MEN-4242 --entry "Normalized API paths"
 
 # With related files
 docmgr changelog update --ticket MEN-4242 \
-  --files backend/api/register.go \
   --file-note "backend/api/register.go:Path normalization source"
 ```
 

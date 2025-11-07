@@ -478,7 +478,6 @@ Track progress in `changelog.md`:
 ```bash
 # With related files and notes
 docmgr changelog update --ticket MEN-4242 \
-  --files backend/api/register.go \
   --file-note "backend/api/register.go:Path normalization source"
 ```
 
@@ -494,7 +493,6 @@ Changelogs are dated automatically. Keep entries short — mention what changed 
 
 ```bash
 docmgr relate --ticket MEN-4242 \
-  --files backend/api/register.go,web/src/store/api/chatApi.ts \
   --file-note "backend/api/register.go:Path normalization source" \
   --file-note "web/src/store/api/chatApi.ts:Frontend integration"
 ```

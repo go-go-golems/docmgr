@@ -191,10 +191,10 @@ ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
 ├── index.md        # Ticket overview (you're here)
 ├── tasks.md        # Todo list
 ├── changelog.md    # History of changes
-├── design/         # Design docs will go here
-├── reference/      # Reference docs
-├── playbooks/      # Test procedures
-└── various/        # Other docs
+├── design-doc/     # Created when you add a design-doc
+├── reference/      # Created when you add a reference doc
+├── playbook/       # Created when you add a playbook
+└── <doc-type>/     # Any other doc-type creates its own subdir
 ```
 
 **Understanding index.md:**
@@ -208,7 +208,7 @@ The `index.md` file is your ticket's single entry point. It:
 - Keep index.md body content concise (~50 lines of markdown)
 - Update frontmatter via `docmgr meta update` commands
 - Write Overview, Status, Next Steps in the body content (below frontmatter)
-- Prefer a subdocument-first linking pattern: relate most implementation files to focused subdocuments (design/reference/playbook), and have `index.md` link to those subdocuments instead of listing every file directly.
+- Prefer a subdocument-first linking pattern: relate most implementation files to focused subdocuments (design-doc/reference/playbook), and have `index.md` link to those subdocuments instead of listing every file directly.
 - When relating files (anywhere), always include notes (`--file-note "path:why-this-file-matters"`); file notes are required in our workflow.
 
 > **Smart Default:** Documents you add will automatically inherit topics (`chat,backend,websocket`), owners, and status from the ticket. No need to repeat them!
@@ -230,12 +230,13 @@ docmgr add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
 - Frontmatter fields (Title, Ticket, Topics) are auto-filled
 - Files get numeric prefixes (01-, 02-, 03-) to keep them ordered
 - Topics/owners/status inherited from ticket (no repetition!)
+- The file is stored under a subdirectory named exactly after its doc-type (e.g., `design-doc/`, `reference/`, `playbook/`, or your custom type)
 
 **Common doc types:**
 - `design-doc` — Architecture and design decisions
 - `reference` — API contracts, data schemas, how things work
 - `playbook` — Test procedures, operational runbooks
-- Unknown types? They go to `various/` (flexible!)
+- Custom types are allowed and create their own subdirectory (e.g., `til/`, `analysis/`)
 
 > **Tip:** Want structure guidance? Run: `docmgr guidelines --doc-type design-doc`
 
@@ -403,7 +404,7 @@ Find design context from code files:
 # During code review: "What's the design for this file?"
 $ docmgr search --file backend/api/register.go
 
-MEN-4242/design/01-path-normalization.md — Path Normalization [MEN-4242] ::
+MEN-4242/design-doc/01-path-normalization.md — Path Normalization [MEN-4242] ::
   file=backend/api/register.go note=Registers API routes
 ```
 
@@ -441,7 +442,7 @@ MEN-4242/design/01-path-normalization.md — Path Normalization [MEN-4242] ::
 
 ### Subdocument-first linking
 
-Prefer relating most files to the specific subdocument that explains them (design/reference/playbook) rather than directly to `index.md`. Keep `index.md` minimal and use it to reference those subdocuments.
+Prefer relating most files to the specific subdocument that explains them (design-doc/reference/playbook) rather than directly to `index.md`. Keep `index.md` minimal and use it to reference those subdocuments.
 
 - Why: Subdocuments keep context close to code and prevent `index.md` bloat.
 - How: Add `RelatedFiles` on the subdocument; in `index.md`, add a short link to that subdocument.
@@ -450,7 +451,7 @@ Prefer relating most files to the specific subdocument that explains them (desig
 Example:
 ```bash
 # Relate implementation files to the design doc (preferred)
-docmgr relate --doc ttmp/MEN-4242/design/01-path-normalization-strategy.md \
+docmgr relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
   --files backend/api/register.go \
   --file-note "backend/api/register.go:Normalization entrypoint and router setup"
 ```
@@ -501,7 +502,7 @@ Changelogs are dated automatically. Keep entries short — mention what changed 
 
 ### Changelog Hygiene (Always Link Files and Provide Notes)
 
-**Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
+**Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design-doc/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
 
 **The workflow:**
 

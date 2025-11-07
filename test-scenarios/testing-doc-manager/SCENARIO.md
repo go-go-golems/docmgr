@@ -112,9 +112,9 @@ Optional manual steps:
 - From nested dir (verifies `.ttmp.yaml` resolution):
   - `cd web && docmgr status --summary-only`
 
-- Induce warnings: add unknown topic, add non-existing RelatedFiles, create `design/index.md`
+- Induce warnings: add unknown topic, add non-existing RelatedFiles, create `design-doc/index.md`
 - Show `--fail-on warning` returns nonzero
-- Use `--ignore-glob "ttmp/*/design/index.md"` to suppress duplicate index
+- Use `--ignore-glob "ttmp/*/design-doc/index.md"` to suppress duplicate index
 - Fix metadata and re-run to pass
 
 ## Notes

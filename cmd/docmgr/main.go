@@ -392,6 +392,26 @@ Helpful docs (built-in):
 	}
 	rootCmd.AddCommand(cobraRenumberCmd)
 
+	// Create layout-fix command
+	layoutFixCmd, err := commands.NewLayoutFixCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating layout-fix command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraLayoutFixCmd, err := cli.BuildCobraCommand(layoutFixCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building layout-fix command: %v\n", err)
+		os.Exit(1)
+	}
+	rootCmd.AddCommand(cobraLayoutFixCmd)
+
 	// Create status command
 	statusCmd, err := commands.NewStatusCommand()
 	if err != nil {

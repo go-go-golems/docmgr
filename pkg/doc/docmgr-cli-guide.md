@@ -104,10 +104,11 @@ Each ticket gets its own workspace under `ttmp/` (configurable with `--root`). T
 
 - `MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
   - `index.md` (frontmatter and summary)
-  - `design/` (design documents)
+  - `design-doc/` (design documents)
   - `reference/` (contracts, API references)
-  - `playbooks/` (operational steps, QA smoke tests)
-  - `scripts/`, `sources/`, `various/`, `archive/`
+  - `playbook/` (operational steps, QA smoke tests)
+  - `<doc-type>/` (custom types create their own subdir)
+  - `scripts/`, `sources/`, `archive/`
   - `.meta/` (internal data)
 - At root: `_templates/` and `_guidelines/` are scaffolded for consistency
 
@@ -201,7 +202,7 @@ docmgr add --ticket MEN-4242 \
 Notes:
 - `doc-type` values come from your workspace vocabulary (`ttmp/vocabulary.yaml`).
 - If a doc type has a template at `ttmp/_templates/<docType>.md`, its body is rendered automatically.
-- Unknown/other doc types are accepted and placed under `various/` by default (frontmatter `DocType` is still set for filtering).
+- Unknown/other doc types are accepted and stored under a subdirectory named after the doc-type (frontmatter `DocType` is still set for filtering).
 
 ### 4.5 Guidelines
 
@@ -332,7 +333,7 @@ Run `doctor` during development and reviews. It's a safety net to catch drift (s
 docmgr doctor --all --stale-after 30 --fail-on error
 
 # Ignore specific paths using glob patterns
-docmgr doctor --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+docmgr doctor --ignore-glob "ttmp/*/design-doc/index.md" --fail-on warning
 
 # Validate specific ticket
 docmgr doctor --ticket MEN-4242

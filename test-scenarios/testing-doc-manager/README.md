@@ -47,6 +47,6 @@ export DOCMGR_PATH=/absolute/path/to/docmgr
 - The ticket workspace will be created under `ttmp/`:
   - `ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
 - Doctor now supports:
-  - `--ignore-dir` and `--ignore-glob` to filter out paths (scenario demonstrates `_templates`, `_guidelines` and design/index.md via `--ignore-glob`)
+  - `--ignore-dir` and `--ignore-glob` to filter out paths (scenario demonstrates `_templates`, `_guidelines` and design-doc/index.md via `--ignore-glob`)
   - `--stale-after <days>` to tune staleness threshold
   - `--fail-on {none,warning,error}` to fail the command for CI integration

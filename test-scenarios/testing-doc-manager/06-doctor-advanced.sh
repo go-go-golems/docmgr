@@ -14,9 +14,9 @@ ${DOCMGR} meta update --doc "${INDEX_MD}" --field Topics --value "chat,backend,w
 ${DOCMGR} meta update --doc "${INDEX_MD}" --field RelatedFiles --value \
 "backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts,backend/chat/api/does-not-exist.go"
 
-# Create duplicate index inside design/
-mkdir -p "${TICKET_DIR}/design"
-cat > "${TICKET_DIR}/design/index.md" <<'EOF'
+# Create duplicate index inside design-doc/
+mkdir -p "${TICKET_DIR}/design-doc"
+cat > "${TICKET_DIR}/design-doc/index.md" <<'EOF'
 ---
 Title: Design Section Index
 Ticket: MEN-4242
@@ -46,7 +46,7 @@ fi
 # 3) Use ignore-glob to suppress duplicate index, keeping other warnings
 set +e
 ${DOCMGR} doctor --ignore-dir _templates --ignore-dir _guidelines \
-  --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+  --ignore-glob "ttmp/*/design-doc/index.md" --fail-on warning
 DOCTOR_RC2=$?
 set -e
 if [ ${DOCTOR_RC2} -eq 0 ]; then
@@ -59,7 +59,7 @@ ${DOCMGR} meta update --doc "${INDEX_MD}" --field RelatedFiles --value \
 "backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts"
 
 # Remove test duplicate index
-rm -f "${TICKET_DIR}/design/index.md"
+rm -f "${TICKET_DIR}/design-doc/index.md"
 
 ${DOCMGR} doctor --ignore-dir _templates --ignore-dir _guidelines --stale-after 30 --fail-on error
 

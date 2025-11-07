@@ -30,8 +30,8 @@ curl -s "$API_URL/api/search?type=reference" | python3 -m json.tool | head -30
 echo
 echo
 
-echo "6. Combined search - topic 'chat' + type 'design':"
-curl -s "$API_URL/api/search?topic=chat&type=design" | python3 -m json.tool | head -30
+echo "6. Combined search - topic 'chat' + type 'design-doc':"
+curl -s "$API_URL/api/search?topic=chat&type=design-doc" | python3 -m json.tool | head -30
 echo
 
 echo "=== Tests complete ==="

@@ -136,15 +136,11 @@ func (s *Server) handleInit(w http.ResponseWriter, r *http.Request) {
 	dirName := fmt.Sprintf("%s-%s", req.Ticket, slug)
 	ticketPath := filepath.Join(s.rootDir, "active", dirName)
 
-	// Create directory structure
+	// Create base directory structure. Doc-type subdirectories are created on demand.
 	dirs := []string{
 		ticketPath,
-		filepath.Join(ticketPath, "design"),
-		filepath.Join(ticketPath, "reference"),
-		filepath.Join(ticketPath, "playbooks"),
 		filepath.Join(ticketPath, "scripts"),
 		filepath.Join(ticketPath, "sources"),
-		filepath.Join(ticketPath, "various"),
 		filepath.Join(ticketPath, "archive"),
 		filepath.Join(ticketPath, ".meta"),
 	}
@@ -285,17 +281,13 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine subdirectory based on doc type; unknown types go to various/
-	var subdir string
-	switch req.DocType {
-	case "design-doc":
-		subdir = "design"
-	case "reference":
-		subdir = "reference"
-	case "playbook":
-		subdir = "playbooks"
-	default:
-		subdir = "various"
+	// Use doc-type slug directly as subdirectory name
+	subdir := req.DocType
+
+	// Ensure target subdirectory exists
+	if err := os.MkdirAll(filepath.Join(ticketDir, subdir), 0755); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create directory: %v", err), http.StatusInternalServerError)
+		return
 	}
 
 	// Create filename from title
@@ -581,17 +573,21 @@ func (s *Server) handleGetDocuments(w http.ResponseWriter, r *http.Request) {
 
 	var documents []map[string]interface{}
 
-	// Scan design, reference, playbooks, sources, and various directories
-	subdirs := map[string]string{
-		"design":    "design",
-		"reference": "reference",
-		"playbooks": "playbook",
-		"sources":   "source",
-		"various":   "various",
-	}
-
-	for subdir, dt := range subdirs {
-		subdirPath := filepath.Join(ticketDir, subdir)
+	// Discover doc-type subdirectories dynamically (exclude scaffolding dirs)
+	entries, _ := os.ReadDir(ticketDir)
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+			continue
+		}
+		if name == "scripts" || name == "sources" || name == "archive" || name == ".meta" {
+			continue
+		}
+		dt := name
+		subdirPath := filepath.Join(ticketDir, name)
 		if _, err := os.Stat(subdirPath); os.IsNotExist(err) {
 			continue
 		}
@@ -737,21 +733,26 @@ func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Scan documents in this workspace
-		subdirs := map[string]string{
-			"design":    "design",
-			"reference": "reference",
-			"playbooks": "playbook",
-			"sources":   "source",
-			"various":   "various",
-		}
-
-		for subdir, dt := range subdirs {
+		// Discover doc-type subdirectories dynamically (exclude scaffolding dirs)
+		entries, _ := os.ReadDir(ticketDir)
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			name := e.Name()
+			if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+				continue
+			}
+			if name == "scripts" || name == "sources" || name == "archive" || name == ".meta" {
+				continue
+			}
+			dt := name
 			// Filter by document type if specified
 			if docType != "" && dt != docType {
 				continue
 			}
 
-			subdirPath := filepath.Join(ticketDir, subdir)
+			subdirPath := filepath.Join(ticketDir, name)
 			if _, err := os.Stat(subdirPath); os.IsNotExist(err) {
 				continue
 			}
@@ -863,10 +864,21 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 				tickets++
 			}
 
-			// count markdown docs under known subdirs
-			subdirs := []string{"design", "reference", "playbooks", "sources", "various"}
-			for _, sd := range subdirs {
-				sdPath := filepath.Join(activePath, entry.Name(), sd)
+			// count markdown docs under any doc-type subdir (exclude scaffolding)
+			ticketDir := filepath.Join(activePath, entry.Name())
+			children, _ := os.ReadDir(ticketDir)
+			for _, child := range children {
+				if !child.IsDir() {
+					continue
+				}
+				name := child.Name()
+				if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+					continue
+				}
+				if name == "scripts" || name == "sources" || name == "archive" || name == ".meta" {
+					continue
+				}
+				sdPath := filepath.Join(ticketDir, name)
 				_ = filepath.Walk(sdPath, func(path string, info os.FileInfo, err error) error {
 					if err != nil || info == nil || info.IsDir() {
 						return nil

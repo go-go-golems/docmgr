@@ -190,7 +190,7 @@ docmgr vocab add --category intent --slug temporary \
 docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
 ```
 
-If a template exists at `ttmp/_templates/til.md`, it will be used. Otherwise the doc is created in `various/` with `DocType: til` so it still participates in search and validation.
+If a template exists at `ttmp/_templates/til.md`, it will be used. Otherwise the doc is created under a subdirectory named after its doc-type (for example `til/`) with `DocType: til` so it still participates in search and validation.
 
 ---
 
@@ -316,9 +316,10 @@ repository/
 │   │   ├── index.md
 │   │   ├── tasks.md
 │   │   ├── changelog.md
-│   │   ├── design/
-│   │   ├── reference/
-│   │   └── various/
+│   │   ├── design-doc/        # Created when you add a design-doc
+│   │   ├── reference/         # Created when you add a reference doc
+│   │   ├── playbook/          # Created when you add a playbook
+│   │   └── <doc-type>/        # Any other doc-type creates its own subdir
 │   │
 │   └── TICKET-002-slug/    # Another ticket
 │       └── ...
@@ -329,10 +330,10 @@ repository/
 - Slug from title: lowercase, alphanumerics and dashes only
 - Example: "Chat WebSocket Lifecycle" → `chat-websocket-lifecycle`
 
-**Per-ticket directories created by `create-ticket`:**
+**Per-ticket directories:**
 - `index.md` — Ticket overview
-- `design/`, `reference/`, `playbooks/` — Typed docs
-- `scripts/`, `sources/`, `various/`, `archive/` — Other content
+- Doc-type subdirectories are created on demand by `docmgr add` (for example `design-doc/`, `reference/`, `playbook/`, or custom types like `til/`)
+- `scripts/`, `sources/`, `archive/` — Other content
 - `.meta/` — Internal metadata
 
 ---
@@ -380,7 +381,7 @@ docmgr vocab list --category docTypes
 
 3) **Create template (optional):**
 
-Edit `ttmp/_templates/til.md` with your preferred structure. If no template exists, docs are created in `various/` but still have `DocType: til`.
+Edit `ttmp/_templates/til.md` with your preferred structure. If no template exists, docs are still created and stored under `til/` with `DocType: til`.
 
 4) **Use it:**
 
@@ -413,7 +414,7 @@ docmgr create-ticket --ticket MIGRATE-001 --title "Existing Docs" --topics migra
 
 ```bash
 # Move to appropriate subdirectory
-mv docs/old-design.md ttmp/MIGRATE-001-existing-docs/design/01-old-design.md
+mv docs/old-design.md ttmp/MIGRATE-001-existing-docs/design-doc/01-old-design.md
 mv docs/api-ref.md ttmp/MIGRATE-001-existing-docs/reference/01-api-ref.md
 ```
 
@@ -421,15 +422,15 @@ mv docs/api-ref.md ttmp/MIGRATE-001-existing-docs/reference/01-api-ref.md
 
 ```bash
 # Set ticket
-docmgr meta update --doc ttmp/MIGRATE-001-.../design/01-old-design.md \
+docmgr meta update --doc ttmp/MIGRATE-001-.../design-doc/01-old-design.md \
   --field Ticket --value MIGRATE-001
 
 # Set topics
-docmgr meta update --doc ttmp/MIGRATE-001-.../design/01-old-design.md \
+docmgr meta update --doc ttmp/MIGRATE-001-.../design-doc/01-old-design.md \
   --field Topics --value "backend,api"
 
 # Add summary
-docmgr meta update --doc ttmp/MIGRATE-001-.../design/01-old-design.md \
+docmgr meta update --doc ttmp/MIGRATE-001-.../design-doc/01-old-design.md \
   --field Summary --value "Original API design documentation"
 ```
 
@@ -485,7 +486,7 @@ archive/
 2024-*/
 
 # Ignore specific problematic files
-ttmp/*/design/index.md
+ttmp/*/design-doc/index.md
 ttmp/LEGACY-*/
 
 # Ignore drafts and experiments
@@ -757,7 +758,7 @@ vocabulary: /shared/path/vocabulary.yaml
 
 **Why it's not enforced:**
 - Allows exploratory work (try new topics without approval)
-- Unknown doc-types go to `various/` (flexible)
+- Unknown/custom doc-types create their own `<doc-type>/` subdirectory (flexible)
 - Warnings better than errors (doesn't block progress)
 
 **Think of vocabulary as:**

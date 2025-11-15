@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-go-golems/docmgr/pkg/models"
@@ -22,13 +23,16 @@ type CreateTicketCommand struct {
 	*cmds.CommandDescription
 }
 
+const DefaultTicketPathTemplate = "{{YYYY}}/{{MM}}/{{DD}}/{{TICKET}}-{{SLUG}}"
+
 // CreateTicketSettings holds the parameters for the create-ticket command
 type CreateTicketSettings struct {
-	Ticket string   `glazed.parameter:"ticket"`
-	Title  string   `glazed.parameter:"title"`
-	Topics []string `glazed.parameter:"topics"`
-	Root   string   `glazed.parameter:"root"`
-	Force  bool     `glazed.parameter:"force"`
+	Ticket       string   `glazed.parameter:"ticket"`
+	Title        string   `glazed.parameter:"title"`
+	Topics       []string `glazed.parameter:"topics"`
+	Root         string   `glazed.parameter:"root"`
+	Force        bool     `glazed.parameter:"force"`
+	PathTemplate string   `glazed.parameter:"path-template"`
 }
 
 func NewCreateTicketCommand() (*CreateTicketCommand, error) {
@@ -72,6 +76,12 @@ Example:
 					parameters.WithHelp("Force overwrite of existing files"),
 					parameters.WithDefault(false),
 				),
+				parameters.NewParameterDefinition(
+					"path-template",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Template for ticket directory relative to root (placeholders: {{YYYY}}, {{MM}}, {{DD}}, {{DATE}}, {{TICKET}}, {{SLUG}}, {{TITLE}})"),
+					parameters.WithDefault(DefaultTicketPathTemplate),
+				),
 			),
 		),
 	}, nil
@@ -92,8 +102,11 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 
 	// Create slug from title
 	slug := utils.Slugify(settings.Title)
-	dirName := fmt.Sprintf("%s-%s", settings.Ticket, slug)
-	ticketPath := filepath.Join(settings.Root, dirName)
+	now := time.Now()
+	ticketPath, err := renderTicketPath(settings.Root, settings.PathTemplate, settings.Ticket, slug, settings.Title, now)
+	if err != nil {
+		return fmt.Errorf("failed to resolve ticket directory: %w", err)
+	}
 
 	// Create directory structure
 	dirs := []string{
@@ -139,7 +152,7 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 		RelatedFiles:    models.RelatedFiles{},
 		ExternalSources: []string{},
 		Summary:         "",
-		LastUpdated:     time.Now(),
+		LastUpdated:     now,
 	}
 
 	indexPath := filepath.Join(ticketPath, "index.md")
@@ -205,7 +218,7 @@ Use docmgr commands to manage this workspace:
 
 - Initial workspace created
 
-`, time.Now().Format("2006-01-02"))
+`, now.Format("2006-01-02"))
 	if err := writeFileIfNotExists(changelogPath, []byte(changelogContent), settings.Force); err != nil {
 		return fmt.Errorf("failed to write changelog.md: %w", err)
 	}
@@ -219,6 +232,35 @@ Use docmgr commands to manage this workspace:
 	)
 
 	return gp.AddRow(ctx, row)
+}
+
+func renderTicketPath(root, templateStr, ticket, slug, title string, now time.Time) (string, error) {
+	if templateStr == "" {
+		templateStr = DefaultTicketPathTemplate
+	}
+	replacements := map[string]string{
+		"{{YYYY}}":   now.Format("2006"),
+		"{{MM}}":     now.Format("01"),
+		"{{DD}}":     now.Format("02"),
+		"{{DATE}}":   now.Format("2006-01-02"),
+		"{{TICKET}}": ticket,
+		"{{SLUG}}":   slug,
+		"{{TITLE}}":  title,
+	}
+	relative := templateStr
+	for placeholder, value := range replacements {
+		relative = strings.ReplaceAll(relative, placeholder, value)
+	}
+	relative = filepath.Clean(relative)
+	relative = strings.TrimPrefix(relative, string(os.PathSeparator))
+	relative = strings.TrimPrefix(relative, "./")
+	if relative == "" || relative == "." {
+		return "", fmt.Errorf("path template resolved to empty path")
+	}
+	if strings.HasPrefix(relative, "..") {
+		return "", fmt.Errorf("path template resolves outside root: %s", relative)
+	}
+	return filepath.Join(root, relative), nil
 }
 
 // writeDocumentWithFrontmatter writes a document with frontmatter to a file.

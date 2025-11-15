@@ -49,6 +49,8 @@ docmgr create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket
 
+By default the workspace lives under `ttmp/YYYY/MM/DD/<ticket>-<slug>/`. Override this with `--path-template` when you need a different hierarchy (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`).
+
 # 4) Add documents
 # Add a design doc, a reference doc, and a playbook to start capturing context.
 docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
@@ -57,7 +59,8 @@ docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat
 
 # 5) Update metadata on the ticket index
 # Owners and Summary improve discoverability; RelatedFiles enable reverse lookup.
-INDEX_MD="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/index.md"
+INDEX_MD=$(find ttmp -type f -path "*/MEN-4242-*/index.md" -print -quit)
+test -n "$INDEX_MD"
 docmgr meta update --doc "$INDEX_MD" --field Owners          --value "manuel,alex"
 docmgr meta update --doc "$INDEX_MD" --field Summary         --value "Unify chat HTTP paths and stabilize WebSocket flows."
 docmgr meta update --doc "$INDEX_MD" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
@@ -216,7 +219,7 @@ See also: `docmgr help templates-and-guidelines` for how templates and guideline
 Keep `Owners`, `Summary`, and `RelatedFiles` current. This makes search, review, and onboarding faster.
 ```bash
 # Update a specific document
-docmgr meta update --doc ttmp/MEN-4242-.../index.md --field Owners --value "manuel,alex"
+docmgr meta update --doc ttmp/YYYY/MM/DD/MEN-4242-.../index.md --field Owners --value "manuel,alex"
 
 # Update all docs for a ticket (optionally filter by type)
 docmgr meta update --ticket MEN-4242 --doc-type design-doc --field Topics --value "chat,backend"

@@ -172,27 +172,15 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 }
 
 func findTicketDirectory(root, ticket string) (string, error) {
-	entries, err := os.ReadDir(root)
+	workspaces, err := collectTicketWorkspaces(root, nil)
 	if err != nil {
 		return "", err
 	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		indexPath := filepath.Join(root, entry.Name(), "index.md")
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
-			continue
-		}
-
-		if doc.Ticket == ticket {
-			return filepath.Join(root, entry.Name()), nil
+	for _, ws := range workspaces {
+		if ws.Doc != nil && ws.Doc.Ticket == ticket {
+			return ws.Path, nil
 		}
 	}
-
 	return "", fmt.Errorf("ticket not found: %s", ticket)
 }
 

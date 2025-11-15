@@ -47,7 +47,7 @@ Examples:
   docmgr relate --ticket MEN-4242 --files backend/chat/api/register.go,web/src/store/api/chatApi.ts
 
   # Relate files to a specific document
-  docmgr relate --doc ttmp/MEN-4242-.../design/path-normalization-strategy.md --files backend/chat/ws/manager.go
+  docmgr relate --doc ttmp/YYYY/MM/DD/MEN-4242-.../design/path-normalization-strategy.md --files backend/chat/ws/manager.go
 
   # Suggest files using heuristics (git + ripgrep + existing RelatedFiles)
   docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat,backend

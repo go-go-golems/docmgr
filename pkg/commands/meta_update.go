@@ -40,7 +40,7 @@ func NewMetaUpdateCommand() (*MetaUpdateCommand, error) {
 			cmds.WithLong(`Updates frontmatter fields in document files.
 
 Example:
-  docmgr meta update --doc ttmp/MEN-1234-slug/index.md --field Status --value review
+  docmgr meta update --doc ttmp/YYYY/MM/DD/MEN-1234-slug/index.md --field Status --value review
   docmgr meta update --ticket MEN-1234 --field Status --value active
   docmgr meta update --ticket MEN-1234 --doc-type design-doc --field Topics --value chat,backend
 `),

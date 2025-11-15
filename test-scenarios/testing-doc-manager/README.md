@@ -25,7 +25,7 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 ## Quick Start
 
 ```bash
-cd vibes/ttmp/2025-11-03/testing-doc-manager/
+cd vibes/ttmp/YYYY-MM-DD/testing-doc-manager/
 chmod +x 00-reset.sh 01-create-mock-codebase.sh 02-init-ticket.sh 03-create-docs-and-meta.sh 04-relate-and-doctor.sh 05-search-scenarios.sh 06-doctor-advanced.sh run-all.sh
 
 # Optionally set the docmgr path if not in PATH
@@ -44,8 +44,8 @@ export DOCMGR_PATH=/absolute/path/to/docmgr
 ## Notes
 
 - The scenario uses ticket `MEN-4242` with title "Normalize chat API paths and WebSocket lifecycle".
-- The ticket workspace will be created under `ttmp/`:
-  - `ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
+- The ticket workspace will be created under `ttmp/` using the default date-based structure, for example:
+  - `ttmp/2025/11/03/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
 - Doctor now supports:
   - `--ignore-dir` and `--ignore-glob` to filter out paths (scenario demonstrates `_templates`, `_guidelines` and design/index.md via `--ignore-glob`)
   - `--stale-after <days>` to tune staleness threshold

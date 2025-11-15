@@ -31,7 +31,8 @@ docmgr create-ticket --ticket MEN-4242 \
   --topics chat,backend,websocket
 ```
 
-This creates `ttmp/MEN-4242-.../` with `index.md`, `tasks.md`, and `changelog.md` under a standard structure.
+This creates `ttmp/YYYY/MM/DD/MEN-4242-.../` with `index.md`, `tasks.md`, and `changelog.md` under a standard structure.
+Use `--path-template` to override the relative directory layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`).
 If your repository doesn’t have a docs root yet (with `vocabulary.yaml`, `_templates/`, `_guidelines/`), run:
 
 ```bash
@@ -71,7 +72,7 @@ See also: `docmgr help templates-and-guidelines` for customization and best prac
 ## 5. Enrich Metadata
 
 ```bash
-INDEX_MD="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/index.md"
+INDEX_MD=$(find ttmp -type f -path "*/MEN-4242-*/index.md" -print -quit)
 docmgr meta update --doc "$INDEX_MD" --field Owners          --value "manuel,alex"
 docmgr meta update --doc "$INDEX_MD" --field Summary         --value "Unify chat HTTP paths and stabilize WebSocket flows."
 docmgr meta update --doc "$INDEX_MD" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
@@ -247,7 +248,7 @@ docmgr guidelines --doc-type design-doc --with-glaze-output --output json
 - `.ttmp.yaml` does not need to live in the repository root. In multi-repo or monorepo setups, place it at a parent directory to centralize a shared docs root and point different repos at distinct `ttmp/` directories as needed via `root` or `vocabulary`.
 - Avoid parentheses in ticket dir names; quote/escape if you must use them:
   ```bash
-  cd "ttmp/MEN-XXXX-name-\(with-parens\)"
+  cd "ttmp/YYYY/MM/DD/MEN-XXXX-name-\(with-parens\)"
   ```
 
 ## 13. Iterate and Maintain
@@ -279,7 +280,7 @@ docmgr relate --ticket MEN-3083 \
   --file-note "pkg/snapshots/sqlite_store.go:SQLite SnapshotStore (MVP persistence)"
 
 # Add to a specific document
-docmgr relate --doc ttmp/MEN-3083-.../design/sem-event-flow.md \
+docmgr relate --doc ttmp/YYYY/MM/DD/MEN-3083-.../design/sem-event-flow.md \
   --files pkg/timeline/controller.go \
   --file-note "pkg/timeline/controller.go:TUI timeline lifecycle (apply/render)"
 

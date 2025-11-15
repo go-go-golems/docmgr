@@ -6,7 +6,11 @@ REPO="${ROOT_DIR}/acme-chat-app"
 cd "${REPO}"
 
 DOCMGR="${DOCMGR_PATH:-docmgr}"
-TICKET_DIR="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle"
+TICKET_DIR=$(find ttmp -type d -path "*/MEN-4242-*" -print -quit)
+if [[ -z "${TICKET_DIR}" ]]; then
+	echo "Could not locate MEN-4242 workspace" >&2
+	exit 1
+fi
 INDEX_MD="${TICKET_DIR}/index.md"
 
 # 1) Introduce issues: unknown topic, missing related file, duplicate index
@@ -46,7 +50,7 @@ fi
 # 3) Use ignore-glob to suppress duplicate index, keeping other warnings
 set +e
 ${DOCMGR} doctor --ignore-dir _templates --ignore-dir _guidelines \
-  --ignore-glob "ttmp/*/design/index.md" --fail-on warning
+  --ignore-glob "${TICKET_DIR}/design/index.md" --fail-on warning
 DOCTOR_RC2=$?
 set -e
 if [ ${DOCTOR_RC2} -eq 0 ]; then

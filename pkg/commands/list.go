@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/adrg/frontmatter"
@@ -78,27 +77,16 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	entries, err := os.ReadDir(settings.Root)
+	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
-		return fmt.Errorf("failed to read root directory: %w", err)
+		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
+	for _, ws := range workspaces {
+		doc := ws.Doc
+		if doc == nil {
 			continue
 		}
-
-		indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			continue
-		}
-
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
-			// Skip documents with invalid frontmatter
-			continue
-		}
-
 		// Apply filters
 		if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) {
 			continue
@@ -112,7 +100,7 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 			types.MRP("title", doc.Title),
 			types.MRP("status", doc.Status),
 			types.MRP("topics", strings.Join(doc.Topics, ", ")),
-			types.MRP("path", filepath.Join(settings.Root, entry.Name())),
+			types.MRP("path", ws.Path),
 			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
 		)
 

@@ -16,7 +16,11 @@ ${DOCMGR} add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Cha
 ${DOCMGR} guidelines --doc-type design-doc --output markdown || true
 
 # Enrich metadata on index.md
-INDEX_MD="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/index.md"
+INDEX_MD=$(find ttmp -type f -path "*/MEN-4242-*/index.md" -print -quit)
+if [[ -z "${INDEX_MD}" ]]; then
+	echo "Could not locate MEN-4242 index.md" >&2
+	exit 1
+fi
 ${DOCMGR} meta update --doc "${INDEX_MD}" --field Owners --value "manuel,alex"
 ${DOCMGR} meta update --doc "${INDEX_MD}" --field Summary --value "Unify chat HTTP paths and stabilize WebSocket flows."
 ${DOCMGR} meta update --doc "${INDEX_MD}" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
@@ -27,7 +31,11 @@ ${DOCMGR} add --ticket MEN-5678 --doc-type reference  --title "Reconnect Lifecyc
 ${DOCMGR} add --ticket MEN-5678 --doc-type playbook   --title "Reconnect Smoke Tests"
 
 # Enrich metadata on second ticket index.md
-INDEX2_MD="ttmp/MEN-5678-secondary-ticket-websocket-reconnection-plan/index.md"
+INDEX2_MD=$(find ttmp -type f -path "*/MEN-5678-*/index.md" -print -quit)
+if [[ -z "${INDEX2_MD}" ]]; then
+	echo "Could not locate MEN-5678 index.md" >&2
+	exit 1
+fi
 ${DOCMGR} meta update --doc "${INDEX2_MD}" --field Owners --value "manuel"
 ${DOCMGR} meta update --doc "${INDEX2_MD}" --field Summary --value "Plan WebSocket reconnection strategy."
 ${DOCMGR} meta update --doc "${INDEX2_MD}" --field ExternalSources --value "https://example.com/ws-reconnect"

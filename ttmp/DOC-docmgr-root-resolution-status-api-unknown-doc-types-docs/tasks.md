@@ -38,13 +38,6 @@ LastUpdated: 2025-11-04T17:56:55.026326019-05:00
 - [x] Echo context on mutating commands (root/config/vocabulary) — Related: docmgr/pkg/commands/add.go; init.go; meta_update.go; vocab_add.go (echo context)
 - [x] Enhance status to show config_path, vocabulary_path, stale source — Related: docmgr/pkg/commands/status.go (config/vocabulary in status)
 - [x] Support .git file (gitdir:) in repo detection — Related: docmgr/pkg/commands/vocab_add.go (gitdir support); docmgr/pkg/commands/config.go
-- [x] Server: Add /api/status endpoint with basic counts — Related: docmgr/cmd/docmgr-server/main.go (/api/status handler)
-- [x] Server: Accept unknown doc types; save under various/ and include in scans — Related: docmgr/cmd/docmgr-server/main.go (scan various/)
-
-### Deferred (Server; not in scope for this phase)
-
-- [ ] Improve startup logging with resolved paths — Related: docmgr/cmd/docmgr-server/main.go (startup logging)
-- [ ] Update README with server endpoints — Related: docmgr/README.md (server endpoints)
 
 ## Navigation
 

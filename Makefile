@@ -1,12 +1,8 @@
-.PHONY: gifs
+.PHONY: build
 
-all: gifs
+all: build
 
 VERSION=v0.1.14
-
-TAPES=$(shell ls doc/vhs/*tape)
-gifs: $(TAPES)
-	for i in $(TAPES); do vhs < $$i; done
 
 docker-lint:
 	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run -v

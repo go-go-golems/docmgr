@@ -12,7 +12,6 @@ Owners:
 RelatedFiles:
     - Path: docmgr/README.md
       Note: 'Docs: quick start includes configure + seed'
-    - Path: docmgr/cmd/docmgr-server/main.go
     - Path: docmgr/cmd/docmgr/main.go
       Note: 'Cobra: register configure command'
     - Path: docmgr/pkg/commands/add.go
@@ -33,7 +32,6 @@ RelatedFiles:
     - Path: docmgr/pkg/doc/docmgr-how-to-setup.md
       Note: 'Docs: configure/seed guidance'
     - Path: docmgr/pkg/doc/docmgr-how-to-use.md
-    - Path: docmgr/pkg/doc/tutorials/docmgr-multi-repo-and-server.md
     - Path: docmgr/test-scenarios/testing-doc-manager/02-init-ticket.sh
       Note: 'Scenario: use init --seed-vocabulary'
     - Path: docmgr/test-scenarios/testing-doc-manager/08-configure.sh

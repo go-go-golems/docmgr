@@ -379,7 +379,7 @@ docmgr relate --ticket MEN-4242 \
 
 ### Relating with Notes (ALWAYS)
 
-**Notes are required.** Always provide a note for each file when running `docmgr relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked.
+**Notes are required.** Always provide a note for each file when running `docmgr relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked. The legacy `--files` flag was removed to enforce this behavior; use repeated `--file-note "path:reason"` entries instead.
 
 ```bash
 docmgr relate --ticket MEN-4242 \
@@ -397,14 +397,15 @@ docmgr changelog update --ticket MEN-4242 --entry "Normalized chat API paths"
 
 # With related files and notes
 docmgr changelog update --ticket MEN-4242 \
-  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
   --file-note "backend/chat/api/register.go:Source of path normalization" \
-  --file-note "web/src/store/api/chatApi.ts=Frontend integration"
+  --file-note "web/src/store/api/chatApi.ts:Frontend integration"
 
 # Use suggestions (print only) or apply them
 docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
 docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 ```
+
+> `--files` was removed from `docmgr changelog update`; attach files by repeating `--file-note "path:reason"` for each path you want to capture.
 
 ### What `changelog.md` is for
 
@@ -533,9 +534,8 @@ docmgr changelog update --ticket MEN-4242 --entry "Normalized chat API paths"
 
 # With related files and notes
 docmgr changelog update --ticket MEN-4242 \
-  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
   --file-note "backend/chat/api/register.go:Source of path normalization" \
-  --file-note "web/src/store/api/chatApi.ts=Frontend integration"
+  --file-note "web/src/store/api/chatApi.ts:Frontend integration"
 
 # Use suggestions (print only) or apply them
 docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
@@ -1118,8 +1118,8 @@ docmgr meta update --ticket MEN-4242 --field Owners --value "current,team,member
 
 **Maintain RelatedFiles:**
 ```bash
-# Add files as you implement
-docmgr relate --ticket MEN-4242 --files new/file.go \
+# Add files as you implement (notes required)
+docmgr relate --ticket MEN-4242 \
   --file-note "new/file.go:What this file does"
 
 # Remove files if refactored away

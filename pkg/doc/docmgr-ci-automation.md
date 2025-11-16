@@ -375,15 +375,16 @@ done
 ### Relate Files Automatically
 
 ```bash
-# Auto-relate files from feature branch
+# Auto-relate files from feature branch (notes required for each path)
 git diff main --name-only | \
   grep -E '\.(go|ts|tsx|py)$' | \
-  xargs -I {} docmgr relate --ticket FEAT-042 --files {}
+  xargs -I FILE docmgr relate --ticket FEAT-042 \
+    --file-note "FILE:Auto-related from git diff"
 
 # With git commit messages as notes
 for file in $(git diff main --name-only); do
   NOTE=$(git log -1 --pretty=%B "$file" | head -1)
-  docmgr relate --ticket FEAT-042 --files "$file" --file-note "$file:$NOTE"
+  docmgr relate --ticket FEAT-042 --file-note "$file:$NOTE"
 done
 ```
 

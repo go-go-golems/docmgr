@@ -19,7 +19,13 @@ func main() {
 		Short: "Document Manager for LLM Workflows",
 		Long: `docmgr is a structured document manager for managing documentation
 in LLM-assisted workflows. It provides commands to create, organize,
-and validate documentation workspaces with metadata and external source support.`,
+and validate documentation workspaces with metadata and external source support.
+
+Helpful docs (built-in):
+
+  - Quick usage:          docmgr help how-to-use
+  - Initial setup guide:  docmgr help how-to-setup
+  - List all embedded docs: docmgr help --all`,
 	}
 
 	// Setup Glazed help system and load embedded docs
@@ -366,6 +372,46 @@ and validate documentation workspaces with metadata and external source support.
 	rootCmd.AddCommand(cobraGuidelinesCmd)
 	rootCmd.AddCommand(cobraRelateCmd)
 
+	// Create renumber command
+	renumberCmd, err := commands.NewRenumberCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating renumber command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraRenumberCmd, err := cli.BuildCobraCommand(renumberCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building renumber command: %v\n", err)
+		os.Exit(1)
+	}
+	rootCmd.AddCommand(cobraRenumberCmd)
+
+	// Create layout-fix command
+	layoutFixCmd, err := commands.NewLayoutFixCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating layout-fix command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraLayoutFixCmd, err := cli.BuildCobraCommand(layoutFixCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building layout-fix command: %v\n", err)
+		os.Exit(1)
+	}
+	rootCmd.AddCommand(cobraLayoutFixCmd)
+
 	// Create status command
 	statusCmd, err := commands.NewStatusCommand()
 	if err != nil {
@@ -403,6 +449,8 @@ and validate documentation workspaces with metadata and external source support.
 		os.Exit(1)
 	}
 	cobraChgUpdate, err := cli.BuildCobraCommand(chgUpdate,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
 		cli.WithParserConfig(cli.CobraParserConfig{
 			ShortHelpLayers: []string{layers.DefaultSlug},
 			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,

@@ -7,13 +7,16 @@ cd "${REPO}"
 
 DOCMGR="${DOCMGR_PATH:-docmgr}"
 
-# Relate files to the ticket index (sets RelatedFiles)
-${DOCMGR} relate --ticket MEN-4242 --files \
-"backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts"
+# Relate files to the ticket index (sets RelatedFiles) with notes
+${DOCMGR} relate --ticket MEN-4242 \
+  --file-note "backend/chat/api/register.go:Registers API routes (scenario)" \
+  --file-note "backend/chat/ws/manager.go:WebSocket lifecycle (scenario)" \
+  --file-note "web/src/store/api/chatApi.ts:Frontend API integration (scenario)"
 
-# Relate files to the second ticket (focus on WS lifecycle)
-${DOCMGR} relate --ticket MEN-5678 --files \
-"backend/chat/ws/manager.go,web/src/ui/chat/ChatPanel.tsx"
+# Relate files to the second ticket (focus on WS lifecycle) with notes
+${DOCMGR} relate --ticket MEN-5678 \
+  --file-note "backend/chat/ws/manager.go:WebSocket lifecycle (scenario)" \
+  --file-note "web/src/ui/chat/ChatPanel.tsx:Frontend chat panel (scenario)"
 
 # Optional: see suggestions with reasons (no changes applied)
 # ${DOCMGR} relate --ticket MEN-4242 --suggest --query WebSocket --topics chat

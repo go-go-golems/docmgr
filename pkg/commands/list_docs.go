@@ -35,11 +35,21 @@ func NewListDocsCommand() (*ListDocsCommand, error) {
 			cmds.WithShort("List individual documents"),
 			cmds.WithLong(`Lists all individual documents across all workspaces.
 
-Example:
+Columns:
+  ticket,doc_type,title,status,topics,path,last_updated
+
+Examples:
+  # Human output
   docmgr list docs
   docmgr list docs --ticket MEN-3475
   docmgr list docs --doc-type design-doc
   docmgr list docs --topics chat,backend
+
+  # Scriptable (paths only)
+  docmgr list docs --ticket MEN-3475 --with-glaze-output --select path
+
+  # TSV subset
+  docmgr list docs --ticket MEN-3475 --with-glaze-output --output tsv --fields doc_type,title,path
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -152,13 +162,13 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 		}
 
 		row := types.NewRow(
-			types.MRP("ticket", doc.Ticket),
-			types.MRP("doc_type", doc.DocType),
-			types.MRP("title", doc.Title),
-			types.MRP("status", doc.Status),
-			types.MRP("topics", strings.Join(doc.Topics, ", ")),
-			types.MRP("path", relPath),
-			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
+			types.MRP(ColTicket, doc.Ticket),
+			types.MRP(ColDocType, doc.DocType),
+			types.MRP(ColTitle, doc.Title),
+			types.MRP(ColStatus, doc.Status),
+			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
+			types.MRP(ColPath, relPath),
+			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {

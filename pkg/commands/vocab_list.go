@@ -3,6 +3,8 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -20,6 +22,7 @@ type VocabListCommand struct {
 // VocabListSettings holds the parameters for the vocab list command
 type VocabListSettings struct {
 	Category string `glazed.parameter:"category"`
+	Root     string `glazed.parameter:"root"`
 }
 
 func NewVocabListCommand() (*VocabListCommand, error) {
@@ -32,10 +35,17 @@ func NewVocabListCommand() (*VocabListCommand, error) {
 The vocabulary path is resolved from .ttmp.yaml if configured via 'vocabulary'.
 By default, it is '<root>/vocabulary.yaml' (root defaults to 'ttmp').
 
-Example:
+Columns:
+  category,slug,description
+
+Examples:
+  # Human output
   docmgr vocab list
   docmgr vocab list --category topics
   docmgr vocab list --category docTypes
+
+  # Scriptable (JSON)
+  docmgr vocab list --with-glaze-output --output json
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -43,6 +53,12 @@ Example:
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Category to list (topics, docTypes, intent). Leave empty to list all."),
 					parameters.WithDefault(""),
+				),
+				parameters.NewParameterDefinition(
+					"root",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Root directory for docs"),
+					parameters.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -58,6 +74,17 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
+	// Echo resolved context
+	root := ResolveRoot(settings.Root)
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := root
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	vocab, err := LoadVocabulary()
 	if err != nil {
@@ -69,9 +96,9 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 	if category == "" || category == "topics" {
 		for _, item := range vocab.Topics {
 			row := types.NewRow(
-				types.MRP("category", "topics"),
-				types.MRP("slug", item.Slug),
-				types.MRP("description", item.Description),
+				types.MRP(ColCategory, "topics"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
@@ -82,9 +109,9 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 	if category == "" || category == "doctypes" || category == "doc-types" {
 		for _, item := range vocab.DocTypes {
 			row := types.NewRow(
-				types.MRP("category", "docTypes"),
-				types.MRP("slug", item.Slug),
-				types.MRP("description", item.Description),
+				types.MRP(ColCategory, "docTypes"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
@@ -95,9 +122,9 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 	if category == "" || category == "intent" {
 		for _, item := range vocab.Intent {
 			row := types.NewRow(
-				types.MRP("category", "intent"),
-				types.MRP("slug", item.Slug),
-				types.MRP("description", item.Description),
+				types.MRP(ColCategory, "intent"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
@@ -119,6 +146,17 @@ func (c *VocabListCommand) Run(
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
+	// Echo resolved context
+	root := ResolveRoot(settings.Root)
+	cfgPath, _ := FindTTMPConfigPath()
+	vocabPath, _ := ResolveVocabularyPath()
+	absRoot := root
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	vocab, err := LoadVocabulary()
 	if err != nil {

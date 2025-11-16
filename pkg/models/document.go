@@ -69,12 +69,22 @@ func (rf *RelatedFile) UnmarshalYAML(value *yaml.Node) error {
 		rf.Path = strings.TrimSpace(value.Value)
 		return nil
 	case yaml.MappingNode:
-		type alias RelatedFile
-		var tmp alias
-		if err := value.Decode(&tmp); err != nil {
-			return err
+		// Manually decode to support both Path/Note and path/note keys (case-insensitive)
+		var path string
+		var note string
+		// value.Content contains [key, value, key, value, ...]
+		for i := 0; i+1 < len(value.Content); i += 2 {
+			k := strings.ToLower(strings.TrimSpace(value.Content[i].Value))
+			v := strings.TrimSpace(value.Content[i+1].Value)
+			switch k {
+			case "path":
+				path = v
+			case "note":
+				note = v
+			}
 		}
-		*rf = RelatedFile(tmp)
+		rf.Path = path
+		rf.Note = note
 		return nil
 	case yaml.DocumentNode:
 		// unsupported for this type; treat as empty

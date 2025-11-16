@@ -7,10 +7,9 @@ cd "${REPO}"
 
 DOCMGR="${DOCMGR_PATH:-docmgr}"
 
-# Append a changelog entry with files and file-notes; verify notes are present
+# Append a changelog entry with file-notes; verify notes are present
 ${DOCMGR} changelog update --ticket MEN-4242 \
   --entry "Test changelog file notes rendering" \
-  --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
   --file-note "backend/chat/api/register.go:Source of path normalization" \
   --file-note "web/src/store/api/chatApi.ts=Frontend integration"
 

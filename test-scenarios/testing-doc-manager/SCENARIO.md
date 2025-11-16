@@ -73,7 +73,7 @@ Optional manual steps:
 ### Search
 ### Relate
 - Add explicit related files to the ticket index:
-  - `docmgr relate --ticket MEN-4242 --files backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts`
+  - `docmgr relate --ticket MEN-4242 --file-note "backend/chat/api/register.go:Registers API routes" --file-note "backend/chat/ws/manager.go:WebSocket lifecycle" --file-note "web/src/store/api/chatApi.ts:Frontend API integration"`
 - See suggested files with explanations (no changes applied):
   - `docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat`
   - Suggestions include a `source` and a `reason` (e.g., "recent commit activity", "working tree modified", "referenced by documents").
@@ -93,7 +93,6 @@ Optional manual steps:
   - `docmgr changelog update --ticket MEN-4242 --entry "Normalize chat API paths"`
 - With related files and notes:
   - `docmgr changelog update --ticket MEN-4242 \
-     --files backend/chat/api/register.go,web/src/store/api/chatApi.ts \
      --file-note "backend/chat/api/register.go:Source of path normalization" \
      --file-note "web/src/store/api/chatApi.ts=Frontend integration"`
 - Suggestions only / apply suggestions:
@@ -112,9 +111,9 @@ Optional manual steps:
 - From nested dir (verifies `.ttmp.yaml` resolution):
   - `cd web && docmgr status --summary-only`
 
-- Induce warnings: add unknown topic, add non-existing RelatedFiles, create `design/index.md`
+- Induce warnings: add unknown topic, add non-existing RelatedFiles, create `design-doc/index.md`
 - Show `--fail-on warning` returns nonzero
-- Use `--ignore-glob "<ticket-dir>/design/index.md"` (for example, `ttmp/YYYY/MM/DD/MEN-4242-.../design/index.md`) to suppress duplicate index
+- Use `--ignore-glob "<ticket-dir>/design-doc/index.md"` (for example, `ttmp/YYYY/MM/DD/MEN-4242-.../design-doc/index.md`) to suppress duplicate index
 - Fix metadata and re-run to pass
 
 ## Notes

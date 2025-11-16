@@ -42,7 +42,7 @@ func NewAddCommand() (*AddCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"add",
 			cmds.WithShort("Add a new document to a workspace"),
-			cmds.WithLong(`Creates a new document in the appropriate subdirectory of a workspace.
+			cmds.WithLong(`Creates a new document in the subdirectory named after its doc-type.
 
 Example:
   docmgr add --ticket MEN-3475 --doc-type design-doc --title "Draft Architecture"
@@ -59,7 +59,7 @@ Example:
 				parameters.NewParameterDefinition(
 					"doc-type",
 					parameters.ParameterTypeString,
-					parameters.WithHelp("Document type (per vocabulary; unknown types go to 'various/')"),
+					parameters.WithHelp("Document type (per vocabulary; stored under <doc-type>/ subdir"),
 					parameters.WithRequired(true),
 				),
 				parameters.NewParameterDefinition(
@@ -150,19 +150,8 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
 
-	// Determine subdirectory based on doc type
-	var subdir string
-	switch settings.DocType {
-	case "design-doc":
-		subdir = "design"
-	case "reference":
-		subdir = "reference"
-	case "playbook":
-		subdir = "playbooks"
-	default:
-		// Accept any vocabulary doc type; place unknown/other types under 'various/'
-		subdir = "various"
-	}
+	// Use doc-type slug directly as subdirectory name
+	subdir := settings.DocType
 
 	// Ensure target subdirectory exists
 	targetDir := filepath.Join(ticketDir, subdir)
@@ -170,12 +159,14 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
 	}
 
-	// Create filename from title with slugification that removes special characters
+	// Create filename from title with slugification and numeric prefix
 	slug := utils.Slugify(settings.Title)
-	filename := fmt.Sprintf("%s.md", slug)
-	docPath := filepath.Join(targetDir, filename)
+	docPath, err := buildPrefixedDocPath(targetDir, slug)
+	if err != nil {
+		return fmt.Errorf("failed to allocate prefixed filename: %w", err)
+	}
 
-	// Check if file already exists
+	// Final guard: ensure file does not already exist (buildPrefixedDocPath should avoid collisions)
 	if _, err := os.Stat(docPath); err == nil {
 		return fmt.Errorf("document already exists: %s", docPath)
 	}

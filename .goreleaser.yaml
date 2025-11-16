@@ -38,7 +38,7 @@ signs:
 
 brews:
   - name: docmgr
-    description: "docmgr is a tool"
+    description: "docmgr is a tool to manage documents when programming with LLMs"
     homepage: "https://github.com/go-go-golems/docmgr"
     repository:
       owner: go-go-golems
@@ -54,7 +54,7 @@ nfpms:
     maintainer: Manuel Odendahl <wesen@ruinwesen.com>
 
     description: |-
-      docmgr is a tool to manage ticket documentation when working with LLM coding.
+      docmgr is a tool to manage documents when programming with LLMs
 
     license: MIT
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -89,28 +88,14 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	entries, err := os.ReadDir(settings.Root)
+	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
-		return fmt.Errorf("failed to read root directory: %w", err)
+		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		// Skip scaffolding directories
-		if strings.HasPrefix(entry.Name(), "_") {
-			continue
-		}
-
-		indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			continue
-		}
-
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
-			// Skip documents with invalid frontmatter
+	for _, ws := range workspaces {
+		doc := ws.Doc
+		if doc == nil {
 			continue
 		}
 
@@ -127,7 +112,7 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 			types.MRP(ColTitle, doc.Title),
 			types.MRP(ColStatus, doc.Status),
 			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
-			types.MRP(ColPath, filepath.Join(settings.Root, entry.Name())),
+			types.MRP(ColPath, ws.Path),
 			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
 		)
 
@@ -158,24 +143,14 @@ func (c *ListTicketsCommand) Run(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	entries, err := os.ReadDir(settings.Root)
+	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
-		return fmt.Errorf("failed to read root directory: %w", err)
+		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if strings.HasPrefix(entry.Name(), "_") {
-			continue
-		}
-		indexPath := filepath.Join(settings.Root, entry.Name(), "index.md")
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			continue
-		}
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
+	for _, ws := range workspaces {
+		doc := ws.Doc
+		if doc == nil {
 			continue
 		}
 		if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) {
@@ -190,7 +165,7 @@ func (c *ListTicketsCommand) Run(
 			doc.Status,
 			strings.Join(doc.Topics, ", "),
 			doc.LastUpdated.Format("2006-01-02"),
-			filepath.Join(settings.Root, entry.Name()),
+			ws.Path,
 		)
 	}
 	return nil

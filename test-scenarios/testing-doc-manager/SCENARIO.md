@@ -27,7 +27,7 @@ Optional manual steps:
 
 ## Expected Results
 
-- `ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/` exists with RFC-aligned scaffolding
+- `ttmp/YYYY/MM/DD/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/` exists with RFC-aligned scaffolding
 - `ttmp/vocabulary.yaml` contains topics/docTypes/intent used by this scenario
 - `index.md` updated with Owners, Summary, ExternalSources, and RelatedFiles
 - `doctor` reports OK unless staleness or multiple index.md introduced
@@ -113,7 +113,7 @@ Optional manual steps:
 
 - Induce warnings: add unknown topic, add non-existing RelatedFiles, create `design-doc/index.md`
 - Show `--fail-on warning` returns nonzero
-- Use `--ignore-glob "ttmp/*/design-doc/index.md"` to suppress duplicate index
+- Use `--ignore-glob "<ticket-dir>/design-doc/index.md"` (for example, `ttmp/YYYY/MM/DD/MEN-4242-.../design-doc/index.md`) to suppress duplicate index
 - Fix metadata and re-run to pass
 
 ## Notes

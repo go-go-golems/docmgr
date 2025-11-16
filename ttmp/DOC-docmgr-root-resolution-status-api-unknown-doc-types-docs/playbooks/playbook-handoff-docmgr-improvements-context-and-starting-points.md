@@ -10,7 +10,6 @@ Intent: long-term
 Owners:
     - manuel
 RelatedFiles:
-    - Path: docmgr/cmd/docmgr-server/main.go
     - Path: docmgr/pkg/commands/add.go
     - Path: docmgr/pkg/commands/config.go
       Note: Root/config resolution and DOCMGR_CONFIG
@@ -63,7 +62,6 @@ docmgr tasks list  --ticket DOC
 - CLI: context echo on `add`, `init`, `meta update`, `vocab add`.
 - CLI: `status` prints config/vocabulary paths (human + structured).
 - Repo detection supports `.git` file with `gitdir:`.
-- Server: `/api/status`; unknown `docType` → `various/` scan.
 - Docs: multi‑repo + `.docmgrignore` guidance; workspace playbook.
 
 ## What’s next
@@ -77,7 +75,6 @@ See `./../tasks.md` for the authoritative, granular checklist (each task lists r
 
 ## Key files to skim
 - CLI commands: `docmgr/pkg/commands/*.go` (especially `config.go`, `status.go`, `add.go`, `init.go`, `meta_update.go`, `vocab_add.go`, `tasks.go`)
-- Server: `docmgr/cmd/docmgr-server/main.go`
 - Docs: `docmgr/pkg/doc/*.md`, `go-go-mento/ttmp/how-to-use.md`
 
 ## Useful links (docs in this ticket)

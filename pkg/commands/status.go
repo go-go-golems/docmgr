@@ -93,37 +93,23 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 	referenceDocs := 0
 	playbooks := 0
 
-	entries, err := os.ReadDir(settings.Root)
+	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
-		return fmt.Errorf("failed to read root directory: %w", err)
+		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
+	for _, ws := range workspaces {
+		doc := ws.Doc
+		if doc == nil {
 			continue
 		}
-		// Skip scaffolding
-		if strings.HasPrefix(entry.Name(), "_") {
-			continue
-		}
-		ticketPath := filepath.Join(settings.Root, entry.Name())
-		indexPath := filepath.Join(ticketPath, "index.md")
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			continue
-		}
-
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
-			continue
-		}
-
 		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
 			continue
 		}
 
 		ticketsTotal++
+		ticketPath := ws.Path
 
-		// Staleness
 		stale := false
 		if !doc.LastUpdated.IsZero() {
 			days := time.Since(doc.LastUpdated).Hours() / 24
@@ -135,7 +121,6 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 			ticketsStale++
 		}
 
-		// Count docs in this ticket
 		ticketDocs := 0
 		dd := 0
 		rd := 0
@@ -261,27 +246,14 @@ func (c *StatusCommand) Run(
 	referenceDocs := 0
 	playbooks := 0
 
-	entries, err := os.ReadDir(settings.Root)
+	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
-		return fmt.Errorf("failed to read root directory: %w", err)
+		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if strings.HasPrefix(entry.Name(), "_") {
-			continue
-		}
-
-		ticketPath := filepath.Join(settings.Root, entry.Name())
-		indexPath := filepath.Join(ticketPath, "index.md")
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-			continue
-		}
-
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
+	for _, ws := range workspaces {
+		doc := ws.Doc
+		if doc == nil {
 			continue
 		}
 		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
@@ -289,6 +261,7 @@ func (c *StatusCommand) Run(
 		}
 
 		ticketsTotal++
+		ticketPath := ws.Path
 
 		stale := false
 		if !doc.LastUpdated.IsZero() {

@@ -46,7 +46,7 @@ Behavior:
 
 Examples:
   # Update a specific file
-  docmgr meta update --doc ttmp/MEN-1234-slug/index.md --field Status --value review
+  docmgr meta update --doc ttmp/YYYY/MM/DD/MEN-1234-slug/index.md --field Status --value review
 
   # Update ticket index.md (default when only --ticket is specified)
   docmgr meta update --ticket MEN-1234 --field Status --value active

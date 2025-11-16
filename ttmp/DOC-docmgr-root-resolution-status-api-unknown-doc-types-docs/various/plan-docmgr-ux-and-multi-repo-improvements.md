@@ -11,9 +11,7 @@ Owners:
     - manuel
 RelatedFiles:
     - Path: docmgr/README.md
-      Note: Server configuration and endpoint documentation
-    - Path: docmgr/cmd/docmgr-server/main.go
-      Note: Server root resolution and /api/status
+      Note: Configuration and endpoint documentation
     - Path: docmgr/pkg/commands/add.go
       Note: Echo resolved context before writes
     - Path: docmgr/pkg/commands/config.go
@@ -32,8 +30,6 @@ RelatedFiles:
       Note: Multi-repo and CI guidance
     - Path: docmgr/pkg/doc/docmgr-how-to-use.md
       Note: Clarified .docmgrignore and doctor usage
-    - Path: docmgr/pkg/doc/tutorials/docmgr-multi-repo-and-server.md
-      Note: New tutorial for multi-repo + server
 ExternalSources: []
 Summary: Unified repo-root detection; default stale-after=30; relate --from-git documented; warnings in status; updated docs.
 LastUpdated: 2025-11-04T17:56:55.026456434-05:00

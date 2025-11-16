@@ -13,11 +13,14 @@ ${DOCMGR} changelog update --ticket MEN-4242 \
   --file-note "backend/chat/api/register.go:Source of path normalization" \
   --file-note "web/src/store/api/chatApi.ts=Frontend integration"
 
-CHG=$(ls ttmp/MEN-4242-*/changelog.md | head -n1)
+CHG=$(find ttmp -type f -path "*/MEN-4242-*/changelog.md" -print -quit)
+if [[ -z "${CHG}" ]]; then
+	echo "Could not locate MEN-4242 changelog.md" >&2
+	exit 1
+fi
 echo "--- BEGIN changelog excerpt: ${CHG} ---"
 tail -n 30 "$CHG"
 echo "--- END changelog excerpt ---"
 
 echo "[ok] changelog file-notes appended"
-
 

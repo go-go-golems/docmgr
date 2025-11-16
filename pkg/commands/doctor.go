@@ -147,63 +147,62 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		intentSet[it.Slug] = struct{}{}
 	}
 
-	entries, err := os.ReadDir(settings.Root)
-	if err != nil {
-		return fmt.Errorf("failed to read root directory: %w", err)
+	skipFn := func(relPath, base string) bool {
+		if containsString(settings.IgnoreDirs, base) {
+			return true
+		}
+		full := filepath.Join(settings.Root, relPath)
+		if relPath == "." {
+			full = settings.Root
+		}
+		if matchesAnyGlob(settings.IgnoreGlobs, base) || matchesAnyGlob(settings.IgnoreGlobs, full) {
+			return true
+		}
+		return false
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
+	workspaces, err := collectTicketWorkspaces(settings.Root, skipFn)
+	if err != nil {
+		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
+	}
 
-		// Skip scaffolding and ignored directories at root
-		name := entry.Name()
-		if strings.HasPrefix(name, "_") {
-			continue
+	missingIndexDirs, err := collectTicketScaffoldsWithoutIndex(settings.Root, skipFn)
+	if err != nil {
+		return fmt.Errorf("failed to detect missing index.md files: %w", err)
+	}
+	for _, missing := range missingIndexDirs {
+		row := types.NewRow(
+			types.MRP("ticket", filepath.Base(missing)),
+			types.MRP("issue", "missing_index"),
+			types.MRP("severity", "error"),
+			types.MRP("message", "index.md not found"),
+			types.MRP("path", missing),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return err
 		}
-		if containsString(settings.IgnoreDirs, name) {
-			continue
-		}
-		if matchesAnyGlob(settings.IgnoreGlobs, name) || matchesAnyGlob(settings.IgnoreGlobs, filepath.Join(settings.Root, name)) {
-			continue
-		}
+		highestSeverity = maxInt(highestSeverity, 2)
+	}
 
-		ticketPath := filepath.Join(settings.Root, entry.Name())
+	for _, ws := range workspaces {
+		ticketPath := ws.Path
 		indexPath := filepath.Join(ticketPath, "index.md")
-
-		// Check if index.md exists
-		if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		if ws.Doc == nil {
 			row := types.NewRow(
-				types.MRP("ticket", entry.Name()),
-				types.MRP("issue", "missing_index"),
-				types.MRP("severity", "error"),
-				types.MRP("message", "index.md not found"),
-				types.MRP("path", ticketPath),
-			)
-			if err := gp.AddRow(ctx, row); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// Try to parse frontmatter
-		doc, err := readDocumentFrontmatter(indexPath)
-		if err != nil {
-			row := types.NewRow(
-				types.MRP("ticket", entry.Name()),
+				types.MRP("ticket", filepath.Base(ticketPath)),
 				types.MRP("issue", "invalid_frontmatter"),
 				types.MRP("severity", "error"),
-				types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", err)),
+				types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", ws.FrontmatterErr)),
 				types.MRP("path", indexPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
 				return err
 			}
+			highestSeverity = maxInt(highestSeverity, 2)
 			continue
 		}
 
-		// Filter by ticket if specified
+		doc := ws.Doc
 		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
 			continue
 		}

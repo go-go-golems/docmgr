@@ -71,6 +71,8 @@ docmgr init --seed-vocabulary
 # Create a new ticket workspace
 docmgr create-ticket --ticket MEN-1234 --title "Design Overview" --topics design,backend
 
+Workspaces are created under `ttmp/YYYY/MM/DD/<ticket>-<slug>/` by default. Use `--path-template` to customize the relative layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`).
+
 # Add a document to the ticket
 docmgr add --ticket MEN-1234 --doc-type design-doc --title "System Overview"
 
@@ -139,29 +141,4 @@ vocabulary: go-go-mento/ttmp/vocabulary.yaml
 
 Environment overrides:
 
-- `DOCMGR_ROOT`: absolute or relative path to the docs root (server and CLI). If relative, it is resolved against the current working directory.
-
-## Server (docmgr-server)
-
-The HTTP server exposes a small API around the same on-disk structure:
-
-- `POST /api/init` — create a ticket workspace under `<root>/active/`.
-- `POST /api/add` — add a document to an existing ticket. Unknown `docType` values are accepted and stored under `various/`.
-- `POST /api/import` — import a local file into `sources/local` and record metadata.
-- `GET  /api/list` — list active tickets.
-- `GET  /api/documents?ticket=...` — list documents for a ticket.
-- `GET  /api/search?q=...&topic=...&type=...` — search within a ticket set.
-- `GET  /api/status` — report resolved root/config/vocabulary and basic counts.
-- `POST /api/update` — update frontmatter for a document.
-
-Root resolution (server):
-
-- Uses `DOCMGR_ROOT` if set; otherwise searches for the nearest `.ttmp.yaml` and resolves `root:` relative to that file; falls back to `docs/` when none is found.
-  Startup logs include: `root=... config=... vocabulary=...`.
-
-Build from source:
-
-```bash
-go build -o $(which docmgr) ./docmgr/cmd/docmgr
-go build -o /usr/local/bin/docmgr-server ./docmgr/cmd/docmgr-server
-```
+- `DOCMGR_ROOT`: absolute or relative path to the docs root. If relative, it is resolved against the current working directory.

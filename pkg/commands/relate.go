@@ -398,16 +398,20 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 
 	// Apply additions / updates from file-note mappings only
 	addedCount := 0
+	updatedCount := 0
 	for path, note := range noteMap {
 		p := strings.TrimSpace(path)
 		if p == "" {
 			continue
 		}
 		if rf, ok := current[p]; ok {
-			// Update note if changed and non-empty
-			if strings.TrimSpace(note) != "" && rf.Note != note {
-				rf.Note = note
-				current[p] = rf
+			if strings.TrimSpace(note) != "" {
+				merged, changed := appendNote(rf.Note, note)
+				if changed {
+					rf.Note = merged
+					current[p] = rf
+					updatedCount++
+				}
 			}
 		} else {
 			current[p] = models.RelatedFile{Path: p, Note: note}
@@ -433,14 +437,17 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 				addedCount++
 			} else if note := noteMap[f]; note != "" {
 				rf := current[f]
-				rf.Note = note
-				current[f] = rf
+				if merged, changed := appendNote(rf.Note, note); changed {
+					rf.Note = merged
+					current[f] = rf
+					updatedCount++
+				}
 			}
 		}
 	}
 
 	// When not in suggestion-listing mode, ensure at least one change was requested
-	if !settings.Suggest && addedCount == 0 && removedCount == 0 {
+	if !settings.Suggest && addedCount == 0 && removedCount == 0 && updatedCount == 0 {
 		return fmt.Errorf("no changes specified. Use --file-note 'path:note' to add/update, --remove-files to remove, or --suggest --apply-suggestions to apply suggestions")
 	}
 
@@ -469,11 +476,31 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	row := types.NewRow(
 		types.MRP("doc", targetDocPath),
 		types.MRP("added", addedCount),
+		types.MRP("updated", updatedCount),
 		types.MRP("removed", removedCount),
 		types.MRP("total", len(doc.RelatedFiles)),
 		types.MRP("status", "updated"),
 	)
 	return gp.AddRow(ctx, row)
+}
+
+func appendNote(existing, addition string) (string, bool) {
+	addition = strings.TrimSpace(addition)
+	if addition == "" {
+		return existing, false
+	}
+	if existing == "" {
+		return addition, true
+	}
+	for _, line := range strings.Split(existing, "\n") {
+		if strings.TrimSpace(line) == addition {
+			return existing, false
+		}
+	}
+	if strings.HasSuffix(existing, "\n") {
+		return existing + addition, true
+	}
+	return existing + "\n" + addition, true
 }
 
 var _ cmds.GlazeCommand = &RelateCommand{}

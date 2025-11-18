@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
+	"github.com/mattn/go-isatty"
 )
 
 // ListTicketsCommand lists ticket workspaces
@@ -93,6 +96,8 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
+	// Filter and sort by last updated (newest first)
+	filtered := make([]TicketWorkspace, 0, len(workspaces))
 	for _, ws := range workspaces {
 		doc := ws.Doc
 		if doc == nil {
@@ -107,13 +112,21 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 			continue
 		}
 
+		filtered = append(filtered, ws)
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].Doc.LastUpdated.After(filtered[j].Doc.LastUpdated)
+	})
+
+	for _, ws := range filtered {
+		doc := ws.Doc
 		row := types.NewRow(
 			types.MRP(ColTicket, doc.Ticket),
 			types.MRP(ColTitle, doc.Title),
 			types.MRP(ColStatus, doc.Status),
 			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
 			types.MRP(ColPath, ws.Path),
-			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
+			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
@@ -148,6 +161,8 @@ func (c *ListTicketsCommand) Run(
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
+	// Filter and sort by last updated (newest first)
+	filtered := make([]TicketWorkspace, 0, len(workspaces))
 	for _, ws := range workspaces {
 		doc := ws.Doc
 		if doc == nil {
@@ -159,15 +174,49 @@ func (c *ListTicketsCommand) Run(
 		if settings.Status != "" && doc.Status != settings.Status {
 			continue
 		}
-		fmt.Printf("%s ‘%s’ status=%s topics=%s updated=%s path=%s\n",
+		filtered = append(filtered, ws)
+	}
+	sort.Slice(filtered, func(i, j int) bool {
+		return filtered[i].Doc.LastUpdated.After(filtered[j].Doc.LastUpdated)
+	})
+
+	// Markdown-formatted table for human-friendly output
+	if len(filtered) == 0 {
+		fmt.Println("No tickets found.")
+		return nil
+	}
+	var b strings.Builder
+	b.WriteString("| Ticket | Title | Status | Topics | Updated | Path |\n")
+	b.WriteString("|---|---|---|---|---|---|\n")
+	for _, ws := range filtered {
+		doc := ws.Doc
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s |\n",
 			doc.Ticket,
 			doc.Title,
 			doc.Status,
 			strings.Join(doc.Topics, ", "),
-			doc.LastUpdated.Format("2006-01-02"),
+			doc.LastUpdated.Format("2006-01-02 15:04"),
 			ws.Path,
 		)
 	}
+	content := b.String()
+
+	// If stdout is a TTY, render with glamour for nicer presentation
+	fd := os.Stdout.Fd()
+	if isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd) {
+		r, err := glamour.NewTermRenderer(
+			glamour.WithAutoStyle(),
+			glamour.WithWordWrap(0),
+		)
+		if err == nil {
+			if rendered, err2 := r.Render(content); err2 == nil {
+				fmt.Print(rendered)
+				return nil
+			}
+		}
+	}
+	// Fallback: print raw markdown
+	fmt.Print(content)
 	return nil
 }
 

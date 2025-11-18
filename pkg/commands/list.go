@@ -101,7 +101,7 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 			types.MRP("status", doc.Status),
 			types.MRP("topics", strings.Join(doc.Topics, ", ")),
 			types.MRP("path", ws.Path),
-			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
+			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {

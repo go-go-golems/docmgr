@@ -422,6 +422,26 @@ Helpful docs (built-in):
 	}
 	rootCmd.AddCommand(cobraRenumberCmd)
 
+	// Create rename-ticket command
+	renameTicketCmd, err := commands.NewRenameTicketCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating rename-ticket command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraRenameTicketCmd, err := cli.BuildCobraCommand(renameTicketCmd,
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building rename-ticket command: %v\n", err)
+		os.Exit(1)
+	}
+	rootCmd.AddCommand(cobraRenameTicketCmd)
+
 	// Create layout-fix command
 	layoutFixCmd, err := commands.NewLayoutFixCommand()
 	if err != nil {

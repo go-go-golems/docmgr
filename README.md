@@ -73,6 +73,9 @@ docmgr create-ticket --ticket MEN-1234 --title "Design Overview" --topics design
 
 Workspaces are created under `ttmp/YYYY/MM/DD/<ticket>-<slug>/` by default. Use `--path-template` to customize the relative layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`).
 
+# Rename a ticket ID and move its workspace
+docmgr rename-ticket --ticket MEN-1234 --new-ticket MEN-5678
+
 # Add a document to the ticket
 docmgr add --ticket MEN-1234 --doc-type design-doc --title "System Overview"
 

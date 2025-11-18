@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/adrg/frontmatter"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -142,20 +143,23 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		doc.ExternalSources = append(doc.ExternalSources, sourceRef)
 		doc.LastUpdated = time.Now()
 
-		// Read the content after frontmatter
-		content, err := os.ReadFile(indexPath)
+		// Read the content after frontmatter using adrg/frontmatter library
+		f, err := os.Open(indexPath)
 		if err != nil {
 			return fmt.Errorf("failed to read index content: %w", err)
 		}
+		defer func() {
+			_ = f.Close()
+		}()
 
-		// Find the end of frontmatter
-		contentStr := string(content)
-		parts := splitFrontmatter(contentStr)
-		if len(parts) < 2 {
-			return fmt.Errorf("invalid frontmatter in index.md")
+		// Parse frontmatter to get the body content
+		var existingDoc models.Document
+		bodyBytes, err := frontmatter.Parse(f, &existingDoc)
+		if err != nil {
+			return fmt.Errorf("failed to parse frontmatter in index.md: %w", err)
 		}
 
-		if err := writeDocumentWithFrontmatter(indexPath, doc, parts[1], true); err != nil {
+		if err := writeDocumentWithFrontmatter(indexPath, doc, string(bodyBytes), true); err != nil {
 			return fmt.Errorf("failed to update index.md: %w", err)
 		}
 	}
@@ -215,63 +219,6 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
-}
-
-func splitFrontmatter(content string) []string {
-	// Simple frontmatter splitter
-	parts := []string{}
-	lines := []string{}
-	inFrontmatter := false
-	frontmatterCount := 0
-
-	for _, line := range splitLines(content) {
-		if line == "---" {
-			frontmatterCount++
-			if frontmatterCount == 2 {
-				inFrontmatter = false
-				continue
-			} else {
-				inFrontmatter = true
-				continue
-			}
-		}
-
-		if !inFrontmatter && frontmatterCount >= 2 {
-			lines = append(lines, line)
-		}
-	}
-
-	parts = append(parts, "")
-	parts = append(parts, joinLines(lines))
-	return parts
-}
-
-func splitLines(s string) []string {
-	lines := []string{}
-	current := ""
-	for _, c := range s {
-		if c == '\n' {
-			lines = append(lines, current)
-			current = ""
-		} else {
-			current += string(c)
-		}
-	}
-	if current != "" {
-		lines = append(lines, current)
-	}
-	return lines
-}
-
-func joinLines(lines []string) string {
-	result := ""
-	for i, line := range lines {
-		result += line
-		if i < len(lines)-1 {
-			result += "\n"
-		}
-	}
-	return result
 }
 
 var _ cmds.GlazeCommand = &ImportFileCommand{}

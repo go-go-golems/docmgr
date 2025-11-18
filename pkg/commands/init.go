@@ -12,6 +12,7 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
+	"gopkg.in/yaml.v3"
 )
 
 // InitCommand initializes a documentation root (ttmp/) with vocabulary, templates, and guidelines
@@ -120,6 +121,46 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 	// Scaffold _templates/ and _guidelines/
 	if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
 		return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
+	}
+
+	// Create .ttmp.yaml config file template if it doesn't exist
+	repoRoot, err := FindRepositoryRoot()
+	if err == nil {
+		configPath := filepath.Join(repoRoot, ".ttmp.yaml")
+		if _, err := os.Stat(configPath); os.IsNotExist(err) {
+			// Determine relative path from repo root to docs root
+			relRoot, err := filepath.Rel(repoRoot, absRoot)
+			if err != nil {
+				relRoot = settings.Root
+			}
+			relVocab, err := filepath.Rel(repoRoot, vocabFilePath)
+			if err != nil {
+				relVocab = filepath.Join(relRoot, "vocabulary.yaml")
+			}
+
+			cfg := WorkspaceConfig{
+				Root:       relRoot,
+				Vocabulary: relVocab,
+			}
+
+			data, err := yaml.Marshal(&cfg)
+			if err != nil {
+				return fmt.Errorf("failed to marshal config: %w", err)
+			}
+
+			if err := os.WriteFile(configPath, data, 0644); err != nil {
+				return fmt.Errorf("failed to write .ttmp.yaml: %w", err)
+			}
+
+			row := types.NewRow(
+				types.MRP("root", settings.Root),
+				types.MRP("vocabulary", vocabFilePath),
+				types.MRP("docmgrignore", ignorePath),
+				types.MRP("config", configPath),
+				types.MRP("status", "initialized"),
+			)
+			return gp.AddRow(ctx, row)
+		}
 	}
 
 	row := types.NewRow(

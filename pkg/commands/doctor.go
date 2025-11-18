@@ -248,14 +248,24 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			}
 		}
 
-		// Validate required fields
+		// Validate required fields using Document.Validate()
+		if err := doc.Validate(); err != nil {
+			hasIssues = true
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "missing_required_fields"),
+				types.MRP("severity", "error"),
+				types.MRP("message", err.Error()),
+				types.MRP("path", indexPath),
+			)
+			if err := gp.AddRow(ctx, row); err != nil {
+				return err
+			}
+			highestSeverity = maxInt(highestSeverity, 2)
+		}
+
+		// Additional validation: Status and Topics (not in Validate() but checked by doctor)
 		issues := []string{}
-		if doc.Title == "" {
-			issues = append(issues, "missing Title")
-		}
-		if doc.Ticket == "" {
-			issues = append(issues, "missing Ticket")
-		}
 		if doc.Status == "" {
 			issues = append(issues, "missing Status")
 		}

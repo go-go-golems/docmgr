@@ -359,9 +359,39 @@ Helpful docs (built-in):
 		os.Exit(1)
 	}
 
+	// Create config parent command
+	configCmd := &cobra.Command{
+		Use:   "config",
+		Short: "Manage configuration",
+		Long:  "Commands for viewing and managing docmgr configuration",
+	}
+
+	// Create config show command
+	configShowCmd, err := commands.NewConfigShowCommand()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating config show command: %v\n", err)
+		os.Exit(1)
+	}
+	cobraConfigShowCmd, err := cli.BuildCobraCommand(configShowCmd,
+		cli.WithDualMode(true),
+		cli.WithGlazeToggleFlag("with-glaze-output"),
+		cli.WithParserConfig(cli.CobraParserConfig{
+			ShortHelpLayers: []string{layers.DefaultSlug},
+			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+		}),
+		cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
+		cli.WithCobraShortHelpLayers(layers.DefaultSlug),
+	)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error building config show command: %v\n", err)
+		os.Exit(1)
+	}
+	configCmd.AddCommand(cobraConfigShowCmd)
+
 	rootCmd.AddCommand(cobraInitCmd)
 	rootCmd.AddCommand(cobraConfigureCmd)
 	rootCmd.AddCommand(cobraCreateTicketCmd)
+	rootCmd.AddCommand(configCmd)
 	rootCmd.AddCommand(listCmd)
 	rootCmd.AddCommand(cobraAddCmd)
 	rootCmd.AddCommand(cobraDoctorCmd)

@@ -132,13 +132,13 @@ func LoadWorkspaceConfig() (*WorkspaceConfig, error) {
 		return nil, nil
 	}
 	verboseLog("Found config file: %s", path)
-	
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		// File exists but can't be read - this is an error
 		return nil, fmt.Errorf("failed to read %s: %w", path, err)
 	}
-	
+
 	var cfg WorkspaceConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		// Config file exists but is malformed - warn but don't fail
@@ -146,9 +146,9 @@ func LoadWorkspaceConfig() (*WorkspaceConfig, error) {
 		fmt.Fprintf(os.Stderr, "Continuing with default configuration. Fix the config file to resolve this warning.\n")
 		return nil, fmt.Errorf("failed to parse %s: %w", path, err)
 	}
-	
+
 	verboseLog("Loaded config from %s: root=%s, vocabulary=%s", path, cfg.Root, cfg.Vocabulary)
-	
+
 	// Normalize relative paths in config to be relative to the config file directory
 	if cfg.Root != "" && !filepath.IsAbs(cfg.Root) {
 		cfg.Root = filepath.Join(filepath.Dir(path), cfg.Root)
@@ -172,7 +172,7 @@ func LoadTTMPConfig() (*TTMPConfig, error) {
 		return nil, err
 	}
 	// Type alias means *TTMPConfig and *WorkspaceConfig are the same type
-	var result *TTMPConfig = (*TTMPConfig)(cfg)
+	result := (*TTMPConfig)(cfg)
 	return result, err
 }
 
@@ -187,7 +187,7 @@ func LoadTTMPConfig() (*TTMPConfig, error) {
 // If DOCMGR_DEBUG is set, the function logs each step of the resolution process.
 func ResolveRoot(root string) string {
 	verboseLog("Resolving workspace root (provided: %q)", root)
-	
+
 	// If a non-default root was explicitly provided and absolute, honor it
 	if root != "ttmp" && root != "" {
 		if filepath.IsAbs(root) {

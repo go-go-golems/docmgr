@@ -23,10 +23,10 @@
 //	# API Design
 //
 //	...document content...
-//
 package models
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -78,6 +78,46 @@ type Document struct {
 	ExternalSources []string     `yaml:"ExternalSources" json:"externalSources"`
 	Summary         string       `yaml:"Summary" json:"summary"`
 	LastUpdated     time.Time    `yaml:"LastUpdated" json:"lastUpdated"`
+}
+
+// Validate checks that the document has all required fields populated.
+//
+// Required fields are:
+//   - Title: Document title (must be non-empty)
+//   - Ticket: Ticket identifier (must be non-empty)
+//   - DocType: Document type (must be non-empty)
+//
+// Returns an error if any required field is missing. The error message
+// lists all missing fields.
+//
+// Example:
+//
+//	doc := &Document{
+//		Title:   "API Design",
+//		Ticket:  "MEN-3475",
+//		DocType: "design-doc",
+//	}
+//	if err := doc.Validate(); err != nil {
+//		return fmt.Errorf("invalid document: %w", err)
+//	}
+func (d *Document) Validate() error {
+	var missing []string
+
+	if strings.TrimSpace(d.Title) == "" {
+		missing = append(missing, "Title")
+	}
+	if strings.TrimSpace(d.Ticket) == "" {
+		missing = append(missing, "Ticket")
+	}
+	if strings.TrimSpace(d.DocType) == "" {
+		missing = append(missing, "DocType")
+	}
+
+	if len(missing) > 0 {
+		return fmt.Errorf("missing required fields: %s", strings.Join(missing, ", "))
+	}
+
+	return nil
 }
 
 // Vocabulary defines the controlled vocabulary for document metadata fields.

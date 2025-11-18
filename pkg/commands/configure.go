@@ -110,7 +110,7 @@ func (c *ConfigureCommand) RunIntoGlazeProcessor(
 	}
 
 	// Build config structure; keep relative paths relative to cfg file directory
-	cfg := TTMPConfig{
+	cfg := WorkspaceConfig{
 		Root: settings.Root,
 		Vocabulary: func() string {
 			if strings.TrimSpace(settings.Vocabulary) != "" {

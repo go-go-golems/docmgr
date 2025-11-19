@@ -70,3 +70,12 @@ Extended Round 4 error context work to doc search and doctor commands; verified 
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/doctor.go — doctor findings addRow context
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/search.go — search result/suggestion rows wrapped
 
+
+## 2025-11-18
+
+Captured a Round 4 implementation diary describing the search/doctor error-context rollout and task closure.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/ttmp/2025/11/18/DOCMGR-REFACTOR-code-refactoring-hierarchical-commands-and-utilities/various/2025-11-18-implementation-diary.md — New diary
+

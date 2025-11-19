@@ -9,5 +9,5 @@
 - [x] Extract internal/documents/frontmatter.go utility (Round 2)
 - [x] Extract internal/documents/walk.go utility (Round 2)
 - [x] Migrate commands to use internal/documents utilities (Round 2)
-- [ ] Add error context to bare return err statements (Round 4)
+- [x] Add error context to bare return err statements (Round 4)
 - [x] Fix config.go silent error swallowing with warnings (Round 4)

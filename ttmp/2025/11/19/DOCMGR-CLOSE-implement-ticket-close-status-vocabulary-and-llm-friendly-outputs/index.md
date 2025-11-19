@@ -1,7 +1,7 @@
 ---
 Title: 'IMPL: Implement ticket close, status vocabulary, and LLM-friendly outputs'
 Ticket: DOCMGR-CLOSE
-Status: active
+Status: complete
 Topics:
     - docmgr
     - workflow
@@ -18,6 +18,8 @@ RelatedFiles:
       Note: CLI wiring for ticket close
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/cmd/docmgr/cmds/ticket/ticket.go
       Note: Registered ticket close command
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/templates/templates.go
+      Note: Fixed duplicate frontmatter via hybrid parsing fallback
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/doctor.go
       Note: Added status vocabulary validation
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/init.go
@@ -32,14 +34,32 @@ RelatedFiles:
       Note: Added status category listing
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/vocabulary.go
       Note: Updated LoadVocabulary for Status
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/doc/docmgr-cli-guide.md
+      Note: Added status lifecycle transitions and ticket close documentation
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/doc/docmgr-how-to-setup.md
+      Note: Added section on status vocabulary and expanded intent vocabulary explanation
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/doc/docmgr-how-to-use.md
+      Note: Added ticket close workflow section with examples and status vocabulary
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/doc/how-to-work-on-any-ticket.md
+      Note: Added Step 7 explaining ticket close workflow for ticket completion
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/models/document.go
       Note: Added Status field to Vocabulary struct
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/ttmp/2025/11/19/DOCMGR-CLOSE-implement-ticket-close-status-vocabulary-and-llm-friendly-outputs/log/01-implementation-diary-ticket-close-status-vocabulary-and-frontmatter-fixes.md
+      Note: Complete implementation diary documenting what worked
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/ttmp/2025/11/19/DOCMGR-CLOSE-implement-ticket-close-status-vocabulary-and-llm-friendly-outputs/playbook/01-playbook-using-ticket-close-status-vocabulary-and-structured-outputs.md
+      Note: Comprehensive playbook covering ticket close
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/ttmp/vocabulary.yaml
       Note: Added status vocabulary entries
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-19T14:58:36.016944946-05:00
+LastUpdated: 2025-11-19T15:36:55.977201641-05:00
 ---
+
+
+
+
+
+
 
 
 # Implement ticket close, status vocabulary, and LLM-friendly outputs

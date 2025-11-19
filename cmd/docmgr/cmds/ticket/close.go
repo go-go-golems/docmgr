@@ -22,4 +22,3 @@ func newCloseCommand() (*cobra.Command, error) {
 	}
 	return cobraCmd, nil
 }
-

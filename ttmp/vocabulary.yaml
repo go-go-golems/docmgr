@@ -21,6 +21,10 @@ docTypes:
 intent:
     - slug: long-term
       description: Long-term documentation
+    - slug: short-term
+      description: Short-term documentation for active work
+    - slug: throwaway
+      description: Temporary/experimental documentation
 status:
     - slug: draft
       description: Initial draft state

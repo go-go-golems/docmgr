@@ -205,6 +205,8 @@ func seedDefaultVocabulary() error {
 
 	// Intent
 	addItem(&vocab.Intent, "long-term", "Likely to persist")
+	addItem(&vocab.Intent, "short-term", "Short-term documentation for active work")
+	addItem(&vocab.Intent, "throwaway", "Temporary/experimental documentation")
 
 	// Status
 	addItem(&vocab.Status, "draft", "Initial draft state")

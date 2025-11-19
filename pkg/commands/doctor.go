@@ -444,7 +444,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			}
 		}
 
-		// Enforce numeric prefix policy: all subdirectory .md files must start with NN- or NNN-
+		// Check all markdown files for invalid frontmatter and enforce numeric prefix policy
 		{
 			prefixRe := regexp.MustCompile(`^(\d{2,3})-`)
 			_ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
@@ -460,15 +460,37 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				}
 				// Skip root-level control files
 				dir := filepath.Dir(path)
-				if filepath.Clean(dir) == filepath.Clean(ticketPath) {
+				isRootLevel := filepath.Clean(dir) == filepath.Clean(ticketPath)
+				if isRootLevel {
 					bn := info.Name()
 					if bn == "index.md" || bn == "README.md" || bn == "tasks.md" || bn == "changelog.md" {
 						return nil
 					}
 				}
+
+				// Check for invalid frontmatter (try to parse it)
+				// Skip index.md as it's already checked above
+				if info.Name() != "index.md" {
+					_, err := readDocumentFrontmatter(path)
+					if err != nil {
+						hasIssues = true
+						row := types.NewRow(
+							types.MRP("ticket", doc.Ticket),
+							types.MRP("issue", "invalid_frontmatter"),
+							types.MRP("severity", "error"),
+							types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", err)),
+							types.MRP("path", path),
+						)
+						if err := gp.AddRow(ctx, row); err != nil {
+							return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", path, err)
+						}
+						highestSeverity = maxInt(highestSeverity, 2)
+					}
+				}
+
 				// Enforce prefix on subdirectory files
 				bn := info.Name()
-				if !prefixRe.MatchString(bn) {
+				if !isRootLevel && !prefixRe.MatchString(bn) {
 					hasIssues = true
 					row := types.NewRow(
 						types.MRP("ticket", doc.Ticket),

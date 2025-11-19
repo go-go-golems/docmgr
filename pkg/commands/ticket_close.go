@@ -24,10 +24,10 @@ type TicketCloseCommand struct {
 
 // TicketCloseSettings holds the parameters for the ticket close command
 type TicketCloseSettings struct {
-	Ticket        string `glazed.parameter:"ticket"`
-	Root          string `glazed.parameter:"root"`
-	Status        string `glazed.parameter:"status"`
-	Intent        string `glazed.parameter:"intent"`
+	Ticket         string `glazed.parameter:"ticket"`
+	Root           string `glazed.parameter:"root"`
+	Status         string `glazed.parameter:"status"`
+	Intent         string `glazed.parameter:"intent"`
 	ChangelogEntry string `glazed.parameter:"changelog-entry"`
 }
 
@@ -295,4 +295,3 @@ func (c *TicketCloseCommand) Run(
 }
 
 var _ cmds.BareCommand = &TicketCloseCommand{}
-

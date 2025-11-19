@@ -830,7 +830,81 @@ Output shows checkboxes: `[x]` for done, `[ ]` for pending.
 
 ---
 
-## 10. Validation with Doctor [INTERMEDIATE]
+## 10. Closing Tickets [INTERMEDIATE]
+
+When you've finished work on a ticket, use `ticket close` to atomically update status, changelog, and metadata:
+
+```bash
+# Close with defaults (status=complete)
+docmgr ticket close --ticket MEN-4242
+
+# Close with custom status
+docmgr ticket close --ticket MEN-4242 --status archived
+
+# Close with custom changelog message
+docmgr ticket close --ticket MEN-4242 --changelog-entry "All requirements implemented, ready for production"
+
+# Close and update intent
+docmgr ticket close --ticket MEN-4242 --intent long-term
+```
+
+**What `ticket close` does:**
+- Updates Status (default: `complete`, override with `--status`)
+- Optionally updates Intent (via `--intent`)
+- Appends a changelog entry (default: "Ticket closed")
+- Updates LastUpdated timestamp
+- Warns if tasks aren't all done (doesn't fail)
+
+**Structured output for automation:**
+```bash
+# Get machine-readable results
+docmgr ticket close --ticket MEN-4242 --with-glaze-output --output json
+
+# Example output:
+{
+  "ticket": "MEN-4242",
+  "all_tasks_done": true,
+  "open_tasks": 0,
+  "done_tasks": 5,
+  "status": "complete",
+  "operations": {
+    "status_updated": true,
+    "intent_updated": false,
+    "changelog_updated": true
+  }
+}
+```
+
+**Status Vocabulary:**
+
+Status values are vocabulary-guided (teams can customize). Default values:
+- `draft` — Initial draft state
+- `active` — Active work in progress
+- `review` — Ready for review
+- `complete` — Work completed
+- `archived` — Archived/completed work
+
+Suggested transitions (not enforced):
+- `draft` → `active` (start work)
+- `active` → `review` (ready for review)
+- `review` → `active` (send back for changes)
+- `review` → `complete` (approved)
+- `complete` → `archived` (long-term storage)
+
+Add custom status values with:
+```bash
+docmgr vocab add --category status --slug on-hold --description "Work paused"
+```
+
+**Pro tip:** When you check off the last task, `task check` suggests running `ticket close`:
+```bash
+docmgr task check --ticket MEN-4242 --id 3
+# Output: 💡 All tasks complete! Consider closing the ticket: docmgr ticket close --ticket MEN-4242
+```
+
+---
+
+## 11. Validation with Doctor [INTERMEDIATE]
 
 Check for problems before they bite you:
 
@@ -843,8 +917,8 @@ docmgr doctor --ticket MEN-4242
 ```
 
 **What doctor checks:**
-- ✅ Missing or invalid frontmatter
-- ✅ Unknown topics/doc-types (warns, doesn't fail)
+- ✅ Missing or invalid frontmatter (all markdown files)
+- ✅ Unknown topics/doc-types/status (warns, doesn't fail)
 - ✅ Missing Note on RelatedFiles entries (warns)
 - ✅ Missing files in RelatedFiles
 - ✅ Stale docs (older than --stale-after days)
@@ -853,6 +927,7 @@ docmgr doctor --ticket MEN-4242
 - Unknown topic (not in vocabulary.yaml) — Add it with `docmgr vocab add`
 - Missing file in RelatedFiles — Fix path or remove entry
 - Stale doc — Update content or adjust --stale-after threshold
+- Invalid frontmatter — Fix YAML syntax errors
 
 ### Suppressing Noise with .docmgrignore
 
@@ -873,7 +948,7 @@ Doctor automatically respects these patterns.
 
 ✅ **Milestone: You Can Now Use All Core Features!**
 
-You know: init, create, add, search, metadata, relate, changelog, tasks, validation.
+You know: init, create, add, search, metadata, relate, changelog, tasks, close, validation.
 
 **What's next?**
 - **Need automation?** → Continue to [Part 3](#part-3-power-user-features-⚡)

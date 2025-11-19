@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"gopkg.in/yaml.v3"
 )
@@ -16,7 +17,7 @@ import (
 // - fallback search for 'ttmp/vocabulary.yaml' upwards
 // - legacy fallback 'doc/vocabulary.yaml' upwards
 func LoadVocabulary() (*models.Vocabulary, error) {
-	if path, err := ResolveVocabularyPath(); err == nil {
+	if path, err := workspace.ResolveVocabularyPath(); err == nil {
 		if _, err2 := os.Stat(path); err2 == nil {
 			return loadVocabularyFromFile(path)
 		}
@@ -49,7 +50,7 @@ func loadVocabularyFromFile(path string) (*models.Vocabulary, error) {
 // If no configuration is found, it defaults to '<repoRoot>/ttmp/vocabulary.yaml'.
 func SaveVocabulary(vocab *models.Vocabulary, repoRoot string) error {
 	// Resolve configured path or default to <repoRoot>/ttmp/vocabulary.yaml
-	vocabPath, err := ResolveVocabularyPath()
+	vocabPath, err := workspace.ResolveVocabularyPath()
 	if err != nil || vocabPath == "" {
 		vocabPath = filepath.Join(repoRoot, "ttmp", "vocabulary.yaml")
 	}

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -77,7 +78,7 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -108,19 +109,19 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
 	// Filter and sort by last updated (newest first)
-	filtered := make([]TicketWorkspace, 0, len(workspaces))
+	filtered := make([]workspace.TicketWorkspace, 0, len(workspaces))
 	for _, ws := range workspaces {
 		doc := ws.Doc
 		if doc == nil {
@@ -176,19 +177,19 @@ func (c *ListTicketsCommand) Run(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
 	// Filter and sort by last updated (newest first)
-	filtered := make([]TicketWorkspace, 0, len(workspaces))
+	filtered := make([]workspace.TicketWorkspace, 0, len(workspaces))
 	for _, ws := range workspaces {
 		doc := ws.Doc
 		if doc == nil {

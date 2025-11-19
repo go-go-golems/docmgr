@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -91,7 +92,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	if s.ChangelogFile != "" {
 		changelogPath = s.ChangelogFile
 	} else {
-		s.Root = ResolveRoot(s.Root)
+		s.Root = workspace.ResolveRoot(s.Root)
 		if s.Ticket == "" {
 			return fmt.Errorf("must specify --ticket or --changelog-file")
 		}
@@ -378,7 +379,7 @@ func (c *ChangelogUpdateCommand) Run(
 	if s.ChangelogFile != "" {
 		changelogPath = s.ChangelogFile
 	} else {
-		s.Root = ResolveRoot(s.Root)
+		s.Root = workspace.ResolveRoot(s.Root)
 		if s.Ticket == "" {
 			return fmt.Errorf("must specify --ticket or --changelog-file")
 		}

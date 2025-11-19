@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -82,7 +83,7 @@ func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 	}
 
 	// Resolve workspace root from config/ENV/git
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if settings.Ticket == settings.NewTicket {
 		return fmt.Errorf("new ticket is identical to current ticket")
@@ -103,7 +104,7 @@ func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 	newBase := settings.NewTicket + remainder
 	newDir := filepath.Join(filepath.Dir(oldDir), newBase)
 
-	verboseLog("rename-ticket: oldDir=%s newDir=%s", oldDir, newDir)
+	workspace.VerboseLog("rename-ticket: oldDir=%s newDir=%s", oldDir, newDir)
 
 	if settings.DryRun {
 		row := types.NewRow(
@@ -196,7 +197,7 @@ func (c *RenameTicketCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if settings.Ticket == settings.NewTicket {
 		return fmt.Errorf("new ticket is identical to current ticket")

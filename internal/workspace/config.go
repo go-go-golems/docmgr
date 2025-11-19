@@ -1,8 +1,4 @@
-// Package commands provides CLI command implementations for docmgr.
-//
-// Commands are built using the Glazed framework and implement the glazed.Command
-// interface. Each command handles a specific docmgr operation such as creating tickets,
-// adding documents, searching, or managing vocabulary.
+// Package workspace provides configuration resolution utilities for docmgr.
 //
 // Configuration management functions in this package handle the resolution of
 // documentation workspace roots using a multi-level fallback chain:
@@ -14,7 +10,7 @@
 //  6. Default: ttmp in current directory
 //
 // See ResolveRoot() for the complete fallback logic.
-package commands
+package workspace
 
 import (
 	"fmt"
@@ -35,6 +31,11 @@ func verboseLog(format string, args ...interface{}) {
 	if isVerbose() {
 		fmt.Fprintf(os.Stderr, "[docmgr:debug] "+format+"\n", args...)
 	}
+}
+
+// VerboseLog exposes verbose logging for other packages that need to honor DOCMGR_DEBUG.
+func VerboseLog(format string, args ...interface{}) {
+	verboseLog(format, args...)
 }
 
 // WorkspaceConfig defines repository-level configuration for docmgr.

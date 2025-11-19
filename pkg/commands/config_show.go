@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -69,7 +70,7 @@ func (c *ConfigShowCommand) RunIntoGlazeProcessor(
 	}
 
 	steps := []resolutionStep{}
-	var activeConfig *WorkspaceConfig
+	var activeConfig *workspace.WorkspaceConfig
 	var activeConfigPath string
 	var resolvedRoot string
 
@@ -162,7 +163,7 @@ func (c *ConfigShowCommand) RunIntoGlazeProcessor(
 		if activeConfigPath != "" {
 			data, err := os.ReadFile(activeConfigPath)
 			if err == nil {
-				var cfg WorkspaceConfig
+				var cfg workspace.WorkspaceConfig
 				if err := yaml.Unmarshal(data, &cfg); err == nil {
 					activeConfig = &cfg
 					// Normalize paths
@@ -188,7 +189,7 @@ func (c *ConfigShowCommand) RunIntoGlazeProcessor(
 
 	// Step 5: Git repository root fallback
 	if resolvedRoot == "" || resolvedRoot == "ttmp" {
-		if gitRoot, err := FindGitRoot(); err == nil && gitRoot != "" {
+		if gitRoot, err := workspace.FindGitRoot(); err == nil && gitRoot != "" {
 			gitRootPath := filepath.Join(gitRoot, "ttmp")
 			steps = append(steps, resolutionStep{
 				Source: "Git repository root",
@@ -352,7 +353,7 @@ func (c *ConfigShowCommand) Run(
 	}
 
 	steps := []resolutionStep{}
-	var activeConfig *WorkspaceConfig
+	var activeConfig *workspace.WorkspaceConfig
 	var activeConfigPath string
 	var resolvedRoot string
 
@@ -455,7 +456,7 @@ func (c *ConfigShowCommand) Run(
 		if activeConfigPath != "" {
 			data, err := os.ReadFile(activeConfigPath)
 			if err == nil {
-				var cfg WorkspaceConfig
+				var cfg workspace.WorkspaceConfig
 				if err := yaml.Unmarshal(data, &cfg); err == nil {
 					activeConfig = &cfg
 					// Normalize paths
@@ -481,7 +482,7 @@ func (c *ConfigShowCommand) Run(
 
 	// Step 5: Git repository root fallback
 	if resolvedRoot == "" || resolvedRoot == "ttmp" {
-		if gitRoot, err := FindGitRoot(); err == nil && gitRoot != "" {
+		if gitRoot, err := workspace.FindGitRoot(); err == nil && gitRoot != "" {
 			gitRootPath := filepath.Join(gitRoot, "ttmp")
 			steps = append(steps, resolutionStep{
 				Source: "Git repository root",

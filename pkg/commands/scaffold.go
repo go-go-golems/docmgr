@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/go-go-golems/docmgr/internal/templates"
 )
 
 // writeFileIfNotExists writes content to a file only if it doesn't exist,
@@ -33,7 +35,7 @@ func scaffoldTemplatesAndGuidelines(root string, force bool) error {
 	}
 
 	// Write template files
-	for docType, template := range TemplateContent {
+	for docType, template := range templates.TemplateContent {
 		templatePath := filepath.Join(templatesDir, fmt.Sprintf("%s.md", docType))
 		if err := writeFileIfNotExists(templatePath, []byte(template), force); err != nil {
 			return fmt.Errorf("failed to write template %s: %w", docType, err)

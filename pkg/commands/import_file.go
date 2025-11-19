@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -82,7 +83,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
@@ -176,7 +177,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 }
 
 func findTicketDirectory(root, ticket string) (string, error) {
-	workspaces, err := collectTicketWorkspaces(root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(root, nil)
 	if err != nil {
 		return "", err
 	}

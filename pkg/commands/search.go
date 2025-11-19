@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -171,7 +172,7 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// If --files flag is set, suggest files instead of searching documents
 	if settings.Files {
@@ -962,7 +963,7 @@ func (c *SearchCommand) Run(
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Suggest files mode
 	if settings.Files {

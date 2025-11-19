@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -72,7 +73,7 @@ func (c *GuidelinesCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// List all available types
 	if settings.List {
@@ -136,7 +137,7 @@ func (c *GuidelinesCommand) Run(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if settings.List {
 		docTypes := ListGuidelineTypes()

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -69,7 +70,7 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	// Collect tickets to process
 	var ticketDirs []string
 	if settings.Ticket != "" {

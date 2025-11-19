@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -107,10 +108,10 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	// Echo resolved context prior to write
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := settings.Root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {

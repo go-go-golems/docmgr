@@ -17,10 +17,17 @@ RelatedFiles:
       Note: Duplication analysis and utility extraction
     - Path: ../../DOCMGR-CODE-REVIEW-code-review-docmgr-codebase/analysis/04-debate-round-04-error-handling-and-user-experience.md
       Note: Error handling improvements
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/cmd/docmgr/cmds/root.go
+      Note: Hierarchical Cobra command tree
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/templates/templates.go
+      Note: Template scaffolding now internal
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/workspace/config.go
+      Note: Config helpers moved to internal/workspace
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-11-18T15:40:59.087327699-05:00
 ---
+
 
 
 

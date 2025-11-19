@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -80,7 +81,7 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -93,7 +94,7 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 	referenceDocs := 0
 	playbooks := 0
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
@@ -179,14 +180,14 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 	}
 
 	// Resolve config and vocabulary paths for summary
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 
 	// Emit warnings
 	cwd, _ := os.Getwd()
 	fallbackCandidate := filepath.Join(cwd, "ttmp")
 	if cfgPath == "" {
-		if _, err := FindGitRoot(); err != nil {
+		if _, err := workspace.FindGitRoot(); err != nil {
 			// No config and no git; if using CWD fallback, warn
 			if filepath.Clean(settings.Root) == filepath.Clean(fallbackCandidate) {
 				_ = gp.AddRow(ctx, types.NewRow(
@@ -197,7 +198,7 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 			}
 		}
 	}
-	if roots, err := DetectMultipleTTMPRoots(); err == nil && len(roots) > 1 {
+	if roots, err := workspace.DetectMultipleTTMPRoots(); err == nil && len(roots) > 1 {
 		_ = gp.AddRow(ctx, types.NewRow(
 			types.MRP("level", "warning"),
 			types.MRP("message", fmt.Sprintf("Multiple ttmp/ roots detected: %s", strings.Join(roots, ", "))),
@@ -234,7 +235,7 @@ func (c *StatusCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
@@ -246,7 +247,7 @@ func (c *StatusCommand) Run(
 	referenceDocs := 0
 	playbooks := 0
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
@@ -311,8 +312,8 @@ func (c *StatusCommand) Run(
 		}
 	}
 
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 	fmt.Printf(
 		"root=%s config=%s vocabulary=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
 		settings.Root, cfgPath, vocabPath, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,

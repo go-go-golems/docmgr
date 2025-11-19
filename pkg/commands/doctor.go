@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -105,7 +106,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -115,7 +116,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	highestSeverity := 0 // 0=ok,1=warning,2=error
 
 	// Determine repository root
-	repoRoot, _ := FindRepositoryRoot()
+	repoRoot, _ := workspace.FindRepositoryRoot()
 
 	// Load .docmgrignore patterns and merge with provided ignore-globs
 	// 1) Try repository root
@@ -161,12 +162,12 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return false
 	}
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, skipFn)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, skipFn)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	missingIndexDirs, err := collectTicketScaffoldsWithoutIndex(settings.Root, skipFn)
+	missingIndexDirs, err := workspace.CollectTicketScaffoldsWithoutIndex(settings.Root, skipFn)
 	if err != nil {
 		return fmt.Errorf("failed to detect missing index.md files: %w", err)
 	}
@@ -362,7 +363,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					candidates = append(candidates, filepath.Join(repoRoot, rf.Path))
 				}
 				// 2) .ttmp.yaml directory (config base)
-				if cfgPath, errCfg := FindTTMPConfigPath(); errCfg == nil {
+				if cfgPath, errCfg := workspace.FindTTMPConfigPath(); errCfg == nil {
 					cfgBase := filepath.Dir(cfgPath)
 					candidates = append(candidates, filepath.Join(cfgBase, rf.Path))
 					// 3) Parent of config base (supports multi-repo workspace siblings)

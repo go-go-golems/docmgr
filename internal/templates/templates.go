@@ -1,4 +1,4 @@
-package commands
+package templates
 
 import (
 	"bytes"
@@ -445,7 +445,7 @@ func GetTemplate(docType string) (string, bool) {
 }
 
 // loadTemplate loads a template from the filesystem first, then falls back to embedded content
-func loadTemplate(root, docType string) (string, bool) {
+func LoadTemplate(root, docType string) (string, bool) {
 	path := filepath.Join(root, "_templates", docType+".md")
 	if b, err := os.ReadFile(path); err == nil {
 		return string(b), true
@@ -455,7 +455,7 @@ func loadTemplate(root, docType string) (string, bool) {
 
 // extractFrontmatterAndBody splits a template into (frontmatter, body) using adrg/frontmatter library.
 // If no frontmatter is found, returns ("", template).
-func extractFrontmatterAndBody(tpl string) (string, string) {
+func ExtractFrontmatterAndBody(tpl string) (string, string) {
 	// Use adrg/frontmatter library for robust parsing
 	reader := bytes.NewReader([]byte(tpl))
 	var meta map[string]interface{}
@@ -472,7 +472,7 @@ func extractFrontmatterAndBody(tpl string) (string, string) {
 }
 
 // renderTemplateBody replaces placeholders in the template body based on the document values
-func renderTemplateBody(body string, doc *models.Document) string {
+func RenderTemplateBody(body string, doc *models.Document) string {
 	now := time.Now().Format("2006-01-02")
 
 	// Build lists

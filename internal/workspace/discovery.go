@@ -1,4 +1,4 @@
-package commands
+package workspace
 
 import (
 	"io/fs"
@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/adrg/frontmatter"
 	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
@@ -17,12 +18,12 @@ type TicketWorkspace struct {
 	FrontmatterErr error
 }
 
-// collectTicketWorkspaces walks the docs root and returns directories that contain
+// CollectTicketWorkspaces walks the docs root and returns directories that contain
 // an index.md file with valid frontmatter. Directories whose base name starts with
 // an underscore are ignored (for example, _templates, _guidelines). The optional
 // skipDir predicate can be used to skip additional directories by relative path
 // or base name.
-func collectTicketWorkspaces(root string, skipDir func(relPath, baseName string) bool) ([]TicketWorkspace, error) {
+func CollectTicketWorkspaces(root string, skipDir func(relPath, baseName string) bool) ([]TicketWorkspace, error) {
 	workspaces := []TicketWorkspace{}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -68,11 +69,11 @@ func collectTicketWorkspaces(root string, skipDir func(relPath, baseName string)
 	return workspaces, nil
 }
 
-// collectTicketScaffoldsWithoutIndex finds directories that look like a ticket workspace
+// CollectTicketScaffoldsWithoutIndex finds directories that look like a ticket workspace
 // (they contain scaffold subdirectories such as design/ or .meta/) but are missing index.md.
 // The same skipDir predicate used in collectTicketWorkspaces can be provided to omit
 // ignored paths.
-func collectTicketScaffoldsWithoutIndex(root string, skipDir func(relPath, baseName string) bool) ([]string, error) {
+func CollectTicketScaffoldsWithoutIndex(root string, skipDir func(relPath, baseName string) bool) ([]string, error) {
 	missing := []string{}
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -123,4 +124,19 @@ func hasWorkspaceScaffold(path string) bool {
 		}
 	}
 	return false
+}
+
+func readDocumentFrontmatter(path string) (*models.Document, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+
+	var doc models.Document
+	if _, err := frontmatter.Parse(f, &doc); err != nil {
+		return nil, err
+	}
+
+	return &doc, nil
 }

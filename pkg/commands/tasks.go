@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -31,7 +32,7 @@ func loadTasksFile(root string, ticket string, tasksFile string) (string, []stri
 	if tasksFile != "" {
 		path = tasksFile
 	} else {
-		root = ResolveRoot(root)
+		root = workspace.ResolveRoot(root)
 		// Prefer simple name-based match to avoid false positives with guideline folders
 		// and non-ticket directories that may contain an index.md without frontmatter.
 		td := ""

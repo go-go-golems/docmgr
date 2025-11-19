@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/templates"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -98,7 +100,7 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Create slug from title
 	slug := utils.Slugify(settings.Title)
@@ -129,7 +131,7 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 
 	// Create index.md with frontmatter
 	// Load config defaults
-	cfg, _ := LoadTTMPConfig()
+	cfg, _ := workspace.LoadWorkspaceConfig()
 
 	doc := models.Document{
 		Title:   settings.Title,
@@ -158,11 +160,11 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 	indexPath := filepath.Join(ticketPath, "index.md")
 	// Try to load index template body
 	indexBody := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
-	if tpl, ok := loadTemplate(settings.Root, "index"); ok {
-		_, body := extractFrontmatterAndBody(tpl)
+	if tpl, ok := templates.LoadTemplate(settings.Root, "index"); ok {
+		_, body := templates.ExtractFrontmatterAndBody(tpl)
 		// Ensure placeholders are populated from doc
 		doc.Title = settings.Title
-		indexBody = renderTemplateBody(body, &doc)
+		indexBody = templates.RenderTemplateBody(body, &doc)
 	}
 	if err := writeDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
 		return fmt.Errorf("failed to write index.md: %w", err)

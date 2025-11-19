@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -81,10 +82,10 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	// Echo resolved context prior to write
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := settings.Root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {
@@ -124,7 +125,7 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 	}
 
 	// Create .ttmp.yaml config file template if it doesn't exist
-	repoRoot, err := FindRepositoryRoot()
+	repoRoot, err := workspace.FindRepositoryRoot()
 	if err == nil {
 		configPath := filepath.Join(repoRoot, ".ttmp.yaml")
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
@@ -138,7 +139,7 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 				relVocab = filepath.Join(relRoot, "vocabulary.yaml")
 			}
 
-			cfg := WorkspaceConfig{
+			cfg := workspace.WorkspaceConfig{
 				Root:       relRoot,
 				Vocabulary: relVocab,
 			}
@@ -206,7 +207,7 @@ func seedDefaultVocabulary() error {
 	addItem(&vocab.Intent, "long-term", "Likely to persist")
 
 	// Persist
-	repoRoot, err := FindRepositoryRoot()
+	repoRoot, err := workspace.FindRepositoryRoot()
 	if err != nil {
 		return err
 	}

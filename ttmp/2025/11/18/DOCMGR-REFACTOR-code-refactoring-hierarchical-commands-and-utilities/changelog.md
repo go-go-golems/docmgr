@@ -51,3 +51,22 @@ Wrapped high-traffic CLI listings with contextual errors, fixed config warnings,
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/meta_update.go — glaze row reporting fixes
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/import_file.go — safer external source metadata writes
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/layout_fix.go — dry-run/move logging with context
+
+## 2025-11-18
+
+Added contextual errors to all tasks CLI commands and re-ran go test.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/tasks.go — tasks command error handling
+
+
+## 2025-11-18
+
+Extended Round 4 error context work to doc search and doctor commands; verified via go test + live CLI runs.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/doctor.go — doctor findings addRow context
+- /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/search.go — search result/suggestion rows wrapped
+

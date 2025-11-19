@@ -144,11 +144,11 @@ Examples:
 func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
 	s := &TasksListSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
 	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks from file: %w", err)
 	}
 	for _, t := range tasks {
 		row := types.NewRow(
@@ -158,7 +158,7 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 			types.MRP(ColFile, path),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to emit tasks list row %d: %w", t.TaskIndex, err)
 		}
 	}
 	return nil
@@ -170,11 +170,11 @@ var _ cmds.GlazeCommand = &TasksListCommand{}
 func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksListSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
 	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks from file: %w", err)
 	}
 	for _, t := range tasks {
 		mark := " "
@@ -218,11 +218,11 @@ func NewTasksAddCommand() (*TasksAddCommand, error) {
 func (c *TasksAddCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksAddSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks add settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
 	newLine := formatTaskLine(false, s.Text)
 	if s.After <= 0 || len(tasks) == 0 {
@@ -241,7 +241,7 @@ func (c *TasksAddCommand) Run(ctx context.Context, pl *layers.ParsedLayers) erro
 		}
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
 	fmt.Printf("Task added to %s\n", path)
 	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
@@ -280,11 +280,11 @@ func NewTasksCheckCommand() (*TasksCheckCommand, error) {
 func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksCheckSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
 	var targets []int
 	if len(s.IDs) > 0 {
@@ -319,7 +319,7 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) er
 		return fmt.Errorf("task id(s) not found: %v", missing)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
 	idsStr := make([]string, 0, len(targets))
 	for _, id := range targets {
@@ -366,11 +366,11 @@ func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
 func (c *TasksUncheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksUncheckSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks uncheck settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
 	var targets []int
 	if len(s.IDs) > 0 {
@@ -405,7 +405,7 @@ func (c *TasksUncheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) 
 		return fmt.Errorf("task id(s) not found: %v", missing)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
 	idsStr := make([]string, 0, len(targets))
 	for _, id := range targets {
@@ -452,11 +452,11 @@ func NewTasksEditCommand() (*TasksEditCommand, error) {
 func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
 	s := &TasksEditSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
 	var target *parsedTask
 	for i := range tasks {
@@ -470,10 +470,13 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	}
 	lines[target.LineIndex] = formatTaskLine(target.Checked, s.Text)
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
 	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task edited"), types.MRP("id", s.ID))
-	return gp.AddRow(ctx, row)
+	if err := gp.AddRow(ctx, row); err != nil {
+		return fmt.Errorf("failed to emit tasks edit row for %s id %d: %w", path, s.ID, err)
+	}
+	return nil
 }
 
 var _ cmds.GlazeCommand = &TasksEditCommand{}
@@ -506,11 +509,11 @@ func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
 func (c *TasksRemoveCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
 	s := &TasksRemoveSettings{}
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
-		return err
+		return fmt.Errorf("failed to parse tasks remove settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
 	if len(s.IDs) == 0 {
 		return fmt.Errorf("no target task specified")
@@ -541,7 +544,7 @@ func (c *TasksRemoveCommand) Run(ctx context.Context, pl *layers.ParsedLayers) e
 		newLines = append(newLines[:idx], newLines[idx+1:]...)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(newLines, "\n")+"\n"), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
 	idsStr := make([]string, 0, len(s.IDs))
 	for _, id := range s.IDs {

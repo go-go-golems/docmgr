@@ -180,7 +180,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			types.MRP("path", missing),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to emit doctor row (missing_index) for %s: %w", missing, err)
 		}
 		highestSeverity = maxInt(highestSeverity, 2)
 	}
@@ -197,7 +197,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", indexPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", filepath.Base(ticketPath), err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
 			continue
@@ -224,7 +224,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("index_files", fmt.Sprintf("%v", indexFiles)),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (multiple_index) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
 		}
@@ -243,7 +243,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -260,7 +260,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", indexPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
 		}
@@ -292,7 +292,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", indexPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (unknown_topics) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
 		}
@@ -309,7 +309,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (unknown_doc_type) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -327,7 +327,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -349,7 +349,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (missing_related_file_note) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -399,7 +399,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (missing_related_file) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -416,7 +416,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (missing_field) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -456,7 +456,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 						types.MRP("path", path),
 					)
 					if err := gp.AddRow(ctx, row); err != nil {
-						return err
+						return fmt.Errorf("failed to emit doctor row (missing_numeric_prefix) for %s: %w", path, err)
 					}
 					highestSeverity = maxInt(highestSeverity, 1)
 				}
@@ -474,7 +474,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", ticketPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor summary row for %s: %w", doc.Ticket, err)
 			}
 		}
 	}

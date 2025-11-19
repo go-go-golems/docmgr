@@ -29,12 +29,20 @@ RelatedFiles:
       Note: Template scaffolding now internal
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/workspace/config.go
       Note: Config helpers moved to internal/workspace
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/doctor.go
+      Note: Doctor command rows now emit contextual errors
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/meta_update.go
       Note: Now uses internal/documents
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/search.go
+      Note: Search command suggestion/errors now include context
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/tasks.go
+      Note: Wrapped tasks commands errors with context
 ExternalSources: []
-Summary: "Round 2 document utilities shipped; CLI verified with new docs while kicking off Round 4 error-handling improvements."
+Summary: Round 2 document utilities shipped; CLI verified with new docs while kicking off Round 4 error-handling improvements.
 LastUpdated: 2025-11-18T20:50:06.490255749-05:00
 ---
+
+
 
 
 

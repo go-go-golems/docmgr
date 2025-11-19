@@ -10,6 +10,8 @@ const (
 	ColTopics      = "topics"
 	ColPath        = "path"
 	ColLastUpdated = "last_updated"
+	ColTasksOpen   = "tasks_open"
+	ColTasksDone   = "tasks_done"
 
 	ColDocType = "doc_type"
 
@@ -23,7 +25,7 @@ const (
 	ColDescription = "description"
 )
 
-var ColumnsTickets = []string{ColTicket, ColTitle, ColStatus, ColTopics, ColPath, ColLastUpdated}
+var ColumnsTickets = []string{ColTicket, ColTitle, ColStatus, ColTopics, ColTasksOpen, ColTasksDone, ColPath, ColLastUpdated}
 var ColumnsDocs = []string{ColTicket, ColDocType, ColTitle, ColStatus, ColTopics, ColPath, ColLastUpdated}
 var ColumnsTasksList = []string{ColIndex, ColChecked, ColText, ColFile}
 var ColumnsVocabList = []string{ColCategory, ColSlug, ColDescription}

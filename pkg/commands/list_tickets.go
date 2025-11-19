@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -15,6 +16,28 @@ import (
 	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/mattn/go-isatty"
 )
+
+// countTasksInTicket loads tasks.md under a ticket and returns (open, done)
+func countTasksInTicket(ticketDir string) (int, int) {
+	path := filepath.Join(ticketDir, "tasks.md")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return 0, 0
+	}
+	lines := strings.Split(strings.ReplaceAll(string(content), "\r\n", "\n"), "\n")
+	tasks := parseTasksFromLines(lines)
+	done := 0
+	for _, t := range tasks {
+		if t.Checked {
+			done++
+		}
+	}
+	open := len(tasks) - done
+	if open < 0 {
+		open = 0
+	}
+	return open, done
+}
 
 // ListTicketsCommand lists ticket workspaces
 type ListTicketsCommand struct {
@@ -120,11 +143,14 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 
 	for _, ws := range filtered {
 		doc := ws.Doc
+		open, done := countTasksInTicket(ws.Path)
 		row := types.NewRow(
 			types.MRP(ColTicket, doc.Ticket),
 			types.MRP(ColTitle, doc.Title),
 			types.MRP(ColStatus, doc.Status),
 			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
+			types.MRP(ColTasksOpen, open),
+			types.MRP(ColTasksDone, done),
 			types.MRP(ColPath, ws.Path),
 			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
@@ -186,15 +212,17 @@ func (c *ListTicketsCommand) Run(
 		return nil
 	}
 	var b strings.Builder
-	b.WriteString("| Ticket | Title | Status | Topics | Updated | Path |\n")
-	b.WriteString("|---|---|---|---|---|---|\n")
+	b.WriteString("| Ticket | Title | Status | Topics | Tasks (open/done) | Updated | Path |\n")
+	b.WriteString("|---|---|---|---|---:|---|---|\n")
 	for _, ws := range filtered {
 		doc := ws.Doc
-		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s |\n",
+		open, done := countTasksInTicket(ws.Path)
+		fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %s | %s |\n",
 			doc.Ticket,
 			doc.Title,
 			doc.Status,
 			strings.Join(doc.Topics, ", "),
+			open, done,
 			doc.LastUpdated.Format("2006-01-02 15:04"),
 			ws.Path,
 		)

@@ -340,7 +340,7 @@ jobs:
 
 echo "Docs requiring attention (>60 days since update):"
 
-docmgr search --updated-since "60 days ago" --with-glaze-output --output json | \
+docmgr doc search --updated-since "60 days ago" --with-glaze-output --output json | \
   jq -r '.[] | {
     ticket: .ticket,
     title: .title,

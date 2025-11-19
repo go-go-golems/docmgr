@@ -350,9 +350,9 @@ docmgr meta update --ticket MEN-4242 \
 ```bash
 # Use shell variable to avoid repeating ticket
 TICKET=MEN-4242
-docmgr add --ticket $TICKET --doc-type design-doc --title "Architecture"
-docmgr add --ticket $TICKET --doc-type reference --title "API Contracts"
-docmgr add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
+docmgr doc add --ticket $TICKET --doc-type design-doc --title "Architecture"
+docmgr doc add --ticket $TICKET --doc-type reference --title "API Contracts"
+docmgr doc add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
 ```
 
 ---
@@ -372,17 +372,17 @@ Bidirectional linking between documentation and code is one of docmgr's most pow
 
 ```bash
 # Relate files to ticket index with notes (repeat --file-note)
-docmgr relate --ticket MEN-4242 \
+docmgr doc relate --ticket MEN-4242 \
   --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 ```
 
 ### Relating with Notes (ALWAYS)
 
-**Notes are required.** Always provide a note for each file when running `docmgr relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked. The legacy `--files` flag was removed to enforce this behavior; use repeated `--file-note "path:reason"` entries instead.
+**Notes are required.** Always provide a note for each file when running `docmgr doc relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked. The legacy `--files` flag was removed to enforce this behavior; use repeated `--file-note "path:reason"` entries instead.
 
 ```bash
-docmgr relate --ticket MEN-4242 \
+docmgr doc relate --ticket MEN-4242 \
   --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 ```
@@ -491,14 +491,14 @@ Examples:
 # Human
 docmgr list tickets
 docmgr status --summary-only
-docmgr search --query websocket
-docmgr guidelines --doc-type design-doc
+docmgr doc search --query websocket
+docmgr doc guidelines --doc-type design-doc
 
 # Structured
 docmgr list tickets --with-glaze-output --output json
 docmgr status --with-glaze-output --output table
-docmgr search --query websocket --with-glaze-output --output yaml
-docmgr guidelines --doc-type design-doc --with-glaze-output --output json
+docmgr doc search --query websocket --with-glaze-output --output yaml
+docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
 
 ### Root discovery and shell gotchas
@@ -626,14 +626,14 @@ Examples:
 # Human
 docmgr list tickets
 docmgr status --summary-only
-docmgr search --query websocket
-docmgr guidelines --doc-type design-doc
+docmgr doc search --query websocket
+docmgr doc guidelines --doc-type design-doc
 
 # Structured
 docmgr list tickets --with-glaze-output --output json
 docmgr status --with-glaze-output --output table
-docmgr search --query websocket --with-glaze-output --output yaml
-docmgr guidelines --doc-type design-doc --with-glaze-output --output json
+docmgr doc search --query websocket --with-glaze-output --output yaml
+docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
 
 ### Root discovery and shell gotchas
@@ -675,17 +675,17 @@ Find design context from code files:
 
 ```bash
 # During code review: "What's the design for this file?"
-$ docmgr search --file backend/api/register.go
+$ docmgr doc search --file backend/api/register.go
 
 MEN-4242/design-doc/01-path-normalization.md — Path Normalization [MEN-4242] ::
   file=backend/api/register.go note=Registers API routes
 
 # Add to a specific document (notes required)
-docmgr relate --doc ttmp/YYYY/MM/DD/MEN-3083-.../design/sem-event-flow.md \
+docmgr doc relate --doc ttmp/YYYY/MM/DD/MEN-3083-.../design/sem-event-flow.md \
   --file-note "pkg/timeline/controller.go:TUI timeline lifecycle (apply/render)"
 
 # Let docmgr suggest related files and store reasons as notes
-docmgr relate --ticket MEN-3083 --suggest --apply-suggestions --query timeline --topics conversation,events
+docmgr doc relate --ticket MEN-3083 --suggest --apply-suggestions --query timeline --topics conversation,events
 ```
 
 **Saves 2-3 minutes per file review** by surfacing design context instantly.
@@ -731,7 +731,7 @@ Prefer relating most files to the specific subdocument that explains them (desig
 Example:
 ```bash
 # Relate implementation files to the design doc (preferred)
-docmgr relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
+docmgr doc relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
   --file-note "backend/api/register.go:Normalization entrypoint and router setup"
 ```
 
@@ -742,7 +742,7 @@ docmgr relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
 1) **Relate files with notes** to the ticket index
 
 ```bash
-docmgr relate --ticket MEN-4242 \
+docmgr doc relate --ticket MEN-4242 \
   --file-note \"backend/api/register.go:Registers API routes (normalization logic)\" \
   --file-note \"web/src/store/api/chatApi.ts:Frontend API integration\"
 ```
@@ -786,7 +786,7 @@ Changelogs are dated automatically. Keep entries short — mention what changed 
 1) Relate files with notes (to ticket index):
 
 ```bash
-docmgr relate --ticket MEN-4242 \
+docmgr doc relate --ticket MEN-4242 \
   --file-note \"backend/api/register.go:Path normalization source\" \
   --file-note \"web/src/store/api/chatApi.ts:Frontend integration\"
 ```
@@ -806,7 +806,7 @@ docmgr doctor --ticket MEN-4242 --stale-after 30 --fail-on error
 
 **Why this matters:** Changelogs are a record of WHAT changed. RelatedFiles document WHICH code implements it. Together they give complete context.
 
-**Note:** `RelatedFiles` in YAML supports both `Path`/`Note` and `path`/`note` formats. Use `docmgr relate` commands to maintain consistency.
+**Note:** `RelatedFiles` in YAML supports both `Path`/`Note` and `path`/`note` formats. Use `docmgr doc relate` commands to maintain consistency.
 
 ---
 
@@ -816,14 +816,14 @@ Track concrete steps in `tasks.md`:
 
 ```bash
 # Add tasks
-docmgr tasks add --ticket MEN-4242 --text "Update API docs for /v2"
-docmgr tasks add --ticket MEN-4242 --text "Add WebSocket lifecycle diagram"
+docmgr task add --ticket MEN-4242 --text "Update API docs for /v2"
+docmgr task add --ticket MEN-4242 --text "Add WebSocket lifecycle diagram"
 
 # Check off completed tasks
-docmgr tasks check --ticket MEN-4242 --id 1,2
+docmgr task check --ticket MEN-4242 --id 1,2
 
 # List tasks
-docmgr tasks list --ticket MEN-4242
+docmgr task list --ticket MEN-4242
 ```
 
 Output shows checkboxes: `[x]` for done, `[ ]` for pending.
@@ -954,7 +954,7 @@ docmgr list docs --ticket MEN-4242 --with-glaze-output \
 
 ```bash
 # Find docs older than 60 days, mark for review
-docmgr search --updated-since "60 days ago" --with-glaze-output --output json | \
+docmgr doc search --updated-since "60 days ago" --with-glaze-output --output json | \
   jq -r '.[] | .path' | \
   while read doc; do
     docmgr meta update --doc "$doc" --field Status --value "needs-review"
@@ -990,8 +990,8 @@ docmgr status --stale-after 7 --with-glaze-output --output json | \
 # Create similar tickets
 for i in {1..5}; do
     TICKET=PROJ-00$i
-    docmgr create-ticket --ticket $TICKET --title "Feature $i" --topics backend
-    docmgr add --ticket $TICKET --doc-type design-doc --title "Design $i"
+    docmgr ticket create-ticket --ticket $TICKET --title "Feature $i" --topics backend
+    docmgr doc add --ticket $TICKET --doc-type design-doc --title "Design $i"
 done
 
 # Update all docs of a type
@@ -1045,7 +1045,7 @@ docs-validate:
 docs-report:
 	@docmgr status --with-glaze-output --output table
 	@echo ""
-	@docmgr search --updated-since "7 days ago"
+	@docmgr doc search --updated-since "7 days ago"
 ```
 
 ---
@@ -1119,11 +1119,11 @@ docmgr meta update --ticket MEN-4242 --field Owners --value "current,team,member
 **Maintain RelatedFiles:**
 ```bash
 # Add files as you implement (notes required)
-docmgr relate --ticket MEN-4242 \
+docmgr doc relate --ticket MEN-4242 \
   --file-note "new/file.go:What this file does"
 
 # Remove files if refactored away
-docmgr relate --ticket MEN-4242 --remove-files old/file.go
+docmgr doc relate --ticket MEN-4242 --remove-files old/file.go
 ```
 
 **Update index.md body regularly:**
@@ -1135,7 +1135,7 @@ docmgr relate --ticket MEN-4242 --remove-files old/file.go
 **Keep tasks.md and changelog.md current:**
 ```bash
 # Check off tasks as you complete them
-docmgr tasks check --ticket MEN-4242 --id 1,2
+docmgr task check --ticket MEN-4242 --id 1,2
 
 # Add changelog entries after significant changes
 docmgr changelog update --ticket MEN-4242 --entry "Completed authentication flow"
@@ -1152,8 +1152,8 @@ docmgr doctor --all --stale-after 30
 
 **Consult guidelines when writing:**
 ```bash
-docmgr guidelines --doc-type design-doc
-docmgr guidelines --doc-type reference
+docmgr doc guidelines --doc-type design-doc
+docmgr doc guidelines --doc-type reference
 ```
 
 ---
@@ -1273,24 +1273,24 @@ cd "ttmp/MEN-XXXX-name-\(with-parens\)"
 docmgr init --seed-vocabulary
 
 # Create ticket
-docmgr create-ticket --ticket YOUR-123 --title "..." --topics ...
+docmgr ticket create-ticket --ticket YOUR-123 --title "..." --topics ...
 
 # Add docs
-docmgr add --ticket YOUR-123 --doc-type TYPE --title "..."
+docmgr doc add --ticket YOUR-123 --doc-type TYPE --title "..."
 
 # Search
-docmgr search --query "..."
-docmgr search --file path/to/file.go
+docmgr doc search --query "..."
+docmgr doc search --file path/to/file.go
 
 # Relate files
-docmgr relate --ticket YOUR-123 --file-note "path:note" --file-note "path2:note2"
+docmgr doc relate --ticket YOUR-123 --file-note "path:note" --file-note "path2:note2"
 
 # Validate
 docmgr doctor --ticket YOUR-123
 
 # Tasks
-docmgr tasks add --ticket YOUR-123 --text "..."
-docmgr tasks check --ticket YOUR-123 --id 1,2
+docmgr task add --ticket YOUR-123 --text "..."
+docmgr task check --ticket YOUR-123 --id 1,2
 
 # Changelog
 docmgr changelog update --ticket YOUR-123 --entry "..."

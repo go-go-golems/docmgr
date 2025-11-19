@@ -12,9 +12,15 @@ func newListCommand() (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.BuildCommand(
+	cobraCmd, err := common.BuildCommand(
 		cmd,
 		cli.WithDualMode(true),
 		cli.WithGlazeToggleFlag("with-glaze-output"),
 	)
+	if err != nil {
+		return nil, err
+	}
+	// Keep backward-compatibility: allow `docmgr doc docs`
+	cobraCmd.Aliases = append(cobraCmd.Aliases, "docs")
+	return cobraCmd, nil
 }

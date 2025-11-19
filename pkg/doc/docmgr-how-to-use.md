@@ -133,8 +133,8 @@ This creates:
 ```
 ttmp/
 ├── vocabulary.yaml     # Defines topics/docTypes (used for validation warnings)
-├── _templates/         # Document templates (used by 'docmgr add')
-├── _guidelines/        # Writing guidelines (see 'docmgr guidelines')
+├── _templates/         # Document templates (used by 'docmgr doc add')
+├── _guidelines/        # Writing guidelines (see 'docmgr doc guidelines')
 └── .docmgrignore       # Files to exclude from validation
 ```
 
@@ -179,7 +179,7 @@ If you see these, initialization succeeded!
 ## 3. Create Your First Ticket [BASIC]
 
 ```bash
-docmgr create-ticket --ticket MEN-4242 \
+docmgr ticket create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket
 ```
@@ -222,9 +222,9 @@ The `index.md` file is your ticket's single entry point. It:
 Add documents to organize your thinking:
 
 ```bash
-docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
-docmgr add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Lifecycle"
-docmgr add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
+docmgr doc add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr doc add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Lifecycle"
+docmgr doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
 ```
 
 **What happens:**
@@ -240,7 +240,7 @@ docmgr add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
 - `playbook` — Test procedures, operational runbooks
 - Custom types are allowed and create their own subdirectory (e.g., `til/`, `analysis/`)
 
-> **Tip:** Want structure guidance? Run: `docmgr guidelines --doc-type design-doc`
+> **Tip:** Want structure guidance? Run: `docmgr doc guidelines --doc-type design-doc`
 
 ---
 
@@ -250,16 +250,16 @@ Find docs by content or metadata:
 
 ```bash
 # Full-text search
-docmgr search --query "WebSocket"
+docmgr doc search --query "WebSocket"
 
 # Filter by metadata
-docmgr search --query "API" --topics backend --doc-type design-doc
+docmgr doc search --query "API" --topics backend --doc-type design-doc
 
 # Find docs that reference a code file (reverse lookup)
-docmgr search --file backend/api/register.go
+docmgr doc search --file backend/api/register.go
 
 # Find docs referencing any file in a directory
-docmgr search --dir backend/api/
+docmgr doc search --dir backend/api/
 ```
 
 **Common usecases:**
@@ -359,7 +359,7 @@ docmgr add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
 
 ## 7. Relating Files to Docs [INTERMEDIATE]
 
-Bidirectional linking between documentation and code is one of docmgr's most powerful features. By relating code files to docs with explanatory notes, you create a navigation map that answers two critical questions: "What's the design for this code file?" (code review context) and "Which code implements this design?" (implementation reference). The `docmgr relate` command manages these relationships in frontmatter, while `docmgr search --file` provides instant reverse lookup from any code file to its related documentation.
+Bidirectional linking between documentation and code is one of docmgr's most powerful features. By relating code files to docs with explanatory notes, you create a navigation map that answers two critical questions: "What's the design for this code file?" (code review context) and "Which code implements this design?" (implementation reference). The `docmgr doc relate` command manages these relationships in frontmatter, while `docmgr doc search --file` provides instant reverse lookup from any code file to its related documentation.
 
 ### The Workflow
 
@@ -437,18 +437,18 @@ Use the `tasks` commands to track the concrete steps for your ticket directly in
 
 ```bash
 # List tasks with indexes
-docmgr tasks list --ticket MEN-4242
+docmgr task list --ticket MEN-4242
 
 # Add a new task
-docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2"
+docmgr task add --ticket MEN-4242 --text "Update API docs for /chat/v2"
 
 # Check / uncheck by id
-docmgr tasks check   --ticket MEN-4242 --id 1
-docmgr tasks uncheck --ticket MEN-4242 --id 1
+docmgr task check   --ticket MEN-4242 --id 1
+docmgr task uncheck --ticket MEN-4242 --id 1
 
 # Edit and remove
-docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
-docmgr tasks remove --ticket MEN-4242 --id 3
+docmgr task edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
+docmgr task remove --ticket MEN-4242 --id 3
 ```
 
 Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
@@ -458,7 +458,7 @@ Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only ed
 - Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
 - Tracks day‑to‑day execution; keep it current as tasks start/finish
 - Break work into small, actionable items; optionally tag owners inline
-- Use the `docmgr tasks` commands to add/check/edit/remove without manual formatting
+- Use the `docmgr task` commands to add/check/edit/remove without manual formatting
 
 ## 11. Check Workspace Status
 
@@ -572,18 +572,18 @@ Use the `tasks` commands to track the concrete steps for your ticket directly in
 
 ```bash
 # List tasks with indexes
-docmgr tasks list --ticket MEN-4242
+docmgr task list --ticket MEN-4242
 
 # Add a new task
-docmgr tasks add --ticket MEN-4242 --text "Update API docs for /chat/v2"
+docmgr task add --ticket MEN-4242 --text "Update API docs for /chat/v2"
 
 # Check / uncheck by id
-docmgr tasks check   --ticket MEN-4242 --id 1
-docmgr tasks uncheck --ticket MEN-4242 --id 1
+docmgr task check   --ticket MEN-4242 --id 1
+docmgr task uncheck --ticket MEN-4242 --id 1
 
 # Edit and remove
-docmgr tasks edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
-docmgr tasks remove --ticket MEN-4242 --id 3
+docmgr task edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
+docmgr task remove --ticket MEN-4242 --id 3
 ```
 
 Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
@@ -593,7 +593,7 @@ Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only ed
 - Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
 - Tracks day‑to‑day execution; keep it current as tasks start/finish
 - Break work into small, actionable items; optionally tag owners inline
-- Use the `docmgr tasks` commands to add/check/edit/remove without manual formatting
+- Use the `docmgr task` commands to add/check/edit/remove without manual formatting
 
 ## 11. Check Workspace Status
 

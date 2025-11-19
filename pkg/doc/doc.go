@@ -6,6 +6,7 @@
 // The embedded files include:
 //   - docmgr-how-to-use.md: Quick start and usage guide
 //   - docmgr-how-to-setup.md: Initial setup instructions
+//   - how-to-work-on-any-ticket.md: Checklist for taking over any ticket
 //   - docmgr-cli-guide.md: Complete CLI reference
 //   - templates-and-guidelines.md: Document templates and guidelines
 //   - docmgr-ci-automation.md: CI/CD integration guide

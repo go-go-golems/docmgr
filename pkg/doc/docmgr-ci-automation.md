@@ -255,7 +255,7 @@ docs-report:
 	  jq -r '.docs[] | select(.stale) | "[\(.ticket)] \(.title) — stale \(.days_since_update) days"'
 	@echo ""
 	@echo "=== Recent Activity (7 days) ==="
-	@docmgr search --updated-since "7 days ago"
+	@docmgr doc search --updated-since "7 days ago"
 
 # Clean up old date-based tickets
 docs-clean:
@@ -297,17 +297,17 @@ docmgr status --summary-only
 echo ""
 
 echo "⚠️  Stale Docs (>30 days):"
-docmgr search --updated-since "30 days ago" --with-glaze-output --output json | \
+docmgr doc search --updated-since "30 days ago" --with-glaze-output --output json | \
   jq -r '.[] | "  • [\(.ticket)] \(.title) (updated: \(.last_updated))"'
 echo ""
 
 echo "📝 Recent Activity (last 7 days):"
-docmgr search --updated-since "7 days ago" --with-glaze-output --output json | \
+docmgr doc search --updated-since "7 days ago" --with-glaze-output --output json | \
   jq -r '.[] | "  • [\(.ticket)] \(.title) — \(.doc_type)"' | head -10
 echo ""
 
 echo "🔍 Top Topics:"
-docmgr list docs --with-glaze-output --output json | \
+docmgr doc list --with-glaze-output --output json | \
   jq -r '.[].topics' | tr ',' '\n' | sort | uniq -c | sort -rn | head -5
 ```
 
@@ -367,7 +367,7 @@ curl -X POST "$SLACK_WEBHOOK_URL" \
 docmgr meta update --ticket MEN-4242 --field Status --value complete
 
 # Update owners across entire workspace
-for ticket in $(docmgr list tickets --with-glaze-output --select ticket); do
+for ticket in $(docmgr ticket list --with-glaze-output --select ticket); do
   docmgr meta update --ticket "$ticket" --field Owners --value "new,team"
 done
 ```
@@ -378,13 +378,13 @@ done
 # Auto-relate files from feature branch (notes required for each path)
 git diff main --name-only | \
   grep -E '\.(go|ts|tsx|py)$' | \
-  xargs -I FILE docmgr relate --ticket FEAT-042 \
+  xargs -I FILE docmgr doc relate --ticket FEAT-042 \
     --file-note "FILE:Auto-related from git diff"
 
 # With git commit messages as notes
 for file in $(git diff main --name-only); do
   NOTE=$(git log -1 --pretty=%B "$file" | head -1)
-  docmgr relate --ticket FEAT-042 --file-note "$file:$NOTE"
+  docmgr doc relate --ticket FEAT-042 --file-note "$file:$NOTE"
 done
 ```
 
@@ -392,11 +392,11 @@ done
 
 ```bash
 # Before renaming/moving files, find docs that reference them
-docmgr search --file pkg/auth/service.go --with-glaze-output --output json | \
+docmgr doc search --file pkg/auth/service.go --with-glaze-output --output json | \
   jq -r '.[] | .path'
 
 # Or search by directory
-docmgr search --dir pkg/auth/ --with-glaze-output --output json | \
+docmgr doc search --dir pkg/auth/ --with-glaze-output --output json | \
   jq -r '.[] | "\(.ticket): \(.title)"' | sort -u
 ```
 
@@ -409,9 +409,9 @@ docmgr search --dir pkg/auth/ --with-glaze-output --output json | \
 echo "# Ticket to Code Map"
 echo ""
 
-for ticket in $(docmgr list tickets --with-glaze-output --select ticket); do
+for ticket in $(docmgr ticket list --with-glaze-output --select ticket); do
   echo "## $ticket"
-  docmgr search --ticket "$ticket" --with-glaze-output --output json | \
+  docmgr doc search --ticket "$ticket" --with-glaze-output --output json | \
     jq -r '.[0].related_files[]? | "- \(.path) — \(.note)"' 2>/dev/null
   echo ""
 done
@@ -513,7 +513,7 @@ Send to monitoring system (Prometheus, Datadog, etc.).
 
 ## 9. Common Automation Patterns
 
-Bulk operations and automation patterns transform docmgr from a documentation tool into a programmable documentation system. These patterns leverage structured output (`--with-glaze-output`) and command composability to automate tedious tasks like syncing metadata from external systems, bulk-updating stale docs, and generating documentation indexes. The key insight is using `docmgr search` to find target docs, then piping paths to `docmgr meta update` or `docmgr relate` for batch modifications.
+Bulk operations and automation patterns transform docmgr from a documentation tool into a programmable documentation system. These patterns leverage structured output (`--with-glaze-output`) and command composability to automate tedious tasks like syncing metadata from external systems, bulk-updating stale docs, and generating documentation indexes. The key insight is using `docmgr doc search` to find target docs, then piping paths to `docmgr meta update` or `docmgr doc relate` for batch modifications.
 
 ### Pattern 1: Sync Metadata from External System
 
@@ -535,7 +535,7 @@ done
 #!/bin/bash
 # Mark stale docs for review
 
-docmgr search --updated-since "60 days ago" --with-glaze-output --output json | \
+docmgr doc search --updated-since "60 days ago" --with-glaze-output --output json | \
   jq -r '.[] | .path' | \
   while read doc; do
     docmgr meta update --doc "$doc" --field Status --value "needs-review"
@@ -553,7 +553,7 @@ echo "" >> DOCS.md
 echo "Auto-generated: $(date)" >> DOCS.md
 echo "" >> DOCS.md
 
-docmgr list tickets --with-glaze-output --output json | \
+docmgr ticket list --with-glaze-output --output json | \
   jq -r '.[] | "## [\(.ticket)] \(.title)\n\n**Topics:** \(.topics)\n**Status:** \(.status)\n\n"' \
   >> DOCS.md
 ```
@@ -695,7 +695,7 @@ exit ${EXIT_CODE:-0}
 **Parallel validation:**
 ```bash
 # Validate tickets in parallel
-docmgr list tickets --with-glaze-output --select ticket | \
+docmgr ticket list --with-glaze-output --select ticket | \
   xargs -P 4 -I {} docmgr doctor --ticket {} --fail-on error
 ```
 

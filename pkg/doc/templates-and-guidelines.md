@@ -35,11 +35,11 @@ These folders are part of your repository so your team can customize house style
 
 ## How They’re Used in the CLI
 
-- `docmgr guidelines --doc-type <type> --output markdown`
+- `docmgr doc guidelines --doc-type <type> --output markdown`
   - Shows the guideline text for a given doc type
   - If `ttmp/_guidelines/<type>.md` exists, it is used; otherwise the embedded default is shown
 
-- `docmgr add --ticket <ticket> --doc-type <type> --title <title>`
+- `docmgr doc add --ticket <ticket> --doc-type <type> --title <title>`
   - Creates a new file with frontmatter
   - If `ttmp/_templates/<type>.md` exists, the body is rendered from the template with variable substitution (for example, `{{TITLE}}`, `{{TICKET}}`, `{{TOPICS}}`, `{{OWNERS}}`)
 
@@ -102,10 +102,10 @@ Explain the “why” behind decisions; enable future readers to re-derive conte
 ## Frequently Asked Questions
 
 Q: Do templates enforce structure automatically?
-A: Yes, when a matching template exists under `ttmp/_templates/`, `docmgr add` will render the body with variable substitution.
+A: Yes, when a matching template exists under `ttmp/_templates/`, `docmgr doc add` will render the body with variable substitution.
 
 Q: Any guidance for RelatedFiles?
-A: Prefer adding a short rationale note per file when possible. Use `docmgr relate --file-note "path:why it matters"` to capture the context.
+A: Prefer adding a short rationale note per file when possible. Use `docmgr doc relate --file-note "path:why it matters"` to capture the context.
 
 Q: How should we maintain changelogs?
 A: Capture decisions and progress in `changelog.md`. Use `docmgr changelog update` to append dated entries and optionally include related files with notes.
@@ -114,6 +114,6 @@ Q: Can guidelines differ between teams?
 A: Yes. Start with shared defaults and layer team-specific files in `ttmp/_guidelines/`.
 
 Q: How do I preview guidelines?
-A: Run `docmgr guidelines --doc-type <type> --output markdown`.
+A: Run `docmgr doc guidelines --doc-type <type> --output markdown`.
 
 

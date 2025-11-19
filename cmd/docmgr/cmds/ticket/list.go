@@ -12,9 +12,15 @@ func newListCommand() (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.BuildCommand(
+	cobraCmd, err := common.BuildCommand(
 		cmd,
 		cli.WithDualMode(true),
 		cli.WithGlazeToggleFlag("with-glaze-output"),
 	)
+	if err != nil {
+		return nil, err
+	}
+	// Allow `docmgr ticket list` as an alias to `docmgr ticket tickets`
+	cobraCmd.Aliases = append(cobraCmd.Aliases, "list")
+	return cobraCmd, nil
 }

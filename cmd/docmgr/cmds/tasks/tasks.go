@@ -5,8 +5,9 @@ import "github.com/spf13/cobra"
 // Attach registers the tasks command tree under the root (docmgr tasks ...).
 func Attach(root *cobra.Command) error {
 	tasksCmd := &cobra.Command{
-		Use:   "tasks",
-		Short: "Manage ticket task lists",
+		Use:     "task",
+		Aliases: []string{"tasks"},
+		Short:   "Manage ticket task lists",
 	}
 
 	listCmd, err := newListCommand()

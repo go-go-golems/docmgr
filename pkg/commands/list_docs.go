@@ -32,7 +32,7 @@ type ListDocsSettings struct {
 func NewListDocsCommand() (*ListDocsCommand, error) {
 	return &ListDocsCommand{
 		CommandDescription: cmds.NewCommandDescription(
-			"docs",
+			"list",
 			cmds.WithShort("List individual documents"),
 			cmds.WithLong(`Lists all individual documents across all workspaces.
 
@@ -41,6 +41,7 @@ Columns:
 
 Examples:
   # Human output
+  docmgr doc list
   docmgr list docs
   docmgr list docs --ticket MEN-3475
   docmgr list docs --doc-type design-doc

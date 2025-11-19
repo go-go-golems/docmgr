@@ -59,8 +59,8 @@ Setup-specific terms used in this guide:
 
 - **Docs root** — The `ttmp/` directory containing all documentation (default location)
 - **Vocabulary** — Central `vocabulary.yaml` defining valid topics, doc types, and intents
-- **Templates** — Markdown files in `_templates/` used by `docmgr add` to scaffold new docs
-- **Guidelines** — Writing guidance in `_guidelines/` shown via `docmgr guidelines`
+- **Templates** — Markdown files in `_templates/` used by `docmgr doc add` to scaffold new docs
+- **Guidelines** — Writing guidance in `_guidelines/` shown via `docmgr doc guidelines`
 - **.ttmp.yaml** — Optional config file for custom root paths or multi-repo setups
 - **Slugification** — How ticket titles become directory names (lowercase, dashes, normalized)
 
@@ -122,16 +122,16 @@ docmgr status --summary-only
 docmgr vocab list
 
 # See templates
-docmgr list tickets  # Will be empty but proves root exists
+docmgr ticket list  # Will be empty but proves root exists
 ```
 
 **Understanding what was created:**
 
 - **vocabulary.yaml** — Defines valid topics (backend, frontend, websocket), doc types (design-doc, reference, playbook), and intents (long-term). Used for validation warnings, not enforcement.
 
-- **_templates/** — Contains markdown templates for each doc type with placeholders (`{{TITLE}}`, `{{TICKET}}`, etc.) that `docmgr add` fills automatically.
+- **_templates/** — Contains markdown templates for each doc type with placeholders (`{{TITLE}}`, `{{TICKET}}`, etc.) that `docmgr doc add` fills automatically.
 
-- **_guidelines/** — Writing guidance shown via `docmgr guidelines --doc-type TYPE`. Customize these to encode your team's standards.
+- **_guidelines/** — Writing guidance shown via `docmgr doc guidelines --doc-type TYPE`. Customize these to encode your team's standards.
 
 - **.docmgrignore** — Like `.gitignore` but for docmgr validation. Excludes `.git/`, `_templates/`, `_guidelines/` by default.
 
@@ -187,7 +187,7 @@ docmgr vocab add --category intent --slug temporary \
 
 ```bash
 # After adding 'til' to vocabulary
-docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
+docmgr doc add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
 ```
 
 If a template exists at `ttmp/_templates/til.md`, it will be used. Otherwise the doc is created under a subdirectory named after its doc-type (for example `til/`) with `DocType: til` so it still participates in search and validation.
@@ -209,13 +209,13 @@ Templates are in `ttmp/_templates/<docType>.md` and use placeholders:
 - `{{OWNERS}}` — YAML-formatted owners array
 - `{{SUMMARY}}` — Summary text
 
-**When you run `docmgr add`, these placeholders are automatically filled.**
+**When you run `docmgr doc add`, these placeholders are automatically filled.**
 
 **Customize templates** by editing files in `_templates/`. Use `docmgr init --force` to re-scaffold if you want to reset to defaults.
 
 ### Guidelines
 
-Guidelines are shown via `docmgr guidelines --doc-type TYPE` and help writers understand:
+Guidelines are shown via `docmgr doc guidelines --doc-type TYPE` and help writers understand:
 - What sections to include
 - What quality standards to meet
 - What reviewers look for
@@ -223,9 +223,9 @@ Guidelines are shown via `docmgr guidelines --doc-type TYPE` and help writers un
 **Preview guidelines:**
 
 ```bash
-docmgr guidelines --doc-type design-doc
-docmgr guidelines --doc-type reference
-docmgr guidelines --list  # Show all available types
+docmgr doc guidelines --doc-type design-doc
+docmgr doc guidelines --doc-type reference
+docmgr doc guidelines --list  # Show all available types
 ```
 
 **Customize guidelines** by editing files in `_guidelines/`.
@@ -240,9 +240,9 @@ docmgr guidelines --list  # Show all available types
 ✅ **Milestone: Repository is Set Up!**
 
 Your team can now:
-- Create tickets with `docmgr create-ticket`
-- Add docs with `docmgr add`
-- Search with `docmgr search`
+- Create tickets with `docmgr ticket create-ticket`
+- Add docs with `docmgr doc add`
+- Search with `docmgr doc search`
 
 **What's next?**
 - Set up CI validation (see separate **CI and Automation Guide**)
@@ -332,7 +332,7 @@ repository/
 
 **Per-ticket directories:**
 - `index.md` — Ticket overview
-- Doc-type subdirectories are created on demand by `docmgr add` (for example `design-doc/`, `reference/`, `playbook/`, or custom types like `til/`)
+- Doc-type subdirectories are created on demand by `docmgr doc add` (for example `design-doc/`, `reference/`, `playbook/`, or custom types like `til/`)
 - `scripts/`, `sources/`, `archive/` — Other content
 - `.meta/` — Internal metadata
 
@@ -386,7 +386,7 @@ Edit `ttmp/_templates/til.md` with your preferred structure. If no template exis
 4) **Use it:**
 
 ```bash
-docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
+docmgr doc add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnection"
 ```
 
 **Common custom doc types teams add:**
@@ -407,7 +407,7 @@ docmgr add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Reconnect
 1) **Create ticket workspace:**
 
 ```bash
-docmgr create-ticket --ticket MIGRATE-001 --title "Existing Docs" --topics migration
+docmgr ticket create-ticket --ticket MIGRATE-001 --title "Existing Docs" --topics migration
 ```
 
 2) **Move files into ticket directory:**
@@ -455,7 +455,7 @@ Your repository now has:
 **What's next?**
 - Set up CI (see [Part 2](#part-2-ci-integration-🔧))
 - Share setup with team
-- Create first ticket: `docmgr create-ticket`
+- Create first ticket: `docmgr ticket create-ticket`
 
 ---
 
@@ -590,7 +590,7 @@ doc-report:
         
         echo ""
         echo "=== Recent Activity (Last 7 Days) ==="
-        docmgr search --updated-since "7 days ago"
+        docmgr doc search --updated-since "7 days ago"
 ```
 
 ---
@@ -612,10 +612,10 @@ doc-report:
 ### Use Search in Reviews
 ```bash
 # During code review: find design context
-docmgr search --file path/to/changed-file.go
+docmgr doc search --file path/to/changed-file.go
 
 # During architecture review: find related docs
-docmgr search --query "authentication" --doc-type design-doc
+docmgr doc search --query "authentication" --doc-type design-doc
 ```
 
 ### Treat Doctor Warnings as Tech Debt
@@ -632,7 +632,7 @@ docmgr search --query "authentication" --doc-type design-doc
 ### Use Tasks and Changelog
 ```bash
 # Encourage consistent tracking
-docmgr tasks add --ticket T --text "Task description"
+docmgr task add --ticket T --text "Task description"
 docmgr changelog update --ticket T --entry "What changed"
 ```
 

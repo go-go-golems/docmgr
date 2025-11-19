@@ -42,7 +42,7 @@ docmgr vocab list  # Should show seeded topics (chat, backend, websocket)
 
 # 4) Create a ticket workspace under ttmp/
 # Creates a dedicated directory with index, tasks, changelog, and standard subfolders.
-docmgr create-ticket --ticket MEN-4242 \
+docmgr ticket create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket
 
@@ -50,9 +50,9 @@ By default the workspace lives under `ttmp/YYYY/MM/DD/<ticket>-<slug>/`. Overrid
 
 # 5) Add documents
 # Add a design doc, a reference doc, and a playbook to start capturing context.
-docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
-docmgr add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"
-docmgr add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"
+docmgr doc add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr doc add --ticket MEN-4242 --doc-type reference  --title "Chat WebSocket Lifecycle"
+docmgr doc add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for Chat"
 
 # 6) Update metadata on the ticket index
 # Owners and Summary improve discoverability; RelatedFiles enable reverse lookup.
@@ -80,11 +80,11 @@ Examples:
 
 ```bash
 # Human-readable (default)
-docmgr list tickets
+docmgr ticket list
 
 # Structured
-docmgr list tickets --with-glaze-output --output json
-docmgr search --query websocket --with-glaze-output --output yaml
+docmgr ticket list --with-glaze-output --output json
+docmgr doc search --query websocket --with-glaze-output --output yaml
 ```
 
 ## 3. Core Concepts
@@ -174,7 +174,7 @@ Creates the `ttmp/` directory if missing, and scaffolds `_templates/` and `_guid
 
 Run this when you start a ticket. It creates a consistent place to capture thinking and decisions.
 ```bash
-docmgr create-ticket --ticket MEN-4242 \
+docmgr ticket create-ticket --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket \
   [--force]
@@ -186,11 +186,11 @@ Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` unde
 
 Create additional documents as needed. Use short, descriptive titles; you can refine content later.
 ```bash
-docmgr add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
-docmgr add --ticket MEN-4242 --doc-type til        --title "TIL — Hydration end-to-end"
+docmgr doc add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr doc add --ticket MEN-4242 --doc-type til        --title "TIL — Hydration end-to-end"
 
 # Optional overrides (taken from ticket by default)
-docmgr add --ticket MEN-4242 \
+docmgr doc add --ticket MEN-4242 \
   --doc-type til \
   --title "TIL conv-id vs run-id hydration curl debugging 2025-11-03" \
   --topics hydration,persistence,conversation,bug \
@@ -212,10 +212,10 @@ Notes:
 Guidelines provide structure and “what good looks like” for each doc type. They help new contributors produce consistent, reviewable docs.
 ```bash
 # Human-readable guideline text
-docmgr guidelines --doc-type design-doc
+docmgr doc guidelines --doc-type design-doc
 
 # Structured output (for tooling)
-docmgr guidelines --doc-type design-doc --with-glaze-output --output json
+docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
 
 Prints the guideline text for the given type. Files in `ttmp/_guidelines/` override embedded defaults.
@@ -238,8 +238,8 @@ Supported fields: Title, Ticket, Status, Topics, DocType, Intent, Owners, Relate
 
 Use listing commands to navigate by ticket. This is useful in reviews and when returning to paused work.
 ```bash
-docmgr list tickets [--ticket MEN-4242]
-docmgr list docs    --ticket MEN-4242
+docmgr ticket list [--ticket MEN-4242]
+docmgr doc list    --ticket MEN-4242
 ```
 
 ### 4.8 Search (Content + Metadata)
@@ -247,30 +247,30 @@ docmgr list docs    --ticket MEN-4242
 Search supports both content queries and metadata filters. Reverse lookups (`--file`, `--dir`) help you find docs from code paths; `--external-source` helps find docs tied to external references. Date filters surface recent activity.
 ```bash
 # Content search
-docmgr search --query "WebSocket" --ticket MEN-4242
+docmgr doc search --query "WebSocket" --ticket MEN-4242
 
 # Metadata filters
-docmgr search --ticket MEN-4242 --topics websocket,backend --doc-type design-doc
+docmgr doc search --ticket MEN-4242 --topics websocket,backend --doc-type design-doc
 
 # Reverse lookup by file or directory
-docmgr search --file backend/chat/api/register.go
-docmgr search --dir  web/src/store/api/
+docmgr doc search --file backend/chat/api/register.go
+docmgr doc search --dir  web/src/store/api/
 
 # External source reference
-docmgr search --external-source "https://example.com/ws-lifecycle"
+docmgr doc search --external-source "https://example.com/ws-lifecycle"
 
 # Date filters (relative and absolute)
-docmgr search --updated-since "2 weeks ago" --ticket MEN-4242
-docmgr search --since "last month" --until "today"
+docmgr doc search --updated-since "2 weeks ago" --ticket MEN-4242
+docmgr doc search --since "last month" --until "today"
 
 # File suggestions (heuristics: related files, git, ripgrep/grep)
-docmgr search --ticket MEN-4242 --topics chat --files
+docmgr doc search --ticket MEN-4242 --topics chat --files
 
 # Relate changed files from git status (modified, staged, untracked)
-docmgr relate --ticket MEN-4242 --suggest --from-git
+docmgr doc relate --ticket MEN-4242 --suggest --from-git
 
 # Apply changed files directly to the ticket index with notes
-docmgr relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
+docmgr doc relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
 ```
 
 Relative date formats supported include: `today`, `yesterday`, `last week`, `this month`, `last month`, `2 weeks ago`, as well as ISO-like absolute dates (for example, `2025-01-01`).
@@ -281,18 +281,18 @@ Link code files to documentation for bidirectional navigation. Relating files en
 
 ```bash
 # Relate files to ticket index with explanatory notes
-docmgr relate --ticket MEN-4242 \
+docmgr doc relate --ticket MEN-4242 \
   --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 
 # Suggest files from git changes
-docmgr relate --ticket MEN-4242 --suggest --from-git
+docmgr doc relate --ticket MEN-4242 --suggest --from-git
 
 # Apply suggestions automatically
-docmgr relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
+docmgr doc relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
 
 # Remove files
-docmgr relate --ticket MEN-4242 --remove-files old/file.go
+docmgr doc relate --ticket MEN-4242 --remove-files old/file.go
 ```
 
 Notes explain WHY each file matters, turning file lists into navigation maps.
@@ -316,13 +316,13 @@ Manage concrete steps in `tasks.md`:
 
 ```bash
 # Add tasks
-docmgr tasks add --ticket MEN-4242 --text "Update API docs"
+docmgr task add --ticket MEN-4242 --text "Update API docs"
 
 # Check off tasks
-docmgr tasks check --ticket MEN-4242 --id 1,2
+docmgr task check --ticket MEN-4242 --id 1,2
 
 # List tasks
-docmgr tasks list --ticket MEN-4242
+docmgr task list --ticket MEN-4242
 ```
 
 ### 4.12 Doctor (Validation)
@@ -366,33 +366,33 @@ go build -o /tmp/docmgr ./cmd/docmgr
 # Create temp root and seed a workspace
 ROOT=$(mktemp -d /tmp/docmgr-tests-XXXXXXXX)
 /tmp/docmgr init --root "$ROOT"
-/tmp/docmgr create-ticket --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
-/tmp/docmgr add  --ticket TST-1000 --doc-type design-doc --title "Design One" --root "$ROOT"
+/tmp/docmgr ticket create-ticket --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
+/tmp/docmgr doc add  --ticket TST-1000 --doc-type design-doc --title "Design One" --root "$ROOT"
 
 # list tickets
-/tmp/docmgr list tickets --root "$ROOT"
-/tmp/docmgr list tickets --root "$ROOT" --with-glaze-output --output json
+/tmp/docmgr ticket list --root "$ROOT"
+/tmp/docmgr ticket list --root "$ROOT" --with-glaze-output --output json
 
 # list docs
-/tmp/docmgr list docs --root "$ROOT" --ticket TST-1000
-/tmp/docmgr list docs --root "$ROOT" --ticket TST-1000 --with-glaze-output --output table
+/tmp/docmgr doc list --root "$ROOT" --ticket TST-1000
+/tmp/docmgr doc list --root "$ROOT" --ticket TST-1000 --with-glaze-output --output table
 
 # status
 /tmp/docmgr status --root "$ROOT"
 /tmp/docmgr status --root "$ROOT" --with-glaze-output --output json
 
 # guidelines
-/tmp/docmgr guidelines --list --root "$ROOT"
-/tmp/docmgr guidelines --doc-type design-doc --root "$ROOT"
-/tmp/docmgr guidelines --doc-type design-doc --root "$ROOT" --with-glaze-output --output json
+/tmp/docmgr doc guidelines --list --root "$ROOT"
+/tmp/docmgr doc guidelines --doc-type design-doc --root "$ROOT"
+/tmp/docmgr doc guidelines --doc-type design-doc --root "$ROOT" --with-glaze-output --output json
 
 # tasks list
-/tmp/docmgr tasks list --ticket TST-1000 --root "$ROOT"
-/tmp/docmgr tasks list --ticket TST-1000 --root "$ROOT" --with-glaze-output --output csv
+/tmp/docmgr task list --ticket TST-1000 --root "$ROOT"
+/tmp/docmgr task list --ticket TST-1000 --root "$ROOT" --with-glaze-output --output csv
 
 # search
-/tmp/docmgr search --root "$ROOT" --ticket TST-1000 --query workspace
-/tmp/docmgr search --root "$ROOT" --ticket TST-1000 --query workspace --with-glaze-output --output yaml
+/tmp/docmgr doc search --root "$ROOT" --ticket TST-1000 --query workspace
+/tmp/docmgr doc search --root "$ROOT" --ticket TST-1000 --query workspace --with-glaze-output --output yaml
 
 # cleanup (optional)
 rm -rf "$ROOT"

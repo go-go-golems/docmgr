@@ -269,6 +269,22 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to write document: %w", err)
 	}
 
+	// After creating the document, print the guidelines for the selected doc type.
+	// Prefer workspace-overridden guidelines under <root>/_guidelines/<doc-type>.md,
+	// falling back to embedded defaults when not present.
+	{
+		guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
+		if b, err := os.ReadFile(guidelinePath); err == nil {
+			fmt.Printf("\n===== Guidelines for %s =====\n\n%s\n", settings.DocType, string(b))
+		} else {
+			if guideline, ok := GetGuideline(settings.DocType); ok {
+				fmt.Printf("\n===== Guidelines for %s =====\n\n%s\n", settings.DocType, guideline)
+			} else {
+				fmt.Printf("\n(No guidelines found for doc-type %s. Use 'docmgr doc guidelines --list' to see available types.)\n", settings.DocType)
+			}
+		}
+	}
+
 	row := types.NewRow(
 		types.MRP("ticket", settings.Ticket),
 		types.MRP("doc_type", settings.DocType),

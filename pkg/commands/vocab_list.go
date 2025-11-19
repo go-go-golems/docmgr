@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -75,9 +76,9 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 	// Echo resolved context
-	root := ResolveRoot(settings.Root)
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	root := workspace.ResolveRoot(settings.Root)
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {
@@ -147,9 +148,9 @@ func (c *VocabListCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 	// Echo resolved context
-	root := ResolveRoot(settings.Root)
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	root := workspace.ResolveRoot(settings.Root)
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {

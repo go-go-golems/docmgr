@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -90,7 +91,7 @@ func (c *ConfigureCommand) RunIntoGlazeProcessor(
 	}
 
 	// Find repository root (shared helper from vocab_add)
-	repoRoot, err := FindRepositoryRoot()
+	repoRoot, err := workspace.FindRepositoryRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
@@ -110,7 +111,7 @@ func (c *ConfigureCommand) RunIntoGlazeProcessor(
 	}
 
 	// Build config structure; keep relative paths relative to cfg file directory
-	cfg := TTMPConfig{
+	cfg := workspace.WorkspaceConfig{
 		Root: settings.Root,
 		Vocabulary: func() string {
 			if strings.TrimSpace(settings.Vocabulary) != "" {

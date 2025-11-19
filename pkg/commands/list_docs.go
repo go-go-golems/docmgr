@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -98,7 +99,7 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -168,17 +169,20 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 			types.MRP(ColStatus, doc.Status),
 			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
 			types.MRP(ColPath, relPath),
-			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02")),
+			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to add document row for %s: %w", relPath, err)
 		}
 
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to list documents under %s: %w", settings.Root, err)
+	}
+	return nil
 }
 
 var _ cmds.GlazeCommand = &ListDocsCommand{}
@@ -194,7 +198,7 @@ func (c *ListDocsCommand) Run(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -257,13 +261,16 @@ func (c *ListDocsCommand) Run(
 			doc.Title,
 			doc.Status,
 			strings.Join(doc.Topics, ", "),
-			doc.LastUpdated.Format("2006-01-02"),
+			doc.LastUpdated.Format("2006-01-02 15:04"),
 			relPath,
 		)
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to list documents under %s: %w", settings.Root, err)
+	}
+	return nil
 }
 
 var _ cmds.BareCommand = &ListDocsCommand{}

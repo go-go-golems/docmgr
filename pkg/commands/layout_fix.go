@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/adrg/frontmatter"
-	"github.com/go-go-golems/docmgr/pkg/models"
+	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -69,7 +69,7 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	// Collect tickets to process
 	var ticketDirs []string
 	if settings.Ticket != "" {
@@ -129,14 +129,8 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 			}
 
 			// Read frontmatter to get DocType
-			f, err := os.Open(path)
-			if err != nil {
-				return nil
-			}
-			defer func() { _ = f.Close() }()
-			var doc models.Document
-			_, perr := frontmatter.Parse(f, &doc)
-			if perr != nil || doc.DocType == "" {
+			doc, _, err := documents.ReadDocumentWithFrontmatter(path)
+			if err != nil || doc.DocType == "" {
 				return nil
 			}
 
@@ -156,11 +150,14 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 					types.MRP("to", filepath.ToSlash(newRel)),
 					types.MRP("status", "would-move"),
 				)
-				return gp.AddRow(ctx, row)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return fmt.Errorf("failed to add layout-fix dry-run row for %s: %w", rel, err)
+				}
+				return nil
 			}
 
 			if err := os.MkdirAll(filepath.Dir(newAbs), 0755); err != nil {
-				return err
+				return fmt.Errorf("failed to ensure target directory for %s: %w", newAbs, err)
 			}
 			if err := os.Rename(path, newAbs); err != nil {
 				return fmt.Errorf("rename %s -> %s failed: %w", path, newAbs, err)
@@ -175,12 +172,12 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 				types.MRP("status", "moved"),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to add layout-fix row for %s: %w", oldRel, err)
 			}
 			return nil
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to walk ticket directory %s: %w", ticketDir, err)
 		}
 		if !settings.DryRun && len(renameMap) > 0 {
 			if err := updateTicketReferences(ticketDir, renameMap); err != nil {

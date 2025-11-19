@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/templates"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -132,10 +135,10 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	// Echo resolved context prior to write
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := settings.Root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {
@@ -253,16 +256,16 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 
 	// Try to load and render a template body
 	content := ""
-	if tpl, ok := loadTemplate(settings.Root, settings.DocType); ok {
-		_, body := extractFrontmatterAndBody(tpl)
+	if tpl, ok := templates.LoadTemplate(settings.Root, settings.DocType); ok {
+		_, body := templates.ExtractFrontmatterAndBody(tpl)
 		// Ensure title is set on doc for placeholders
 		doc.Title = settings.Title
-		content = renderTemplateBody(body, &doc)
+		content = templates.RenderTemplateBody(body, &doc)
 	} else {
 		content = fmt.Sprintf("# %s\n\n<!-- Add your content here -->\n", settings.Title)
 	}
 
-	if err := writeDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
+	if err := documents.WriteDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
 		return fmt.Errorf("failed to write document: %w", err)
 	}
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -105,7 +106,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -115,7 +116,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	highestSeverity := 0 // 0=ok,1=warning,2=error
 
 	// Determine repository root
-	repoRoot, _ := FindRepositoryRoot()
+	repoRoot, _ := workspace.FindRepositoryRoot()
 
 	// Load .docmgrignore patterns and merge with provided ignore-globs
 	// 1) Try repository root
@@ -161,12 +162,12 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return false
 	}
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, skipFn)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, skipFn)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
 
-	missingIndexDirs, err := collectTicketScaffoldsWithoutIndex(settings.Root, skipFn)
+	missingIndexDirs, err := workspace.CollectTicketScaffoldsWithoutIndex(settings.Root, skipFn)
 	if err != nil {
 		return fmt.Errorf("failed to detect missing index.md files: %w", err)
 	}
@@ -179,7 +180,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			types.MRP("path", missing),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to emit doctor row (missing_index) for %s: %w", missing, err)
 		}
 		highestSeverity = maxInt(highestSeverity, 2)
 	}
@@ -196,7 +197,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", indexPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", filepath.Base(ticketPath), err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
 			continue
@@ -223,7 +224,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("index_files", fmt.Sprintf("%v", indexFiles)),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (multiple_index) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
 		}
@@ -242,20 +243,30 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
 		}
 
-		// Validate required fields
+		// Validate required fields using Document.Validate()
+		if err := doc.Validate(); err != nil {
+			hasIssues = true
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "missing_required_fields"),
+				types.MRP("severity", "error"),
+				types.MRP("message", err.Error()),
+				types.MRP("path", indexPath),
+			)
+			if err := gp.AddRow(ctx, row); err != nil {
+				return fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", doc.Ticket, err)
+			}
+			highestSeverity = maxInt(highestSeverity, 2)
+		}
+
+		// Additional validation: Status and Topics (not in Validate() but checked by doctor)
 		issues := []string{}
-		if doc.Title == "" {
-			issues = append(issues, "missing Title")
-		}
-		if doc.Ticket == "" {
-			issues = append(issues, "missing Ticket")
-		}
 		if doc.Status == "" {
 			issues = append(issues, "missing Status")
 		}
@@ -281,7 +292,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", indexPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor row (unknown_topics) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
 		}
@@ -298,7 +309,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (unknown_doc_type) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -316,7 +327,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -338,7 +349,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (missing_related_file_note) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -352,7 +363,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					candidates = append(candidates, filepath.Join(repoRoot, rf.Path))
 				}
 				// 2) .ttmp.yaml directory (config base)
-				if cfgPath, errCfg := FindTTMPConfigPath(); errCfg == nil {
+				if cfgPath, errCfg := workspace.FindTTMPConfigPath(); errCfg == nil {
 					cfgBase := filepath.Dir(cfgPath)
 					candidates = append(candidates, filepath.Join(cfgBase, rf.Path))
 					// 3) Parent of config base (supports multi-repo workspace siblings)
@@ -388,7 +399,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (missing_related_file) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -405,7 +416,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit doctor row (missing_field) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}
@@ -445,7 +456,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 						types.MRP("path", path),
 					)
 					if err := gp.AddRow(ctx, row); err != nil {
-						return err
+						return fmt.Errorf("failed to emit doctor row (missing_numeric_prefix) for %s: %w", path, err)
 					}
 					highestSeverity = maxInt(highestSeverity, 1)
 				}
@@ -463,7 +474,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				types.MRP("path", ticketPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to emit doctor summary row for %s: %w", doc.Ticket, err)
 			}
 		}
 	}

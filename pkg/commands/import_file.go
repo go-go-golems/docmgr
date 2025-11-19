@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -81,7 +83,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
@@ -132,7 +134,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 
 	// Update index.md to add external source reference
 	indexPath := filepath.Join(ticketDir, "index.md")
-	doc, err := readDocumentFrontmatter(indexPath)
+	doc, body, err := documents.ReadDocumentWithFrontmatter(indexPath)
 	if err != nil {
 		return fmt.Errorf("failed to read index.md: %w", err)
 	}
@@ -142,20 +144,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		doc.ExternalSources = append(doc.ExternalSources, sourceRef)
 		doc.LastUpdated = time.Now()
 
-		// Read the content after frontmatter
-		content, err := os.ReadFile(indexPath)
-		if err != nil {
-			return fmt.Errorf("failed to read index content: %w", err)
-		}
-
-		// Find the end of frontmatter
-		contentStr := string(content)
-		parts := splitFrontmatter(contentStr)
-		if len(parts) < 2 {
-			return fmt.Errorf("invalid frontmatter in index.md")
-		}
-
-		if err := writeDocumentWithFrontmatter(indexPath, doc, parts[1], true); err != nil {
+		if err := documents.WriteDocumentWithFrontmatter(indexPath, doc, body, true); err != nil {
 			return fmt.Errorf("failed to update index.md: %w", err)
 		}
 	}
@@ -168,11 +157,14 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		types.MRP("status", "imported"),
 	)
 
-	return gp.AddRow(ctx, row)
+	if err := gp.AddRow(ctx, row); err != nil {
+		return fmt.Errorf("failed to add import row for %s: %w", settings.FilePath, err)
+	}
+	return nil
 }
 
 func findTicketDirectory(root, ticket string) (string, error) {
-	workspaces, err := collectTicketWorkspaces(root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(root, nil)
 	if err != nil {
 		return "", err
 	}
@@ -191,10 +183,10 @@ func appendSourceMetadata(path string, source *models.ExternalSource) error {
 	if _, err := os.Stat(path); err == nil {
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read external sources file %s: %w", path, err)
 		}
 		if err := yaml.Unmarshal(data, &sources); err != nil {
-			return err
+			return fmt.Errorf("failed to parse external sources file %s: %w", path, err)
 		}
 	}
 
@@ -202,10 +194,13 @@ func appendSourceMetadata(path string, source *models.ExternalSource) error {
 
 	data, err := yaml.Marshal(sources)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to encode external sources for %s: %w", path, err)
 	}
 
-	return os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write external sources file %s: %w", path, err)
+	}
+	return nil
 }
 
 func contains(slice []string, item string) bool {
@@ -215,63 +210,6 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
-}
-
-func splitFrontmatter(content string) []string {
-	// Simple frontmatter splitter
-	parts := []string{}
-	lines := []string{}
-	inFrontmatter := false
-	frontmatterCount := 0
-
-	for _, line := range splitLines(content) {
-		if line == "---" {
-			frontmatterCount++
-			if frontmatterCount == 2 {
-				inFrontmatter = false
-				continue
-			} else {
-				inFrontmatter = true
-				continue
-			}
-		}
-
-		if !inFrontmatter && frontmatterCount >= 2 {
-			lines = append(lines, line)
-		}
-	}
-
-	parts = append(parts, "")
-	parts = append(parts, joinLines(lines))
-	return parts
-}
-
-func splitLines(s string) []string {
-	lines := []string{}
-	current := ""
-	for _, c := range s {
-		if c == '\n' {
-			lines = append(lines, current)
-			current = ""
-		} else {
-			current += string(c)
-		}
-	}
-	if current != "" {
-		lines = append(lines, current)
-	}
-	return lines
-}
-
-func joinLines(lines []string) string {
-	result := ""
-	for i, line := range lines {
-		result += line
-		if i < len(lines)-1 {
-			result += "\n"
-		}
-	}
-	return result
 }
 
 var _ cmds.GlazeCommand = &ImportFileCommand{}

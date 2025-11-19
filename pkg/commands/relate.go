@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -143,7 +145,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Resolve target document path
 	var targetDocPath string
@@ -336,7 +338,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Read the target document
-	doc, err := readDocumentFrontmatter(targetDocPath)
+	doc, content, err := documents.ReadDocumentWithFrontmatter(targetDocPath)
 	if err != nil {
 		return fmt.Errorf("failed to read document frontmatter: %w", err)
 	}
@@ -464,12 +466,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	doc.RelatedFiles = out
 
 	// Preserve existing content: rewrite file with updated frontmatter
-	// We need the content; use readDocumentWithContent
-	_, content, err := readDocumentWithContent(targetDocPath)
-	if err != nil {
-		return fmt.Errorf("failed to read document content: %w", err)
-	}
-	if err := writeDocumentWithFrontmatter(targetDocPath, doc, content, true); err != nil {
+	if err := documents.WriteDocumentWithFrontmatter(targetDocPath, doc, content, true); err != nil {
 		return fmt.Errorf("failed to write document: %w", err)
 	}
 

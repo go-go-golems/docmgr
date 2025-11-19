@@ -6,8 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/adrg/frontmatter"
-	"github.com/go-go-golems/docmgr/pkg/models"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -77,7 +76,7 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	workspaces, err := collectTicketWorkspaces(settings.Root, nil)
+	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
 	}
@@ -101,31 +100,15 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 			types.MRP("status", doc.Status),
 			types.MRP("topics", strings.Join(doc.Topics, ", ")),
 			types.MRP("path", ws.Path),
-			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
+			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to add workspace row for %s: %w", doc.Ticket, err)
 		}
 	}
 
 	return nil
-}
-
-func readDocumentFrontmatter(path string) (*models.Document, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-
-	var doc models.Document
-	_, err = frontmatter.Parse(f, &doc)
-	if err != nil {
-		return nil, err
-	}
-
-	return &doc, nil
 }
 
 var _ cmds.GlazeCommand = &ListCommand{}

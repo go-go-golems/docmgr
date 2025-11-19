@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/templates"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -15,7 +18,6 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
-	"gopkg.in/yaml.v3"
 )
 
 // CreateTicketCommand creates a new ticket workspace under the docs root
@@ -98,7 +100,7 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Create slug from title
 	slug := utils.Slugify(settings.Title)
@@ -129,7 +131,7 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 
 	// Create index.md with frontmatter
 	// Load config defaults
-	cfg, _ := LoadTTMPConfig()
+	cfg, _ := workspace.LoadWorkspaceConfig()
 
 	doc := models.Document{
 		Title:   settings.Title,
@@ -158,13 +160,13 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 	indexPath := filepath.Join(ticketPath, "index.md")
 	// Try to load index template body
 	indexBody := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
-	if tpl, ok := loadTemplate(settings.Root, "index"); ok {
-		_, body := extractFrontmatterAndBody(tpl)
+	if tpl, ok := templates.LoadTemplate(settings.Root, "index"); ok {
+		_, body := templates.ExtractFrontmatterAndBody(tpl)
 		// Ensure placeholders are populated from doc
 		doc.Title = settings.Title
-		indexBody = renderTemplateBody(body, &doc)
+		indexBody = templates.RenderTemplateBody(body, &doc)
 	}
-	if err := writeDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
+	if err := documents.WriteDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
 		return fmt.Errorf("failed to write index.md: %w", err)
 	}
 
@@ -261,50 +263,6 @@ func renderTicketPath(root, templateStr, ticket, slug, title string, now time.Ti
 		return "", fmt.Errorf("path template resolves outside root: %s", relative)
 	}
 	return filepath.Join(root, relative), nil
-}
-
-// writeDocumentWithFrontmatter writes a document with frontmatter to a file.
-// If the file exists and force is false, it preserves existing frontmatter
-// and content without overwriting.
-func writeDocumentWithFrontmatter(path string, doc *models.Document, content string, force bool) error {
-	// Check if file exists and we're not forcing
-	if !force {
-		if _, err := os.Stat(path); err == nil {
-			// File exists, preserve it
-			return nil
-		}
-	}
-
-	// Write the document
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = f.Close() }()
-
-	// Write frontmatter
-	if _, err := f.WriteString("---\n"); err != nil {
-		return err
-	}
-
-	encoder := yaml.NewEncoder(f)
-	if err := encoder.Encode(doc); err != nil {
-		return err
-	}
-	if err := encoder.Close(); err != nil {
-		return err
-	}
-
-	if _, err := f.WriteString("---\n\n"); err != nil {
-		return err
-	}
-
-	// Write content
-	if _, err := f.WriteString(content); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 var _ cmds.GlazeCommand = &CreateTicketCommand{}

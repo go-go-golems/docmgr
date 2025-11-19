@@ -73,6 +73,9 @@ docmgr create-ticket --ticket MEN-1234 --title "Design Overview" --topics design
 
 Workspaces are created under `ttmp/YYYY/MM/DD/<ticket>-<slug>/` by default. Use `--path-template` to customize the relative layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`).
 
+# Rename a ticket ID and move its workspace
+docmgr rename-ticket --ticket MEN-1234 --new-ticket MEN-5678
+
 # Add a document to the ticket
 docmgr add --ticket MEN-1234 --doc-type design-doc --title "System Overview"
 
@@ -111,6 +114,32 @@ docmgr help how-to-use
 - Build: `go build ./...`
 - Lint/Test (if configured): `make lint`, `make test`
 - Release (when configured): `make goreleaser`
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and contribution guidelines.
+
+## Glossary
+
+Key terms used throughout docmgr:
+
+- **Workspace**: Root directory containing ticket documentation (default: `ttmp`). The workspace is organized hierarchically by date and ticket ID.
+
+- **Ticket**: Work item identifier (e.g., `MEN-3475`, `DOCMGR-123`). Tickets group related documentation together.
+
+- **Ticket Workspace**: Directory structure for a single ticket's documentation. Typically organized as `ttmp/YYYY/MM/DD/<ticket>-<slug>/` containing subdirectories like `analysis/`, `design/`, `playbooks/`, etc.
+
+- **Doc Type**: Category of document that determines its purpose and structure. Common types include:
+  - `design-doc`: Architecture and design decisions
+  - `playbook`: Step-by-step procedures and runbooks
+  - `analysis`: Research and analysis documents
+  - `reference`: API references and documentation
+  - `log`: Implementation diaries and notes
+  - `task-list`: Task tracking documents
+
+- **Vocabulary**: Controlled vocabulary for standardizing metadata values. Defines allowed values for `topics`, `docTypes`, and `intent` fields across all documents. Stored in `vocabulary.yaml` at the workspace root.
+
+- **Frontmatter**: YAML metadata block at the top of markdown documents containing fields like `Title`, `Ticket`, `DocType`, `Topics`, `Owners`, `RelatedFiles`, etc.
+
+- **Related Files**: Code files linked to documentation via the `RelatedFiles` frontmatter field. Enables traceability from documentation to implementation.
 
 ## License
 

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -88,15 +89,15 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 	}
 
 	// Find repository root (git root preferred; fallbacks supported)
-	repoRoot, err := FindRepositoryRoot()
+	repoRoot, err := workspace.FindRepositoryRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
 
 	// Echo resolved context prior to write
-	cfgPath, _ := FindTTMPConfigPath()
-	vocabPath, _ := ResolveVocabularyPath()
-	root := ResolveRoot(settings.Root)
+	cfgPath, _ := workspace.FindTTMPConfigPath()
+	vocabPath, _ := workspace.ResolveVocabularyPath()
+	root := workspace.ResolveRoot(settings.Root)
 	absRoot := root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {
@@ -151,6 +152,6 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 }
 
 // findRepoRoot finds the repository root by walking up from current directory
-// unified repo root detection moved to FindRepositoryRoot() in config.go
+// unified repo root detection moved to workspace.FindRepositoryRoot() in config.go
 
 var _ cmds.GlazeCommand = &VocabAddCommand{}

@@ -1,3 +1,7 @@
+// Package utils provides utility functions for docmgr.
+//
+// The Slugify function converts arbitrary strings into filesystem-friendly slugs
+// suitable for use in filenames and directory names.
 package utils
 
 import (

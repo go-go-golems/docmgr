@@ -12,8 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adrg/frontmatter"
-	"github.com/go-go-golems/docmgr/pkg/models"
+	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -171,7 +170,7 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	}
 
 	// Apply config root if present
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// If --files flag is set, suggest files instead of searching documents
 	if settings.Files {
@@ -377,13 +376,16 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		}
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to emit search result for %s: %w", relPath, err)
 		}
 
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to walk documents under %s: %w", settings.Root, err)
+	}
+	return nil
 }
 
 // suggestFiles suggests related files using heuristics (git + ripgrep)
@@ -468,7 +470,7 @@ func (c *SearchCommand) suggestFiles(
 	})
 
 	if err != nil {
-		return fmt.Errorf("error walking directory: %w", err)
+		return fmt.Errorf("error walking directory %s: %w", ticketDir, err)
 	}
 
 	// Output suggested files from RelatedFiles
@@ -479,7 +481,7 @@ func (c *SearchCommand) suggestFiles(
 			types.MRP("reason", "referenced by documents"),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to emit related_files suggestion for %s: %w", file, err)
 		}
 	}
 
@@ -494,7 +496,7 @@ func (c *SearchCommand) suggestFiles(
 					types.MRP("reason", "recent commit activity"),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit git_modified suggestion for %s: %w", file, err)
 				}
 			}
 		}
@@ -510,7 +512,7 @@ func (c *SearchCommand) suggestFiles(
 					types.MRP("reason", "working tree modified"),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit git_staged suggestion for %s: %w", file, err)
 				}
 			}
 		}
@@ -522,7 +524,7 @@ func (c *SearchCommand) suggestFiles(
 					types.MRP("reason", "staged for commit"),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit git_untracked suggestion for %s: %w", file, err)
 				}
 			}
 		}
@@ -534,7 +536,7 @@ func (c *SearchCommand) suggestFiles(
 					types.MRP("reason", "untracked new file"),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return err
+					return fmt.Errorf("failed to emit ripgrep suggestion for %s: %w", file, err)
 				}
 			}
 		}
@@ -552,7 +554,7 @@ func (c *SearchCommand) suggestFiles(
 						types.MRP("reason", fmt.Sprintf("content match: %s", firstTerm(searchTerms))),
 					)
 					if err := gp.AddRow(ctx, row); err != nil {
-						return err
+						return fmt.Errorf("failed to emit git_history suggestion for %s: %w", file, err)
 					}
 				}
 			}
@@ -776,27 +778,6 @@ func firstTerm(terms []string) string {
 	return terms[0]
 }
 
-// readDocumentWithContent reads a document and returns both frontmatter and content
-func readDocumentWithContent(path string) (*models.Document, string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, "", err
-	}
-	defer func() { _ = f.Close() }()
-
-	var doc models.Document
-	rest, err := frontmatter.Parse(f, &doc)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Read content
-	contentBytes := rest
-	content := string(contentBytes)
-
-	return &doc, content, nil
-}
-
 // extractSnippet extracts a snippet of text around a query match
 func extractSnippet(content, query string, contextLen int) string {
 	if query == "" {
@@ -962,7 +943,7 @@ func (c *SearchCommand) Run(
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
-	settings.Root = ResolveRoot(settings.Root)
+	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// Suggest files mode
 	if settings.Files {

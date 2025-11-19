@@ -1,11 +1,13 @@
-package commands
+package templates
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/adrg/frontmatter"
 	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
@@ -443,7 +445,7 @@ func GetTemplate(docType string) (string, bool) {
 }
 
 // loadTemplate loads a template from the filesystem first, then falls back to embedded content
-func loadTemplate(root, docType string) (string, bool) {
+func LoadTemplate(root, docType string) (string, bool) {
 	path := filepath.Join(root, "_templates", docType+".md")
 	if b, err := os.ReadFile(path); err == nil {
 		return string(b), true
@@ -451,25 +453,26 @@ func loadTemplate(root, docType string) (string, bool) {
 	return GetTemplate(docType)
 }
 
-// splitFrontmatter splits a template into (frontmatter, body). If no frontmatter, returns ("", template)
-func extractFrontmatterAndBody(tpl string) (string, string) {
-	s := strings.TrimLeft(tpl, "\n\r ")
-	if !strings.HasPrefix(s, "---") {
+// extractFrontmatterAndBody splits a template into (frontmatter, body) using adrg/frontmatter library.
+// If no frontmatter is found, returns ("", template).
+func ExtractFrontmatterAndBody(tpl string) (string, string) {
+	// Use adrg/frontmatter library for robust parsing
+	reader := bytes.NewReader([]byte(tpl))
+	var meta map[string]interface{}
+	bodyBytes, err := frontmatter.Parse(reader, &meta)
+	if err != nil {
+		// If parsing fails (e.g., no frontmatter), return empty frontmatter and full template
 		return "", tpl
 	}
-	// Find the closing delimiter after the first line
-	// We look for "\n---\n" to be robust to content
-	idx := strings.Index(s[3:], "\n---\n")
-	if idx == -1 {
-		return "", tpl
-	}
-	fm := s[:3+idx+5] // include both delimiters
-	body := s[3+idx+5:]
-	return fm, body
+
+	// Reconstruct frontmatter from metadata (for templates, we just need the body)
+	// The frontmatter string isn't needed for template rendering, so we return empty
+	// and let the template system handle frontmatter generation
+	return "", string(bodyBytes)
 }
 
 // renderTemplateBody replaces placeholders in the template body based on the document values
-func renderTemplateBody(body string, doc *models.Document) string {
+func RenderTemplateBody(body string, doc *models.Document) string {
 	now := time.Now().Format("2006-01-02")
 
 	// Build lists

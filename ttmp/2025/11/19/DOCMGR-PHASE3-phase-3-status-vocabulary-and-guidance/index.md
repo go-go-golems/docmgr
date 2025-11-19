@@ -1,7 +1,7 @@
 ---
 Title: Phase 3 — Status vocabulary and guidance
 Ticket: DOCMGR-PHASE3
-Status: active
+Status: complete
 Topics:
     - tools
     - ux
@@ -31,8 +31,9 @@ RelatedFiles:
       Note: 'Seeds status vocabulary: draft'
 ExternalSources: []
 Summary: 'Phase 3: add status vocabulary seeds, doctor warnings, and guidance; document transitions (warnings only).'
-LastUpdated: 2025-11-19T16:30:09.525066593-05:00
+LastUpdated: 2025-11-19T16:47:11.817295815-05:00
 ---
+
 
 
 
@@ -53,7 +54,7 @@ This ticket implements Phase 3 from the synthesis: introduce a `status` vocabula
 
 ## Status
 
-Current status: **active**
+Current status: **complete**
 
 ## Scope
 

@@ -15,3 +15,8 @@
 ## 2025-11-19
 
 Initialize Phase 3 ticket; added intern guide; related debate docs and key code files.
+
+## 2025-11-19
+
+Phase 3 done: status vocabulary guidance merged
+

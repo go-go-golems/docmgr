@@ -121,8 +121,10 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		categoryItems = &vocab.DocTypes
 	case "intent":
 		categoryItems = &vocab.Intent
+	case "status":
+		categoryItems = &vocab.Status
 	default:
-		return fmt.Errorf("invalid category: %s (must be topics, docTypes, or intent)", category)
+		return fmt.Errorf("invalid category: %s (must be topics, docTypes, intent, or status)", category)
 	}
 
 	// Check if slug already exists

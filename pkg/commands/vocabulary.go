@@ -28,6 +28,7 @@ func LoadVocabulary() (*models.Vocabulary, error) {
 		Topics:   []models.VocabItem{},
 		DocTypes: []models.VocabItem{},
 		Intent:   []models.VocabItem{},
+		Status:   []models.VocabItem{},
 	}, nil
 }
 

@@ -146,10 +146,22 @@ func (d *Document) Validate() error {
 //	    description: Long-term documentation that should be maintained
 //	  - slug: short-term
 //	    description: Temporary documentation for active work
+//	status:
+//	  - slug: draft
+//	    description: Initial draft state
+//	  - slug: active
+//	    description: Active work in progress
+//	  - slug: review
+//	    description: Ready for review
+//	  - slug: complete
+//	    description: Work completed
+//	  - slug: archived
+//	    description: Archived/completed work
 type Vocabulary struct {
 	Topics   []VocabItem `yaml:"topics" json:"topics"`
 	DocTypes []VocabItem `yaml:"docTypes" json:"docTypes"`
 	Intent   []VocabItem `yaml:"intent" json:"intent"`
+	Status   []VocabItem `yaml:"status" json:"status"`
 }
 
 // VocabItem represents a vocabulary entry

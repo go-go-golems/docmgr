@@ -133,6 +133,19 @@ func (c *VocabListCommand) RunIntoGlazeProcessor(
 		}
 	}
 
+	if category == "" || category == "status" {
+		for _, item := range vocab.Status {
+			row := types.NewRow(
+				types.MRP(ColCategory, "status"),
+				types.MRP(ColSlug, item.Slug),
+				types.MRP(ColDescription, item.Description),
+			)
+			if err := gp.AddRow(ctx, row); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -179,6 +192,11 @@ func (c *VocabListCommand) Run(
 	if category == "" || category == "intent" {
 		for _, item := range vocab.Intent {
 			fmt.Printf("intent: %s — %s\n", item.Slug, item.Description)
+		}
+	}
+	if category == "" || category == "status" {
+		for _, item := range vocab.Status {
+			fmt.Printf("status: %s — %s\n", item.Slug, item.Description)
 		}
 	}
 	return nil

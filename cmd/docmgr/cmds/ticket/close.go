@@ -1,4 +1,4 @@
-package tasks
+package ticket
 
 import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/common"
@@ -7,14 +7,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newCheckCommand() (*cobra.Command, error) {
-	cmd, err := commands.NewTasksCheckCommand()
+func newCloseCommand() (*cobra.Command, error) {
+	cmd, err := commands.NewTicketCloseCommand()
 	if err != nil {
 		return nil, err
 	}
-	return common.BuildCommand(
+	cobraCmd, err := common.BuildCommand(
 		cmd,
 		cli.WithDualMode(true),
 		cli.WithGlazeToggleFlag("with-glaze-output"),
 	)
+	if err != nil {
+		return nil, err
+	}
+	return cobraCmd, nil
 }
+

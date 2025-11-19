@@ -330,11 +330,102 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) er
 	} else {
 		fmt.Printf("Task checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
 	}
-	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+
+	// Check if all tasks are now done
+	updatedTasks := parseTasksFromLines(lines)
+	allDone := true
+	hasTasks := len(updatedTasks) > 0
+	for _, t := range updatedTasks {
+		if !t.Checked {
+			allDone = false
+			break
+		}
+	}
+
+	// Suggest ticket close if all tasks are done
+	if allDone && hasTasks && s.Ticket != "" {
+		fmt.Printf("💡 All tasks complete! Consider closing the ticket: docmgr ticket close --ticket %s\n", s.Ticket)
+	} else {
+		fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	}
 	return nil
 }
 
+func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+	s := &TasksCheckSettings{}
+	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks check settings: %w", err)
+	}
+	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return fmt.Errorf("failed to load tasks file: %w", err)
+	}
+	var targets []int
+	if len(s.IDs) > 0 {
+		targets = s.IDs
+	} else if s.Match != "" {
+		for _, t := range tasks {
+			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
+				targets = []int{t.TaskIndex}
+				break
+			}
+		}
+	}
+	if len(targets) == 0 {
+		return fmt.Errorf("no target task specified")
+	}
+	found := map[int]bool{}
+	for _, t := range tasks {
+		for _, id := range targets {
+			if t.TaskIndex == id {
+				lines[t.LineIndex] = formatTaskLine(true, t.Text)
+				found[id] = true
+			}
+		}
+	}
+	var missing []int
+	for _, id := range targets {
+		if !found[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("task id(s) not found: %v", missing)
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+	}
+
+	// Check if all tasks are now done
+	updatedTasks := parseTasksFromLines(lines)
+	allDone := true
+	hasTasks := len(updatedTasks) > 0
+	openTasks := 0
+	doneTasks := 0
+	for _, t := range updatedTasks {
+		if t.Checked {
+			doneTasks++
+		} else {
+			openTasks++
+			allDone = false
+		}
+	}
+
+	// Emit structured output
+	row := types.NewRow(
+		types.MRP("ticket", s.Ticket),
+		types.MRP("tasks_file", path),
+		types.MRP("all_tasks_done", allDone && hasTasks),
+		types.MRP("open_tasks", openTasks),
+		types.MRP("done_tasks", doneTasks),
+		types.MRP("total_tasks", len(updatedTasks)),
+		types.MRP("checked_ids", targets),
+	)
+	return gp.AddRow(ctx, row)
+}
+
 var _ cmds.BareCommand = &TasksCheckCommand{}
+var _ cmds.GlazeCommand = &TasksCheckCommand{}
 
 // tasks uncheck
 type TasksUncheckCommand struct{ *cmds.CommandDescription }

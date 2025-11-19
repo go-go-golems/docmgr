@@ -206,6 +206,13 @@ func seedDefaultVocabulary() error {
 	// Intent
 	addItem(&vocab.Intent, "long-term", "Likely to persist")
 
+	// Status
+	addItem(&vocab.Status, "draft", "Initial draft state")
+	addItem(&vocab.Status, "active", "Active work in progress")
+	addItem(&vocab.Status, "review", "Ready for review")
+	addItem(&vocab.Status, "complete", "Work completed")
+	addItem(&vocab.Status, "archived", "Archived/completed work")
+
 	// Persist
 	repoRoot, err := workspace.FindRepositoryRoot()
 	if err != nil {

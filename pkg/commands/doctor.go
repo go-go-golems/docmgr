@@ -147,6 +147,10 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	for _, it := range vocab.Intent {
 		intentSet[it.Slug] = struct{}{}
 	}
+	statusSet := map[string]struct{}{}
+	for _, it := range vocab.Status {
+		statusSet[it.Slug] = struct{}{}
+	}
 
 	skipFn := func(relPath, base string) bool {
 		if containsString(settings.IgnoreDirs, base) {
@@ -328,6 +332,24 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
 					return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", doc.Ticket, err)
+				}
+				highestSeverity = maxInt(highestSeverity, 1)
+			}
+		}
+
+		// Unknown status (vocabulary-guided, warn only)
+		if doc.Status != "" {
+			if _, ok := statusSet[doc.Status]; !ok {
+				hasIssues = true
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "unknown_status"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("unknown status: %s (consider adding to vocabulary)", doc.Status)),
+					types.MRP("path", indexPath),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return fmt.Errorf("failed to emit doctor row (unknown_status) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
 			}

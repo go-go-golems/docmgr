@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
@@ -50,7 +50,7 @@ func CollectTicketWorkspaces(root string, skipDir func(relPath, baseName string)
 
 		indexPath := filepath.Join(path, "index.md")
 		if fi, err := os.Stat(indexPath); err == nil && !fi.IsDir() {
-			doc, err := readDocumentFrontmatter(indexPath)
+			doc, _, err := documents.ReadDocumentWithFrontmatter(indexPath)
 			if err != nil {
 				workspaces = append(workspaces, TicketWorkspace{Path: path, FrontmatterErr: err})
 			} else {
@@ -124,19 +124,4 @@ func hasWorkspaceScaffold(path string) bool {
 		}
 	}
 	return false
-}
-
-func readDocumentFrontmatter(path string) (*models.Document, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-
-	var doc models.Document
-	if _, err := frontmatter.Parse(f, &doc); err != nil {
-		return nil, err
-	}
-
-	return &doc, nil
 }

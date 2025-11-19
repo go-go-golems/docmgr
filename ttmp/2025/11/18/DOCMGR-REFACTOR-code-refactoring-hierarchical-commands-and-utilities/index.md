@@ -18,15 +18,25 @@ RelatedFiles:
     - Path: ../../DOCMGR-CODE-REVIEW-code-review-docmgr-codebase/analysis/04-debate-round-04-error-handling-and-user-experience.md
       Note: Error handling improvements
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/cmd/docmgr/cmds/root.go
-      Note: Hierarchical Cobra command tree
+      Note: |-
+        Hierarchical Cobra command tree
+        Hierarchical commands wiring
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/documents/frontmatter.go
+      Note: Frontmatter helpers moved to internal
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/documents/walk.go
+      Note: Document walker utility
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/templates/templates.go
       Note: Template scaffolding now internal
     - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/internal/workspace/config.go
       Note: Config helpers moved to internal/workspace
+    - Path: /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/meta_update.go
+      Note: Now uses internal/documents
 ExternalSources: []
-Summary: ""
-LastUpdated: 2025-11-18T15:40:59.087327699-05:00
+Summary: "Round 2 document utilities shipped; CLI verified with new docs while kicking off Round 4 error-handling improvements."
+LastUpdated: 2025-11-18T20:50:06.490255749-05:00
 ---
+
+
 
 
 

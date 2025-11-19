@@ -209,10 +209,10 @@ func ResolveRoot(root string) string {
 	verboseLog("Checking for .ttmp.yaml config file...")
 	if cfgPath, err := FindTTMPConfigPath(); err == nil {
 		verboseLog("Found config file: %s", cfgPath)
-		data, err := os.ReadFile(cfgPath)
-		if err == nil {
+		data, readErr := os.ReadFile(cfgPath)
+		if readErr == nil {
 			var cfg WorkspaceConfig
-			if yaml.Unmarshal(data, &cfg) == nil {
+			if unmarshalErr := yaml.Unmarshal(data, &cfg); unmarshalErr == nil {
 				if cfg.Root != "" {
 					var resolved string
 					if filepath.IsAbs(cfg.Root) {
@@ -226,11 +226,11 @@ func ResolveRoot(root string) string {
 				verboseLog("Config file found but no root specified, continuing fallback chain")
 			} else {
 				// Config file exists but is malformed
-				fmt.Fprintf(os.Stderr, "Warning: Failed to parse config file %s: %v\n", cfgPath, err)
+				fmt.Fprintf(os.Stderr, "Warning: Failed to parse config file %s: %v\n", cfgPath, unmarshalErr)
 				fmt.Fprintf(os.Stderr, "Continuing with fallback resolution. Fix the config file to resolve this warning.\n")
 			}
 		} else {
-			verboseLog("Config file exists but cannot be read: %v", err)
+			verboseLog("Config file exists but cannot be read: %v", readErr)
 		}
 	} else {
 		verboseLog("No config file found: %v", err)

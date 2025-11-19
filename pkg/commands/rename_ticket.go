@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -148,35 +148,13 @@ func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 // updateTicketFrontmatter walks a directory and updates the Ticket field in frontmatter-capable markdown files.
 func updateTicketFrontmatter(root string, newTicket string) (int, error) {
 	updated := 0
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
+	err := documents.WalkDocuments(root, func(path string, doc *models.Document, body string, readErr error) error {
+		if readErr != nil || doc == nil {
 			return nil
 		}
-		if d.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
-			return nil
-		}
-
-		// Attempt to parse frontmatter; skip files without valid frontmatter
-		f, openErr := os.Open(path)
-		if openErr != nil {
-			return nil
-		}
-		defer func() { _ = f.Close() }()
-
-		var doc models.Document
-		body, parseErr := frontmatter.Parse(f, &doc)
-		if parseErr != nil {
-			return nil
-		}
-
-		// Update ticket and last-updated
 		doc.Ticket = newTicket
 		doc.LastUpdated = time.Now()
-
-		if err := writeDocumentWithFrontmatter(path, &doc, string(body), true); err != nil {
+		if err := documents.WriteDocumentWithFrontmatter(path, doc, body, true); err != nil {
 			return fmt.Errorf("writing updated frontmatter failed for %s: %w", path, err)
 		}
 		updated++

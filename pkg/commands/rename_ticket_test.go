@@ -6,8 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/adrg/frontmatter"
-	"github.com/go-go-golems/docmgr/pkg/models"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/glazed/pkg/cli"
 )
 
@@ -118,13 +117,7 @@ LastUpdated: 2025-11-18
 
 	// Validate frontmatter updated in index.md
 	idxPath := filepath.Join(newDir, "index.md")
-	f, err := os.Open(idxPath)
-	if err != nil {
-		t.Fatalf("open index failed: %v", err)
-	}
-	var idxDoc models.Document
-	_, err = frontmatter.Parse(f, &idxDoc)
-	_ = f.Close()
+	idxDoc, _, err := documents.ReadDocumentWithFrontmatter(idxPath)
 	if err != nil {
 		t.Fatalf("parse index frontmatter failed: %v", err)
 	}
@@ -134,13 +127,7 @@ LastUpdated: 2025-11-18
 
 	// Validate frontmatter updated in sub doc
 	docPath := filepath.Join(newDir, "design-doc", "01-intro.md")
-	f2, err := os.Open(docPath)
-	if err != nil {
-		t.Fatalf("open doc failed: %v", err)
-	}
-	var subDoc models.Document
-	_, err = frontmatter.Parse(f2, &subDoc)
-	_ = f2.Close()
+	subDoc, _, err := documents.ReadDocumentWithFrontmatter(docPath)
 	if err != nil {
 		t.Fatalf("parse sub doc failed: %v", err)
 	}

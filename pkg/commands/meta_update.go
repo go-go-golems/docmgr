@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -157,7 +157,7 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 				types.MRP("error", err.Error()),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to report meta update error for %s: %w", filePath, err)
 			}
 			continue
 		}
@@ -169,7 +169,7 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 			types.MRP("status", "updated"),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to add meta update row for %s: %w", filePath, err)
 		}
 	}
 
@@ -178,23 +178,10 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 
 // updateDocumentField updates a specific field in a document's frontmatter
 func updateDocumentField(filePath string, fieldName string, value string) error {
-	// Read file
-	f, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	// Parse frontmatter
-	var doc models.Document
-	rest, err := frontmatter.Parse(f, &doc)
+	doc, content, err := documents.ReadDocumentWithFrontmatter(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse frontmatter: %w", err)
 	}
-
-	// Read rest of content
-	restBytes := rest
-	content := string(restBytes)
 
 	// Update field based on field name
 	// Map field names to struct fields (case-insensitive)
@@ -260,7 +247,7 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 	doc.LastUpdated = time.Now()
 
 	// Write back to file
-	return writeDocumentWithFrontmatter(filePath, &doc, content, true)
+	return documents.WriteDocumentWithFrontmatter(filePath, doc, content, true)
 }
 
 // findMarkdownFiles finds all markdown files in a directory, optionally filtered by doc type
@@ -280,7 +267,7 @@ func findMarkdownFiles(rootDir string, docTypeFilter string) ([]string, error) {
 
 		// If docType filter specified, check frontmatter
 		if docTypeFilter != "" {
-			doc, err := readDocumentFrontmatter(path)
+			doc, _, err := documents.ReadDocumentWithFrontmatter(path)
 			if err != nil {
 				return nil // Skip files with invalid frontmatter
 			}

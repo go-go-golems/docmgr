@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -134,7 +134,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 
 	// Update index.md to add external source reference
 	indexPath := filepath.Join(ticketDir, "index.md")
-	doc, err := readDocumentFrontmatter(indexPath)
+	doc, body, err := documents.ReadDocumentWithFrontmatter(indexPath)
 	if err != nil {
 		return fmt.Errorf("failed to read index.md: %w", err)
 	}
@@ -144,23 +144,7 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		doc.ExternalSources = append(doc.ExternalSources, sourceRef)
 		doc.LastUpdated = time.Now()
 
-		// Read the content after frontmatter using adrg/frontmatter library
-		f, err := os.Open(indexPath)
-		if err != nil {
-			return fmt.Errorf("failed to read index content: %w", err)
-		}
-		defer func() {
-			_ = f.Close()
-		}()
-
-		// Parse frontmatter to get the body content
-		var existingDoc models.Document
-		bodyBytes, err := frontmatter.Parse(f, &existingDoc)
-		if err != nil {
-			return fmt.Errorf("failed to parse frontmatter in index.md: %w", err)
-		}
-
-		if err := writeDocumentWithFrontmatter(indexPath, doc, string(bodyBytes), true); err != nil {
+		if err := documents.WriteDocumentWithFrontmatter(indexPath, doc, body, true); err != nil {
 			return fmt.Errorf("failed to update index.md: %w", err)
 		}
 	}
@@ -173,7 +157,10 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		types.MRP("status", "imported"),
 	)
 
-	return gp.AddRow(ctx, row)
+	if err := gp.AddRow(ctx, row); err != nil {
+		return fmt.Errorf("failed to add import row for %s: %w", settings.FilePath, err)
+	}
+	return nil
 }
 
 func findTicketDirectory(root, ticket string) (string, error) {
@@ -196,10 +183,10 @@ func appendSourceMetadata(path string, source *models.ExternalSource) error {
 	if _, err := os.Stat(path); err == nil {
 		data, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to read external sources file %s: %w", path, err)
 		}
 		if err := yaml.Unmarshal(data, &sources); err != nil {
-			return err
+			return fmt.Errorf("failed to parse external sources file %s: %w", path, err)
 		}
 	}
 
@@ -207,10 +194,13 @@ func appendSourceMetadata(path string, source *models.ExternalSource) error {
 
 	data, err := yaml.Marshal(sources)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to encode external sources for %s: %w", path, err)
 	}
 
-	return os.WriteFile(path, data, 0644)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write external sources file %s: %w", path, err)
+	}
+	return nil
 }
 
 func contains(slice []string, item string) bool {

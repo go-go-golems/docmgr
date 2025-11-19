@@ -6,9 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/adrg/frontmatter"
 	"github.com/go-go-golems/docmgr/internal/workspace"
-	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -106,27 +104,11 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to add workspace row for %s: %w", doc.Ticket, err)
 		}
 	}
 
 	return nil
-}
-
-func readDocumentFrontmatter(path string) (*models.Document, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-
-	var doc models.Document
-	_, err = frontmatter.Parse(f, &doc)
-	if err != nil {
-		return nil, err
-	}
-
-	return &doc, nil
 }
 
 var _ cmds.GlazeCommand = &ListCommand{}

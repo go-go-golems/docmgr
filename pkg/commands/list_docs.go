@@ -173,13 +173,16 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to add document row for %s: %w", relPath, err)
 		}
 
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to list documents under %s: %w", settings.Root, err)
+	}
+	return nil
 }
 
 var _ cmds.GlazeCommand = &ListDocsCommand{}
@@ -264,7 +267,10 @@ func (c *ListDocsCommand) Run(
 		return nil
 	})
 
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to list documents under %s: %w", settings.Root, err)
+	}
+	return nil
 }
 
 var _ cmds.BareCommand = &ListDocsCommand{}

@@ -12,9 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/adrg/frontmatter"
 	"github.com/go-go-golems/docmgr/internal/workspace"
-	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -775,27 +773,6 @@ func firstTerm(terms []string) string {
 		return ""
 	}
 	return terms[0]
-}
-
-// readDocumentWithContent reads a document and returns both frontmatter and content
-func readDocumentWithContent(path string) (*models.Document, string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, "", err
-	}
-	defer func() { _ = f.Close() }()
-
-	var doc models.Document
-	rest, err := frontmatter.Parse(f, &doc)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Read content
-	contentBytes := rest
-	content := string(contentBytes)
-
-	return &doc, content, nil
 }
 
 // extractSnippet extracts a snippet of text around a query match

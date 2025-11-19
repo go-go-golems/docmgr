@@ -174,7 +174,7 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 				types.MRP("path", ticketPath),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return err
+				return fmt.Errorf("failed to add status row for %s: %w", doc.Ticket, err)
 			}
 		}
 	}
@@ -219,7 +219,10 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 		types.MRP("stale_after_days", settings.StaleAfterDays),
 		types.MRP("status", "ok"),
 	)
-	return gp.AddRow(ctx, sum)
+	if err := gp.AddRow(ctx, sum); err != nil {
+		return fmt.Errorf("failed to add status summary row: %w", err)
+	}
+	return nil
 }
 
 var _ cmds.GlazeCommand = &StatusCommand{}

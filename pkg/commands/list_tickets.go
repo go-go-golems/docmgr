@@ -157,7 +157,7 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return err
+			return fmt.Errorf("failed to add ticket row for %s: %w", doc.Ticket, err)
 		}
 	}
 

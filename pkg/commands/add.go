@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
@@ -264,7 +265,7 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		content = fmt.Sprintf("# %s\n\n<!-- Add your content here -->\n", settings.Title)
 	}
 
-	if err := writeDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
+	if err := documents.WriteDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
 		return fmt.Errorf("failed to write document: %w", err)
 	}
 

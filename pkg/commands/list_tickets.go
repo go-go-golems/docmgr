@@ -207,26 +207,49 @@ func (c *ListTicketsCommand) Run(
 		return filtered[i].Doc.LastUpdated.After(filtered[j].Doc.LastUpdated)
 	})
 
-	// Markdown-formatted table for human-friendly output
+	// Markdown-formatted sections for human-friendly output
 	if len(filtered) == 0 {
 		fmt.Println("No tickets found.")
 		return nil
 	}
 	var b strings.Builder
-	b.WriteString("| Ticket | Title | Status | Topics | Tasks (open/done) | Updated | Path |\n")
-	b.WriteString("|---|---|---|---|---:|---|---|\n")
+	rootDisplay := settings.Root
+	if abs, err := filepath.Abs(settings.Root); err == nil {
+		rootDisplay = abs
+	}
+	if rootDisplay != "" {
+		fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", rootDisplay)
+	}
+
+	b.WriteString(fmt.Sprintf("## Tickets (%d)\n\n", len(filtered)))
 	for _, ws := range filtered {
 		doc := ws.Doc
 		open, done := countTasksInTicket(ws.Path)
-		fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %s | %s |\n",
-			doc.Ticket,
-			doc.Title,
-			doc.Status,
-			strings.Join(doc.Topics, ", "),
-			open, done,
-			doc.LastUpdated.Format("2006-01-02 15:04"),
-			ws.Path,
-		)
+		topics := "—"
+		if len(doc.Topics) > 0 {
+			topics = strings.Join(doc.Topics, ", ")
+		}
+		relPath := ws.Path
+		absRoot := rootDisplay
+		if abs, err := filepath.Abs(ws.Path); err == nil {
+			if absRoot != "" {
+				if rel, err2 := filepath.Rel(absRoot, abs); err2 == nil && rel != "" && rel != "." {
+					relPath = rel
+				} else if err2 == nil && rel == "." {
+					relPath = "."
+				} else {
+					relPath = abs
+				}
+			} else {
+				relPath = abs
+			}
+		}
+		fmt.Fprintf(&b, "### %s — %s\n", doc.Ticket, doc.Title)
+		fmt.Fprintf(&b, "- Status: **%s**\n", doc.Status)
+		fmt.Fprintf(&b, "- Topics: %s\n", topics)
+		fmt.Fprintf(&b, "- Tasks: %d open / %d done\n", open, done)
+		fmt.Fprintf(&b, "- Updated: %s\n", doc.LastUpdated.Format("2006-01-02 15:04"))
+		fmt.Fprintf(&b, "- Path: `%s`\n\n", relPath)
 	}
 	content := b.String()
 

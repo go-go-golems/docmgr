@@ -475,7 +475,7 @@ docmgr status --stale-after 30
 docmgr supports human-friendly defaults and structured output via Glaze.
 
 - Human-friendly (default):
-  - list tickets/docs: concise one-liners (ticket/title/status/topics/path/updated)
+  - list tickets/docs: markdown sections with per-ticket bullet summaries (status, topics, tasks, path relative to docs root; root shown once at top)
   - status: summary line (+ per-ticket lines unless `--summary-only`)
   - search: `path — title [ticket] :: snippet`; `--files` shows `file — reason (source=...)`
   - guidelines: raw guideline text (or list types with `--list`)
@@ -1170,6 +1170,22 @@ docmgr status --stale-after 30
 # Structured output for scripting
 docmgr list tickets --with-glaze-output --output json
 docmgr list docs --ticket MEN-4242 --with-glaze-output --output csv
+```
+
+Sample human output (default):
+
+```
+Docs root: `/home/you/projects/chat-app/ttmp`
+Paths are relative to this root.
+
+## Tickets (2)
+
+### MEN-4242 — Chat Persistence
+- Status: **active**
+- Topics: backend, chat
+- Tasks: 2 open / 5 done
+- Updated: 2025-11-19 14:20
+- Path: `2025/11/19/MEN-4242-chat-persistence`
 ```
 
 **Common usecases:**

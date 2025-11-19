@@ -832,7 +832,7 @@ Output shows checkboxes: `[x]` for done, `[ ]` for pending.
 
 ## 10. Closing Tickets [INTERMEDIATE]
 
-When you've finished work on a ticket, use `ticket close` to atomically update status, changelog, and metadata:
+When you've finished work on a ticket, use `ticket close` to atomically update status, changelog, and metadata. Ticket status must match the shared vocabulary; see [Status Vocabulary & Transitions](#status-vocabulary--transitions) if you're unsure which value to pick.
 
 ```bash
 # Close with defaults (status=complete)
@@ -875,23 +875,30 @@ docmgr ticket close --ticket MEN-4242 --with-glaze-output --output json
 }
 ```
 
-**Status Vocabulary:**
+### Status Vocabulary & Transitions
 
-Status values are vocabulary-guided (teams can customize). Default values:
+Status values are vocabulary-guided (teams can customize). Default values keep work flowing in a predictable direction:
 - `draft` — Initial draft state
 - `active` — Active work in progress
 - `review` — Ready for review
 - `complete` — Work completed
 - `archived` — Archived/completed work
 
+Discover the current list (including custom entries) with:
+
+```bash
+docmgr vocab list --category status --with-glaze-output --output table
+```
+
 Suggested transitions (not enforced):
-- `draft` → `active` (start work)
-- `active` → `review` (ready for review)
-- `review` → `active` (send back for changes)
-- `review` → `complete` (approved)
-- `complete` → `archived` (long-term storage)
+- `draft` → `active` → `review` → `complete` → `archived`
+- `review` → `active` (send back for fixes)
+- `complete` → `active` (reopen; unusual, call it out in the changelog)
+
+`docmgr doctor` warns (does not fail) if a ticket uses a status value that's not part of the vocabulary and lists the valid values plus the `docmgr vocab list --category status` command to help you correct or extend the list.
 
 Add custom status values with:
+
 ```bash
 docmgr vocab add --category status --slug on-hold --description "Work paused"
 ```

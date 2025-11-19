@@ -146,8 +146,8 @@ docmgr vocab add --category status \
 $ docmgr doctor --ticket MEN-4242
 
 ticket       | issue          | severity | message
--------------|----------------|----------|----------------------------------
-MEN-4242     | unknown_status | warning  | unknown status: in-progress (consider adding to vocabulary)
+-------------|----------------|----------|---------------------------------------------------------------------------
+MEN-4242     | unknown_status | warning  | unknown status: in-progress (valid values: draft, active, review, complete, archived; list via 'docmgr vocab list --category status')
 ```
 
 ## Feature 3: Task Completion Suggestions
@@ -204,8 +204,8 @@ Doctor validates status values against vocabulary:
 $ docmgr doctor --all
 
 ticket   | issue          | severity | message
----------|----------------|----------|----------------------------------
-MEN-4242 | unknown_status | warning  | unknown status: in-progress (consider adding to vocabulary)
+---------|----------------|----------|---------------------------------------------------------------------------
+MEN-4242 | unknown_status | warning  | unknown status: in-progress (valid values: draft, active, review, complete, archived; list via 'docmgr vocab list --category status')
 ```
 
 ## Complete Workflow Example

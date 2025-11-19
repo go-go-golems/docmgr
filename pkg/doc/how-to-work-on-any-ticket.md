@@ -81,7 +81,7 @@ Keep a running list of blockers, gaps, and temporary workarounds. Update it when
 
 ## Step 7: Close the Ticket When Done
 
-When all tasks are complete and work is ready for review or deployment, use `ticket close` to atomically update status, changelog, and timestamps:
+When all tasks are complete and work is ready for review or deployment, use `ticket close` to atomically update status, changelog, and timestamps. Status values follow the shared status vocabulary (`draft → active → review → complete → archived`, with `review → active` and occasional `complete → active` re-openings), so confirm the exact slug before closing.
 
 ```bash
 # Check if all tasks are done
@@ -102,6 +102,15 @@ docmgr ticket close --ticket <TICKET-ID> --status review --changelog-entry "Impl
 - Warns if tasks aren't all done (doesn't fail)
 
 **Pro tip:** When you check off the last task with `docmgr task check`, it automatically suggests running `ticket close`.
+
+**Status cheat sheet:**
+
+```bash
+# Inspect the current status vocabulary (including custom entries)
+docmgr vocab list --category status --with-glaze-output --output table
+```
+
+`docmgr doctor` warns—but will not fail—if a ticket uses a status value outside the vocabulary. Update the ticket or extend the vocabulary with `docmgr vocab add --category status --slug <slug> --description "..."`
 
 ## docmgr Helpers at a Glance
 

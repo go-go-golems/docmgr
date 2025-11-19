@@ -148,8 +148,14 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		intentSet[it.Slug] = struct{}{}
 	}
 	statusSet := map[string]struct{}{}
+	statusList := make([]string, 0, len(vocab.Status))
 	for _, it := range vocab.Status {
 		statusSet[it.Slug] = struct{}{}
+		statusList = append(statusList, it.Slug)
+	}
+	statusValidText := "none defined (add via 'docmgr vocab add --category status --slug <slug>')"
+	if len(statusList) > 0 {
+		statusValidText = strings.Join(statusList, ", ")
 	}
 
 	skipFn := func(relPath, base string) bool {
@@ -345,7 +351,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					types.MRP("ticket", doc.Ticket),
 					types.MRP("issue", "unknown_status"),
 					types.MRP("severity", "warning"),
-					types.MRP("message", fmt.Sprintf("unknown status: %s (consider adding to vocabulary)", doc.Status)),
+					types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status')", doc.Status, statusValidText)),
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {

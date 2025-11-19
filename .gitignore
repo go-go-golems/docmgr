@@ -29,3 +29,5 @@ thirdparty/
 
 out/
 
+docmgr
+!docmgr/

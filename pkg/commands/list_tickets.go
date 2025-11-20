@@ -128,7 +128,7 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// If only printing template schema, skip all other processing and output
-	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+	if settings.PrintTemplateSchema {
 		type TicketInfo struct {
 			Ticket      string
 			Title       string
@@ -236,7 +236,7 @@ func (c *ListTicketsCommand) Run(
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// If only printing template schema, skip all other processing and output
-	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+	if settings.PrintTemplateSchema {
 		type TicketInfo struct {
 			Ticket      string
 			Title       string
@@ -460,10 +460,6 @@ func (c *ListTicketsCommand) Run(
 		"root":   settings.Root,
 		"ticket": settings.Ticket,
 		"status": settings.Status,
-	}
-	// Print template schema if requested
-	if settings.PrintTemplateSchema {
-		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
 	}
 	_ = templates.RenderVerbTemplate(verbCandidates, rootDisplay, settingsMap, templateData)
 

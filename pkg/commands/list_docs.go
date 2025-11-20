@@ -123,7 +123,7 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// If only printing template schema, skip all other processing and output
-	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+	if settings.PrintTemplateSchema {
 		type DocInfo struct {
 			DocType string
 			Title   string
@@ -262,7 +262,7 @@ func (c *ListDocsCommand) Run(
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
 	// If only printing template schema, skip all other processing and output
-	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+	if settings.PrintTemplateSchema {
 		type DocInfo struct {
 			DocType string
 			Title   string
@@ -541,10 +541,6 @@ func (c *ListDocsCommand) Run(
 		"status":  settings.Status,
 		"docType": settings.DocType,
 		"topics":  settings.Topics,
-	}
-	// Print template schema if requested
-	if settings.PrintTemplateSchema {
-		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
 	}
 	_ = templates.RenderVerbTemplate(verbCandidates, absRoot, settingsMap, templateData)
 

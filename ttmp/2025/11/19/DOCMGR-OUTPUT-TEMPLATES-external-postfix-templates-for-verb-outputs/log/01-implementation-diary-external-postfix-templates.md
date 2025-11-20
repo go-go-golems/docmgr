@@ -515,3 +515,23 @@ The remaining tasks are enhancements that can be done incrementally based on use
 ### Follow-ups
 - Extend flags to future templated verbs when added (status, tasks list, search, vocab list, guidelines)
 - Document the new flags in the user guide and examples
+
+---
+
+## 2025-11-20 - Simplified schema flag handling
+
+### What I Did
+- Simplified `--print-template-schema` handling to rely only on `settings.PrintTemplateSchema`
+- Removed auxiliary flag detection helpers and extra checks
+- Ensured that when the flag is set, commands print only the schema and skip all other output
+
+### Why
+- Glazed `InitializeStruct` reliably populates `settings`, so additional checks were redundant
+- Keeps code paths straightforward and predictable
+
+### Verification
+- Built and ran:
+  - `go run ./cmd/docmgr list docs --print-template-schema --schema-format yaml`
+  - `go run ./cmd/docmgr list tickets --print-template-schema --schema-format yaml`
+  - `go run ./cmd/docmgr doctor --print-template-schema --schema-format yaml`
+- Observed schema-only output (no human sections or postfix templates)

@@ -1,0 +1,60 @@
+{{- /* Advanced example: doctor template with detailed analysis */ -}}
+---
+doctor_analysis:
+  total_findings: {{ .TotalFindings }}
+  
+  severity_breakdown:
+  {{- $severityMap := dict "ERROR" 0 "WARNING" 0 "OK" 0 }}
+  {{- range .Tickets }}
+    {{- range .Findings }}
+      {{- $count := or (get $severityMap .Severity) 0 }}
+      {{- $severityMap = set $severityMap .Severity (add1 $count) }}
+    {{- end }}
+  {{- end }}
+  {{- range $sev, $count := $severityMap }}
+    - {{ $sev }}: {{ $count }}
+  {{- end }}
+  
+  issue_types:
+  {{- $issueMap := dict }}
+  {{- range .Tickets }}
+    {{- range .Findings }}
+      {{- $count := or (get $issueMap .Issue) 0 }}
+      {{- $issueMap = set $issueMap .Issue (add1 $count) }}
+    {{- end }}
+  {{- end }}
+  {{- range $issue, $count := $issueMap }}
+    - {{ $issue }}: {{ $count }} occurrences
+  {{- end }}
+  
+  tickets_with_errors:
+  {{- range .Tickets }}
+    {{- $errorCount := countBy .Findings "ERROR" }}
+    {{- if gt $errorCount 0 }}
+    - {{ .Ticket }}: {{ $errorCount }} error(s)
+      {{- range .Findings }}
+        {{- if eq .Severity "ERROR" }}
+      - {{ .Issue }}: {{ .Message }} ({{ .Path }})
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  
+  tickets_with_warnings_only:
+  {{- range .Tickets }}
+    {{- $errorCount := countBy .Findings "ERROR" }}
+    {{- $warningCount := countBy .Findings "WARNING" }}
+    {{- if and (eq $errorCount 0) (gt $warningCount 0) }}
+    - {{ .Ticket }}: {{ $warningCount }} warning(s) (no errors)
+    {{- end }}
+  {{- end }}
+  
+  clean_tickets:
+  {{- $cleanCount := 0 }}
+  {{- range .Tickets }}
+    {{- if eq (len .Findings) 0 }}
+      {{- $cleanCount = add1 $cleanCount }}
+    {{- end }}
+  {{- end }}
+  clean: {{ $cleanCount }} tickets with no findings
+

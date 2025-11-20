@@ -1,0 +1,164 @@
+package templates
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"reflect"
+
+	"gopkg.in/yaml.v3"
+)
+
+// PrintSchema renders a simple schema describing the structure of v.
+// Supported formats: "json" (default), "yaml".
+func PrintSchema(w io.Writer, v any, format string) error {
+	s := buildSchema(reflect.ValueOf(v))
+	var out []byte
+	var err error
+	switch format {
+	case "yaml", "yml":
+		out, err = yaml.Marshal(s)
+	default:
+		out, err = json.MarshalIndent(s, "", "  ")
+	}
+	if err != nil {
+		return err
+	}
+	_, _ = w.Write(out)
+	if len(out) == 0 || out[len(out)-1] != '\n' {
+		_, _ = io.WriteString(w, "\n")
+	}
+	return nil
+}
+
+// buildSchema converts a reflected value into a simple, readable schema.
+// The returned value is a map[string]any suitable for JSON/YAML marshalling.
+func buildSchema(rv reflect.Value) any {
+	if !rv.IsValid() {
+		return map[string]any{"type": "null"}
+	}
+	t := rv.Type()
+	// Handle typed nils
+	if (t.Kind() == reflect.Ptr || t.Kind() == reflect.Interface || t.Kind() == reflect.Slice || t.Kind() == reflect.Map) && rv.IsNil() {
+		// Return type info if possible
+		switch t.Kind() {
+		case reflect.Slice, reflect.Array:
+			return map[string]any{
+				"type":  "array",
+				"items": buildSchema(reflect.New(t.Elem()).Elem()),
+			}
+		case reflect.Map:
+			return map[string]any{
+				"type":       "object",
+				"properties": map[string]any{},
+			}
+		default:
+			return map[string]any{"type": kindToTypeName(t.Kind())}
+		}
+	}
+
+	switch t.Kind() {
+	case reflect.Bool:
+		return map[string]any{"type": "boolean"}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return map[string]any{"type": "integer"}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return map[string]any{"type": "integer"}
+	case reflect.Float32, reflect.Float64:
+		return map[string]any{"type": "number"}
+	case reflect.String:
+		return map[string]any{"type": "string"}
+	case reflect.Slice, reflect.Array:
+		// Try to infer item type from element type or first element
+		itemSchema := any(map[string]any{"type": "any"})
+		if rv.Len() > 0 {
+			itemSchema = buildSchema(rv.Index(0))
+		} else {
+			itemSchema = buildSchema(reflect.New(t.Elem()).Elem())
+		}
+		return map[string]any{
+			"type":  "array",
+			"items": itemSchema,
+		}
+	case reflect.Map:
+		props := map[string]any{}
+		iter := rv.MapRange()
+		for iter.Next() {
+			k := iter.Key()
+			v := iter.Value()
+			keyStr := fmt.Sprintf("%v", k.Interface())
+			props[keyStr] = buildSchema(v)
+		}
+		return map[string]any{
+			"type":       "object",
+			"properties": props,
+		}
+	case reflect.Struct:
+		props := map[string]any{}
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			// Exported fields only
+			if f.PkgPath != "" {
+				continue
+			}
+			name := f.Name
+			// If there's a `json:"foo"` tag, prefer it
+			if tag, ok := f.Tag.Lookup("json"); ok && tag != "" {
+				// Tag may contain options, split on comma
+				name = parseJSONTagName(tag, name)
+			}
+			props[name] = buildSchema(rv.Field(i))
+		}
+		return map[string]any{
+			"type":       "object",
+			"properties": props,
+		}
+	case reflect.Interface, reflect.Ptr:
+		return buildSchema(rv.Elem())
+	default:
+		return map[string]any{"type": kindToTypeName(t.Kind())}
+	}
+}
+
+func kindToTypeName(k reflect.Kind) string {
+	switch k {
+	case reflect.Invalid:
+		return "null"
+	case reflect.Bool:
+		return "boolean"
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return "integer"
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "integer"
+	case reflect.Float32, reflect.Float64:
+		return "number"
+	case reflect.String:
+		return "string"
+	case reflect.Map, reflect.Struct:
+		return "object"
+	case reflect.Slice, reflect.Array:
+		return "array"
+	case reflect.Interface, reflect.Ptr:
+		return "any"
+	default:
+		return "any"
+	}
+}
+
+// parseJSONTagName extracts the field name from a `json:"name,omitempty"` tag.
+func parseJSONTagName(tag string, fallback string) string {
+	if tag == "-" {
+		return fallback
+	}
+	for i := 0; i < len(tag); i++ {
+		if tag[i] == ',' {
+			if i == 0 {
+				return fallback
+			}
+			return tag[:i]
+		}
+	}
+	return tag
+}
+
+

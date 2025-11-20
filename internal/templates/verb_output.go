@@ -90,7 +90,8 @@ func RenderVerbTemplate(
 		}
 	}
 
-	// Render template to stdout
+	// Render template to stdout (add newline separator for readability)
+	fmt.Fprintln(os.Stdout)
 	if err := tmpl.Execute(os.Stdout, templateData); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Failed to render template %s: %v\n", templatePath, err)
 		return false

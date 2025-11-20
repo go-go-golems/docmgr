@@ -15,6 +15,12 @@ topics:
       description: Backend services
     - slug: websocket
       description: WebSocket lifecycle & events
+    - slug: cli
+      description: CLI and command-line interface topics
+    - slug: templates
+      description: Template system and templating topics
+    - slug: glaze
+      description: Glazed framework and structured output topics
 docTypes:
     - slug: index
       description: Ticket index

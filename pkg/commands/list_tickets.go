@@ -51,6 +51,9 @@ type ListTicketsSettings struct {
 	Root   string `glazed.parameter:"root"`
 	Ticket string `glazed.parameter:"ticket"`
 	Status string `glazed.parameter:"status"`
+	// Schema printing flags (human mode only)
+	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
 
 func NewListTicketsCommand() (*ListTicketsCommand, error) {
@@ -83,6 +86,18 @@ Examples:
 					parameters.WithDefault("ttmp"),
 				),
 				parameters.NewParameterDefinition(
+					"print-template-schema",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Print template schema after output (human mode only)"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"schema-format",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Template schema output format: json|yaml"),
+					parameters.WithDefault("json"),
+				),
+				parameters.NewParameterDefinition(
 					"ticket",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Filter by ticket identifier"),
@@ -111,6 +126,46 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+		type TicketInfo struct {
+			Ticket      string
+			Title       string
+			Status      string
+			Topics      []string
+			Path        string
+			LastUpdated string
+		}
+		templateData := map[string]interface{}{
+			"TotalTickets": 0,
+			"Tickets": []TicketInfo{
+				{
+					Ticket:      "",
+					Title:       "",
+					Status:      "",
+					Topics:      []string{},
+					Path:        "",
+					LastUpdated: "",
+				},
+			},
+			"Rows": []map[string]interface{}{
+				{
+					"ticket":       "",
+					"title":        "",
+					"status":       "",
+					"topics":       "",
+					"tasks_open":   0,
+					"tasks_done":   0,
+					"path":         "",
+					"last_updated": "",
+				},
+			},
+			"Fields": []string{"ticket", "title", "status", "topics", "path", "last_updated"},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -179,6 +234,46 @@ func (c *ListTicketsCommand) Run(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+		type TicketInfo struct {
+			Ticket      string
+			Title       string
+			Status      string
+			Topics      []string
+			Path        string
+			LastUpdated string
+		}
+		templateData := map[string]interface{}{
+			"TotalTickets": 0,
+			"Tickets": []TicketInfo{
+				{
+					Ticket:      "",
+					Title:       "",
+					Status:      "",
+					Topics:      []string{},
+					Path:        "",
+					LastUpdated: "",
+				},
+			},
+			"Rows": []map[string]interface{}{
+				{
+					"ticket":       "",
+					"title":        "",
+					"status":       "",
+					"topics":       "",
+					"tasks_open":   0,
+					"tasks_done":   0,
+					"path":         "",
+					"last_updated": "",
+				},
+			},
+			"Fields": []string{"ticket", "title", "status", "topics", "path", "last_updated"},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -365,6 +460,10 @@ func (c *ListTicketsCommand) Run(
 		"root":   settings.Root,
 		"ticket": settings.Ticket,
 		"status": settings.Status,
+	}
+	// Print template schema if requested
+	if settings.PrintTemplateSchema {
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
 	}
 	_ = templates.RenderVerbTemplate(verbCandidates, rootDisplay, settingsMap, templateData)
 

@@ -1,0 +1,53 @@
+{{- /* Advanced example: list tickets with complex aggregations and filtering */ -}}
+---
+ticket_analysis:
+  total: {{ .TotalTickets }}
+  
+  status_breakdown:
+  {{- $statusMap := dict }}
+  {{- range .Tickets }}
+    {{- $count := or (get $statusMap .Status) 0 }}
+    {{- $statusMap = set $statusMap .Status (add1 $count) }}
+  {{- end }}
+  {{- range $status, $count := $statusMap }}
+    - {{ $status }}: {{ $count }} ({{ printf "%.1f" (div (mul $count 100.0) $.TotalTickets) }}%)
+  {{- end }}
+  
+  topic_frequency:
+  {{- $topicMap := dict }}
+  {{- range .Tickets }}
+    {{- range .Topics }}
+      {{- $count := or (get $topicMap .) 0 }}
+      {{- $topicMap = set $topicMap . (add1 $count) }}
+    {{- end }}
+  {{- end }}
+  {{- range $topic, $count := $topicMap }}
+    {{- if gt $count 1 }}
+    - {{ $topic }}: {{ $count }} tickets
+    {{- end }}
+  {{- end }}
+  
+  recently_updated:
+  {{- $recentTickets := slice }}
+  {{- range .Tickets }}
+    {{- if ne .LastUpdated "unknown" }}
+      {{- $recentTickets = append $recentTickets . }}
+    {{- end }}
+  {{- end }}
+  {{- range $recentTickets | slice 0 5 }}
+    - {{ .Ticket }}: {{ .Title }} (updated {{ .LastUpdated }})
+  {{- end }}
+  
+  needs_attention:
+  {{- range .Tickets }}
+    {{- if eq .Status "active" }}
+      {{- $daysSinceUpdate := 0 }}
+      {{- if ne .LastUpdated "unknown" }}
+        {{- /* In real template, would parse date and calculate days */ -}}
+      {{- end }}
+      {{- if eq $daysSinceUpdate 0 }}
+    - {{ .Ticket }}: {{ .Title }} (no update date)
+      {{- end }}
+    {{- end }}
+  {{- end }}
+

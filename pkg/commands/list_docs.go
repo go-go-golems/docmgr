@@ -32,6 +32,9 @@ type ListDocsSettings struct {
 	Status  string   `glazed.parameter:"status"`
 	DocType string   `glazed.parameter:"doc-type"`
 	Topics  []string `glazed.parameter:"topics"`
+	// Schema printing flags (human mode only)
+	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
 
 func NewListDocsCommand() (*ListDocsCommand, error) {
@@ -64,6 +67,18 @@ Examples:
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
 					parameters.WithDefault("ttmp"),
+				),
+				parameters.NewParameterDefinition(
+					"print-template-schema",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Print template schema after output (human mode only)"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"schema-format",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Template schema output format: json|yaml"),
+					parameters.WithDefault("json"),
 				),
 				parameters.NewParameterDefinition(
 					"ticket",
@@ -106,6 +121,46 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+		type DocInfo struct {
+			DocType string
+			Title   string
+			Status  string
+			Topics  []string
+			Updated string
+			Path    string
+		}
+		type TicketInfo struct {
+			Ticket string
+			Docs   []DocInfo
+		}
+		templateData := map[string]interface{}{
+			"TotalDocs":    0,
+			"TotalTickets": 0,
+			"Tickets": []TicketInfo{
+				{
+					Ticket: "",
+					Docs:   []DocInfo{{}},
+				},
+			},
+			"Rows": []map[string]interface{}{
+				{
+					"ticket":       "",
+					"doc_type":     "",
+					"title":        "",
+					"status":       "",
+					"topics":       "",
+					"path":         "",
+					"last_updated": "",
+				},
+			},
+			"Fields": []string{"ticket", "doc_type", "title", "status", "topics", "path", "last_updated"},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -205,6 +260,46 @@ func (c *ListDocsCommand) Run(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema || isSchemaFlagSet(parsedLayers) || isSchemaFlagInArgs() {
+		type DocInfo struct {
+			DocType string
+			Title   string
+			Status  string
+			Topics  []string
+			Updated string
+			Path    string
+		}
+		type TicketInfo struct {
+			Ticket string
+			Docs   []DocInfo
+		}
+		templateData := map[string]interface{}{
+			"TotalDocs":    0,
+			"TotalTickets": 0,
+			"Tickets": []TicketInfo{
+				{
+					Ticket: "",
+					Docs:   []DocInfo{{}},
+				},
+			},
+			"Rows": []map[string]interface{}{
+				{
+					"ticket":       "",
+					"doc_type":     "",
+					"title":        "",
+					"status":       "",
+					"topics":       "",
+					"path":         "",
+					"last_updated": "",
+				},
+			},
+			"Fields": []string{"ticket", "doc_type", "title", "status", "topics", "path", "last_updated"},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -446,6 +541,10 @@ func (c *ListDocsCommand) Run(
 		"status":  settings.Status,
 		"docType": settings.DocType,
 		"topics":  settings.Topics,
+	}
+	// Print template schema if requested
+	if settings.PrintTemplateSchema {
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
 	}
 	_ = templates.RenderVerbTemplate(verbCandidates, absRoot, settingsMap, templateData)
 

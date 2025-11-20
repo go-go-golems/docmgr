@@ -497,7 +497,7 @@ docmgr doc guidelines --doc-type design-doc
 
 # Structured
 docmgr list tickets --with-glaze-output --output json
-docmgr status --with-glaze-output --output table
+docmgr status --with-glaze-output --output yaml
 docmgr doc search --query websocket --with-glaze-output --output yaml
 docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
@@ -632,7 +632,7 @@ docmgr doc guidelines --doc-type design-doc
 
 # Structured
 docmgr list tickets --with-glaze-output --output json
-docmgr status --with-glaze-output --output table
+docmgr status --with-glaze-output --output yaml
 docmgr doc search --query websocket --with-glaze-output --output yaml
 docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
@@ -888,7 +888,7 @@ Status values are vocabulary-guided (teams can customize). Default values keep w
 Discover the current list (including custom entries) with:
 
 ```bash
-docmgr vocab list --category status --with-glaze-output --output table
+docmgr vocab list --category status --with-glaze-output --output yaml
 ```
 
 Suggested transitions (not enforced):
@@ -1126,7 +1126,7 @@ docs-validate:
 	docmgr doctor --all --stale-after 30 --fail-on error
 
 docs-report:
-	@docmgr status --with-glaze-output --output table
+	@docmgr status --with-glaze-output --output yaml
 	@echo ""
 	@docmgr doc search --updated-since "7 days ago"
 ```
@@ -1413,3 +1413,16 @@ docmgr list docs --with-glaze-output --output json
 - `RelatedFiles` — Array of paths (with optional notes)
 - `ExternalSources` — Array of URLs
 - `Summary` — One-line description
+# Human vs Glaze output
+
+`docmgr doctor` now mirrors other dual-mode commands:
+
+```bash
+# Human-readable report (default)
+docmgr doctor --ticket MEN-4242
+
+# Structured output (default JSON)
+docmgr doctor --ticket MEN-4242 --with-glaze-output --output yaml
+```
+
+The human report groups findings per ticket with Markdown bullets, while `--with-glaze-output` switches back to Glaze rows (table/json/yaml/csv) for automation.

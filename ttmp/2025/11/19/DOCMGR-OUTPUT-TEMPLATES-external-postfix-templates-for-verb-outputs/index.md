@@ -11,24 +11,38 @@ Intent: long-term
 Owners:
     - manuel
 RelatedFiles:
+    - Path: docmgr/pkg/commands/guidelines_cmd.go
+      Note: Added schema flags and postfix template rendering for guidelines verb
     - Path: docmgr/pkg/commands/search.go
       Note: Added schema flags and postfix template rendering for search verb
     - Path: docmgr/pkg/commands/status.go
       Note: Added schema flags and postfix template rendering for status verb
     - Path: docmgr/pkg/commands/tasks.go
       Note: Added schema flags and postfix template rendering for tasks list verb
+    - Path: docmgr/pkg/commands/vocab_list.go
+      Note: Added schema flags and postfix template rendering for vocab list verb
+    - Path: docmgr/test-scenarios/testing-doc-manager/13-template-schema-output.sh
+      Note: Integration test verifying --print-template-schema outputs only schema (no human output) for all templated verbs
+    - Path: docmgr/test-scenarios/testing-doc-manager/run-all.sh
+      Note: Added template schema output test to test suite
     - Path: docmgr/ttmp/2025/11/19/DOCMGR-OUTPUT-TEMPLATES-external-postfix-templates-for-verb-outputs/playbooks/01-intern-playbook-continuing-external-templates.md
       Note: Updated playbook with lessons learned and improved guidance
+    - Path: docmgr/ttmp/templates/doc/guidelines.templ
+      Note: Example template file for guidelines command
     - Path: docmgr/ttmp/templates/doc/search.templ
       Note: Example template file for search command
     - Path: docmgr/ttmp/templates/status.templ
       Note: Example template file for status command
     - Path: docmgr/ttmp/templates/tasks/list.templ
       Note: Example template file for tasks list command
+    - Path: docmgr/ttmp/templates/vocab/list.templ
+      Note: Example template file for vocab list command
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-11-19T20:23:21.630363211-05:00
 ---
+
+
 
 
 

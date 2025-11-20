@@ -159,3 +159,31 @@ Added template support for search command: refactored to collect results first, 
 - docmgr/pkg/commands/search.go — Refactored Run to collect results before printing
 - docmgr/ttmp/templates/doc/search.templ — Example template for search command output
 
+
+## 2025-11-20
+
+Added template support for vocab list and guidelines commands: schema flags, template data building, and example templates
+
+### Related Files
+
+- docmgr/pkg/commands/guidelines_cmd.go — Added schema flags and postfix template rendering for guidelines verb
+- docmgr/pkg/commands/vocab_list.go — Added schema flags and postfix template rendering for vocab list verb
+- docmgr/ttmp/templates/doc/guidelines.templ — Example template for guidelines command
+- docmgr/ttmp/templates/vocab/list.templ — Example template for vocab list command
+
+
+## 2025-11-20
+
+Updated playbook: all suggested verbs now have template support implemented
+
+
+## 2025-11-20
+
+Added integration tests for --print-template-schema: verify schema-only output (no human-readable content) for all templated verbs
+
+### Related Files
+
+- docmgr/test-scenarios/testing-doc-manager/13-template-schema-output.sh — Integration test script verifying --print-template-schema outputs only schema
+- docmgr/test-scenarios/testing-doc-manager/README.md — Documented new template schema output test
+- docmgr/test-scenarios/testing-doc-manager/run-all.sh — Added 13-template-schema-output.sh to test suite
+

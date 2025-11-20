@@ -1,0 +1,30 @@
+---
+vocabulary_summary:
+  category: {{ .Category }}
+  topics_count: {{ len .Topics }}
+  doctypes_count: {{ len .DocTypes }}
+  intent_count: {{ len .Intent }}
+  status_count: {{ len .Status }}
+topics:
+{{- range .Topics }}
+  - slug: {{ .Slug }}
+    description: {{ .Description }}
+{{- end }}
+doctypes:
+{{- range .DocTypes }}
+  - slug: {{ .Slug }}
+    description: {{ .Description }}
+{{- end }}
+intent:
+{{- range .Intent }}
+  - slug: {{ .Slug }}
+    description: {{ .Description }}
+{{- end }}
+status:
+{{- range .Status }}
+  - slug: {{ .Slug }}
+    description: {{ .Description }}
+{{- end }}
+guidance: |
+  Use vocabulary entries consistently across documents. Check slug spelling before creating new entries.
+

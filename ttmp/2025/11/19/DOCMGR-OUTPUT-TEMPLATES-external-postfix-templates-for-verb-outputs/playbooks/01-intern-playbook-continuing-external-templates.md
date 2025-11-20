@@ -25,6 +25,12 @@ RelatedFiles:
     note: Example wiring for postfix templates and schema flags
   - path: docmgr/pkg/commands/tasks.go
     note: Example wiring for postfix templates and schema flags
+  - path: docmgr/pkg/commands/search.go
+    note: Example wiring for postfix templates and schema flags (refactored to collect results first)
+  - path: docmgr/pkg/commands/vocab_list.go
+    note: Example wiring for postfix templates and schema flags
+  - path: docmgr/pkg/commands/guidelines_cmd.go
+    note: Example wiring for postfix templates and schema flags
   - path: docmgr/ttmp/templates/doc/list.templ
     note: Example template for doc list
   - path: docmgr/ttmp/templates/list/tickets.templ
@@ -35,6 +41,12 @@ RelatedFiles:
     note: Example template for status command
   - path: docmgr/ttmp/templates/tasks/list.templ
     note: Example template for tasks list command
+  - path: docmgr/ttmp/templates/doc/search.templ
+    note: Example template for search command
+  - path: docmgr/ttmp/templates/vocab/list.templ
+    note: Example template for vocab list command
+  - path: docmgr/ttmp/templates/doc/guidelines.templ
+    note: Example template for guidelines command
 ExternalSources: []
 Summary: Step-by-step guide for implementing postfix templates and template schema printing for additional verbs, with validation, examples, and documentation best practices.
 LastUpdated: 2025-11-20T00:00:00Z
@@ -148,21 +160,24 @@ Use `list_docs.go`, `list_tickets.go`, `doctor.go`, `status.go`, and `tasks.go` 
 
 - Schema printing: `docmgr/internal/templates/schema.go`.
 - Template rendering: `docmgr/internal/templates/verb_output.go`.
-- Example verbs: `list_docs.go`, `list_tickets.go`, `doctor.go`, `status.go`, `tasks.go`.
+- Example verbs: `list_docs.go`, `list_tickets.go`, `doctor.go`, `status.go`, `tasks.go`, `search.go`, `vocab_list.go`, `guidelines_cmd.go`.
 - Example templates: 
   - `ttmp/templates/doc/list.templ`
   - `ttmp/templates/list/tickets.templ`
   - `ttmp/templates/doctor.templ`
   - `ttmp/templates/status.templ`
   - `ttmp/templates/tasks/list.templ`
+  - `ttmp/templates/doc/search.templ`
+  - `ttmp/templates/vocab/list.templ`
+  - `ttmp/templates/doc/guidelines.templ`
 
 # Suggested Next Verbs (in order)
 
 1. ~~`status`~~ ✅ — Completed; template data with ticket info and totals.
 2. ~~`tasks list`~~ ✅ — Completed; simple data with open/done totals.
-3. `search` — refactor to collect results, then render template.
-4. `vocab list` — categorize topics/docTypes/intent/status.
-5. `guidelines` — optional; consider metadata around source.
+3. ~~`search`~~ ✅ — Completed; refactored to collect results, then render template.
+4. ~~`vocab list`~~ ✅ — Completed; categorize topics/docTypes/intent/status.
+5. ~~`guidelines`~~ ✅ — Completed; consider metadata around source.
 
 # Command Snippets
 

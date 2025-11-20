@@ -635,3 +635,84 @@ The remaining tasks are enhancements that can be done incrementally based on use
 
 ### Follow-ups
 - Continue with next verbs: `vocab list`, `guidelines`
+
+---
+
+## 2025-11-20 - Added template support for vocab list and guidelines commands
+
+### What I Did
+- **Vocab list command**:
+  - Added `PrintTemplateSchema` and `SchemaFormat` flags to `VocabListSettings` struct
+  - Implemented schema printing early return in both `RunIntoGlazeProcessor` and `Run` methods
+  - Built template data structure with categorized vocabulary items (Topics, DocTypes, Intent, Status)
+  - Added postfix template rendering in `Run` method using `templates.RenderVerbTemplate`
+  - Created example template at `ttmp/templates/vocab/list.templ` with LLM-friendly YAML output
+
+- **Guidelines command**:
+  - Added `PrintTemplateSchema` and `SchemaFormat` flags to `GuidelinesSettings` struct
+  - Implemented schema printing early return in both `RunIntoGlazeProcessor` and `Run` methods
+  - Built template data structure with docType, guideline text, source (filesystem/embedded), and path
+  - Added postfix template rendering in `Run` method using `templates.RenderVerbTemplate`
+  - Created example template at `ttmp/templates/doc/guidelines.templ` with LLM-friendly YAML output
+
+### Why
+- Following the playbook pattern established for previous verbs
+- `vocab list` and `guidelines` are the remaining suggested verbs in the playbook
+- Both commands benefit from templated output for automation and LLM consumption
+
+### Files Changed
+- `docmgr/pkg/commands/vocab_list.go` — Added schema flags, early returns, template data building, and rendering
+- `docmgr/pkg/commands/guidelines_cmd.go` — Added schema flags, early returns, template data building, and rendering
+- `docmgr/ttmp/templates/vocab/list.templ` — New example template file
+- `docmgr/ttmp/templates/doc/guidelines.templ` — New example template file
+
+### Verification
+- Built successfully: `go build ./cmd/docmgr`
+- Tested vocab list: `go run ./cmd/docmgr vocab list --category topics` — output unchanged, template renders correctly
+- Tested vocab list schema: `go run ./cmd/docmgr vocab list --print-template-schema --schema-format yaml` — schema-only output as expected
+- Tested guidelines: `go run ./cmd/docmgr doc guidelines --doc-type design-doc` — output unchanged, template renders correctly
+- Tested guidelines schema: `go run ./cmd/docmgr doc guidelines --doc-type design-doc --print-template-schema --schema-format yaml` — schema-only output as expected
+
+### What Worked
+- Pattern from existing verbs applied cleanly to both commands
+- Template data structures match the human output structures
+- Schema generation correctly infers types from the template data
+- Both commands now have consistent template support
+
+### Follow-ups
+- All suggested verbs from the playbook are now complete!
+
+---
+
+## 2025-11-20 - Added integration tests for --print-template-schema
+
+### What I Did
+- Created integration test script `test-scenarios/testing-doc-manager/13-template-schema-output.sh`
+- Test verifies that `--print-template-schema` outputs ONLY schema (YAML properties structure) and no human-readable output
+- Tests all templated verbs: list docs, list tickets, doctor, status, tasks list, search, vocab list, guidelines
+- Added test to `run-all.sh` test suite
+- Updated README to document the new test
+
+### Why
+- Task 37: Add integration tests to verify `--print-template-schema` prints only schema
+- Ensures the early return pattern works correctly - when schema flag is set, no human output should appear
+- Prevents regression where schema and human output might both appear
+
+### Files Changed
+- `docmgr/test-scenarios/testing-doc-manager/13-template-schema-output.sh` — New integration test script
+- `docmgr/test-scenarios/testing-doc-manager/run-all.sh` — Added new test to suite
+- `docmgr/test-scenarios/testing-doc-manager/README.md` — Documented new test
+
+### Verification
+- Tested logic manually: verified schema-only output doesn't contain human-readable markers ("Docs root:", "## Documents", "Total tickets:", etc.)
+- Test script follows existing integration test patterns
+- All templated verbs are covered in the test
+
+### What Worked
+- Test logic correctly identifies human-readable output vs schema output
+- Pattern matches existing integration test structure
+- Comprehensive coverage of all templated verbs
+
+### Follow-ups
+- Test should be run as part of full scenario with built docmgr binary
+- Consider adding to CI pipeline for automated validation

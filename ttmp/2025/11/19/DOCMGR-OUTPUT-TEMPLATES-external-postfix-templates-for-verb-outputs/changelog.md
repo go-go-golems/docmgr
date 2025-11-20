@@ -106,3 +106,22 @@ Implemented template schema printing: added --print-template-schema and --schema
 - docmgr/pkg/commands/list_docs.go — Flags and wiring in Run
 - docmgr/pkg/commands/list_tickets.go — Flags and wiring in Run
 
+
+## 2025-11-20
+
+Added intern playbook for continuing external postfix templates: step-by-step workflow, schema printing, wiring, examples, and verification checklist.
+
+### Related Files
+
+- docmgr/ttmp/2025/11/19/DOCMGR-OUTPUT-TEMPLATES-external-postfix-templates-for-verb-outputs/playbooks/01-intern-playbook-continuing-external-templates.md — Intern playbook
+
+
+## 2025-11-20
+
+Added template support for status command: schema flags, template data building, and example template
+
+### Related Files
+
+- docmgr/pkg/commands/status.go — Added schema flags and postfix template rendering
+- docmgr/ttmp/templates/status.templ — Example template for status command output
+

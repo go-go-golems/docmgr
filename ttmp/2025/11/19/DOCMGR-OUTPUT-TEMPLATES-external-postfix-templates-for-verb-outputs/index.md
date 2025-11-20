@@ -10,11 +10,16 @@ DocType: index
 Intent: long-term
 Owners:
     - manuel
-RelatedFiles: []
+RelatedFiles:
+    - Path: docmgr/pkg/commands/status.go
+      Note: Added schema flags and postfix template rendering for status verb
+    - Path: docmgr/ttmp/templates/status.templ
+      Note: Example template file for status command
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-11-19T20:23:21.630363211-05:00
 ---
+
 
 # External postfix templates for verb outputs
 

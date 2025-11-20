@@ -33,3 +33,17 @@
 - [ ] Replace custom FuncMap helpers with glazed templating helpers (sprig and co) - investigate glazed template formatter FuncMap, migrate existing templates to use standard helpers, update documentation
 - [x] Add --print-template-schema flag to all verbs with templating - output JSON schema and documentation for template data structures using introspection, show available fields, types, and example values
 - [ ] Create documentation/tutorial for postfix templates - user guide explaining how to create templates, available data structures, function helpers, common patterns, and examples
+- [ ] Create example template for status (ttmp/templates/status.templ)
+- [ ] Create example template for tasks list (ttmp/templates/tasks/list.templ)
+- [ ] Create example template for search (ttmp/templates/doc/search.templ)
+- [ ] Create example template for vocab list (ttmp/templates/vocab/list.templ)
+- [ ] Create example template for guidelines (ttmp/templates/doc/guidelines.templ)
+- [ ] Extend data contracts reference with status/tasks/search/vocab/guidelines
+- [ ] Add integration tests: --print-template-schema prints only schema (docs/tickets/doctor)
+- [ ] Document --print-template-schema usage in how-to-use and tutorial
+- [ ] Migrate FuncMap in internal/templates/verb_output.go to Glazed/Sprig helpers; update templates
+- [ ] Implement docmgr template validate (lint templates; pre-runtime checks)
+- [ ] Add --debug-template flag: show resolved path, data keys preview, and errors
+- [ ] Add CI step: validate templates and run schema-only tests
+- [ ] Evaluate template composition/inheritance patterns; propose recommendations
+- [ ] Standardize template field names across verbs; write conventions doc

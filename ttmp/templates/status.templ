@@ -1,0 +1,24 @@
+---
+status_summary:
+  root: {{ .Root }}
+  tickets_total: {{ .TicketsTotal }}
+  tickets_stale: {{ .TicketsStale }}
+  docs_total: {{ .DocsTotal }}
+  doc_types:
+    design_docs: {{ .DesignDocs }}
+    reference_docs: {{ .ReferenceDocs }}
+    playbooks: {{ .Playbooks }}
+  stale_threshold_days: {{ .StaleAfterDays }}
+stale_tickets:
+{{- range .Tickets }}
+{{- if .Stale }}
+  - ticket: {{ .Ticket }}
+    title: {{ .Title }}
+    status: {{ .Status }}
+    docs: {{ .Docs }}
+    last_updated: {{ .LastUpdated }}
+{{- end }}
+{{- end }}
+guidance: |
+  Review stale tickets first. Consider updating or closing tickets that haven't been touched in {{ .StaleAfterDays }} days.
+

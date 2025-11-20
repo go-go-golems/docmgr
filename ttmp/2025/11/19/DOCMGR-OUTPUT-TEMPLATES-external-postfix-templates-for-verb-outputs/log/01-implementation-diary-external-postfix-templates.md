@@ -535,3 +535,36 @@ The remaining tasks are enhancements that can be done incrementally based on use
   - `go run ./cmd/docmgr list tickets --print-template-schema --schema-format yaml`
   - `go run ./cmd/docmgr doctor --print-template-schema --schema-format yaml`
 - Observed schema-only output (no human sections or postfix templates)
+
+---
+
+## 2025-11-20 - Added template support for status command
+
+### What I Did
+- Added `PrintTemplateSchema` and `SchemaFormat` flags to `StatusSettings` struct
+- Implemented schema printing early return in both `RunIntoGlazeProcessor` and `Run` methods
+- Built template data structure with ticket information, totals, and summary statistics
+- Added postfix template rendering in `Run` method using `templates.RenderVerbTemplate`
+- Created example template at `ttmp/templates/status.templ` with LLM-friendly YAML output
+
+### Why
+- Following the playbook pattern established for `list docs`, `list tickets`, and `doctor` commands
+- `status` is the first suggested verb in the playbook's "Suggested Next Verbs" list
+- High value command that benefits from templated output for automation
+
+### Files Changed
+- `docmgr/pkg/commands/status.go` — Added schema flags, early returns, template data building, and rendering
+- `docmgr/ttmp/templates/status.templ` — New example template file
+
+### Verification
+- Built successfully: `go build ./cmd/docmgr`
+- Tested human output: `go run ./cmd/docmgr status --summary-only` — output unchanged, template renders correctly
+- Tested schema printing: `go run ./cmd/docmgr status --print-template-schema --schema-format yaml` — schema-only output as expected
+
+### What Worked
+- Pattern from existing verbs (`list_docs.go`, `list_tickets.go`) applied cleanly
+- Template data structure matches the human output structure
+- Schema generation correctly infers types from the template data
+
+### Follow-ups
+- Continue with next verbs: `tasks list`, `search`, `vocab list`, `guidelines`

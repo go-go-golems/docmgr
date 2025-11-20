@@ -125,3 +125,18 @@ Added template support for status command: schema flags, template data building,
 - docmgr/pkg/commands/status.go — Added schema flags and postfix template rendering
 - docmgr/ttmp/templates/status.templ — Example template for status command output
 
+
+## 2025-11-20
+
+Completed status command template support implementation
+
+
+## 2025-11-20
+
+Added template support for tasks list command: schema flags, template data building, and example template
+
+### Related Files
+
+- docmgr/pkg/commands/tasks.go — Added schema flags and postfix template rendering for tasks list verb
+- docmgr/ttmp/templates/tasks/list.templ — Example template for tasks list command output
+

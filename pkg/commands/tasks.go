@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -111,9 +112,11 @@ func formatTaskLine(checked bool, text string) string {
 type TasksListCommand struct{ *cmds.CommandDescription }
 
 type TasksListSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
+	Ticket             string `glazed.parameter:"ticket"`
+	Root               string `glazed.parameter:"root"`
+	TasksFile          string `glazed.parameter:"tasks-file"`
+	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
 
 func NewTasksListCommand() (*TasksListCommand, error) {
@@ -136,6 +139,8 @@ Examples:
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
 			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
+			parameters.NewParameterDefinition("print-template-schema", parameters.ParameterTypeBool, parameters.WithHelp("Print template schema after output (human mode only)"), parameters.WithDefault(false)),
+			parameters.NewParameterDefinition("schema-format", parameters.ParameterTypeString, parameters.WithHelp("Template schema output format: json|yaml"), parameters.WithDefault("json")),
 		),
 	)
 	return &TasksListCommand{CommandDescription: cmd}, nil
@@ -146,6 +151,34 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
+
+	// Apply config root if present
+	s.Root = workspace.ResolveRoot(s.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if s.PrintTemplateSchema {
+		type TaskInfo struct {
+			Index  int
+			Checked bool
+			Text   string
+		}
+		templateData := map[string]interface{}{
+			"TotalTasks": 0,
+			"OpenTasks":  0,
+			"DoneTasks":  0,
+			"TasksFile":  "",
+			"Tasks": []TaskInfo{
+				{
+					Index:   0,
+					Checked: false,
+					Text:    "",
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, s.SchemaFormat)
+		return nil
+	}
+
 	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
@@ -172,6 +205,34 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
+
+	// Apply config root if present
+	s.Root = workspace.ResolveRoot(s.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if s.PrintTemplateSchema {
+		type TaskInfo struct {
+			Index   int
+			Checked bool
+			Text    string
+		}
+		templateData := map[string]interface{}{
+			"TotalTasks": 0,
+			"OpenTasks":  0,
+			"DoneTasks":  0,
+			"TasksFile":  "",
+			"Tasks": []TaskInfo{
+				{
+					Index:   0,
+					Checked: false,
+					Text:    "",
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, s.SchemaFormat)
+		return nil
+	}
+
 	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
@@ -183,6 +244,54 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 		}
 		fmt.Printf("[%d] [%s] %s (file=%s)\n", t.TaskIndex, mark, t.Text, path)
 	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type TaskInfo struct {
+		Index   int
+		Checked bool
+		Text    string
+	}
+
+	taskInfos := make([]TaskInfo, 0, len(tasks))
+	openTasks := 0
+	doneTasks := 0
+	for _, t := range tasks {
+		taskInfos = append(taskInfos, TaskInfo{
+			Index:   t.TaskIndex,
+			Checked: t.Checked,
+			Text:    t.Text,
+		})
+		if t.Checked {
+			doneTasks++
+		} else {
+			openTasks++
+		}
+	}
+
+	templateData := map[string]interface{}{
+		"TotalTasks": len(tasks),
+		"OpenTasks":  openTasks,
+		"DoneTasks":  doneTasks,
+		"TasksFile":  path,
+		"Tasks":      taskInfos,
+	}
+
+	// Try verb path: ["tasks", "list"]
+	verbCandidates := [][]string{
+		{"tasks", "list"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":      s.Root,
+		"ticket":    s.Ticket,
+		"tasksFile": s.TasksFile,
+	}
+	absRoot := s.Root
+	if abs, err := filepath.Abs(s.Root); err == nil {
+		absRoot = abs
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, absRoot, settingsMap, templateData)
+
 	return nil
 }
 

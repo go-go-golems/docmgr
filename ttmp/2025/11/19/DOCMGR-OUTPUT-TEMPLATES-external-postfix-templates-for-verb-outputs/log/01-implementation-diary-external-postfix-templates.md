@@ -568,3 +568,36 @@ The remaining tasks are enhancements that can be done incrementally based on use
 
 ### Follow-ups
 - Continue with next verbs: `tasks list`, `search`, `vocab list`, `guidelines`
+
+---
+
+## 2025-11-20 - Added template support for tasks list command
+
+### What I Did
+- Added `PrintTemplateSchema` and `SchemaFormat` flags to `TasksListSettings` struct
+- Implemented schema printing early return in both `RunIntoGlazeProcessor` and `Run` methods
+- Built template data structure with task information, totals (TotalTasks, OpenTasks, DoneTasks), and file path
+- Added postfix template rendering in `Run` method using `templates.RenderVerbTemplate`
+- Created example template at `ttmp/templates/tasks/list.templ` with LLM-friendly YAML output
+
+### Why
+- Following the playbook pattern established for previous verbs
+- `tasks list` is the second suggested verb in the playbook's "Suggested Next Verbs" list
+- Simple data structure makes it a good candidate for templating
+
+### Files Changed
+- `docmgr/pkg/commands/tasks.go` — Added schema flags, early returns, template data building, and rendering
+- `docmgr/ttmp/templates/tasks/list.templ` — New example template file
+
+### Verification
+- Built successfully: `go build ./cmd/docmgr`
+- Tested human output: `go run ./cmd/docmgr tasks list --ticket DOCMGR-OUTPUT-TEMPLATES` — output unchanged, template renders correctly
+- Tested schema printing: `go run ./cmd/docmgr tasks list --print-template-schema --schema-format yaml` — schema-only output as expected
+
+### What Worked
+- Pattern from existing verbs applied cleanly
+- Template data structure matches the human output structure
+- Simple template without complex math functions works well
+
+### Follow-ups
+- Continue with next verbs: `search`, `vocab list`, `guidelines`

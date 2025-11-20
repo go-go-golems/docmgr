@@ -31,6 +31,14 @@ type ImportFileSettings struct {
 	Name     string `glazed.parameter:"name"`
 }
 
+type ImportFileResult struct {
+	Ticket      string
+	SourceFile  string
+	Destination string
+	MetaPath    string
+	IndexPath   string
+}
+
 func NewImportFileCommand() (*ImportFileCommand, error) {
 	return &ImportFileCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -82,83 +90,21 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
-	// Find the ticket directory
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	result, err := c.importFile(settings)
 	if err != nil {
-		return fmt.Errorf("failed to find ticket directory: %w", err)
-	}
-
-	// Check if source file exists
-	if _, err := os.Stat(settings.FilePath); os.IsNotExist(err) {
-		return fmt.Errorf("source file does not exist: %s", settings.FilePath)
-	}
-
-	// Create sources directory if it doesn't exist
-	sourcesDir := filepath.Join(ticketDir, "sources", "local")
-	if err := os.MkdirAll(sourcesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create sources directory: %w", err)
-	}
-
-	// Determine destination filename
-	destName := filepath.Base(settings.FilePath)
-	if settings.Name != "" {
-		ext := filepath.Ext(settings.FilePath)
-		destName = settings.Name + ext
-	}
-	destPath := filepath.Join(sourcesDir, destName)
-
-	// Copy the file
-	input, err := os.ReadFile(settings.FilePath)
-	if err != nil {
-		return fmt.Errorf("failed to read source file: %w", err)
-	}
-
-	if err := os.WriteFile(destPath, input, 0644); err != nil {
-		return fmt.Errorf("failed to write destination file: %w", err)
-	}
-
-	// Create metadata file
-	source := models.ExternalSource{
-		Type:        "local",
-		Path:        settings.FilePath,
-		LastFetched: time.Now(),
-	}
-
-	metaPath := filepath.Join(ticketDir, ".meta", "sources.yaml")
-	if err := appendSourceMetadata(metaPath, &source); err != nil {
-		return fmt.Errorf("failed to write metadata: %w", err)
-	}
-
-	// Update index.md to add external source reference
-	indexPath := filepath.Join(ticketDir, "index.md")
-	doc, body, err := documents.ReadDocumentWithFrontmatter(indexPath)
-	if err != nil {
-		return fmt.Errorf("failed to read index.md: %w", err)
-	}
-
-	sourceRef := fmt.Sprintf("local:%s", destName)
-	if !contains(doc.ExternalSources, sourceRef) {
-		doc.ExternalSources = append(doc.ExternalSources, sourceRef)
-		doc.LastUpdated = time.Now()
-
-		if err := documents.WriteDocumentWithFrontmatter(indexPath, doc, body, true); err != nil {
-			return fmt.Errorf("failed to update index.md: %w", err)
-		}
+		return err
 	}
 
 	row := types.NewRow(
-		types.MRP("ticket", settings.Ticket),
-		types.MRP("source_file", settings.FilePath),
-		types.MRP("destination", destPath),
+		types.MRP("ticket", result.Ticket),
+		types.MRP("source_file", result.SourceFile),
+		types.MRP("destination", result.Destination),
 		types.MRP("type", "local"),
 		types.MRP("status", "imported"),
 	)
 
 	if err := gp.AddRow(ctx, row); err != nil {
-		return fmt.Errorf("failed to add import row for %s: %w", settings.FilePath, err)
+		return fmt.Errorf("failed to add import row for %s: %w", result.SourceFile, err)
 	}
 	return nil
 }
@@ -213,3 +159,97 @@ func contains(slice []string, item string) bool {
 }
 
 var _ cmds.GlazeCommand = &ImportFileCommand{}
+
+func (c *ImportFileCommand) importFile(settings *ImportFileSettings) (*ImportFileResult, error) {
+	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
+	}
+
+	if _, err := os.Stat(settings.FilePath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("source file does not exist: %s", settings.FilePath)
+	}
+
+	sourcesDir := filepath.Join(ticketDir, "sources", "local")
+	if err := os.MkdirAll(sourcesDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create sources directory: %w", err)
+	}
+
+	destName := filepath.Base(settings.FilePath)
+	if settings.Name != "" {
+		ext := filepath.Ext(settings.FilePath)
+		destName = settings.Name + ext
+	}
+	destPath := filepath.Join(sourcesDir, destName)
+
+	input, err := os.ReadFile(settings.FilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source file: %w", err)
+	}
+
+	if err := os.WriteFile(destPath, input, 0644); err != nil {
+		return nil, fmt.Errorf("failed to write destination file: %w", err)
+	}
+
+	source := models.ExternalSource{
+		Type:        "local",
+		Path:        settings.FilePath,
+		LastFetched: time.Now(),
+	}
+
+	metaPath := filepath.Join(ticketDir, ".meta", "sources.yaml")
+	if err := appendSourceMetadata(metaPath, &source); err != nil {
+		return nil, fmt.Errorf("failed to write metadata: %w", err)
+	}
+
+	indexPath := filepath.Join(ticketDir, "index.md")
+	doc, body, err := documents.ReadDocumentWithFrontmatter(indexPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read index.md: %w", err)
+	}
+
+	sourceRef := fmt.Sprintf("local:%s", destName)
+	if !contains(doc.ExternalSources, sourceRef) {
+		doc.ExternalSources = append(doc.ExternalSources, sourceRef)
+		doc.LastUpdated = time.Now()
+
+		if err := documents.WriteDocumentWithFrontmatter(indexPath, doc, body, true); err != nil {
+			return nil, fmt.Errorf("failed to update index.md: %w", err)
+		}
+	}
+
+	return &ImportFileResult{
+		Ticket:      settings.Ticket,
+		SourceFile:  settings.FilePath,
+		Destination: destPath,
+		MetaPath:    metaPath,
+		IndexPath:   indexPath,
+	}, nil
+}
+
+func (c *ImportFileCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &ImportFileSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.importFile(settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("File imported into %s\n", filepath.Dir(result.Destination))
+	fmt.Printf("- Source: %s\n", result.SourceFile)
+	fmt.Printf("- Destination: %s\n", result.Destination)
+	fmt.Printf("- Metadata: %s\n", result.MetaPath)
+	fmt.Printf("- Index updated: %s\n", result.IndexPath)
+
+	return nil
+}
+
+var _ cmds.BareCommand = &ImportFileCommand{}

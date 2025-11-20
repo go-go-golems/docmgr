@@ -476,6 +476,7 @@ docmgr supports human-friendly defaults and structured output via Glaze.
 
 - Human-friendly (default):
   - list tickets/docs: markdown sections with per-ticket bullet summaries (status, topics, tasks, path relative to docs root; root shown once at top)
+  - add/create/relate/meta/vocab/import/layout-fix/renumber/configure/init/task edit/doctor: readable summaries highlighting paths, counts, and status; add `--with-glaze-output` when automation needs rows
   - status: summary line (+ per-ticket lines unless `--summary-only`)
   - search: `path — title [ticket] :: snippet`; `--files` shows `file — reason (source=...)`
   - guidelines: raw guideline text (or list types with `--list`)
@@ -1187,6 +1188,8 @@ Paths are relative to this root.
 - Updated: 2025-11-19 14:20
 - Path: `2025/11/19/MEN-4242-chat-persistence`
 ```
+
+`docmgr list docs` mirrors the same style, grouped by ticket with per-document bullet summaries (doc type, status, topics, updated, path).
 
 **Common usecases:**
 - `list tickets` — See all your tickets at a glance

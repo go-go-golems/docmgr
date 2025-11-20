@@ -30,6 +30,13 @@ type ConfigureSettings struct {
 	Force      bool     `glazed.parameter:"force"`
 }
 
+type ConfigureResult struct {
+	ConfigPath string
+	Root       string
+	Vocabulary string
+	Status     string
+}
+
 func NewConfigureCommand() (*ConfigureCommand, error) {
 	return &ConfigureCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -90,65 +97,88 @@ func (c *ConfigureCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Find repository root (shared helper from vocab_add)
-	repoRoot, err := workspace.FindRepositoryRoot()
+	result, err := c.writeConfig(settings)
 	if err != nil {
-		return fmt.Errorf("failed to find repository root: %w", err)
+		return err
 	}
 
-	// Target path for config
+	row := types.NewRow(
+		types.MRP("config", result.ConfigPath),
+		types.MRP("root", result.Root),
+		types.MRP("vocabulary", result.Vocabulary),
+		types.MRP("status", result.Status),
+	)
+	return gp.AddRow(ctx, row)
+}
+
+var _ cmds.GlazeCommand = &ConfigureCommand{}
+
+func (c *ConfigureCommand) writeConfig(settings *ConfigureSettings) (*ConfigureResult, error) {
+	repoRoot, err := workspace.FindRepositoryRoot()
+	if err != nil {
+		return nil, fmt.Errorf("failed to find repository root: %w", err)
+	}
+
 	cfgPath := filepath.Join(repoRoot, ".ttmp.yaml")
 
 	if _, err := os.Stat(cfgPath); err == nil && !settings.Force {
-		// Do not overwrite existing config unless --force
-		row := types.NewRow(
-			types.MRP("config", cfgPath),
-			types.MRP("root", settings.Root),
-			types.MRP("vocabulary", settings.Vocabulary),
-			types.MRP("status", "exists"),
-		)
-		return gp.AddRow(ctx, row)
+		return &ConfigureResult{
+			ConfigPath: cfgPath,
+			Root:       settings.Root,
+			Vocabulary: settings.Vocabulary,
+			Status:     "exists",
+		}, nil
 	}
 
-	// Build config structure; keep relative paths relative to cfg file directory
 	cfg := workspace.WorkspaceConfig{
 		Root: settings.Root,
 		Vocabulary: func() string {
 			if strings.TrimSpace(settings.Vocabulary) != "" {
 				return settings.Vocabulary
 			}
-			// default to <root>/vocabulary.yaml
 			return filepath.ToSlash(filepath.Join(settings.Root, "vocabulary.yaml"))
 		}(),
 	}
 	cfg.Defaults.Owners = append([]string{}, settings.Owners...)
 	cfg.Defaults.Intent = settings.Intent
 
-	// Serialize YAML
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return nil, fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Ensure parent dir exists (repo root should exist)
 	if err := os.WriteFile(cfgPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write %s: %w", cfgPath, err)
+		return nil, fmt.Errorf("failed to write %s: %w", cfgPath, err)
 	}
 
-	// Echo resolved context prior to write-like behavior
-	absRoot := settings.Root
-	if !filepath.IsAbs(absRoot) {
-		absRoot = filepath.Join(repoRoot, settings.Root)
-	}
-	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, cfg.Vocabulary)
-
-	row := types.NewRow(
-		types.MRP("config", cfgPath),
-		types.MRP("root", cfg.Root),
-		types.MRP("vocabulary", cfg.Vocabulary),
-		types.MRP("status", "written"),
-	)
-	return gp.AddRow(ctx, row)
+	return &ConfigureResult{
+		ConfigPath: cfgPath,
+		Root:       cfg.Root,
+		Vocabulary: cfg.Vocabulary,
+		Status:     "written",
+	}, nil
 }
 
-var _ cmds.GlazeCommand = &ConfigureCommand{}
+func (c *ConfigureCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &ConfigureSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.writeConfig(settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Configuration file: %s\n", result.ConfigPath)
+	fmt.Printf("- Root: %s\n", result.Root)
+	fmt.Printf("- Vocabulary: %s\n", result.Vocabulary)
+	fmt.Printf("- Status: %s\n", result.Status)
+
+	return nil
+}
+
+var _ cmds.BareCommand = &ConfigureCommand{}

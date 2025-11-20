@@ -9,12 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
-	"github.com/go-go-golems/glazed/pkg/middlewares"
+	glazedMiddlewares "github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
+	"github.com/mattn/go-isatty"
 )
 
 // DoctorCommand validates document workspaces
@@ -98,7 +100,7 @@ Example:
 func (c *DoctorCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
-	gp middlewares.Processor,
+	gp glazedMiddlewares.Processor,
 ) error {
 	settings := &DoctorSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
@@ -646,3 +648,99 @@ func severityThreshold(s string) int {
 }
 
 var _ cmds.GlazeCommand = &DoctorCommand{}
+
+type doctorRowCollector struct {
+	rows []types.Row
+}
+
+func (c *doctorRowCollector) AddRow(ctx context.Context, row types.Row) error {
+	c.rows = append(c.rows, row)
+	return nil
+}
+
+func (c *doctorRowCollector) Close(ctx context.Context) error {
+	return nil
+}
+
+func (c *DoctorCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	collector := &doctorRowCollector{}
+	if err := c.RunIntoGlazeProcessor(ctx, parsedLayers, collector); err != nil {
+		return err
+	}
+
+	rows := collector.rows
+	if len(rows) == 0 {
+		fmt.Println("No tickets checked.")
+		return nil
+	}
+
+	grouped := map[string][]types.Row{}
+	order := []string{}
+	for _, row := range rows {
+		ticket := getRowString(row, ColTicket)
+		if ticket == "" {
+			ticket = "(unknown)"
+		}
+		if _, ok := grouped[ticket]; !ok {
+			grouped[ticket] = []types.Row{}
+			order = append(order, ticket)
+		}
+		grouped[ticket] = append(grouped[ticket], row)
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "## Doctor Report (%d findings)\n\n", len(rows))
+	for _, ticket := range order {
+		fmt.Fprintf(&b, "### %s\n\n", ticket)
+		entries := grouped[ticket]
+		for _, row := range entries {
+			issue := getRowString(row, "issue")
+			severity := strings.ToUpper(getRowString(row, "severity"))
+			message := getRowString(row, "message")
+			path := getRowString(row, "path")
+
+			if issue == "none" && severity == "OK" {
+				fmt.Fprintf(&b, "- ✅ %s\n", message)
+				continue
+			}
+			if message == "" {
+				message = "(no message)"
+			}
+			if path != "" {
+				fmt.Fprintf(&b, "- [%s] %s — %s (path=%s)\n", severity, issue, message, path)
+			} else {
+				fmt.Fprintf(&b, "- [%s] %s — %s\n", severity, issue, message)
+			}
+		}
+		fmt.Fprintln(&b)
+	}
+
+	content := b.String()
+	fd := os.Stdout.Fd()
+	if isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd) {
+		renderer, err := glamour.NewTermRenderer(
+			glamour.WithAutoStyle(),
+			glamour.WithWordWrap(0),
+		)
+		if err == nil {
+			if rendered, err := renderer.Render(content); err == nil {
+				fmt.Print(rendered)
+				return nil
+			}
+		}
+	}
+	fmt.Print(content)
+	return nil
+}
+
+func getRowString(row types.Row, field string) string {
+	if val, ok := row.Get(field); ok {
+		return fmt.Sprint(val)
+	}
+	return ""
+}
+
+var _ cmds.BareCommand = &DoctorCommand{}

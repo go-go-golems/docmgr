@@ -27,6 +27,13 @@ type LayoutFixSettings struct {
 	DryRun bool   `glazed.parameter:"dry-run"`
 }
 
+type LayoutFixMove struct {
+	Ticket string
+	From   string
+	To     string
+	Status string
+}
+
 func NewLayoutFixCommand() (*LayoutFixCommand, error) {
 	return &LayoutFixCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -69,23 +76,42 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
+	moves, err := c.applyLayoutFix(settings)
+	if err != nil {
+		return err
+	}
+
+	for _, move := range moves {
+		row := types.NewRow(
+			types.MRP("ticket", move.Ticket),
+			types.MRP("from", move.From),
+			types.MRP("to", move.To),
+			types.MRP("status", move.Status),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return fmt.Errorf("failed to emit layout-fix row: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (c *LayoutFixCommand) applyLayoutFix(settings *LayoutFixSettings) ([]LayoutFixMove, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
-	// Collect tickets to process
 	var ticketDirs []string
 	if settings.Ticket != "" {
 		td, err := findTicketDirectory(settings.Root, settings.Ticket)
 		if err != nil {
-			return fmt.Errorf("failed to find ticket directory: %w", err)
+			return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 		}
 		ticketDirs = append(ticketDirs, td)
 	} else {
 		entries, err := os.ReadDir(settings.Root)
 		if err != nil {
-			return fmt.Errorf("failed to read root: %w", err)
+			return nil, fmt.Errorf("failed to read root: %w", err)
 		}
 		for _, e := range entries {
 			if e.IsDir() {
-				// consider directories with an index.md
 				idx := filepath.Join(settings.Root, e.Name(), "index.md")
 				if _, err := os.Stat(idx); err == nil {
 					ticketDirs = append(ticketDirs, filepath.Join(settings.Root, e.Name()))
@@ -94,15 +120,17 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 		}
 	}
 
+	moves := []LayoutFixMove{}
+
 	for _, ticketDir := range ticketDirs {
-		// Walk ticketDir for markdown files
+		ticketName := filepath.Base(ticketDir)
 		renameMap := map[string]string{}
+
 		err := filepath.WalkDir(ticketDir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
 			if d.IsDir() {
-				// Skip scaffolding dirs
 				name := d.Name()
 				if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") || name == ".meta" || name == "scripts" || name == "sources" || name == "archive" {
 					return nil
@@ -112,7 +140,6 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 			if !strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
 				return nil
 			}
-			// Skip root-level control files
 			dir := filepath.Dir(path)
 			if filepath.Clean(dir) == filepath.Clean(ticketDir) {
 				bn := d.Name()
@@ -121,14 +148,12 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 				}
 			}
 
-			// Determine current first-level directory relative to ticketDir
 			rel, _ := filepath.Rel(ticketDir, path)
 			parts := strings.Split(rel, string(os.PathSeparator))
 			if len(parts) < 1 {
 				return nil
 			}
 
-			// Read frontmatter to get DocType
 			doc, _, err := documents.ReadDocumentWithFrontmatter(path)
 			if err != nil || doc.DocType == "" {
 				return nil
@@ -136,23 +161,20 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 
 			expected := doc.DocType
 			currentTop := parts[0]
-			if currentTop == expected { // already in the right place
+			if currentTop == expected {
 				return nil
 			}
 
-			// Plan move: keep basename, move under expected/
 			newRel := filepath.Join(expected, filepath.Base(path))
 			newAbs := filepath.Join(ticketDir, newRel)
+			oldRel := filepath.ToSlash(rel)
 			if settings.DryRun {
-				row := types.NewRow(
-					types.MRP("ticket", filepath.Base(ticketDir)),
-					types.MRP("from", filepath.ToSlash(rel)),
-					types.MRP("to", filepath.ToSlash(newRel)),
-					types.MRP("status", "would-move"),
-				)
-				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to add layout-fix dry-run row for %s: %w", rel, err)
-				}
+				moves = append(moves, LayoutFixMove{
+					Ticket: ticketName,
+					From:   oldRel,
+					To:     filepath.ToSlash(newRel),
+					Status: "would-move",
+				})
 				return nil
 			}
 
@@ -162,31 +184,59 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 			if err := os.Rename(path, newAbs); err != nil {
 				return fmt.Errorf("rename %s -> %s failed: %w", path, newAbs, err)
 			}
-			oldRel := filepath.ToSlash(rel)
 			renameMap[oldRel] = filepath.ToSlash(newRel)
-
-			row := types.NewRow(
-				types.MRP("ticket", filepath.Base(ticketDir)),
-				types.MRP("from", oldRel),
-				types.MRP("to", filepath.ToSlash(newRel)),
-				types.MRP("status", "moved"),
-			)
-			if err := gp.AddRow(ctx, row); err != nil {
-				return fmt.Errorf("failed to add layout-fix row for %s: %w", oldRel, err)
-			}
+			moves = append(moves, LayoutFixMove{
+				Ticket: ticketName,
+				From:   oldRel,
+				To:     filepath.ToSlash(newRel),
+				Status: "moved",
+			})
 			return nil
 		})
 		if err != nil {
-			return fmt.Errorf("failed to walk ticket directory %s: %w", ticketDir, err)
+			return nil, fmt.Errorf("failed to walk ticket directory %s: %w", ticketDir, err)
 		}
 		if !settings.DryRun && len(renameMap) > 0 {
 			if err := updateTicketReferences(ticketDir, renameMap); err != nil {
-				return fmt.Errorf("failed to update references in %s: %w", ticketDir, err)
+				return nil, fmt.Errorf("failed to update references in %s: %w", ticketDir, err)
 			}
 		}
+	}
+
+	return moves, nil
+}
+
+func (c *LayoutFixCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &LayoutFixSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	moves, err := c.applyLayoutFix(settings)
+	if err != nil {
+		return err
+	}
+
+	if len(moves) == 0 {
+		if settings.DryRun {
+			fmt.Println("No moves planned.")
+		} else {
+			fmt.Println("No layout issues detected.")
+		}
+		return nil
+	}
+
+	mode := map[bool]string{true: "dry-run", false: "executed"}[settings.DryRun]
+	fmt.Printf("## Layout Fix (%s)\n\n", mode)
+	for _, move := range moves {
+		fmt.Printf("- %s: %s → %s (%s)\n", move.Ticket, move.From, move.To, move.Status)
 	}
 
 	return nil
 }
 
 var _ cmds.GlazeCommand = &LayoutFixCommand{}
+var _ cmds.BareCommand = &LayoutFixCommand{}

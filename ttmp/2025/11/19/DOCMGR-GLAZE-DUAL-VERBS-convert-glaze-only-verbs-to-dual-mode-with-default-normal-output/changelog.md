@@ -18,3 +18,13 @@ Created comprehensive analysis of glaze-only verbs that should be converted to d
 ### Related Files
 
 - docmgr/ttmp/2025/11/19/DOCMGR-GLAZE-DUAL-VERBS-convert-glaze-only-verbs-to-dual-mode-with-default-normal-output/analysis/01-glaze-only-verbs-analysis.md — Analysis document
+
+## 2025-11-19
+
+List tickets human output now includes docs root header plus relative paths
+
+
+## 2025-11-19
+
+- Converted remaining glaze-only verbs (add/create/meta/relate/task edit/vocab add/import/layout-fix/renumber/configure/init) plus list docs into human-first markdown outputs
+- Added dual-mode `doctor` output (grouped human report + glaze toggle) and restored the documented `docmgr workspace <verb>` namespace so docs match the CLI

@@ -3,9 +3,8 @@ Title: Convert glaze-only verbs to dual mode with default normal output
 Ticket: DOCMGR-GLAZE-DUAL-VERBS
 Status: active
 Topics:
-    - tooling
+    - tools
     - ux
-    - cli
 DocType: index
 Intent: long-term
 Owners:
@@ -14,9 +13,12 @@ RelatedFiles:
     - Path: docmgr/ttmp/2025/11/19/DOCMGR-GLAZE-DUAL-VERBS-convert-glaze-only-verbs-to-dual-mode-with-default-normal-output/analysis/01-glaze-only-verbs-analysis.md
       Note: Comprehensive analysis of glaze-only verbs that should be dual mode
 ExternalSources: []
-Summary: ""
-LastUpdated: 2025-11-19T14:28:36.630905055-05:00
+Summary: 'Dual-mode sweep: list docs now mirrors ticket output and core verbs (add/create/meta/relate/task edit/vocab add/import/layout-fix/renumber/configure/init) emit human-first markdown with glaze toggles'
+LastUpdated: 2025-11-19T17:34:29.963329302-05:00
 ---
+
+
+
 
 
 ---

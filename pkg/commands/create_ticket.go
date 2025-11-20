@@ -37,6 +37,15 @@ type CreateTicketSettings struct {
 	PathTemplate string   `glazed.parameter:"path-template"`
 }
 
+type CreateTicketResult struct {
+	Ticket       string
+	Title        string
+	Path         string
+	Root         string
+	Directories  []string
+	FilesCreated []string
+}
+
 func NewCreateTicketCommand() (*CreateTicketCommand, error) {
 	return &CreateTicketCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -99,19 +108,32 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
+	result, err := c.createTicketWorkspace(settings)
+	if err != nil {
+		return err
+	}
+
+	row := types.NewRow(
+		types.MRP("ticket", result.Ticket),
+		types.MRP("path", result.Path),
+		types.MRP("title", result.Title),
+		types.MRP("status", "created"),
+	)
+
+	return gp.AddRow(ctx, row)
+}
+
+func (c *CreateTicketCommand) createTicketWorkspace(settings *CreateTicketSettings) (*CreateTicketResult, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	// Create slug from title
 	slug := utils.Slugify(settings.Title)
 	now := time.Now()
 	ticketPath, err := renderTicketPath(settings.Root, settings.PathTemplate, settings.Ticket, slug, settings.Title, now)
 	if err != nil {
-		return fmt.Errorf("failed to resolve ticket directory: %w", err)
+		return nil, fmt.Errorf("failed to resolve ticket directory: %w", err)
 	}
 
-	// Create directory structure
-	dirs := []string{
+	dirList := []string{
 		ticketPath,
 		filepath.Join(ticketPath, "design"),
 		filepath.Join(ticketPath, "reference"),
@@ -123,14 +145,12 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 		filepath.Join(ticketPath, "archive"),
 	}
 
-	for _, dir := range dirs {
+	for _, dir := range dirList {
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+			return nil, fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
 
-	// Create index.md with frontmatter
-	// Load config defaults
 	cfg, _ := workspace.LoadWorkspaceConfig()
 
 	doc := models.Document{
@@ -158,19 +178,18 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 	}
 
 	indexPath := filepath.Join(ticketPath, "index.md")
-	// Try to load index template body
 	indexBody := fmt.Sprintf("# %s\n\nDocument workspace for %s.\n", settings.Title, settings.Ticket)
 	if tpl, ok := templates.LoadTemplate(settings.Root, "index"); ok {
 		_, body := templates.ExtractFrontmatterAndBody(tpl)
-		// Ensure placeholders are populated from doc
 		doc.Title = settings.Title
 		indexBody = templates.RenderTemplateBody(body, &doc)
 	}
 	if err := documents.WriteDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
-		return fmt.Errorf("failed to write index.md: %w", err)
+		return nil, fmt.Errorf("failed to write index.md: %w", err)
 	}
 
-	// Create README.md
+	files := []string{indexPath}
+
 	readmePath := filepath.Join(ticketPath, "README.md")
 	readmeContent := fmt.Sprintf(`# %s
 
@@ -196,10 +215,10 @@ Use docmgr commands to manage this workspace:
 `, settings.Title, settings.Ticket)
 
 	if err := writeFileIfNotExists(readmePath, []byte(readmeContent), settings.Force); err != nil {
-		return fmt.Errorf("failed to write README.md: %w", err)
+		return nil, fmt.Errorf("failed to write README.md: %w", err)
 	}
+	files = append(files, readmePath)
 
-	// Create tasks.md
 	tasksPath := filepath.Join(ticketPath, "tasks.md")
 	tasksContent := `# Tasks
 
@@ -209,10 +228,10 @@ Use docmgr commands to manage this workspace:
 
 `
 	if err := writeFileIfNotExists(tasksPath, []byte(tasksContent), settings.Force); err != nil {
-		return fmt.Errorf("failed to write tasks.md: %w", err)
+		return nil, fmt.Errorf("failed to write tasks.md: %w", err)
 	}
+	files = append(files, tasksPath)
 
-	// Create changelog.md
 	changelogPath := filepath.Join(ticketPath, "changelog.md")
 	changelogContent := fmt.Sprintf(`# Changelog
 
@@ -222,19 +241,78 @@ Use docmgr commands to manage this workspace:
 
 `, now.Format("2006-01-02"))
 	if err := writeFileIfNotExists(changelogPath, []byte(changelogContent), settings.Force); err != nil {
-		return fmt.Errorf("failed to write changelog.md: %w", err)
+		return nil, fmt.Errorf("failed to write changelog.md: %w", err)
+	}
+	files = append(files, changelogPath)
+
+	return &CreateTicketResult{
+		Ticket:       settings.Ticket,
+		Title:        settings.Title,
+		Path:         ticketPath,
+		Root:         settings.Root,
+		Directories:  dirList,
+		FilesCreated: files,
+	}, nil
+}
+
+func (c *CreateTicketCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &CreateTicketSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Output result
-	row := types.NewRow(
-		types.MRP("ticket", settings.Ticket),
-		types.MRP("path", ticketPath),
-		types.MRP("title", settings.Title),
-		types.MRP("status", "created"),
-	)
+	result, err := c.createTicketWorkspace(settings)
+	if err != nil {
+		return err
+	}
 
-	return gp.AddRow(ctx, row)
+	absRoot := workspace.ResolveRoot(settings.Root)
+	if !filepath.IsAbs(absRoot) {
+		if cwd, err := os.Getwd(); err == nil {
+			absRoot = filepath.Join(cwd, absRoot)
+		}
+	}
+	relPath := result.Path
+	if rel, err := filepath.Rel(absRoot, result.Path); err == nil {
+		relPath = filepath.ToSlash(rel)
+	}
+
+	fmt.Printf("Docs root: `%s`\n\n", absRoot)
+	fmt.Printf("## Ticket Workspace Created\n\n")
+	fmt.Printf("- Ticket: %s\n", result.Ticket)
+	fmt.Printf("- Title: %s\n", result.Title)
+	fmt.Printf("- Path: `%s`\n", relPath)
+	fmt.Printf("- Directories: %d\n", len(result.Directories))
+	fmt.Printf("- Files: %d\n", len(result.FilesCreated))
+
+	fmt.Printf("\n### Created Directories\n")
+	for _, d := range result.Directories {
+		if rel, err := filepath.Rel(absRoot, d); err == nil {
+			fmt.Printf("- `%s`\n", filepath.ToSlash(rel))
+		} else {
+			fmt.Printf("- `%s`\n", d)
+		}
+	}
+
+	fmt.Printf("\n### Created Files\n")
+	for _, f := range result.FilesCreated {
+		if rel, err := filepath.Rel(absRoot, f); err == nil {
+			fmt.Printf("- `%s`\n", filepath.ToSlash(rel))
+		} else {
+			fmt.Printf("- `%s`\n", f)
+		}
+	}
+
+	return nil
 }
+
+var _ cmds.GlazeCommand = &CreateTicketCommand{}
+var _ cmds.BareCommand = &CreateTicketCommand{}
+var _ cmds.GlazeCommand = &CreateTicketCommand{}
+var _ cmds.BareCommand = &CreateTicketCommand{}
 
 func renderTicketPath(root, templateStr, ticket, slug, title string, now time.Time) (string, error) {
 	if templateStr == "" {

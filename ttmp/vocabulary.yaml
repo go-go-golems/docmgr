@@ -9,6 +9,12 @@ topics:
       description: Usability testing and improvement
     - slug: documentation
       description: Documentation writing and maintenance
+    - slug: chat
+      description: Chat backend and frontend surfaces
+    - slug: backend
+      description: Backend services
+    - slug: websocket
+      description: WebSocket lifecycle & events
 docTypes:
     - slug: index
       description: Ticket index
@@ -27,6 +33,8 @@ intent:
       description: Document only for the ticket, will be archived once the ticket is closed.
     - slug: throwaway
       description: Temporary/experimental documentation
+    - slug: short-term
+      description: Short-term documentation for active work
 status:
     - slug: draft
       description: Initial draft state

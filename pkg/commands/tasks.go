@@ -545,23 +545,9 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, err := editTaskLine(s)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
-	}
-	var target *parsedTask
-	for i := range tasks {
-		if tasks[i].TaskIndex == s.ID {
-			target = &tasks[i]
-			break
-		}
-	}
-	if target == nil {
-		return fmt.Errorf("task id not found: %d", s.ID)
-	}
-	lines[target.LineIndex] = formatTaskLine(target.Checked, s.Text)
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+		return err
 	}
 	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task edited"), types.MRP("id", s.ID))
 	if err := gp.AddRow(ctx, row); err != nil {
@@ -571,6 +557,44 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 }
 
 var _ cmds.GlazeCommand = &TasksEditCommand{}
+
+func (c *TasksEditCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+	s := &TasksEditSettings{}
+	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
+	}
+	path, err := editTaskLine(s)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Task %d updated in %s\n", s.ID, path)
+	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	return nil
+}
+
+var _ cmds.BareCommand = &TasksEditCommand{}
+
+func editTaskLine(s *TasksEditSettings) (string, error) {
+	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to load tasks file: %w", err)
+	}
+	var target *parsedTask
+	for i := range tasks {
+		if tasks[i].TaskIndex == s.ID {
+			target = &tasks[i]
+			break
+		}
+	}
+	if target == nil {
+		return "", fmt.Errorf("task id not found: %d", s.ID)
+	}
+	lines[target.LineIndex] = formatTaskLine(target.Checked, s.Text)
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return "", fmt.Errorf("failed to write tasks file %s: %w", path, err)
+	}
+	return path, nil
+}
 
 // tasks remove
 type TasksRemoveCommand struct{ *cmds.CommandDescription }

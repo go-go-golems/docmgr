@@ -33,6 +33,25 @@ type MetaUpdateSettings struct {
 	Root    string `glazed.parameter:"root"`
 }
 
+type MetaUpdateContext struct {
+	Root           string
+	ConfigPath     string
+	VocabularyPath string
+}
+
+type MetaUpdateRow struct {
+	Doc    string
+	Field  string
+	Value  string
+	Status string
+	Error  string
+}
+
+type MetaUpdateExecutionResult struct {
+	Context MetaUpdateContext
+	Updates []MetaUpdateRow
+}
+
 func NewMetaUpdateCommand() (*MetaUpdateCommand, error) {
 	return &MetaUpdateCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -107,9 +126,41 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
+	result, err := c.applyMetaUpdate(settings)
+	if err != nil {
+		return err
+	}
+
+	for _, update := range result.Updates {
+		if update.Status == "error" {
+			row := types.NewRow(
+				types.MRP("doc", update.Doc),
+				types.MRP("field", update.Field),
+				types.MRP("status", update.Status),
+				types.MRP("error", update.Error),
+			)
+			if err := gp.AddRow(ctx, row); err != nil {
+				return fmt.Errorf("failed to report meta update error for %s: %w", update.Doc, err)
+			}
+			continue
+		}
+
+		row := types.NewRow(
+			types.MRP("doc", update.Doc),
+			types.MRP("field", update.Field),
+			types.MRP("value", update.Value),
+			types.MRP("status", update.Status),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return fmt.Errorf("failed to add meta update row for %s: %w", update.Doc, err)
+		}
+	}
+
+	return nil
+}
+
+func (c *MetaUpdateCommand) applyMetaUpdate(settings *MetaUpdateSettings) (*MetaUpdateExecutionResult, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
-	// Echo resolved context prior to write
 	cfgPath, _ := workspace.FindTTMPConfigPath()
 	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := settings.Root
@@ -118,59 +169,91 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 			absRoot = filepath.Join(cwd, absRoot)
 		}
 	}
-	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
+
+	ctx := MetaUpdateContext{
+		Root:           absRoot,
+		ConfigPath:     cfgPath,
+		VocabularyPath: vocabPath,
+	}
 
 	var filesToUpdate []string
 
 	if settings.Doc != "" {
-		// Update specific file
 		filesToUpdate = []string{settings.Doc}
 	} else if settings.Ticket != "" {
-		// Resolve the ticket directory
 		ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
 		if err != nil {
-			return fmt.Errorf("failed to find ticket directory: %w", err)
+			return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 		}
 
 		if settings.DocType == "" {
-			// Default: update only index.md for the ticket
 			filesToUpdate = []string{filepath.Join(ticketDir, "index.md")}
 		} else {
-			// Update all markdown files matching the doc type
 			files, err := findMarkdownFiles(ticketDir, settings.DocType)
 			if err != nil {
-				return fmt.Errorf("failed to find files: %w", err)
+				return nil, fmt.Errorf("failed to find files: %w", err)
 			}
 			filesToUpdate = files
 		}
 	} else {
-		return fmt.Errorf("must specify either --doc or --ticket")
+		return nil, fmt.Errorf("must specify either --doc or --ticket")
 	}
 
-	// Update each file
+	updates := make([]MetaUpdateRow, 0, len(filesToUpdate))
 	for _, filePath := range filesToUpdate {
 		if err := updateDocumentField(filePath, settings.Field, settings.Value); err != nil {
-			row := types.NewRow(
-				types.MRP("doc", filePath),
-				types.MRP("field", settings.Field),
-				types.MRP("status", "error"),
-				types.MRP("error", err.Error()),
-			)
-			if err := gp.AddRow(ctx, row); err != nil {
-				return fmt.Errorf("failed to report meta update error for %s: %w", filePath, err)
-			}
+			updates = append(updates, MetaUpdateRow{
+				Doc:    filePath,
+				Field:  settings.Field,
+				Status: "error",
+				Error:  err.Error(),
+			})
 			continue
 		}
 
-		row := types.NewRow(
-			types.MRP("doc", filePath),
-			types.MRP("field", settings.Field),
-			types.MRP("value", settings.Value),
-			types.MRP("status", "updated"),
-		)
-		if err := gp.AddRow(ctx, row); err != nil {
-			return fmt.Errorf("failed to add meta update row for %s: %w", filePath, err)
+		updates = append(updates, MetaUpdateRow{
+			Doc:    filePath,
+			Field:  settings.Field,
+			Value:  settings.Value,
+			Status: "updated",
+		})
+	}
+
+	return &MetaUpdateExecutionResult{
+		Context: ctx,
+		Updates: updates,
+	}, nil
+}
+
+func (c *MetaUpdateCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &MetaUpdateSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.applyMetaUpdate(settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Docs root: `%s`\n", result.Context.Root)
+	if result.Context.ConfigPath != "" {
+		fmt.Printf("Config: `%s`\n", result.Context.ConfigPath)
+	}
+	if result.Context.VocabularyPath != "" {
+		fmt.Printf("Vocabulary: `%s`\n", result.Context.VocabularyPath)
+	}
+
+	fmt.Printf("\n## Metadata Updates\n\n")
+	for _, update := range result.Updates {
+		if update.Status == "error" {
+			fmt.Printf("- `%s`: error updating %s (%s)\n", update.Doc, update.Field, update.Error)
+			continue
 		}
+		fmt.Printf("- `%s`: %s → %s\n", update.Doc, update.Field, update.Value)
 	}
 
 	return nil
@@ -284,3 +367,4 @@ func findMarkdownFiles(rootDir string, docTypeFilter string) ([]string, error) {
 }
 
 var _ cmds.GlazeCommand = &MetaUpdateCommand{}
+var _ cmds.BareCommand = &MetaUpdateCommand{}

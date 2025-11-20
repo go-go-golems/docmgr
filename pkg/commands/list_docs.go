@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -357,11 +358,97 @@ func (c *ListDocsCommand) Run(
 		); err == nil {
 			if rendered, err := renderer.Render(content); err == nil {
 				fmt.Print(rendered)
-				return nil
+			} else {
+				fmt.Print(content)
 			}
+		} else {
+			fmt.Print(content)
 		}
+	} else {
+		fmt.Print(content)
 	}
-	fmt.Print(content)
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type DocInfo struct {
+		DocType string
+		Title   string
+		Status  string
+		Topics  []string
+		Updated string
+		Path    string
+	}
+	type TicketInfo struct {
+		Ticket string
+		Docs   []DocInfo
+	}
+
+	tickets := make([]TicketInfo, 0, len(order))
+	for _, ticket := range order {
+		docs := grouped[ticket]
+		docInfos := make([]DocInfo, 0, len(docs))
+		for _, entry := range docs {
+			updated := "unknown"
+			if !entry.lastUpdated.IsZero() {
+				updated = entry.lastUpdated.Format("2006-01-02 15:04")
+			}
+			docInfos = append(docInfos, DocInfo{
+				DocType: entry.docType,
+				Title:   entry.title,
+				Status:  entry.status,
+				Topics:  entry.topics,
+				Updated: updated,
+				Path:    entry.path,
+			})
+		}
+		tickets = append(tickets, TicketInfo{
+			Ticket: ticket,
+			Docs:   docInfos,
+		})
+	}
+
+	// Build rows for template (same as Glaze rows)
+	rows := make([]map[string]interface{}, 0, len(entries))
+	fields := []string{"ticket", "doc_type", "title", "status", "topics", "path", "last_updated"}
+	for _, entry := range entries {
+		topicsStr := strings.Join(entry.topics, ", ")
+		updated := "unknown"
+		if !entry.lastUpdated.IsZero() {
+			updated = entry.lastUpdated.Format("2006-01-02 15:04")
+		}
+		rows = append(rows, map[string]interface{}{
+			"ticket":       entry.ticket,
+			"doc_type":     entry.docType,
+			"title":        entry.title,
+			"status":       entry.status,
+			"topics":       topicsStr,
+			"path":         entry.path,
+			"last_updated": updated,
+		})
+	}
+
+	templateData := map[string]interface{}{
+		"TotalDocs":     len(entries),
+		"TotalTickets":  len(order),
+		"Tickets":       tickets,
+		"Rows":          rows,
+		"Fields":        fields,
+	}
+
+	// Try both possible verb paths: ["doc", "list"] and ["list", "docs"]
+	verbCandidates := [][]string{
+		{"doc", "list"},
+		{"list", "docs"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":    settings.Root,
+		"ticket":  settings.Ticket,
+		"status":  settings.Status,
+		"docType": settings.DocType,
+		"topics":  settings.Topics,
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, absRoot, settingsMap, templateData)
+
 	return nil
 }
 

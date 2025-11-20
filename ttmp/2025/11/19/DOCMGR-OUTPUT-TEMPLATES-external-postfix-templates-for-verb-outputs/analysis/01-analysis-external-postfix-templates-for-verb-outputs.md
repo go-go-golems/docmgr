@@ -38,27 +38,19 @@ LastUpdated: 2025-11-19T20:23:21.873380559-05:00
 - Enable per‑verb external templates to append a configurable “postfix” to human output.
 - Location: `ttmp/templates/$group/$verb.templ` (rooted at docs root).
 - Each verb provides a typed struct as template data to steer LLMs with custom summaries.
-- Applies by default in classic/human mode; opt‑in behavior for Glaze mode is discussed below.
+- Applies only in classic/human mode; never in Glaze mode.
 
 ### High‑level behavior
 
-- After a command completes its normal human output, docmgr checks for a matching template file:
-  - Grouped verbs: `templates/doc/list.templ`, `templates/list/tickets.templ`, etc.
-  - Single‑level verbs: `templates/doctor.templ`
-  - Fallbacks:
-    - If `templates/$group/$verb.templ` exists, render it.
-    - Else if `templates/$verb.templ` exists (for single‑level verbs), render it.
-    - Else do nothing.
+- After a command completes its normal human output, the verb checks for its single, canonical template path and renders it if present:
+  - Grouped verbs: `templates/$group/$verb.templ` (no fallbacks)
+  - Single‑level verbs: `templates/$verb.templ` (no fallbacks)
 - The template is rendered with a typed data object provided by the verb.
 - Rendering errors print a concise warning to stderr and are non‑fatal.
 
-### Where to hook this in the codebase
+### Where to implement rendering
 
-- Runner decision for Glaze vs classic output and place to inject postfix:
-  - `glazed/pkg/cli/cobra.go` (`runCobraCommand`): decides classic vs Glaze and runs the verb.
-  - Use `GetVerbsFromCobraCommand` to compute `["docmgr","doc","list"] → group=doc, verb=list`.
-- Dual‑mode commands and defaults:
-  - `docmgr/cmd/docmgr/cmds/common/common.go`: wires dual mode and Glaze defaults.
+- Each verb implements template rendering inside its own `Run` (classic) method after producing human output.
 - Examples of classic/human output we will append to:
   - `docmgr/pkg/commands/list_docs.go` (human run aggregates by ticket, prints bullets)
   - `docmgr/pkg/commands/list_tickets.go` (similar pattern for tickets)
@@ -69,29 +61,17 @@ LastUpdated: 2025-11-19T20:23:21.873380559-05:00
 ### Template file resolution
 
 - Docs root resolved as usual (CWD → `.ttmp.yaml` → default `ttmp`).
-- Relative to docs root:
-  - For nested verbs: `templates/$group/$verb.templ`
-    - Examples: `templates/doc/list.templ`, `templates/list/tickets.templ`, `templates/doc/search.templ`
-  - For single verbs: `templates/$verb.templ`
-    - Examples: `templates/doctor.templ`, `templates/status.templ`
-- Optional future extension:
-  - Support subpaths along the entire verb chain: `templates/doc/list/docs.templ` (not needed now).
-  - Configure `templatesRoot` in `.ttmp.yaml` to override `ttmp/templates`.
+- Relative to docs root, the verb uses a single canonical path (no fallbacks):
+  - Nested verbs: `templates/$group/$verb.templ` (e.g., `templates/doc/list.templ`, `templates/list/tickets.templ`)
+  - Single verbs: `templates/$verb.templ` (e.g., `templates/doctor.templ`)
 
 ### When to render
 
-- Default: render in classic/human mode only.
-- Glaze mode:
-  - Off by default (scripts expect machine output).
-  - Add `--with-postfix-template` to explicitly append postfix even in Glaze mode (printed after structured output on stdout; never interleave within JSON/CSV payload).
-- Global flag(s) proposal:
-  - `--no-postfix-template` to disable.
-  - `--with-postfix-template` to force-enable (including Glaze mode).
-  - Env overrides: `DOCMGR_POSTFIX_TEMPLATE=0|1`.
+- Render only in classic/human mode (inside `Run`). Do not render in Glaze mode (`RunIntoGlazeProcessor`).
 
 ### Template data contract
 
-Principle: Each verb exposes a typed Go struct that captures its computed, human‑friendly state in a stable format for templates. For Glaze verbs, also provide rows and simple stats.
+Principle: Each verb builds a typed Go struct inside its `Run` (classic) method capturing its human‑friendly state for templates.
 
 - Common envelope (available to all templates):
   - `Verbs []string` — full path, e.g., `["docmgr","doc","list"]`
@@ -146,8 +126,7 @@ Principle: Each verb exposes a typed Go struct that captures its computed, human
     ```` 
 
 Notes:
-- For Glaze verbs, `Rows` and `Fields` mirror what `--with-glaze-output` would produce.
-- Classic verbs provide richer, domain‑specific summaries in addition to any rows.
+- Data structures are built only in classic mode and may include derived summaries beyond what Glaze rows contain.
 
 ### Example templates
 
@@ -237,22 +216,16 @@ Function helpers
 
 ### Implementation outline (no code changes yet)
 
-- Add a small “postfix renderer” utility:
-  - Resolve docs root (respect `.ttmp.yaml`) and compute template path using `GetVerbsFromCobraCommand`.
-  - If template exists, render with the struct provided by the verb, plus the common envelope.
-  - Append to stdout after the classic output block.
-- Introduce a lightweight interface implemented by verbs:
-  - `type TemplateDataProvider interface { TemplateData(ctx context.Context, parsed *layers.ParsedLayers) (any, error) }`
-  - Classic verbs return a domain struct; Glaze verbs can return `Rows/Fields` plus a concise summary struct.
-  - If a verb does not implement the interface, skip rendering.
-- Flags:
-  - Root level (default off in Glaze): `--with-postfix-template`, `--no-postfix-template`.
-  - Env: `DOCMGR_POSTFIX_TEMPLATE=0|1`.
+- In each verb’s `Run` (classic) method:
+  - Build the typed data struct (plus a minimal common envelope if needed).
+  - Resolve docs root (respect `.ttmp.yaml`) and compute the canonical template path for the verb.
+  - If the template exists, render it and append to stdout.
+- No additional interfaces; no flags.
 - Testing surface:
-  - Add template files under `ttmp/templates/` and verify rendering for:
-    - `doc list` (aka `list docs`)
-    - `list tickets`
-    - `doctor`
+  - Provide example templates under `ttmp/templates/` and verify rendering for:
+    - `doc list` (canonical path e.g., `templates/doc/list.templ`)
+    - `list tickets` (canonical path e.g., `templates/list/tickets.templ`)
+    - `doctor` (canonical path `templates/doctor.templ`)
 
 ### Risks and considerations
 

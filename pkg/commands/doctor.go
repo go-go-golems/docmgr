@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -666,6 +667,14 @@ func (c *DoctorCommand) Run(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
 ) error {
+	settings := &DoctorSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	// Apply config root if present
+	settings.Root = workspace.ResolveRoot(settings.Root)
+
 	collector := &doctorRowCollector{}
 	if err := c.RunIntoGlazeProcessor(ctx, parsedLayers, collector); err != nil {
 		return err
@@ -728,11 +737,79 @@ func (c *DoctorCommand) Run(
 		if err == nil {
 			if rendered, err := renderer.Render(content); err == nil {
 				fmt.Print(rendered)
-				return nil
+			} else {
+				fmt.Print(content)
 			}
+		} else {
+			fmt.Print(content)
+		}
+	} else {
+		fmt.Print(content)
+	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type Finding struct {
+		Issue    string
+		Severity string
+		Message  string
+		Path     string
+	}
+	type TicketFindings struct {
+		Ticket   string
+		Findings []Finding
+	}
+
+	ticketFindings := make([]TicketFindings, 0, len(order))
+	totalFindings := 0
+	for _, ticket := range order {
+		entries := grouped[ticket]
+		findings := make([]Finding, 0)
+		for _, row := range entries {
+			issue := getRowString(row, "issue")
+			severity := getRowString(row, "severity")
+			message := getRowString(row, "message")
+			path := getRowString(row, "path")
+
+			// Skip "none" issues (all checks passed)
+			if issue == "none" {
+				continue
+			}
+
+			findings = append(findings, Finding{
+				Issue:    issue,
+				Severity: strings.ToUpper(severity),
+				Message:  message,
+				Path:     path,
+			})
+			totalFindings++
+		}
+		if len(findings) > 0 {
+			ticketFindings = append(ticketFindings, TicketFindings{
+				Ticket:   ticket,
+				Findings: findings,
+			})
 		}
 	}
-	fmt.Print(content)
+
+	templateData := map[string]interface{}{
+		"TotalFindings": totalFindings,
+		"Tickets":       ticketFindings,
+	}
+
+	// Try verb path: ["doctor"]
+	verbCandidates := [][]string{
+		{"doctor"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":        settings.Root,
+		"ticket":      settings.Ticket,
+		"all":         settings.All,
+		"staleAfter":  settings.StaleAfterDays,
+		"failOn":      settings.FailOn,
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, settings.Root, settingsMap, templateData)
+
 	return nil
 }
 

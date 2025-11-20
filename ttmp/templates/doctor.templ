@@ -1,0 +1,13 @@
+---
+doctor_summary:
+  findings_total: {{ .TotalFindings }}
+  by_ticket:
+  {{- range .Tickets }}
+    - ticket: {{ .Ticket }}
+      errors: {{ countBy .Findings "ERROR" }}
+      warnings: {{ countBy .Findings "WARNING" }}
+      oks: {{ countBy .Findings "OK" }}
+  {{- end }}
+guidance: |
+  Address ERRORs first. For WARNINGs, add owner and due date.
+

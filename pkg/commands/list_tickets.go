@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -263,12 +264,110 @@ func (c *ListTicketsCommand) Run(
 		if err == nil {
 			if rendered, err2 := r.Render(content); err2 == nil {
 				fmt.Print(rendered)
-				return nil
+			} else {
+				fmt.Print(content)
+			}
+		} else {
+			fmt.Print(content)
+		}
+	} else {
+		// Fallback: print raw markdown
+		fmt.Print(content)
+	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type TicketInfo struct {
+		Ticket     string
+		Title      string
+		Status     string
+		Topics     []string
+		Path       string
+		LastUpdated string
+	}
+
+	ticketInfos := make([]TicketInfo, 0, len(filtered))
+	for _, ws := range filtered {
+		doc := ws.Doc
+		topics := doc.Topics
+		if topics == nil {
+			topics = []string{}
+		}
+		relPath := ws.Path
+		if abs, err := filepath.Abs(ws.Path); err == nil {
+			if rootDisplay != "" {
+				if rel, err2 := filepath.Rel(rootDisplay, abs); err2 == nil && rel != "" && rel != "." {
+					relPath = rel
+				} else if err2 == nil && rel == "." {
+					relPath = "."
+				} else {
+					relPath = abs
+				}
+			} else {
+				relPath = abs
 			}
 		}
+		ticketInfos = append(ticketInfos, TicketInfo{
+			Ticket:      doc.Ticket,
+			Title:       doc.Title,
+			Status:      doc.Status,
+			Topics:      topics,
+			Path:        relPath,
+			LastUpdated: doc.LastUpdated.Format("2006-01-02 15:04"),
+		})
 	}
-	// Fallback: print raw markdown
-	fmt.Print(content)
+
+	// Build rows for template (same as Glaze rows)
+	rows := make([]map[string]interface{}, 0, len(filtered))
+	fields := []string{"ticket", "title", "status", "topics", "path", "last_updated"}
+	for _, ws := range filtered {
+		doc := ws.Doc
+		open, done := countTasksInTicket(ws.Path)
+		topicsStr := strings.Join(doc.Topics, ", ")
+		relPath := ws.Path
+		if abs, err := filepath.Abs(ws.Path); err == nil {
+			if rootDisplay != "" {
+				if rel, err2 := filepath.Rel(rootDisplay, abs); err2 == nil && rel != "" && rel != "." {
+					relPath = rel
+				} else if err2 == nil && rel == "." {
+					relPath = "."
+				} else {
+					relPath = abs
+				}
+			} else {
+				relPath = abs
+			}
+		}
+		rows = append(rows, map[string]interface{}{
+			"ticket":       doc.Ticket,
+			"title":        doc.Title,
+			"status":       doc.Status,
+			"topics":       topicsStr,
+			"tasks_open":   open,
+			"tasks_done":   done,
+			"path":         relPath,
+			"last_updated": doc.LastUpdated.Format("2006-01-02 15:04"),
+		})
+	}
+
+	templateData := map[string]interface{}{
+		"TotalTickets": len(filtered),
+		"Tickets":      ticketInfos,
+		"Rows":         rows,
+		"Fields":       fields,
+	}
+
+	// Try verb path: ["list", "tickets"]
+	verbCandidates := [][]string{
+		{"list", "tickets"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":   settings.Root,
+		"ticket": settings.Ticket,
+		"status": settings.Status,
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, rootDisplay, settingsMap, templateData)
+
 	return nil
 }
 

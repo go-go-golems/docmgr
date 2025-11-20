@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -27,20 +29,22 @@ type SearchCommand struct {
 
 // SearchSettings holds the parameters for the search command
 type SearchSettings struct {
-	Query          string   `glazed.parameter:"query"`
-	Ticket         string   `glazed.parameter:"ticket"`
-	Topics         []string `glazed.parameter:"topics"`
-	DocType        string   `glazed.parameter:"doc-type"`
-	Status         string   `glazed.parameter:"status"`
-	Files          bool     `glazed.parameter:"files"`
-	File           string   `glazed.parameter:"file"`
-	Dir            string   `glazed.parameter:"dir"`
-	ExternalSource string   `glazed.parameter:"external-source"`
-	Since          string   `glazed.parameter:"since"`
-	Until          string   `glazed.parameter:"until"`
-	CreatedSince   string   `glazed.parameter:"created-since"`
-	UpdatedSince   string   `glazed.parameter:"updated-since"`
-	Root           string   `glazed.parameter:"root"`
+	Query              string   `glazed.parameter:"query"`
+	Ticket             string   `glazed.parameter:"ticket"`
+	Topics             []string `glazed.parameter:"topics"`
+	DocType            string   `glazed.parameter:"doc-type"`
+	Status             string   `glazed.parameter:"status"`
+	Files              bool     `glazed.parameter:"files"`
+	File               string   `glazed.parameter:"file"`
+	Dir                string   `glazed.parameter:"dir"`
+	ExternalSource     string   `glazed.parameter:"external-source"`
+	Since              string   `glazed.parameter:"since"`
+	Until              string   `glazed.parameter:"until"`
+	CreatedSince       string   `glazed.parameter:"created-since"`
+	UpdatedSince       string   `glazed.parameter:"updated-since"`
+	Root               string   `glazed.parameter:"root"`
+	PrintTemplateSchema bool     `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string   `glazed.parameter:"schema-format"`
 }
 
 func NewSearchCommand() (*SearchCommand, error) {
@@ -154,6 +158,18 @@ Example:
 					parameters.WithHelp("Root directory for docs"),
 					parameters.WithDefault("ttmp"),
 				),
+				parameters.NewParameterDefinition(
+					"print-template-schema",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Print template schema after output (human mode only)"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"schema-format",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Template schema output format: json|yaml"),
+					parameters.WithDefault("json"),
+				),
 			),
 		),
 	}, nil
@@ -171,6 +187,36 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema {
+		type SearchResult struct {
+			Ticket  string
+			Title   string
+			DocType string
+			Status  string
+			Topics  []string
+			Path    string
+			Snippet string
+		}
+		templateData := map[string]interface{}{
+			"Query":       "",
+			"TotalResults": 0,
+			"Results": []SearchResult{
+				{
+					Ticket:  "",
+					Title:   "",
+					DocType: "",
+					Status:  "",
+					Topics:  []string{},
+					Path:    "",
+					Snippet: "",
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	// If --files flag is set, suggest files instead of searching documents
 	if settings.Files {
@@ -945,6 +991,36 @@ func (c *SearchCommand) Run(
 	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema {
+		type SearchResult struct {
+			Ticket  string
+			Title   string
+			DocType string
+			Status  string
+			Topics  []string
+			Path    string
+			Snippet string
+		}
+		templateData := map[string]interface{}{
+			"Query":        "",
+			"TotalResults": 0,
+			"Results": []SearchResult{
+				{
+					Ticket:  "",
+					Title:   "",
+					DocType: "",
+					Status:  "",
+					Topics:  []string{},
+					Path:    "",
+					Snippet: "",
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
+
 	// Suggest files mode
 	if settings.Files {
 		// derive ticketDir
@@ -1073,7 +1149,17 @@ func (c *SearchCommand) Run(
 
 	queryLower := strings.ToLower(settings.Query)
 
-	_ = filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
+	// Collect search results first
+	type searchResult struct {
+		relPath      string
+		doc          *models.Document
+		snippet      string
+		matchedFiles []string
+		matchedNotes []string
+	}
+	var results []searchResult
+
+	err = filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -1200,20 +1286,94 @@ func (c *SearchCommand) Run(
 		}
 		snippet := extractSnippet(content, settings.Query, 100)
 
-		if settings.File != "" {
-			extra := ""
-			if len(matchedFiles) > 0 {
-				extra += " file=" + strings.Join(matchedFiles, ", ")
-			}
-			if len(matchedNotes) > 0 {
-				extra += " note=" + strings.Join(matchedNotes, " | ")
-			}
-			fmt.Printf("%s — %s [%s] :: %s%s\n", relPath, doc.Title, doc.Ticket, snippet, extra)
-		} else {
-			fmt.Printf("%s — %s [%s] :: %s\n", relPath, doc.Title, doc.Ticket, snippet)
-		}
+		// Collect result instead of printing immediately
+		results = append(results, searchResult{
+			relPath:      relPath,
+			doc:          doc,
+			snippet:      snippet,
+			matchedFiles: matchedFiles,
+			matchedNotes: matchedNotes,
+		})
+
 		return nil
 	})
+
+	if err != nil {
+		return fmt.Errorf("failed to walk documents under %s: %w", settings.Root, err)
+	}
+
+	// Print human output
+	for _, result := range results {
+		if settings.File != "" {
+			extra := ""
+			if len(result.matchedFiles) > 0 {
+				extra += " file=" + strings.Join(result.matchedFiles, ", ")
+			}
+			if len(result.matchedNotes) > 0 {
+				extra += " note=" + strings.Join(result.matchedNotes, " | ")
+			}
+			fmt.Printf("%s — %s [%s] :: %s%s\n", result.relPath, result.doc.Title, result.doc.Ticket, result.snippet, extra)
+		} else {
+			fmt.Printf("%s — %s [%s] :: %s\n", result.relPath, result.doc.Title, result.doc.Ticket, result.snippet)
+		}
+	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type SearchResult struct {
+		Ticket  string
+		Title   string
+		DocType string
+		Status  string
+		Topics  []string
+		Path    string
+		Snippet string
+	}
+
+	searchResults := make([]SearchResult, 0, len(results))
+	for _, result := range results {
+		topics := result.doc.Topics
+		if topics == nil {
+			topics = []string{}
+		}
+		searchResults = append(searchResults, SearchResult{
+			Ticket:  result.doc.Ticket,
+			Title:   result.doc.Title,
+			DocType: result.doc.DocType,
+			Status:  result.doc.Status,
+			Topics:  topics,
+			Path:    result.relPath,
+			Snippet: result.snippet,
+		})
+	}
+
+	templateData := map[string]interface{}{
+		"Query":        settings.Query,
+		"TotalResults": len(results),
+		"Results":      searchResults,
+	}
+
+	// Try verb path: ["doc", "search"] or ["search"]
+	verbCandidates := [][]string{
+		{"doc", "search"},
+		{"search"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":           settings.Root,
+		"query":          settings.Query,
+		"ticket":         settings.Ticket,
+		"topics":         settings.Topics,
+		"docType":        settings.DocType,
+		"status":         settings.Status,
+		"file":           settings.File,
+		"dir":            settings.Dir,
+		"externalSource": settings.ExternalSource,
+	}
+	absRoot := settings.Root
+	if abs, err := filepath.Abs(settings.Root); err == nil {
+		absRoot = abs
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, absRoot, settingsMap, templateData)
 
 	return nil
 }

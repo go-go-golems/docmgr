@@ -35,7 +35,7 @@
 - [x] Create documentation/tutorial for postfix templates - user guide explaining how to create templates, available data structures, function helpers, common patterns, and examples
 - [ ] Create example template for status (ttmp/templates/status.templ)
 - [x] Create example template for tasks list (ttmp/templates/tasks/list.templ)
-- [ ] Create example template for search (ttmp/templates/doc/search.templ)
+- [x] Create example template for search (ttmp/templates/doc/search.templ)
 - [ ] Create example template for vocab list (ttmp/templates/vocab/list.templ)
 - [ ] Create example template for guidelines (ttmp/templates/doc/guidelines.templ)
 - [x] Extend data contracts reference with status/tasks/search/vocab/guidelines

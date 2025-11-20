@@ -140,3 +140,22 @@ Added template support for tasks list command: schema flags, template data build
 - docmgr/pkg/commands/tasks.go — Added schema flags and postfix template rendering for tasks list verb
 - docmgr/ttmp/templates/tasks/list.templ — Example template for tasks list command output
 
+
+## 2025-11-20
+
+Updated playbook with lessons learned from status and tasks list implementations
+
+### Related Files
+
+- docmgr/ttmp/2025/11/19/DOCMGR-OUTPUT-TEMPLATES-external-postfix-templates-for-verb-outputs/playbooks/01-intern-playbook-continuing-external-templates.md — Added lessons learned section and improved step-by-step instructions
+
+
+## 2025-11-20
+
+Added template support for search command: refactored to collect results first, added schema flags, template data building, and example template
+
+### Related Files
+
+- docmgr/pkg/commands/search.go — Refactored Run to collect results before printing
+- docmgr/ttmp/templates/doc/search.templ — Example template for search command output
+

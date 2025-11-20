@@ -601,3 +601,37 @@ The remaining tasks are enhancements that can be done incrementally based on use
 
 ### Follow-ups
 - Continue with next verbs: `search`, `vocab list`, `guidelines`
+
+---
+
+## 2025-11-20 - Added template support for search command
+
+### What I Did
+- Added `PrintTemplateSchema` and `SchemaFormat` flags to `SearchSettings` struct
+- Implemented schema printing early return in both `RunIntoGlazeProcessor` and `Run` methods
+- **Refactored `Run` method**: Changed from printing results immediately to collecting them first, then printing, then building template data
+- Built template data structure with query, total results, and result details (ticket, title, doc_type, status, topics, path, snippet)
+- Added postfix template rendering in `Run` method using `templates.RenderVerbTemplate`
+- Created example template at `ttmp/templates/doc/search.templ` with LLM-friendly YAML output
+
+### Why
+- Following the playbook pattern established for previous verbs
+- `search` is the third suggested verb in the playbook's "Suggested Next Verbs" list
+- Required refactoring because the original implementation printed results immediately during walk
+
+### Files Changed
+- `docmgr/pkg/commands/search.go` — Added schema flags, early returns, refactored result collection, template data building, and rendering
+- `docmgr/ttmp/templates/doc/search.templ` — New example template file
+
+### Verification
+- Built successfully: `go build ./cmd/docmgr`
+- Tested human output: `go run ./cmd/docmgr doc search --query "template" --ticket DOCMGR-OUTPUT-TEMPLATES` — output unchanged, template renders correctly
+- Tested schema printing: `go run ./cmd/docmgr doc search --query "template" --print-template-schema --schema-format yaml` — schema-only output as expected
+
+### What Worked
+- Refactoring to collect results first worked well - cleaner separation of concerns
+- Template data structure captures all relevant search result information
+- Schema generation correctly infers types from the template data
+
+### Follow-ups
+- Continue with next verbs: `vocab list`, `guidelines`

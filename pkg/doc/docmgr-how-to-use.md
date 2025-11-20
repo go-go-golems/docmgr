@@ -637,6 +637,35 @@ docmgr doc search --query websocket --with-glaze-output --output yaml
 docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
 
+### Template Schema Discovery
+
+Many commands support **postfix templates** — custom templates that render LLM-friendly output after the human-readable output. To discover what data is available for templates, use `--print-template-schema`:
+
+```bash
+# Print schema for list docs command
+docmgr list docs --print-template-schema --schema-format yaml
+
+# Print schema for status command
+docmgr status --print-template-schema --schema-format json
+
+# Print schema for search command
+docmgr doc search --query "test" --print-template-schema --schema-format yaml
+```
+
+**What you get:**
+- YAML or JSON schema showing all available fields and their types
+- Nested structures for complex data (e.g., arrays of tickets with nested docs)
+- Schema-only output (no human-readable content) — useful for automation
+
+**Available on:** `list docs`, `list tickets`, `doctor`, `status`, `tasks list`, `doc search`, `vocab list`, `doc guidelines`
+
+**Use cases:**
+- **Template development:** Understand available data before writing templates
+- **Documentation:** Generate reference docs for template authors
+- **Automation:** Parse schema to generate template scaffolding tools
+
+> **Tip:** Templates are stored in `ttmp/templates/` following the command path (e.g., `ttmp/templates/status.templ`, `ttmp/templates/tasks/list.templ`). See the [template data contracts reference](../../ttmp/2025/11/19/DOCMGR-OUTPUT-TEMPLATES-external-postfix-templates-for-verb-outputs/reference/01-template-data-contracts-reference.md) for detailed field documentation.
+
 ### Root discovery and shell gotchas
 
 - `.ttmp.yaml` discovery walks up from CWD. If you need consistent behavior from nested subdirs, set an absolute `root` in `.ttmp.yaml` or run from repo root.

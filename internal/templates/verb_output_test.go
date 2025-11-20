@@ -8,7 +8,7 @@ import (
 )
 
 func TestSlice(t *testing.T) {
-	fnMap := getTemplateFuncMap()
+	fnMap := GetTemplateFuncMap()
 	sliceFn := fnMap["slice"].(func(int, int, interface{}) interface{})
 
 	tests := []struct {
@@ -80,7 +80,7 @@ func TestSlice(t *testing.T) {
 }
 
 func TestDict(t *testing.T) {
-	fnMap := getTemplateFuncMap()
+	fnMap := GetTemplateFuncMap()
 	dictFn := fnMap["dict"].(func(...interface{}) map[string]interface{})
 
 	tests := []struct {
@@ -121,7 +121,7 @@ func TestDict(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	fnMap := getTemplateFuncMap()
+	fnMap := GetTemplateFuncMap()
 	setFn := fnMap["set"].(func(map[string]interface{}, string, interface{}) map[string]interface{})
 
 	tests := []struct {
@@ -165,7 +165,7 @@ func TestSet(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	fnMap := getTemplateFuncMap()
+	fnMap := GetTemplateFuncMap()
 	getFn := fnMap["get"].(func(map[string]interface{}, string) interface{})
 
 	tests := []struct {
@@ -205,7 +205,7 @@ func TestGet(t *testing.T) {
 }
 
 func TestAdd1(t *testing.T) {
-	fnMap := getTemplateFuncMap()
+	fnMap := GetTemplateFuncMap()
 	add1Fn := fnMap["add1"].(func(interface{}) int)
 
 	tests := []struct {
@@ -251,7 +251,7 @@ func TestAdd1(t *testing.T) {
 }
 
 func TestCountBy(t *testing.T) {
-	fnMap := getTemplateFuncMap()
+	fnMap := GetTemplateFuncMap()
 	countByFn := fnMap["countBy"].(func(interface{}, interface{}) int)
 
 	// Test struct for reflection-based counting

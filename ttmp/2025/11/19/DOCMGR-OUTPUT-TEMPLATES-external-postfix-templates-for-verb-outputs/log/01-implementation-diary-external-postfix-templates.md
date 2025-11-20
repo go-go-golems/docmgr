@@ -716,3 +716,83 @@ The remaining tasks are enhancements that can be done incrementally based on use
 ### Follow-ups
 - Test should be run as part of full scenario with built docmgr binary
 - Consider adding to CI pipeline for automated validation
+
+---
+
+## 2025-11-20 - Documented --print-template-schema in how-to-use tutorial
+
+### What I Did
+- Added "Template Schema Discovery" subsection to section 12 "Output Modes and UX" in `docmgr-how-to-use.md`
+- Documented `--print-template-schema` flag usage with examples
+- Explained what users get (YAML/JSON schema, field types, nested structures)
+- Listed all commands that support the flag
+- Added use cases: template development, documentation, automation
+- Included tip about template location and reference to data contracts doc
+
+### Why
+- Task 38: Document --print-template-schema usage in how-to-use and tutorial
+- Makes the feature discoverable for users creating custom templates
+- Provides clear examples and use cases
+- Links to detailed reference documentation
+
+### Files Changed
+- `docmgr/pkg/doc/docmgr-how-to-use.md` — Added Template Schema Discovery section
+
+### Verification
+- Documentation follows existing tutorial style and structure
+- Examples use consistent command patterns
+- Links to reference documentation for deeper details
+
+### What Worked
+- Natural fit in the "Output Modes and UX" section
+- Clear examples showing different commands and formats
+- Useful use cases help users understand when to use the feature
+
+### Follow-ups
+- Consider adding to Part 3 (Power Features) if more advanced usage patterns emerge
+
+---
+
+## 2025-11-20 - Implemented docmgr template validate command
+
+### What I Did
+- Created `docmgr template validate` command to validate template syntax before runtime
+- Command validates one or more template files by parsing them with Go's text/template engine
+- Supports validating specific template via `--path` or all templates in `ttmp/templates/`
+- Reports syntax errors, undefined functions, and other template issues
+- Exported `GetTemplateFuncMap()` from `internal/templates/verb_output.go` for use in validation
+- Created template command structure: `cmd/docmgr/cmds/template/` with `template.go` and `validate.go`
+- Wired up command in `root.go`
+
+### Why
+- Task 20: Add template validation tooling (docmgr template validate command to check syntax before runtime)
+- Allows developers to catch template errors before runtime
+- Useful for CI/CD pipelines to validate templates
+- Helps template authors debug syntax issues
+
+### Files Changed
+- `docmgr/pkg/commands/template_validate.go` — New template validate command implementation
+- `docmgr/cmd/docmgr/cmds/template/template.go` — Template command structure
+- `docmgr/cmd/docmgr/cmds/template/validate.go` — Validate subcommand wiring
+- `docmgr/cmd/docmgr/cmds/root.go` — Added template command to root
+- `docmgr/internal/templates/verb_output.go` — Exported `GetTemplateFuncMap()` function
+- `docmgr/internal/templates/verb_output_test.go` — Updated to use exported function
+
+### Verification
+- Command builds successfully
+- Help text displays correctly
+- Validates all templates when no path specified
+- Validates specific template when `--path` provided
+- Correctly reports syntax errors (tested with malformed template)
+- Correctly reports undefined function errors (found 2 templates using `div` and `append` functions)
+- Verbose mode shows all validated templates
+
+### What Worked
+- Reusing the same FuncMap ensures validation matches runtime behavior
+- Scanning all templates by default is useful for CI/CD
+- Clear error messages help identify issues quickly
+
+### Follow-ups
+- Consider adding option to validate against schema/data structure
+- Could add warnings for deprecated template functions
+- Consider adding template linting rules (e.g., check for common mistakes)

@@ -22,7 +22,7 @@
 - [ ] Add template debugging features (--debug-template flag showing resolved path, data, and errors)
 - [x] Create comprehensive template examples (advanced patterns: nested loops, conditionals, complex transformations)
 - [x] Consider adding templates to more verbs (status, search, guidelines, vocab list, etc.)
-- [ ] Evaluate template composition/inheritance patterns (if needed based on usage feedback)
+- [x] Evaluate template composition/inheritance patterns (if needed based on usage feedback)
 - [x] Add unit tests for template FuncMap helpers (especially countBy with various data types)
 - [x] Add vocabulary entries for new topics used in tickets (cli, templates, glaze)
 - [x] Implement template support for status command - build template data struct with TicketsTotal, TicketsStale, DocsTotal, doc type counts, and per-ticket status info. Render templates/status.templ after human output.
@@ -40,7 +40,7 @@
 - [x] Create example template for guidelines (ttmp/templates/doc/guidelines.templ)
 - [x] Extend data contracts reference with status/tasks/search/vocab/guidelines
 - [x] Add integration tests: --print-template-schema prints only schema (docs/tickets/doctor)
-- [ ] Document --print-template-schema usage in how-to-use and tutorial
+- [x] Document --print-template-schema usage in how-to-use and tutorial
 - [ ] Migrate FuncMap in internal/templates/verb_output.go to Glazed/Sprig helpers; update templates
 - [x] Implement docmgr template validate (lint templates; pre-runtime checks)
 - [ ] Add --debug-template flag: show resolved path, data keys preview, and errors

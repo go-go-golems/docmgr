@@ -187,3 +187,23 @@ Added integration tests for --print-template-schema: verify schema-only output (
 - docmgr/test-scenarios/testing-doc-manager/README.md — Documented new template schema output test
 - docmgr/test-scenarios/testing-doc-manager/run-all.sh — Added 13-template-schema-output.sh to test suite
 
+
+## 2025-11-20
+
+Documented --print-template-schema usage in how-to-use tutorial: added section explaining schema discovery, use cases, and available commands
+
+### Related Files
+
+- docmgr/pkg/doc/docmgr-how-to-use.md — Added Template Schema Discovery section to Output Modes and UX
+
+
+## 2025-11-20
+
+Implemented docmgr template validate command: validates template syntax before runtime, supports validating specific templates or all templates, reports parse errors and undefined functions
+
+### Related Files
+
+- docmgr/cmd/docmgr/cmds/template/ — New template command directory with validate subcommand
+- docmgr/internal/templates/verb_output.go — Exported GetTemplateFuncMap() for use in validation
+- docmgr/pkg/commands/template_validate.go — New template validate command implementation
+

@@ -61,7 +61,7 @@ func RenderVerbTemplate(
 	}
 
 	// Create template with FuncMap
-	tmpl := template.New(filepath.Base(templatePath)).Funcs(getTemplateFuncMap())
+	tmpl := template.New(filepath.Base(templatePath)).Funcs(GetTemplateFuncMap())
 
 	// Parse template
 	tmpl, err = tmpl.Parse(string(templateContent))
@@ -141,8 +141,8 @@ func resolveTemplatePath(root string, verbs []string) string {
 	return ""
 }
 
-// getTemplateFuncMap returns a safe, minimal FuncMap for template rendering
-func getTemplateFuncMap() template.FuncMap {
+// GetTemplateFuncMap returns a safe, minimal FuncMap for template rendering
+func GetTemplateFuncMap() template.FuncMap {
 	return template.FuncMap{
 		"slice": func(start, end int, s interface{}) interface{} {
 			switch v := s.(type) {

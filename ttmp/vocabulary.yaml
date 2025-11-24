@@ -9,6 +9,18 @@ topics:
       description: Usability testing and improvement
     - slug: documentation
       description: Documentation writing and maintenance
+    - slug: chat
+      description: Chat backend and frontend surfaces
+    - slug: backend
+      description: Backend services
+    - slug: websocket
+      description: WebSocket lifecycle & events
+    - slug: cli
+      description: CLI and command-line interface topics
+    - slug: templates
+      description: Template system and templating topics
+    - slug: glaze
+      description: Glazed framework and structured output topics
 docTypes:
     - slug: index
       description: Ticket index
@@ -20,4 +32,23 @@ docTypes:
       description: Operational playbook
 intent:
     - slug: long-term
-      description: Long-term documentation
+      description: Long-term documentation, only use for documents that are expected to be maintained for a long time and moved to the actual repository. This includes for example design documents and architecture notes, as well as reference documents and playbooks.
+    - slug: ticket-specific
+      description: Document only for the ticket, kept around after the ticket is closed to give context. This includes for example playbooks to understand the implementation work and reference documents about smaller topics.
+    - slug: only-during-ticket
+      description: Document only for the ticket, will be archived once the ticket is closed.
+    - slug: throwaway
+      description: Temporary/experimental documentation
+    - slug: short-term
+      description: Short-term documentation for active work
+status:
+    - slug: draft
+      description: Initial draft state
+    - slug: active
+      description: Active work in progress
+    - slug: review
+      description: Ready for review
+    - slug: complete
+      description: Work completed
+    - slug: archived
+      description: Archived/completed work

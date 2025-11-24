@@ -19,6 +19,7 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 - `05-search-scenarios.sh` — run search scenarios (content, metadata, reverse lookup, external sources, dates, file suggestions)
 - `06-doctor-advanced.sh` — exercise doctor warnings, ignore-glob, and recovery
 - `07-status.sh` — show workspace summary and staleness
+- `13-template-schema-output.sh` — verify --print-template-schema outputs only schema (no human output)
 - `run-all.sh` — convenience script to run all steps in order
 - `SCENARIO.md` — detailed explanation of the scenario and expected outputs
 

@@ -1,0 +1,18 @@
+{{- /* LLM-oriented summary of docs */ -}}
+---
+summary:
+  docs: {{ .TotalDocs }}
+  tickets: {{ .TotalTickets }}
+guidance: |
+  Prefer the most recently updated docs per ticket when summarizing.
+top_docs:
+{{- range $t := .Tickets }}
+  {{- range $d := $t.Docs | slice 0 1 }}
+  - ticket: {{ $t.Ticket }}
+    title: {{ $d.Title }}
+    type: {{ $d.DocType }}
+    status: {{ $d.Status }}
+    path: {{ $d.Path }}
+  {{- end }}
+{{- end }}
+

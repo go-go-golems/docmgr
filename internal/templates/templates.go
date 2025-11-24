@@ -455,20 +455,61 @@ func LoadTemplate(root, docType string) (string, bool) {
 
 // extractFrontmatterAndBody splits a template into (frontmatter, body) using adrg/frontmatter library.
 // If no frontmatter is found, returns ("", template).
+// For templates with placeholders ({{TITLE}}, etc.), falls back to manual parsing since
+// the library can't parse invalid YAML.
 func ExtractFrontmatterAndBody(tpl string) (string, string) {
-	// Use adrg/frontmatter library for robust parsing
+	// Use adrg/frontmatter library for robust parsing (works for valid YAML)
 	reader := bytes.NewReader([]byte(tpl))
 	var meta map[string]interface{}
 	bodyBytes, err := frontmatter.Parse(reader, &meta)
-	if err != nil {
-		// If parsing fails (e.g., no frontmatter), return empty frontmatter and full template
+	if err == nil {
+		// Successfully parsed - return the body
+		return "", string(bodyBytes)
+	}
+
+	// Parsing failed - could be:
+	// 1. No frontmatter (template starts with content)
+	// 2. Invalid YAML (template has placeholders like {{TITLE}})
+	// For templates with placeholders, manually extract the body by finding the --- delimiter
+
+	// Check if this looks like a template with frontmatter (has --- at start)
+	if !strings.HasPrefix(strings.TrimSpace(tpl), "---") {
+		// No frontmatter marker, return full template as body
 		return "", tpl
 	}
 
-	// Reconstruct frontmatter from metadata (for templates, we just need the body)
-	// The frontmatter string isn't needed for template rendering, so we return empty
-	// and let the template system handle frontmatter generation
-	return "", string(bodyBytes)
+	// Try to manually extract body by finding the frontmatter delimiter
+	// Look for the pattern: ---\n...content...\n---
+	lines := strings.Split(tpl, "\n")
+	if len(lines) < 2 {
+		return "", tpl
+	}
+
+	// Find the first --- (should be line 0)
+	if strings.TrimSpace(lines[0]) != "---" {
+		return "", tpl
+	}
+
+	// Find the closing ---
+	bodyStart := -1
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			bodyStart = i + 1
+			break
+		}
+	}
+
+	if bodyStart == -1 {
+		// No closing --- found, return full template
+		return "", tpl
+	}
+
+	// Extract body (everything after the closing ---)
+	body := strings.Join(lines[bodyStart:], "\n")
+	// Remove leading newline if present
+	body = strings.TrimPrefix(body, "\n")
+
+	return "", body
 }
 
 // renderTemplateBody replaces placeholders in the template body based on the document values

@@ -38,6 +38,24 @@ type RelateSettings struct {
 	Root             string   `glazed.parameter:"root"`
 }
 
+type RelateSuggestion struct {
+	File    string
+	Reasons []string
+}
+
+type RelateUpdateSummary struct {
+	DocPath string
+	Added   int
+	Updated int
+	Removed int
+	Total   int
+}
+
+type RelateResult struct {
+	Suggestions []RelateSuggestion
+	Update      *RelateUpdateSummary
+}
+
 func NewRelateCommand() (*RelateCommand, error) {
 	return &RelateCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -501,3 +519,57 @@ func appendNote(existing, addition string) (string, bool) {
 }
 
 var _ cmds.GlazeCommand = &RelateCommand{}
+
+type relateRowCollector struct {
+	rows []types.Row
+}
+
+func (c *relateRowCollector) AddRow(ctx context.Context, row types.Row) error {
+	c.rows = append(c.rows, row)
+	return nil
+}
+
+func (c *relateRowCollector) Close(ctx context.Context) error {
+	return nil
+}
+
+func (c *RelateCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	collector := &relateRowCollector{}
+	if err := c.RunIntoGlazeProcessor(ctx, parsedLayers, collector); err != nil {
+		return err
+	}
+
+	if len(collector.rows) == 0 {
+		fmt.Println("No related files updated or suggested.")
+		return nil
+	}
+
+	first := collector.rows[0]
+	if _, ok := first.Get("doc"); ok {
+		docPath, _ := first.Get("doc")
+		added, _ := first.Get("added")
+		updated, _ := first.Get("updated")
+		removed, _ := first.Get("removed")
+		total, _ := first.Get("total")
+		fmt.Printf("Related files updated for %v\n", docPath)
+		fmt.Printf("- Added: %v\n", added)
+		fmt.Printf("- Updated: %v\n", updated)
+		fmt.Printf("- Removed: %v\n", removed)
+		fmt.Printf("- Total: %v\n", total)
+		return nil
+	}
+
+	fmt.Println("Suggested related files:")
+	for _, row := range collector.rows {
+		file, _ := row.Get("file")
+		reason, _ := row.Get("reason")
+		fmt.Printf("- %v — %v\n", file, reason)
+	}
+
+	return nil
+}
+
+var _ cmds.BareCommand = &RelateCommand{}

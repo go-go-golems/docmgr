@@ -29,6 +29,15 @@ type VocabAddSettings struct {
 	Root        string `glazed.parameter:"root"`
 }
 
+type VocabAddResult struct {
+	Category       string
+	Slug           string
+	Description    string
+	VocabularyPath string
+	Root           string
+	ConfigPath     string
+}
+
 func NewVocabAddCommand() (*VocabAddCommand, error) {
 	return &VocabAddCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -83,18 +92,38 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
+	result, err := c.addVocabularyEntry(settings)
+	if err != nil {
+		return err
+	}
+
+	row := types.NewRow(
+		types.MRP("category", result.Category),
+		types.MRP("slug", result.Slug),
+		types.MRP("description", result.Description),
+		types.MRP("vocabulary_path", result.VocabularyPath),
+		types.MRP("status", "added"),
+	)
+
+	return gp.AddRow(ctx, row)
+}
+
+// findRepoRoot finds the repository root by walking up from current directory
+// unified repo root detection moved to workspace.FindRepositoryRoot() in config.go
+
+var _ cmds.GlazeCommand = &VocabAddCommand{}
+
+func (c *VocabAddCommand) addVocabularyEntry(settings *VocabAddSettings) (*VocabAddResult, error) {
 	vocab, err := LoadVocabulary()
 	if err != nil {
-		return fmt.Errorf("failed to load vocabulary: %w", err)
+		return nil, fmt.Errorf("failed to load vocabulary: %w", err)
 	}
 
-	// Find repository root (git root preferred; fallbacks supported)
 	repoRoot, err := workspace.FindRepositoryRoot()
 	if err != nil {
-		return fmt.Errorf("failed to find repository root: %w", err)
+		return nil, fmt.Errorf("failed to find repository root: %w", err)
 	}
 
-	// Echo resolved context prior to write
 	cfgPath, _ := workspace.FindTTMPConfigPath()
 	vocabPath, _ := workspace.ResolveVocabularyPath()
 	root := workspace.ResolveRoot(settings.Root)
@@ -104,7 +133,6 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 			absRoot = filepath.Join(cwd, absRoot)
 		}
 	}
-	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
 	newItem := models.VocabItem{
 		Slug:        strings.ToLower(settings.Slug),
@@ -121,37 +149,61 @@ func (c *VocabAddCommand) RunIntoGlazeProcessor(
 		categoryItems = &vocab.DocTypes
 	case "intent":
 		categoryItems = &vocab.Intent
+	case "status":
+		categoryItems = &vocab.Status
 	default:
-		return fmt.Errorf("invalid category: %s (must be topics, docTypes, or intent)", category)
+		return nil, fmt.Errorf("invalid category: %s (must be topics, docTypes, intent, or status)", category)
 	}
 
-	// Check if slug already exists
 	for _, item := range *categoryItems {
 		if item.Slug == newItem.Slug {
-			return fmt.Errorf("slug '%s' already exists in category '%s'", newItem.Slug, category)
+			return nil, fmt.Errorf("slug '%s' already exists in category '%s'", newItem.Slug, category)
 		}
 	}
 
-	// Add new item
 	*categoryItems = append(*categoryItems, newItem)
 
-	// Save vocabulary (path resolved via config or defaults)
 	if err := SaveVocabulary(vocab, repoRoot); err != nil {
-		return fmt.Errorf("failed to save vocabulary: %w", err)
+		return nil, fmt.Errorf("failed to save vocabulary: %w", err)
 	}
 
-	row := types.NewRow(
-		types.MRP("category", category),
-		types.MRP("slug", newItem.Slug),
-		types.MRP("description", newItem.Description),
-		types.MRP("vocabulary_path", vocabPath),
-		types.MRP("status", "added"),
-	)
-
-	return gp.AddRow(ctx, row)
+	return &VocabAddResult{
+		Category:       category,
+		Slug:           newItem.Slug,
+		Description:    newItem.Description,
+		VocabularyPath: vocabPath,
+		Root:           absRoot,
+		ConfigPath:     cfgPath,
+	}, nil
 }
 
-// findRepoRoot finds the repository root by walking up from current directory
-// unified repo root detection moved to workspace.FindRepositoryRoot() in config.go
+func (c *VocabAddCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &VocabAddSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
 
-var _ cmds.GlazeCommand = &VocabAddCommand{}
+	result, err := c.addVocabularyEntry(settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Docs root: `%s`\n", result.Root)
+	if result.ConfigPath != "" {
+		fmt.Printf("Config: `%s`\n", result.ConfigPath)
+	}
+	if result.VocabularyPath != "" {
+		fmt.Printf("Vocabulary: `%s`\n", result.VocabularyPath)
+	}
+	fmt.Printf("\nVocabulary entry added:\n")
+	fmt.Printf("- Category: %s\n", result.Category)
+	fmt.Printf("- Slug: %s\n", result.Slug)
+	fmt.Printf("- Description: %s\n", result.Description)
+
+	return nil
+}
+
+var _ cmds.BareCommand = &VocabAddCommand{}

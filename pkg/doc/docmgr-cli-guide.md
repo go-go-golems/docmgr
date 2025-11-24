@@ -234,6 +234,8 @@ docmgr meta update --ticket MEN-4242 --doc-type design-doc --field Topics --valu
 
 Supported fields: Title, Ticket, Status, Topics, DocType, Intent, Owners, RelatedFiles, ExternalSources, Summary.
 
+**Note on Status:** Status is vocabulary-guided (see `docmgr vocab list --category status`). Unknown values trigger warnings in `doctor` but don't fail operations.
+
 ### 4.7 List Tickets and Docs
 
 Use listing commands to navigate by ticket. This is useful in reviews and when returning to paused work.

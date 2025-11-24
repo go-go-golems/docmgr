@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -111,9 +112,11 @@ func formatTaskLine(checked bool, text string) string {
 type TasksListCommand struct{ *cmds.CommandDescription }
 
 type TasksListSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
+	Ticket              string `glazed.parameter:"ticket"`
+	Root                string `glazed.parameter:"root"`
+	TasksFile           string `glazed.parameter:"tasks-file"`
+	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
 
 func NewTasksListCommand() (*TasksListCommand, error) {
@@ -136,6 +139,8 @@ Examples:
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
 			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
+			parameters.NewParameterDefinition("print-template-schema", parameters.ParameterTypeBool, parameters.WithHelp("Print template schema after output (human mode only)"), parameters.WithDefault(false)),
+			parameters.NewParameterDefinition("schema-format", parameters.ParameterTypeString, parameters.WithHelp("Template schema output format: json|yaml"), parameters.WithDefault("json")),
 		),
 	)
 	return &TasksListCommand{CommandDescription: cmd}, nil
@@ -146,6 +151,34 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
+
+	// Apply config root if present
+	s.Root = workspace.ResolveRoot(s.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if s.PrintTemplateSchema {
+		type TaskInfo struct {
+			Index   int
+			Checked bool
+			Text    string
+		}
+		templateData := map[string]interface{}{
+			"TotalTasks": 0,
+			"OpenTasks":  0,
+			"DoneTasks":  0,
+			"TasksFile":  "",
+			"Tasks": []TaskInfo{
+				{
+					Index:   0,
+					Checked: false,
+					Text:    "",
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, s.SchemaFormat)
+		return nil
+	}
+
 	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
@@ -172,6 +205,34 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
+
+	// Apply config root if present
+	s.Root = workspace.ResolveRoot(s.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if s.PrintTemplateSchema {
+		type TaskInfo struct {
+			Index   int
+			Checked bool
+			Text    string
+		}
+		templateData := map[string]interface{}{
+			"TotalTasks": 0,
+			"OpenTasks":  0,
+			"DoneTasks":  0,
+			"TasksFile":  "",
+			"Tasks": []TaskInfo{
+				{
+					Index:   0,
+					Checked: false,
+					Text:    "",
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, s.SchemaFormat)
+		return nil
+	}
+
 	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
@@ -183,6 +244,54 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 		}
 		fmt.Printf("[%d] [%s] %s (file=%s)\n", t.TaskIndex, mark, t.Text, path)
 	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type TaskInfo struct {
+		Index   int
+		Checked bool
+		Text    string
+	}
+
+	taskInfos := make([]TaskInfo, 0, len(tasks))
+	openTasks := 0
+	doneTasks := 0
+	for _, t := range tasks {
+		taskInfos = append(taskInfos, TaskInfo{
+			Index:   t.TaskIndex,
+			Checked: t.Checked,
+			Text:    t.Text,
+		})
+		if t.Checked {
+			doneTasks++
+		} else {
+			openTasks++
+		}
+	}
+
+	templateData := map[string]interface{}{
+		"TotalTasks": len(tasks),
+		"OpenTasks":  openTasks,
+		"DoneTasks":  doneTasks,
+		"TasksFile":  path,
+		"Tasks":      taskInfos,
+	}
+
+	// Try verb path: ["tasks", "list"]
+	verbCandidates := [][]string{
+		{"tasks", "list"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":      s.Root,
+		"ticket":    s.Ticket,
+		"tasksFile": s.TasksFile,
+	}
+	absRoot := s.Root
+	if abs, err := filepath.Abs(s.Root); err == nil {
+		absRoot = abs
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, absRoot, settingsMap, templateData)
+
 	return nil
 }
 
@@ -330,11 +439,102 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) er
 	} else {
 		fmt.Printf("Task checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
 	}
-	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+
+	// Check if all tasks are now done
+	updatedTasks := parseTasksFromLines(lines)
+	allDone := true
+	hasTasks := len(updatedTasks) > 0
+	for _, t := range updatedTasks {
+		if !t.Checked {
+			allDone = false
+			break
+		}
+	}
+
+	// Suggest ticket close if all tasks are done
+	if allDone && hasTasks && s.Ticket != "" {
+		fmt.Printf("💡 All tasks complete! Consider closing the ticket: docmgr ticket close --ticket %s\n", s.Ticket)
+	} else {
+		fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	}
 	return nil
 }
 
+func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+	s := &TasksCheckSettings{}
+	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks check settings: %w", err)
+	}
+	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return fmt.Errorf("failed to load tasks file: %w", err)
+	}
+	var targets []int
+	if len(s.IDs) > 0 {
+		targets = s.IDs
+	} else if s.Match != "" {
+		for _, t := range tasks {
+			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
+				targets = []int{t.TaskIndex}
+				break
+			}
+		}
+	}
+	if len(targets) == 0 {
+		return fmt.Errorf("no target task specified")
+	}
+	found := map[int]bool{}
+	for _, t := range tasks {
+		for _, id := range targets {
+			if t.TaskIndex == id {
+				lines[t.LineIndex] = formatTaskLine(true, t.Text)
+				found[id] = true
+			}
+		}
+	}
+	var missing []int
+	for _, id := range targets {
+		if !found[id] {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("task id(s) not found: %v", missing)
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+	}
+
+	// Check if all tasks are now done
+	updatedTasks := parseTasksFromLines(lines)
+	allDone := true
+	hasTasks := len(updatedTasks) > 0
+	openTasks := 0
+	doneTasks := 0
+	for _, t := range updatedTasks {
+		if t.Checked {
+			doneTasks++
+		} else {
+			openTasks++
+			allDone = false
+		}
+	}
+
+	// Emit structured output
+	row := types.NewRow(
+		types.MRP("ticket", s.Ticket),
+		types.MRP("tasks_file", path),
+		types.MRP("all_tasks_done", allDone && hasTasks),
+		types.MRP("open_tasks", openTasks),
+		types.MRP("done_tasks", doneTasks),
+		types.MRP("total_tasks", len(updatedTasks)),
+		types.MRP("checked_ids", targets),
+	)
+	return gp.AddRow(ctx, row)
+}
+
 var _ cmds.BareCommand = &TasksCheckCommand{}
+var _ cmds.GlazeCommand = &TasksCheckCommand{}
 
 // tasks uncheck
 type TasksUncheckCommand struct{ *cmds.CommandDescription }
@@ -454,23 +654,9 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, err := editTaskLine(s)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
-	}
-	var target *parsedTask
-	for i := range tasks {
-		if tasks[i].TaskIndex == s.ID {
-			target = &tasks[i]
-			break
-		}
-	}
-	if target == nil {
-		return fmt.Errorf("task id not found: %d", s.ID)
-	}
-	lines[target.LineIndex] = formatTaskLine(target.Checked, s.Text)
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+		return err
 	}
 	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task edited"), types.MRP("id", s.ID))
 	if err := gp.AddRow(ctx, row); err != nil {
@@ -480,6 +666,44 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 }
 
 var _ cmds.GlazeCommand = &TasksEditCommand{}
+
+func (c *TasksEditCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+	s := &TasksEditSettings{}
+	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
+	}
+	path, err := editTaskLine(s)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Task %d updated in %s\n", s.ID, path)
+	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	return nil
+}
+
+var _ cmds.BareCommand = &TasksEditCommand{}
+
+func editTaskLine(s *TasksEditSettings) (string, error) {
+	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to load tasks file: %w", err)
+	}
+	var target *parsedTask
+	for i := range tasks {
+		if tasks[i].TaskIndex == s.ID {
+			target = &tasks[i]
+			break
+		}
+	}
+	if target == nil {
+		return "", fmt.Errorf("task id not found: %d", s.ID)
+	}
+	lines[target.LineIndex] = formatTaskLine(target.Checked, s.Text)
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return "", fmt.Errorf("failed to write tasks file %s: %w", path, err)
+	}
+	return path, nil
+}
 
 // tasks remove
 type TasksRemoveCommand struct{ *cmds.CommandDescription }

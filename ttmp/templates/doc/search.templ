@@ -1,0 +1,20 @@
+---
+search_summary:
+  query: {{ .Query }}
+  total_results: {{ .TotalResults }}
+results:
+{{- range .Results }}
+  - ticket: {{ .Ticket }}
+    title: {{ .Title }}
+    doc_type: {{ .DocType }}
+    status: {{ .Status }}
+    path: {{ .Path }}
+    snippet: {{ .Snippet }}
+    topics:
+{{- range .Topics }}
+      - {{ . }}
+{{- end }}
+{{- end }}
+guidance: |
+  Review results by ticket and doc_type. Focus on active tickets and design-docs for implementation guidance.
+

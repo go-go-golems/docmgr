@@ -28,6 +28,14 @@ type InitSettings struct {
 	SeedVocabulary bool   `glazed.parameter:"seed-vocabulary"`
 }
 
+type InitResult struct {
+	Root         string
+	Vocabulary   string
+	DocmgrIgnore string
+	ConfigPath   string
+	Status       string
+}
+
 func NewInitCommand() (*InitCommand, error) {
 	return &InitCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -81,55 +89,67 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
+	result, err := c.initializeWorkspace(settings)
+	if err != nil {
+		return err
+	}
+
+	row := types.NewRow(
+		types.MRP("root", result.Root),
+		types.MRP("vocabulary", result.Vocabulary),
+		types.MRP("docmgrignore", result.DocmgrIgnore),
+		types.MRP("status", result.Status),
+	)
+	if result.ConfigPath != "" {
+		row.Set("config", result.ConfigPath)
+	}
+	return gp.AddRow(ctx, row)
+}
+
+var _ cmds.GlazeCommand = &InitCommand{}
+var _ cmds.BareCommand = &InitCommand{}
+
+func (c *InitCommand) initializeWorkspace(settings *InitSettings) (*InitResult, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
-	// Echo resolved context prior to write
 	cfgPath, _ := workspace.FindTTMPConfigPath()
-	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := settings.Root
 	if !filepath.IsAbs(absRoot) {
 		if cwd, err := os.Getwd(); err == nil {
 			absRoot = filepath.Join(cwd, absRoot)
 		}
 	}
-	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
-	// Create root directory
 	if err := os.MkdirAll(settings.Root, 0755); err != nil {
-		return fmt.Errorf("failed to create docs root %s: %w", settings.Root, err)
+		return nil, fmt.Errorf("failed to create docs root %s: %w", settings.Root, err)
 	}
 
-	// Create .docmgrignore with sensible defaults
 	ignorePath := filepath.Join(settings.Root, ".docmgrignore")
 	ignoreContent := "# Default ignores for docmgr\n.git/\n_templates/\n_guidelines/\n"
 	if err := writeFileIfNotExists(ignorePath, []byte(ignoreContent), settings.Force); err != nil {
-		return fmt.Errorf("failed to write .docmgrignore: %w", err)
+		return nil, fmt.Errorf("failed to write .docmgrignore: %w", err)
 	}
 
-	// Create vocabulary.yaml if missing (empty lists)
 	vocabFilePath := filepath.Join(settings.Root, "vocabulary.yaml")
 	if err := writeFileIfNotExists(vocabFilePath, []byte("topics: []\ndocTypes: []\nintent: []\n"), settings.Force); err != nil {
-		return fmt.Errorf("failed to write vocabulary.yaml: %w", err)
+		return nil, fmt.Errorf("failed to write vocabulary.yaml: %w", err)
 	}
 
-	// Optionally seed vocabulary with defaults
 	if settings.SeedVocabulary {
 		if err := seedDefaultVocabulary(); err != nil {
-			return fmt.Errorf("failed to seed vocabulary: %w", err)
+			return nil, fmt.Errorf("failed to seed vocabulary: %w", err)
 		}
 	}
 
-	// Scaffold _templates/ and _guidelines/
 	if err := scaffoldTemplatesAndGuidelines(settings.Root, settings.Force); err != nil {
-		return fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
+		return nil, fmt.Errorf("failed to scaffold templates and guidelines: %w", err)
 	}
 
-	// Create .ttmp.yaml config file template if it doesn't exist
+	status := "initialized"
+	configPath := cfgPath
 	repoRoot, err := workspace.FindRepositoryRoot()
 	if err == nil {
-		configPath := filepath.Join(repoRoot, ".ttmp.yaml")
+		configPath = filepath.Join(repoRoot, ".ttmp.yaml")
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			// Determine relative path from repo root to docs root
 			relRoot, err := filepath.Rel(repoRoot, absRoot)
 			if err != nil {
 				relRoot = settings.Root
@@ -146,34 +166,52 @@ func (c *InitCommand) RunIntoGlazeProcessor(
 
 			data, err := yaml.Marshal(&cfg)
 			if err != nil {
-				return fmt.Errorf("failed to marshal config: %w", err)
+				return nil, fmt.Errorf("failed to marshal config: %w", err)
 			}
 
 			if err := os.WriteFile(configPath, data, 0644); err != nil {
-				return fmt.Errorf("failed to write .ttmp.yaml: %w", err)
+				return nil, fmt.Errorf("failed to write .ttmp.yaml: %w", err)
 			}
-
-			row := types.NewRow(
-				types.MRP("root", settings.Root),
-				types.MRP("vocabulary", vocabFilePath),
-				types.MRP("docmgrignore", ignorePath),
-				types.MRP("config", configPath),
-				types.MRP("status", "initialized"),
-			)
-			return gp.AddRow(ctx, row)
 		}
 	}
 
-	row := types.NewRow(
-		types.MRP("root", settings.Root),
-		types.MRP("vocabulary", vocabFilePath),
-		types.MRP("docmgrignore", ignorePath),
-		types.MRP("status", "initialized"),
-	)
-	return gp.AddRow(ctx, row)
+	if configPath == "" {
+		status = "initialized"
+	}
+
+	return &InitResult{
+		Root:         settings.Root,
+		Vocabulary:   vocabFilePath,
+		DocmgrIgnore: ignorePath,
+		ConfigPath:   configPath,
+		Status:       status,
+	}, nil
 }
 
-var _ cmds.GlazeCommand = &InitCommand{}
+func (c *InitCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &InitSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.initializeWorkspace(settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Docs root initialized at %s\n", result.Root)
+	fmt.Printf("- Vocabulary: %s\n", result.Vocabulary)
+	fmt.Printf("- .docmgrignore: %s\n", result.DocmgrIgnore)
+	if result.ConfigPath != "" {
+		fmt.Printf("- Config: %s\n", result.ConfigPath)
+	}
+	fmt.Printf("- Status: %s\n", result.Status)
+
+	return nil
+}
 
 // seedDefaultVocabulary populates vocabulary.yaml with a minimal default set if entries are missing.
 func seedDefaultVocabulary() error {
@@ -205,6 +243,15 @@ func seedDefaultVocabulary() error {
 
 	// Intent
 	addItem(&vocab.Intent, "long-term", "Likely to persist")
+	addItem(&vocab.Intent, "short-term", "Short-term documentation for active work")
+	addItem(&vocab.Intent, "throwaway", "Temporary/experimental documentation")
+
+	// Status
+	addItem(&vocab.Status, "draft", "Initial draft state")
+	addItem(&vocab.Status, "active", "Active work in progress")
+	addItem(&vocab.Status, "review", "Ready for review")
+	addItem(&vocab.Status, "complete", "Work completed")
+	addItem(&vocab.Status, "archived", "Archived/completed work")
 
 	// Persist
 	repoRoot, err := workspace.FindRepositoryRoot()

@@ -1,0 +1,16 @@
+---
+tasks_summary:
+  total: {{ .TotalTasks }}
+  open: {{ .OpenTasks }}
+  done: {{ .DoneTasks }}
+  file: {{ .TasksFile }}
+open_tasks:
+{{- range .Tasks }}
+{{- if not .Checked }}
+  - index: {{ .Index }}
+    text: {{ .Text }}
+{{- end }}
+{{- end }}
+guidance: |
+  Focus on open tasks first. Consider breaking down large tasks into smaller, actionable items.
+

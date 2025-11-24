@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -50,6 +51,9 @@ type ListTicketsSettings struct {
 	Root   string `glazed.parameter:"root"`
 	Ticket string `glazed.parameter:"ticket"`
 	Status string `glazed.parameter:"status"`
+	// Schema printing flags (human mode only)
+	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
 
 func NewListTicketsCommand() (*ListTicketsCommand, error) {
@@ -82,6 +86,18 @@ Examples:
 					parameters.WithDefault("ttmp"),
 				),
 				parameters.NewParameterDefinition(
+					"print-template-schema",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Print template schema after output (human mode only)"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"schema-format",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Template schema output format: json|yaml"),
+					parameters.WithDefault("json"),
+				),
+				parameters.NewParameterDefinition(
 					"ticket",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Filter by ticket identifier"),
@@ -110,6 +126,46 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema {
+		type TicketInfo struct {
+			Ticket      string
+			Title       string
+			Status      string
+			Topics      []string
+			Path        string
+			LastUpdated string
+		}
+		templateData := map[string]interface{}{
+			"TotalTickets": 0,
+			"Tickets": []TicketInfo{
+				{
+					Ticket:      "",
+					Title:       "",
+					Status:      "",
+					Topics:      []string{},
+					Path:        "",
+					LastUpdated: "",
+				},
+			},
+			"Rows": []map[string]interface{}{
+				{
+					"ticket":       "",
+					"title":        "",
+					"status":       "",
+					"topics":       "",
+					"tasks_open":   0,
+					"tasks_done":   0,
+					"path":         "",
+					"last_updated": "",
+				},
+			},
+			"Fields": []string{"ticket", "title", "status", "topics", "path", "last_updated"},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -179,6 +235,46 @@ func (c *ListTicketsCommand) Run(
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema {
+		type TicketInfo struct {
+			Ticket      string
+			Title       string
+			Status      string
+			Topics      []string
+			Path        string
+			LastUpdated string
+		}
+		templateData := map[string]interface{}{
+			"TotalTickets": 0,
+			"Tickets": []TicketInfo{
+				{
+					Ticket:      "",
+					Title:       "",
+					Status:      "",
+					Topics:      []string{},
+					Path:        "",
+					LastUpdated: "",
+				},
+			},
+			"Rows": []map[string]interface{}{
+				{
+					"ticket":       "",
+					"title":        "",
+					"status":       "",
+					"topics":       "",
+					"tasks_open":   0,
+					"tasks_done":   0,
+					"path":         "",
+					"last_updated": "",
+				},
+			},
+			"Fields": []string{"ticket", "title", "status", "topics", "path", "last_updated"},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
+
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
@@ -207,26 +303,49 @@ func (c *ListTicketsCommand) Run(
 		return filtered[i].Doc.LastUpdated.After(filtered[j].Doc.LastUpdated)
 	})
 
-	// Markdown-formatted table for human-friendly output
+	// Markdown-formatted sections for human-friendly output
 	if len(filtered) == 0 {
 		fmt.Println("No tickets found.")
 		return nil
 	}
 	var b strings.Builder
-	b.WriteString("| Ticket | Title | Status | Topics | Tasks (open/done) | Updated | Path |\n")
-	b.WriteString("|---|---|---|---|---:|---|---|\n")
+	rootDisplay := settings.Root
+	if abs, err := filepath.Abs(settings.Root); err == nil {
+		rootDisplay = abs
+	}
+	if rootDisplay != "" {
+		fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", rootDisplay)
+	}
+
+	b.WriteString(fmt.Sprintf("## Tickets (%d)\n\n", len(filtered)))
 	for _, ws := range filtered {
 		doc := ws.Doc
 		open, done := countTasksInTicket(ws.Path)
-		fmt.Fprintf(&b, "| %s | %s | %s | %s | %d/%d | %s | %s |\n",
-			doc.Ticket,
-			doc.Title,
-			doc.Status,
-			strings.Join(doc.Topics, ", "),
-			open, done,
-			doc.LastUpdated.Format("2006-01-02 15:04"),
-			ws.Path,
-		)
+		topics := "—"
+		if len(doc.Topics) > 0 {
+			topics = strings.Join(doc.Topics, ", ")
+		}
+		relPath := ws.Path
+		absRoot := rootDisplay
+		if abs, err := filepath.Abs(ws.Path); err == nil {
+			if absRoot != "" {
+				if rel, err2 := filepath.Rel(absRoot, abs); err2 == nil && rel != "" && rel != "." {
+					relPath = rel
+				} else if err2 == nil && rel == "." {
+					relPath = "."
+				} else {
+					relPath = abs
+				}
+			} else {
+				relPath = abs
+			}
+		}
+		fmt.Fprintf(&b, "### %s — %s\n", doc.Ticket, doc.Title)
+		fmt.Fprintf(&b, "- Status: **%s**\n", doc.Status)
+		fmt.Fprintf(&b, "- Topics: %s\n", topics)
+		fmt.Fprintf(&b, "- Tasks: %d open / %d done\n", open, done)
+		fmt.Fprintf(&b, "- Updated: %s\n", doc.LastUpdated.Format("2006-01-02 15:04"))
+		fmt.Fprintf(&b, "- Path: `%s`\n\n", relPath)
 	}
 	content := b.String()
 
@@ -240,12 +359,110 @@ func (c *ListTicketsCommand) Run(
 		if err == nil {
 			if rendered, err2 := r.Render(content); err2 == nil {
 				fmt.Print(rendered)
-				return nil
+			} else {
+				fmt.Print(content)
+			}
+		} else {
+			fmt.Print(content)
+		}
+	} else {
+		// Fallback: print raw markdown
+		fmt.Print(content)
+	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type TicketInfo struct {
+		Ticket      string
+		Title       string
+		Status      string
+		Topics      []string
+		Path        string
+		LastUpdated string
+	}
+
+	ticketInfos := make([]TicketInfo, 0, len(filtered))
+	for _, ws := range filtered {
+		doc := ws.Doc
+		topics := doc.Topics
+		if topics == nil {
+			topics = []string{}
+		}
+		relPath := ws.Path
+		if abs, err := filepath.Abs(ws.Path); err == nil {
+			if rootDisplay != "" {
+				if rel, err2 := filepath.Rel(rootDisplay, abs); err2 == nil && rel != "" && rel != "." {
+					relPath = rel
+				} else if err2 == nil && rel == "." {
+					relPath = "."
+				} else {
+					relPath = abs
+				}
+			} else {
+				relPath = abs
 			}
 		}
+		ticketInfos = append(ticketInfos, TicketInfo{
+			Ticket:      doc.Ticket,
+			Title:       doc.Title,
+			Status:      doc.Status,
+			Topics:      topics,
+			Path:        relPath,
+			LastUpdated: doc.LastUpdated.Format("2006-01-02 15:04"),
+		})
 	}
-	// Fallback: print raw markdown
-	fmt.Print(content)
+
+	// Build rows for template (same as Glaze rows)
+	rows := make([]map[string]interface{}, 0, len(filtered))
+	fields := []string{"ticket", "title", "status", "topics", "path", "last_updated"}
+	for _, ws := range filtered {
+		doc := ws.Doc
+		open, done := countTasksInTicket(ws.Path)
+		topicsStr := strings.Join(doc.Topics, ", ")
+		relPath := ws.Path
+		if abs, err := filepath.Abs(ws.Path); err == nil {
+			if rootDisplay != "" {
+				if rel, err2 := filepath.Rel(rootDisplay, abs); err2 == nil && rel != "" && rel != "." {
+					relPath = rel
+				} else if err2 == nil && rel == "." {
+					relPath = "."
+				} else {
+					relPath = abs
+				}
+			} else {
+				relPath = abs
+			}
+		}
+		rows = append(rows, map[string]interface{}{
+			"ticket":       doc.Ticket,
+			"title":        doc.Title,
+			"status":       doc.Status,
+			"topics":       topicsStr,
+			"tasks_open":   open,
+			"tasks_done":   done,
+			"path":         relPath,
+			"last_updated": doc.LastUpdated.Format("2006-01-02 15:04"),
+		})
+	}
+
+	templateData := map[string]interface{}{
+		"TotalTickets": len(filtered),
+		"Tickets":      ticketInfos,
+		"Rows":         rows,
+		"Fields":       fields,
+	}
+
+	// Try verb path: ["list", "tickets"]
+	verbCandidates := [][]string{
+		{"list", "tickets"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":   settings.Root,
+		"ticket": settings.Ticket,
+		"status": settings.Status,
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, rootDisplay, settingsMap, templateData)
+
 	return nil
 }
 

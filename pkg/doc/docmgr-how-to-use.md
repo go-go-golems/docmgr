@@ -475,7 +475,8 @@ docmgr status --stale-after 30
 docmgr supports human-friendly defaults and structured output via Glaze.
 
 - Human-friendly (default):
-  - list tickets/docs: concise one-liners (ticket/title/status/topics/path/updated)
+  - list tickets/docs: markdown sections with per-ticket bullet summaries (status, topics, tasks, path relative to docs root; root shown once at top)
+  - add/create/relate/meta/vocab/import/layout-fix/renumber/configure/init/task edit/doctor: readable summaries highlighting paths, counts, and status; add `--with-glaze-output` when automation needs rows
   - status: summary line (+ per-ticket lines unless `--summary-only`)
   - search: `path — title [ticket] :: snippet`; `--files` shows `file — reason (source=...)`
   - guidelines: raw guideline text (or list types with `--list`)
@@ -496,7 +497,7 @@ docmgr doc guidelines --doc-type design-doc
 
 # Structured
 docmgr list tickets --with-glaze-output --output json
-docmgr status --with-glaze-output --output table
+docmgr status --with-glaze-output --output yaml
 docmgr doc search --query websocket --with-glaze-output --output yaml
 docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
@@ -631,10 +632,39 @@ docmgr doc guidelines --doc-type design-doc
 
 # Structured
 docmgr list tickets --with-glaze-output --output json
-docmgr status --with-glaze-output --output table
+docmgr status --with-glaze-output --output yaml
 docmgr doc search --query websocket --with-glaze-output --output yaml
 docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
 ```
+
+### Template Schema Discovery
+
+Many commands support **postfix templates** — custom templates that render LLM-friendly output after the human-readable output. To discover what data is available for templates, use `--print-template-schema`:
+
+```bash
+# Print schema for list docs command
+docmgr list docs --print-template-schema --schema-format yaml
+
+# Print schema for status command
+docmgr status --print-template-schema --schema-format json
+
+# Print schema for search command
+docmgr doc search --query "test" --print-template-schema --schema-format yaml
+```
+
+**What you get:**
+- YAML or JSON schema showing all available fields and their types
+- Nested structures for complex data (e.g., arrays of tickets with nested docs)
+- Schema-only output (no human-readable content) — useful for automation
+
+**Available on:** `list docs`, `list tickets`, `doctor`, `status`, `tasks list`, `doc search`, `vocab list`, `doc guidelines`
+
+**Use cases:**
+- **Template development:** Understand available data before writing templates
+- **Documentation:** Generate reference docs for template authors
+- **Automation:** Parse schema to generate template scaffolding tools
+
+> **Tip:** Templates are stored in `ttmp/templates/` following the command path (e.g., `ttmp/templates/status.templ`, `ttmp/templates/tasks/list.templ`). See the [template data contracts reference](../../ttmp/2025/11/19/DOCMGR-OUTPUT-TEMPLATES-external-postfix-templates-for-verb-outputs/reference/01-template-data-contracts-reference.md) for detailed field documentation.
 
 ### Root discovery and shell gotchas
 
@@ -830,7 +860,88 @@ Output shows checkboxes: `[x]` for done, `[ ]` for pending.
 
 ---
 
-## 10. Validation with Doctor [INTERMEDIATE]
+## 10. Closing Tickets [INTERMEDIATE]
+
+When you've finished work on a ticket, use `ticket close` to atomically update status, changelog, and metadata. Ticket status must match the shared vocabulary; see [Status Vocabulary & Transitions](#status-vocabulary--transitions) if you're unsure which value to pick.
+
+```bash
+# Close with defaults (status=complete)
+docmgr ticket close --ticket MEN-4242
+
+# Close with custom status
+docmgr ticket close --ticket MEN-4242 --status archived
+
+# Close with custom changelog message
+docmgr ticket close --ticket MEN-4242 --changelog-entry "All requirements implemented, ready for production"
+
+# Close and update intent
+docmgr ticket close --ticket MEN-4242 --intent long-term
+```
+
+**What `ticket close` does:**
+- Updates Status (default: `complete`, override with `--status`)
+- Optionally updates Intent (via `--intent`)
+- Appends a changelog entry (default: "Ticket closed")
+- Updates LastUpdated timestamp
+- Warns if tasks aren't all done (doesn't fail)
+
+**Structured output for automation:**
+```bash
+# Get machine-readable results
+docmgr ticket close --ticket MEN-4242 --with-glaze-output --output json
+
+# Example output:
+{
+  "ticket": "MEN-4242",
+  "all_tasks_done": true,
+  "open_tasks": 0,
+  "done_tasks": 5,
+  "status": "complete",
+  "operations": {
+    "status_updated": true,
+    "intent_updated": false,
+    "changelog_updated": true
+  }
+}
+```
+
+### Status Vocabulary & Transitions
+
+Status values are vocabulary-guided (teams can customize). Default values keep work flowing in a predictable direction:
+- `draft` — Initial draft state
+- `active` — Active work in progress
+- `review` — Ready for review
+- `complete` — Work completed
+- `archived` — Archived/completed work
+
+Discover the current list (including custom entries) with:
+
+```bash
+docmgr vocab list --category status --with-glaze-output --output yaml
+```
+
+Suggested transitions (not enforced):
+- `draft` → `active` → `review` → `complete` → `archived`
+- `review` → `active` (send back for fixes)
+- `complete` → `active` (reopen; unusual, call it out in the changelog)
+
+`docmgr doctor` warns (does not fail) if a ticket uses a status value that's not part of the vocabulary and lists the valid values plus the `docmgr vocab list --category status` command to help you correct or extend the list.
+
+Add custom status values with:
+
+```bash
+docmgr vocab add --category status --slug on-hold --description "Work paused"
+```
+
+**Pro tip:** When you check off the last task, `task check` suggests running `ticket close`:
+```bash
+docmgr task check --ticket MEN-4242 --id 3
+# Output: 💡 All tasks complete! Consider closing the ticket: docmgr ticket close --ticket MEN-4242
+```
+
+---
+
+## 11. Validation with Doctor [INTERMEDIATE]
 
 Check for problems before they bite you:
 
@@ -843,8 +954,8 @@ docmgr doctor --ticket MEN-4242
 ```
 
 **What doctor checks:**
-- ✅ Missing or invalid frontmatter
-- ✅ Unknown topics/doc-types (warns, doesn't fail)
+- ✅ Missing or invalid frontmatter (all markdown files)
+- ✅ Unknown topics/doc-types/status (warns, doesn't fail)
 - ✅ Missing Note on RelatedFiles entries (warns)
 - ✅ Missing files in RelatedFiles
 - ✅ Stale docs (older than --stale-after days)
@@ -853,6 +964,7 @@ docmgr doctor --ticket MEN-4242
 - Unknown topic (not in vocabulary.yaml) — Add it with `docmgr vocab add`
 - Missing file in RelatedFiles — Fix path or remove entry
 - Stale doc — Update content or adjust --stale-after threshold
+- Invalid frontmatter — Fix YAML syntax errors
 
 ### Suppressing Noise with .docmgrignore
 
@@ -873,7 +985,7 @@ Doctor automatically respects these patterns.
 
 ✅ **Milestone: You Can Now Use All Core Features!**
 
-You know: init, create, add, search, metadata, relate, changelog, tasks, validation.
+You know: init, create, add, search, metadata, relate, changelog, tasks, close, validation.
 
 **What's next?**
 - **Need automation?** → Continue to [Part 3](#part-3-power-user-features-⚡)
@@ -1043,7 +1155,7 @@ docs-validate:
 	docmgr doctor --all --stale-after 30 --fail-on error
 
 docs-report:
-	@docmgr status --with-glaze-output --output table
+	@docmgr status --with-glaze-output --output yaml
 	@echo ""
 	@docmgr doc search --updated-since "7 days ago"
 ```
@@ -1089,6 +1201,24 @@ docmgr status --stale-after 30
 docmgr list tickets --with-glaze-output --output json
 docmgr list docs --ticket MEN-4242 --with-glaze-output --output csv
 ```
+
+Sample human output (default):
+
+```
+Docs root: `/home/you/projects/chat-app/ttmp`
+Paths are relative to this root.
+
+## Tickets (2)
+
+### MEN-4242 — Chat Persistence
+- Status: **active**
+- Topics: backend, chat
+- Tasks: 2 open / 5 done
+- Updated: 2025-11-19 14:20
+- Path: `2025/11/19/MEN-4242-chat-persistence`
+```
+
+`docmgr list docs` mirrors the same style, grouped by ticket with per-document bullet summaries (doc type, status, topics, updated, path).
 
 **Common usecases:**
 - `list tickets` — See all your tickets at a glance
@@ -1312,3 +1442,16 @@ docmgr list docs --with-glaze-output --output json
 - `RelatedFiles` — Array of paths (with optional notes)
 - `ExternalSources` — Array of URLs
 - `Summary` — One-line description
+# Human vs Glaze output
+
+`docmgr doctor` now mirrors other dual-mode commands:
+
+```bash
+# Human-readable report (default)
+docmgr doctor --ticket MEN-4242
+
+# Structured output (default JSON)
+docmgr doctor --ticket MEN-4242 --with-glaze-output --output yaml
+```
+
+The human report groups findings per ticket with Markdown bullets, while `--with-glaze-output` switches back to Glaze rows (table/json/yaml/csv) for automation.

@@ -9,12 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
-	"github.com/go-go-golems/glazed/pkg/middlewares"
+	glazedMiddlewares "github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
+	"github.com/mattn/go-isatty"
 )
 
 // DoctorCommand validates document workspaces
@@ -31,6 +34,9 @@ type DoctorSettings struct {
 	IgnoreGlobs    []string `glazed.parameter:"ignore-glob"`
 	StaleAfterDays int      `glazed.parameter:"stale-after"`
 	FailOn         string   `glazed.parameter:"fail-on"`
+	// Schema printing flags (human mode only)
+	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
+	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
 
 func NewDoctorCommand() (*DoctorCommand, error) {
@@ -53,6 +59,18 @@ Example:
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Root directory for docs"),
 					parameters.WithDefault("ttmp"),
+				),
+				parameters.NewParameterDefinition(
+					"print-template-schema",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("Print template schema after output (human mode only)"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"schema-format",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Template schema output format: json|yaml"),
+					parameters.WithDefault("json"),
 				),
 				parameters.NewParameterDefinition(
 					"ticket",
@@ -98,7 +116,7 @@ Example:
 func (c *DoctorCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
-	gp middlewares.Processor,
+	gp glazedMiddlewares.Processor,
 ) error {
 	settings := &DoctorSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
@@ -107,6 +125,31 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema {
+		type Finding struct {
+			Issue    string
+			Severity string
+			Message  string
+			Path     string
+		}
+		type TicketFindings struct {
+			Ticket   string
+			Findings []Finding
+		}
+		templateData := map[string]interface{}{
+			"TotalFindings": 0,
+			"Tickets": []TicketFindings{
+				{
+					Ticket:   "",
+					Findings: []Finding{{}},
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
 
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
@@ -146,6 +189,16 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	intentSet := map[string]struct{}{}
 	for _, it := range vocab.Intent {
 		intentSet[it.Slug] = struct{}{}
+	}
+	statusSet := map[string]struct{}{}
+	statusList := make([]string, 0, len(vocab.Status))
+	for _, it := range vocab.Status {
+		statusSet[it.Slug] = struct{}{}
+		statusList = append(statusList, it.Slug)
+	}
+	statusValidText := "none defined (add via 'docmgr vocab add --category status --slug <slug>')"
+	if len(statusList) > 0 {
+		statusValidText = strings.Join(statusList, ", ")
 	}
 
 	skipFn := func(relPath, base string) bool {
@@ -333,6 +386,24 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			}
 		}
 
+		// Unknown status (vocabulary-guided, warn only)
+		if doc.Status != "" {
+			if _, ok := statusSet[doc.Status]; !ok {
+				hasIssues = true
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "unknown_status"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status')", doc.Status, statusValidText)),
+					types.MRP("path", indexPath),
+				)
+				if err := gp.AddRow(ctx, row); err != nil {
+					return fmt.Errorf("failed to emit doctor row (unknown_status) for %s: %w", doc.Ticket, err)
+				}
+				highestSeverity = maxInt(highestSeverity, 1)
+			}
+		}
+
 		// Validate RelatedFiles existence with robust resolution
 		for _, rf := range doc.RelatedFiles {
 			if rf.Path == "" {
@@ -422,7 +493,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			}
 		}
 
-		// Enforce numeric prefix policy: all subdirectory .md files must start with NN- or NNN-
+		// Check all markdown files for invalid frontmatter and enforce numeric prefix policy
 		{
 			prefixRe := regexp.MustCompile(`^(\d{2,3})-`)
 			_ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
@@ -438,15 +509,37 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				}
 				// Skip root-level control files
 				dir := filepath.Dir(path)
-				if filepath.Clean(dir) == filepath.Clean(ticketPath) {
+				isRootLevel := filepath.Clean(dir) == filepath.Clean(ticketPath)
+				if isRootLevel {
 					bn := info.Name()
 					if bn == "index.md" || bn == "README.md" || bn == "tasks.md" || bn == "changelog.md" {
 						return nil
 					}
 				}
+
+				// Check for invalid frontmatter (try to parse it)
+				// Skip index.md as it's already checked above
+				if info.Name() != "index.md" {
+					_, err := readDocumentFrontmatter(path)
+					if err != nil {
+						hasIssues = true
+						row := types.NewRow(
+							types.MRP("ticket", doc.Ticket),
+							types.MRP("issue", "invalid_frontmatter"),
+							types.MRP("severity", "error"),
+							types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", err)),
+							types.MRP("path", path),
+						)
+						if err := gp.AddRow(ctx, row); err != nil {
+							return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", path, err)
+						}
+						highestSeverity = maxInt(highestSeverity, 2)
+					}
+				}
+
 				// Enforce prefix on subdirectory files
 				bn := info.Name()
-				if !prefixRe.MatchString(bn) {
+				if !isRootLevel && !prefixRe.MatchString(bn) {
 					hasIssues = true
 					row := types.NewRow(
 						types.MRP("ticket", doc.Ticket),
@@ -596,3 +689,200 @@ func severityThreshold(s string) int {
 }
 
 var _ cmds.GlazeCommand = &DoctorCommand{}
+
+type doctorRowCollector struct {
+	rows []types.Row
+}
+
+func (c *doctorRowCollector) AddRow(ctx context.Context, row types.Row) error {
+	c.rows = append(c.rows, row)
+	return nil
+}
+
+func (c *doctorRowCollector) Close(ctx context.Context) error {
+	return nil
+}
+
+func (c *DoctorCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &DoctorSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	// Apply config root if present
+	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// If only printing template schema, skip all other processing and output
+	if settings.PrintTemplateSchema {
+		type Finding struct {
+			Issue    string
+			Severity string
+			Message  string
+			Path     string
+		}
+		type TicketFindings struct {
+			Ticket   string
+			Findings []Finding
+		}
+		templateData := map[string]interface{}{
+			"TotalFindings": 0,
+			"Tickets": []TicketFindings{
+				{
+					Ticket:   "",
+					Findings: []Finding{{}},
+				},
+			},
+		}
+		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
+		return nil
+	}
+
+	collector := &doctorRowCollector{}
+	if err := c.RunIntoGlazeProcessor(ctx, parsedLayers, collector); err != nil {
+		return err
+	}
+
+	rows := collector.rows
+	if len(rows) == 0 {
+		fmt.Println("No tickets checked.")
+		return nil
+	}
+
+	grouped := map[string][]types.Row{}
+	order := []string{}
+	for _, row := range rows {
+		ticket := getRowString(row, ColTicket)
+		if ticket == "" {
+			ticket = "(unknown)"
+		}
+		if _, ok := grouped[ticket]; !ok {
+			grouped[ticket] = []types.Row{}
+			order = append(order, ticket)
+		}
+		grouped[ticket] = append(grouped[ticket], row)
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "## Doctor Report (%d findings)\n\n", len(rows))
+	for _, ticket := range order {
+		fmt.Fprintf(&b, "### %s\n\n", ticket)
+		entries := grouped[ticket]
+		for _, row := range entries {
+			issue := getRowString(row, "issue")
+			severity := strings.ToUpper(getRowString(row, "severity"))
+			message := getRowString(row, "message")
+			path := getRowString(row, "path")
+
+			if issue == "none" && severity == "OK" {
+				fmt.Fprintf(&b, "- ✅ %s\n", message)
+				continue
+			}
+			if message == "" {
+				message = "(no message)"
+			}
+			if path != "" {
+				fmt.Fprintf(&b, "- [%s] %s — %s (path=%s)\n", severity, issue, message, path)
+			} else {
+				fmt.Fprintf(&b, "- [%s] %s — %s\n", severity, issue, message)
+			}
+		}
+		fmt.Fprintln(&b)
+	}
+
+	content := b.String()
+	fd := os.Stdout.Fd()
+	if isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd) {
+		renderer, err := glamour.NewTermRenderer(
+			glamour.WithAutoStyle(),
+			glamour.WithWordWrap(0),
+		)
+		if err == nil {
+			if rendered, err := renderer.Render(content); err == nil {
+				fmt.Print(rendered)
+			} else {
+				fmt.Print(content)
+			}
+		} else {
+			fmt.Print(content)
+		}
+	} else {
+		fmt.Print(content)
+	}
+
+	// Render postfix template if it exists
+	// Build template data struct
+	type Finding struct {
+		Issue    string
+		Severity string
+		Message  string
+		Path     string
+	}
+	type TicketFindings struct {
+		Ticket   string
+		Findings []Finding
+	}
+
+	ticketFindings := make([]TicketFindings, 0, len(order))
+	totalFindings := 0
+	for _, ticket := range order {
+		entries := grouped[ticket]
+		findings := make([]Finding, 0)
+		for _, row := range entries {
+			issue := getRowString(row, "issue")
+			severity := getRowString(row, "severity")
+			message := getRowString(row, "message")
+			path := getRowString(row, "path")
+
+			// Skip "none" issues (all checks passed)
+			if issue == "none" {
+				continue
+			}
+
+			findings = append(findings, Finding{
+				Issue:    issue,
+				Severity: strings.ToUpper(severity),
+				Message:  message,
+				Path:     path,
+			})
+			totalFindings++
+		}
+		if len(findings) > 0 {
+			ticketFindings = append(ticketFindings, TicketFindings{
+				Ticket:   ticket,
+				Findings: findings,
+			})
+		}
+	}
+
+	templateData := map[string]interface{}{
+		"TotalFindings": totalFindings,
+		"Tickets":       ticketFindings,
+	}
+
+	// Try verb path: ["doctor"]
+	verbCandidates := [][]string{
+		{"doctor"},
+	}
+	settingsMap := map[string]interface{}{
+		"root":       settings.Root,
+		"ticket":     settings.Ticket,
+		"all":        settings.All,
+		"staleAfter": settings.StaleAfterDays,
+		"failOn":     settings.FailOn,
+	}
+	_ = templates.RenderVerbTemplate(verbCandidates, settings.Root, settingsMap, templateData)
+
+	return nil
+}
+
+func getRowString(row types.Row, field string) string {
+	if val, ok := row.Get(field); ok {
+		return fmt.Sprint(val)
+	}
+	return ""
+}
+
+var _ cmds.BareCommand = &DoctorCommand{}

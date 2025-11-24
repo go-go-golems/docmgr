@@ -179,9 +179,43 @@ docmgr vocab add --category intent --slug temporary \
 **Guidance for vocabulary:**
 - **Topics** — Reflect your architecture/domains (backend, frontend, database, api, etc.)
 - **DocTypes** — How readers approach the doc (design-doc, reference, playbook, til, etc.)
-- **Intent** — Longevity expectations (long-term for persistent docs, temporary for experiments)
+- **Intent** — Longevity expectations (long-term for persistent docs, short-term for active work, throwaway for experiments)
+- **Status** — Workflow state (draft, active, review, complete, archived) — vocabulary-guided, not enforced
 
 **Keep vocabulary small initially** (5-8 topics, 5-7 doc types). Evolve with team consensus via PRs.
+
+### Status Vocabulary (NEW)
+
+Status values are now vocabulary-guided, allowing teams to customize workflow states:
+
+```bash
+# View current status values
+docmgr vocab list --category status
+
+# Add custom status
+docmgr vocab add --category status --slug blocked \
+  --description "Work blocked by external dependencies"
+
+# Add another
+docmgr vocab add --category status --slug on-hold \
+  --description "Work paused temporarily"
+```
+
+**Default status values:**
+- `draft` — Initial draft state
+- `active` — Active work in progress
+- `review` — Ready for review
+- `complete` — Work completed
+- `archived` — Archived/completed work
+
+**Suggested transitions (not enforced):**
+```
+draft → active → review → complete → archived
+review → active (rework)
+complete → active (reopen, unusual)
+```
+
+Doctor warns on unknown status values but doesn't fail, encouraging consistency while allowing flexibility.
 
 ### Using Custom Doc Types
 

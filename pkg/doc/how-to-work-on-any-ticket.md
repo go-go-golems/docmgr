@@ -79,6 +79,39 @@ Document any local setup, build commands, unusual comparison steps, or environme
 
 Keep a running list of blockers, gaps, and temporary workarounds. Update it whenever you discover a new risk so planning conversations have an up-to-date source of truth. Mention follow-up tasks if they cannot be addressed immediately.
 
+## Step 7: Close the Ticket When Done
+
+When all tasks are complete and work is ready for review or deployment, use `ticket close` to atomically update status, changelog, and timestamps. Status values follow the shared status vocabulary (`draft → active → review → complete → archived`, with `review → active` and occasional `complete → active` re-openings), so confirm the exact slug before closing.
+
+```bash
+# Check if all tasks are done
+docmgr task list --ticket <TICKET-ID>
+
+# Close with defaults (status=complete)
+docmgr ticket close --ticket <TICKET-ID>
+
+# Or close with custom status
+docmgr ticket close --ticket <TICKET-ID> --status review --changelog-entry "Implementation complete, ready for review"
+```
+
+**What `ticket close` does:**
+- Updates Status (default: `complete`, override with `--status`)
+- Optionally updates Intent (via `--intent`)
+- Appends a changelog entry
+- Updates LastUpdated timestamp
+- Warns if tasks aren't all done (doesn't fail)
+
+**Pro tip:** When you check off the last task with `docmgr task check`, it automatically suggests running `ticket close`.
+
+**Status cheat sheet:**
+
+```bash
+# Inspect the current status vocabulary (including custom entries)
+docmgr vocab list --category status --with-glaze-output --output table
+```
+
+`docmgr doctor` warns—but will not fail—if a ticket uses a status value outside the vocabulary. Update the ticket or extend the vocabulary with `docmgr vocab add --category status --slug <slug> --description "..."`
+
 ## docmgr Helpers at a Glance
 
 Re-run the status and metadata commands whenever you context-switch to ensure nothing drifted:
@@ -87,8 +120,9 @@ Re-run the status and metadata commands whenever you context-switch to ensure no
 docmgr status --summary-only
 docmgr ticket list
 docmgr meta update --ticket <TICKET-ID> --field Status --value active
+docmgr ticket close --ticket <TICKET-ID>  # When done
 ```
 
 ## Where to Go Next
 
-After finishing this checklist, return to the task list, confirm priorities with the ticket owner, and continue iterating through tasks, file relations, changelog entries, and diary updates. This loop keeps every ticket workspace healthy and auditable.
+After finishing this checklist, return to the task list, confirm priorities with the ticket owner, and continue iterating through tasks, file relations, changelog entries, and diary updates. When all tasks are complete, use `docmgr ticket close` to finalize the work. This loop keeps every ticket workspace healthy and auditable.

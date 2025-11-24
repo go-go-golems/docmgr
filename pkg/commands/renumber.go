@@ -28,6 +28,13 @@ type RenumberSettings struct {
 	Ticket string `glazed.parameter:"ticket"`
 }
 
+type RenumberResult struct {
+	Ticket      string
+	Renamed     int
+	Path        string
+	CompletedAt time.Time
+}
+
 func NewRenumberCommand() (*RenumberCommand, error) {
 	return &RenumberCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -64,95 +71,17 @@ func (c *RenumberCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
-	// Locate ticket path
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	result, err := c.applyRenumber(settings)
 	if err != nil {
-		return fmt.Errorf("failed to find ticket directory: %w", err)
-	}
-
-	// Collect subdirectories under ticketDir (only immediate child dirs)
-	entries, err := os.ReadDir(ticketDir)
-	if err != nil {
-		return fmt.Errorf("failed to read ticket dir: %w", err)
-	}
-
-	// Track renames: oldRel -> newRel (relative to ticketDir)
-	renameMap := map[string]string{}
-
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		if strings.HasPrefix(name, "_") || name == ".meta" { // skip scaffolding/cache dirs
-			continue
-		}
-
-		subdir := filepath.Join(ticketDir, name)
-		// Gather .md files
-		var files []string
-		err = filepath.WalkDir(subdir, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			if d.IsDir() {
-				return nil
-			}
-			if strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
-				files = append(files, path)
-			}
-			return nil
-		})
-		if err != nil {
-			return fmt.Errorf("walk failed: %w", err)
-		}
-
-		// Sort by stripped name
-		sort.Slice(files, func(i, j int) bool {
-			bi, _, _ := stripNumericPrefix(filepath.Base(files[i]))
-			bj, _, _ := stripNumericPrefix(filepath.Base(files[j]))
-			return bi < bj
-		})
-
-		// Assign sequential prefixes
-		next := 1
-		for _, oldPath := range files {
-			base := filepath.Base(oldPath)
-			stripped, _, _ := stripNumericPrefix(base)
-			width := 2
-			if next >= 100 {
-				width = 3
-			}
-			newBase := fmt.Sprintf("%0*d-%s", width, next, stripped)
-			next++
-			if base == newBase {
-				continue
-			}
-			newPath := filepath.Join(filepath.Dir(oldPath), newBase)
-			if err := os.Rename(oldPath, newPath); err != nil {
-				return fmt.Errorf("failed to rename %s -> %s: %w", oldPath, newPath, err)
-			}
-			oldRel, _ := filepath.Rel(ticketDir, oldPath)
-			newRel, _ := filepath.Rel(ticketDir, newPath)
-			renameMap[filepath.ToSlash(oldRel)] = filepath.ToSlash(newRel)
-		}
-	}
-
-	// Update references within the ticket
-	if len(renameMap) > 0 {
-		if err := updateTicketReferences(ticketDir, renameMap); err != nil {
-			return fmt.Errorf("failed to update references: %w", err)
-		}
+		return err
 	}
 
 	row := types.NewRow(
-		types.MRP("ticket", settings.Ticket),
-		types.MRP("renamed", len(renameMap)),
+		types.MRP("ticket", result.Ticket),
+		types.MRP("renamed", result.Renamed),
 		types.MRP("status", "completed"),
-		types.MRP("path", ticketDir),
-		types.MRP("time", time.Now().Format(time.RFC3339)),
+		types.MRP("path", result.Path),
+		types.MRP("time", result.CompletedAt.Format(time.RFC3339)),
 	)
 	return gp.AddRow(ctx, row)
 }
@@ -189,3 +118,111 @@ func updateTicketReferences(ticketDir string, renameMap map[string]string) error
 }
 
 var _ cmds.GlazeCommand = &RenumberCommand{}
+var _ cmds.BareCommand = &RenumberCommand{}
+
+func (c *RenumberCommand) applyRenumber(settings *RenumberSettings) (*RenumberResult, error) {
+	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
+	}
+
+	entries, err := os.ReadDir(ticketDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read ticket dir: %w", err)
+	}
+
+	renameMap := map[string]string{}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if strings.HasPrefix(name, "_") || name == ".meta" {
+			continue
+		}
+
+		subdir := filepath.Join(ticketDir, name)
+		var files []string
+		err = filepath.WalkDir(subdir, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				return nil
+			}
+			if strings.HasSuffix(strings.ToLower(d.Name()), ".md") {
+				files = append(files, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, fmt.Errorf("walk failed: %w", err)
+		}
+
+		sort.Slice(files, func(i, j int) bool {
+			bi, _, _ := stripNumericPrefix(filepath.Base(files[i]))
+			bj, _, _ := stripNumericPrefix(filepath.Base(files[j]))
+			return bi < bj
+		})
+
+		next := 1
+		for _, oldPath := range files {
+			base := filepath.Base(oldPath)
+			stripped, _, _ := stripNumericPrefix(base)
+			width := 2
+			if next >= 100 {
+				width = 3
+			}
+			newBase := fmt.Sprintf("%0*d-%s", width, next, stripped)
+			next++
+			if base == newBase {
+				continue
+			}
+			newPath := filepath.Join(filepath.Dir(oldPath), newBase)
+			if err := os.Rename(oldPath, newPath); err != nil {
+				return nil, fmt.Errorf("failed to rename %s -> %s: %w", oldPath, newPath, err)
+			}
+			oldRel, _ := filepath.Rel(ticketDir, oldPath)
+			newRel, _ := filepath.Rel(ticketDir, newPath)
+			renameMap[filepath.ToSlash(oldRel)] = filepath.ToSlash(newRel)
+		}
+	}
+
+	if len(renameMap) > 0 {
+		if err := updateTicketReferences(ticketDir, renameMap); err != nil {
+			return nil, fmt.Errorf("failed to update references: %w", err)
+		}
+	}
+
+	return &RenumberResult{
+		Ticket:      settings.Ticket,
+		Renamed:     len(renameMap),
+		Path:        ticketDir,
+		CompletedAt: time.Now(),
+	}, nil
+}
+
+func (c *RenumberCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &RenumberSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.applyRenumber(settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Ticket %s renumbered.\n", result.Ticket)
+	fmt.Printf("- Files renamed: %d\n", result.Renamed)
+	fmt.Printf("- Path: %s\n", result.Path)
+	fmt.Printf("- Completed: %s\n", result.CompletedAt.Format(time.RFC3339))
+
+	return nil
+}

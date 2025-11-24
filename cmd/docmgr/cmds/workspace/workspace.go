@@ -2,25 +2,35 @@ package workspace
 
 import "github.com/spf13/cobra"
 
-// Attach registers workspace-wide commands (init/configure/status/doctor).
+// Attach registers workspace-wide commands (init/configure/status/doctor) both at the root level
+// and under a namespaced "workspace" command to match documentation references.
 func Attach(root *cobra.Command) error {
-	initCmd, err := newInitCommand()
-	if err != nil {
-		return err
-	}
-	configureCmd, err := newConfigureCommand()
-	if err != nil {
-		return err
-	}
-	statusCmd, err := newStatusCommand()
-	if err != nil {
-		return err
-	}
-	doctorCmd, err := newDoctorCommand()
-	if err != nil {
-		return err
+	workspaceCmd := &cobra.Command{
+		Use:   "workspace",
+		Short: "Workspace initialization and configuration commands",
 	}
 
-	root.AddCommand(initCmd, configureCmd, statusCmd, doctorCmd)
+	builders := []func() (*cobra.Command, error){
+		newInitCommand,
+		newConfigureCommand,
+		newStatusCommand,
+		newDoctorCommand,
+	}
+
+	for _, builder := range builders {
+		cmd, err := builder()
+		if err != nil {
+			return err
+		}
+		root.AddCommand(cmd)
+
+		nestedCmd, err := builder()
+		if err != nil {
+			return err
+		}
+		workspaceCmd.AddCommand(nestedCmd)
+	}
+
+	root.AddCommand(workspaceCmd)
 	return nil
 }

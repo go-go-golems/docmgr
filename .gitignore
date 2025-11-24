@@ -16,6 +16,8 @@
 
 go.work
 dist
+.gocache/
+.golangci-cache/
 envs/
 
 .history/
@@ -31,3 +33,4 @@ out/
 
 docmgr
 !docmgr/
+docmgr-local

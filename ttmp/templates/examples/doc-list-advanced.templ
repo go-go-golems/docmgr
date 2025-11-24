@@ -1,0 +1,56 @@
+{{- /* Advanced example: doc list template with filtering and grouping */ -}}
+---
+summary:
+  total_docs: {{ .TotalDocs }}
+  total_tickets: {{ .TotalTickets }}
+  by_status:
+  {{- $statusMap := dict }}
+  {{- range .Tickets }}
+    {{- range .Docs }}
+      {{- $count := or (get $statusMap .Status) 0 }}
+      {{- $statusMap = set $statusMap .Status (add1 $count) }}
+    {{- end }}
+  {{- end }}
+  {{- range $status, $count := $statusMap }}
+    - {{ $status }}: {{ $count }}
+  {{- end }}
+  by_doc_type:
+  {{- $typeMap := dict }}
+  {{- range .Tickets }}
+    {{- range .Docs }}
+      {{- $count := or (get $typeMap .DocType) 0 }}
+      {{- $typeMap = set $typeMap .DocType (add1 $count) }}
+    {{- end }}
+  {{- end }}
+  {{- range $type, $count := $typeMap }}
+    - {{ $type }}: {{ $count }}
+  {{- end }}
+
+recent_docs:
+  {{- $recentDocs := slice }}
+  {{- range .Tickets }}
+    {{- range .Docs | slice 0 3 }}
+      {{- $recentDocs = append $recentDocs . }}
+    {{- end }}
+  {{- end }}
+  {{- range $recentDocs | slice 0 10 }}
+  - title: {{ .Title }}
+    ticket: {{ $.Tickets[0].Ticket }}
+    type: {{ .DocType }}
+    updated: {{ .Updated }}
+  {{- end }}
+
+active_tickets_only:
+  {{- range .Tickets }}
+    {{- $hasActiveDocs := false }}
+    {{- range .Docs }}
+      {{- if eq .Status "active" }}
+        {{- $hasActiveDocs = true }}
+      {{- end }}
+    {{- end }}
+    {{- if $hasActiveDocs }}
+  - ticket: {{ .Ticket }}
+    active_docs: {{ len .Docs }}
+    {{- end }}
+  {{- end }}
+

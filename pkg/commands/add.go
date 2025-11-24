@@ -40,6 +40,22 @@ type AddSettings struct {
 	RelatedFiles    []string `glazed.parameter:"related-files"`
 }
 
+type AddResult struct {
+	Ticket         string
+	DocType        string
+	Title          string
+	DocPath        string
+	DocStatus      string
+	Topics         []string
+	Owners         []string
+	Intent         string
+	GuidelineText  string
+	GuidelineTitle string
+	Root           string
+	ConfigPath     string
+	VocabularyPath string
+}
+
 func NewAddCommand() (*AddCommand, error) {
 	return &AddCommand{
 		CommandDescription: cmds.NewCommandDescription(
@@ -134,9 +150,24 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
+	result, err := c.createDocument(settings)
+	if err != nil {
+		return err
+	}
+
+	row := types.NewRow(
+		types.MRP("ticket", result.Ticket),
+		types.MRP("doc_type", result.DocType),
+		types.MRP("title", result.Title),
+		types.MRP("path", result.DocPath),
+		types.MRP("status", "created"),
+	)
+
+	return gp.AddRow(ctx, row)
+}
+
+func (c *AddCommand) createDocument(settings *AddSettings) (*AddResult, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
-	// Echo resolved context prior to write
 	cfgPath, _ := workspace.FindTTMPConfigPath()
 	vocabPath, _ := workspace.ResolveVocabularyPath()
 	absRoot := settings.Root
@@ -145,44 +176,33 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 			absRoot = filepath.Join(cwd, absRoot)
 		}
 	}
-	fmt.Printf("root=%s config=%s vocabulary=%s\n", absRoot, cfgPath, vocabPath)
 
-	// Find the ticket directory
 	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
 	if err != nil {
-		return fmt.Errorf("failed to find ticket directory: %w", err)
+		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 	}
 
-	// Use doc-type slug directly as subdirectory name
 	subdir := settings.DocType
-
-	// Ensure target subdirectory exists
 	targetDir := filepath.Join(ticketDir, subdir)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
+		return nil, fmt.Errorf("failed to create directory %s: %w", targetDir, err)
 	}
 
-	// Create filename from title with slugification and numeric prefix
 	slug := utils.Slugify(settings.Title)
 	docPath, err := buildPrefixedDocPath(targetDir, slug)
 	if err != nil {
-		return fmt.Errorf("failed to allocate prefixed filename: %w", err)
+		return nil, fmt.Errorf("failed to allocate prefixed filename: %w", err)
 	}
-
-	// Final guard: ensure file does not already exist (buildPrefixedDocPath should avoid collisions)
 	if _, err := os.Stat(docPath); err == nil {
-		return fmt.Errorf("document already exists: %s", docPath)
+		return nil, fmt.Errorf("document already exists: %s", docPath)
 	}
 
-	// Read ticket metadata
 	indexPath := filepath.Join(ticketDir, "index.md")
 	ticketDoc, err := readDocumentFrontmatter(indexPath)
 	if err != nil {
-		return fmt.Errorf("failed to read ticket metadata: %w", err)
+		return nil, fmt.Errorf("failed to read ticket metadata: %w", err)
 	}
 
-	// Create document with frontmatter
-	// Defaults from ticket, then override with flags if provided
 	topics := ticketDoc.Topics
 	if len(settings.Topics) > 0 {
 		var ts []string
@@ -254,11 +274,9 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		LastUpdated:     time.Now(),
 	}
 
-	// Try to load and render a template body
 	content := ""
 	if tpl, ok := templates.LoadTemplate(settings.Root, settings.DocType); ok {
 		_, body := templates.ExtractFrontmatterAndBody(tpl)
-		// Ensure title is set on doc for placeholders
 		doc.Title = settings.Title
 		content = templates.RenderTemplateBody(body, &doc)
 	} else {
@@ -266,34 +284,87 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 	}
 
 	if err := documents.WriteDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
-		return fmt.Errorf("failed to write document: %w", err)
+		return nil, fmt.Errorf("failed to write document: %w", err)
 	}
 
-	// After creating the document, print the guidelines for the selected doc type.
-	// Prefer workspace-overridden guidelines under <root>/_guidelines/<doc-type>.md,
-	// falling back to embedded defaults when not present.
-	{
-		guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
-		if b, err := os.ReadFile(guidelinePath); err == nil {
-			fmt.Printf("\n===== Guidelines for %s =====\n\n%s\n", settings.DocType, string(b))
-		} else {
-			if guideline, ok := GetGuideline(settings.DocType); ok {
-				fmt.Printf("\n===== Guidelines for %s =====\n\n%s\n", settings.DocType, guideline)
-			} else {
-				fmt.Printf("\n(No guidelines found for doc-type %s. Use 'docmgr doc guidelines --list' to see available types.)\n", settings.DocType)
-			}
-		}
+	guidelineText := ""
+	guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
+	if b, err := os.ReadFile(guidelinePath); err == nil {
+		guidelineText = string(b)
+	} else if guideline, ok := GetGuideline(settings.DocType); ok {
+		guidelineText = guideline
 	}
 
-	row := types.NewRow(
-		types.MRP("ticket", settings.Ticket),
-		types.MRP("doc_type", settings.DocType),
-		types.MRP("title", settings.Title),
-		types.MRP("path", docPath),
-		types.MRP("status", "created"),
-	)
+	return &AddResult{
+		Ticket:         settings.Ticket,
+		DocType:        settings.DocType,
+		Title:          settings.Title,
+		DocPath:        docPath,
+		DocStatus:      doc.Status,
+		Topics:         doc.Topics,
+		Owners:         doc.Owners,
+		Intent:         doc.Intent,
+		GuidelineText:  guidelineText,
+		GuidelineTitle: settings.DocType,
+		Root:           absRoot,
+		ConfigPath:     cfgPath,
+		VocabularyPath: vocabPath,
+	}, nil
+}
 
-	return gp.AddRow(ctx, row)
+func (c *AddCommand) Run(
+	ctx context.Context,
+	parsedLayers *layers.ParsedLayers,
+) error {
+	settings := &AddSettings{}
+	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.createDocument(settings)
+	if err != nil {
+		return err
+	}
+
+	relPath := result.DocPath
+	if rel, err := filepath.Rel(result.Root, result.DocPath); err == nil {
+		relPath = filepath.ToSlash(rel)
+	}
+
+	topics := "—"
+	if len(result.Topics) > 0 {
+		topics = strings.Join(result.Topics, ", ")
+	}
+	owners := "—"
+	if len(result.Owners) > 0 {
+		owners = strings.Join(result.Owners, ", ")
+	}
+
+	fmt.Printf("Docs root: `%s`\n", result.Root)
+	if result.ConfigPath != "" {
+		fmt.Printf("Config: `%s`\n", result.ConfigPath)
+	}
+	if result.VocabularyPath != "" {
+		fmt.Printf("Vocabulary: `%s`\n", result.VocabularyPath)
+	}
+	fmt.Printf("\n## Document Created\n\n")
+	fmt.Printf("- Ticket: %s\n", result.Ticket)
+	fmt.Printf("- Doc type: %s\n", result.DocType)
+	fmt.Printf("- Title: %s\n", result.Title)
+	fmt.Printf("- Status: %s\n", result.DocStatus)
+	fmt.Printf("- Intent: %s\n", result.Intent)
+	fmt.Printf("- Topics: %s\n", topics)
+	fmt.Printf("- Owners: %s\n", owners)
+	fmt.Printf("- Path: `%s`\n", relPath)
+
+	if result.GuidelineText != "" {
+		fmt.Printf("\n### Guidelines for %s\n\n%s\n", result.GuidelineTitle, result.GuidelineText)
+	} else {
+		fmt.Printf("\n(No guidelines found for doc-type %s. Use `docmgr doc guidelines --list` to view available types.)\n", result.DocType)
+	}
+
+	return nil
 }
 
 var _ cmds.GlazeCommand = &AddCommand{}
+var _ cmds.BareCommand = &AddCommand{}

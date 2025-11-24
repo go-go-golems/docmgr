@@ -1,0 +1,12 @@
+---
+ticket_overview:
+  total: {{ .TotalTickets }}
+  statuses:
+  {{- $m := dict }}
+  {{- range .Tickets }}{{- $s := .Status }}{{- $m = set $m $s (add1 (or (get $m $s) 0)) }}{{- end }}
+  {{- range $k, $v := $m }}
+    - {{ $k }}: {{ $v }}
+  {{- end }}
+guidance: |
+  Focus on active tickets first. Summarize changes since the last update.
+

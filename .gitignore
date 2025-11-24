@@ -16,6 +16,8 @@
 
 go.work
 dist
+.gocache/
+.golangci-cache/
 envs/
 
 .history/

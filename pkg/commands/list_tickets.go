@@ -373,11 +373,11 @@ func (c *ListTicketsCommand) Run(
 	// Render postfix template if it exists
 	// Build template data struct
 	type TicketInfo struct {
-		Ticket     string
-		Title      string
-		Status     string
-		Topics     []string
-		Path       string
+		Ticket      string
+		Title       string
+		Status      string
+		Topics      []string
+		Path        string
 		LastUpdated string
 	}
 

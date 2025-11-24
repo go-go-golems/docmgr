@@ -22,9 +22,9 @@ type GuidelinesCommand struct {
 
 // GuidelinesSettings holds the parameters for the guidelines command
 type GuidelinesSettings struct {
-	DocType            string `glazed.parameter:"doc-type"`
-	Root               string `glazed.parameter:"root"`
-	List               bool   `glazed.parameter:"list"`
+	DocType             string `glazed.parameter:"doc-type"`
+	Root                string `glazed.parameter:"root"`
+	List                bool   `glazed.parameter:"list"`
 	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
@@ -93,10 +93,10 @@ func (c *GuidelinesCommand) RunIntoGlazeProcessor(
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		templateData := map[string]interface{}{
-			"DocType":      "",
+			"DocType":       "",
 			"GuidelineText": "",
-			"Source":       "",
-			"Path":         "",
+			"Source":        "",
+			"Path":          "",
 		}
 		_ = templates.PrintSchema(os.Stdout, templateData, settings.SchemaFormat)
 		return nil

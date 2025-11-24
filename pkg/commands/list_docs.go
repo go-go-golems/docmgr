@@ -523,11 +523,11 @@ func (c *ListDocsCommand) Run(
 	}
 
 	templateData := map[string]interface{}{
-		"TotalDocs":     len(entries),
-		"TotalTickets":  len(order),
-		"Tickets":       tickets,
-		"Rows":          rows,
-		"Fields":        fields,
+		"TotalDocs":    len(entries),
+		"TotalTickets": len(order),
+		"Tickets":      tickets,
+		"Rows":         rows,
+		"Fields":       fields,
 	}
 
 	// Try both possible verb paths: ["doc", "list"] and ["list", "docs"]

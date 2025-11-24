@@ -112,9 +112,9 @@ func formatTaskLine(checked bool, text string) string {
 type TasksListCommand struct{ *cmds.CommandDescription }
 
 type TasksListSettings struct {
-	Ticket             string `glazed.parameter:"ticket"`
-	Root               string `glazed.parameter:"root"`
-	TasksFile          string `glazed.parameter:"tasks-file"`
+	Ticket              string `glazed.parameter:"ticket"`
+	Root                string `glazed.parameter:"root"`
+	TasksFile           string `glazed.parameter:"tasks-file"`
 	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
@@ -158,9 +158,9 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	// If only printing template schema, skip all other processing and output
 	if s.PrintTemplateSchema {
 		type TaskInfo struct {
-			Index  int
+			Index   int
 			Checked bool
-			Text   string
+			Text    string
 		}
 		templateData := map[string]interface{}{
 			"TotalTasks": 0,

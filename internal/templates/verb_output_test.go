@@ -428,4 +428,3 @@ func TestResolveTemplatePath(t *testing.T) {
 		})
 	}
 }
-

@@ -18,4 +18,3 @@ func Attach(root *cobra.Command) error {
 	root.AddCommand(templateCmd)
 	return nil
 }
-

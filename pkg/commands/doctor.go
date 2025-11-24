@@ -867,11 +867,11 @@ func (c *DoctorCommand) Run(
 		{"doctor"},
 	}
 	settingsMap := map[string]interface{}{
-		"root":        settings.Root,
-		"ticket":      settings.Ticket,
-		"all":         settings.All,
-		"staleAfter":  settings.StaleAfterDays,
-		"failOn":      settings.FailOn,
+		"root":       settings.Root,
+		"ticket":     settings.Ticket,
+		"all":        settings.All,
+		"staleAfter": settings.StaleAfterDays,
+		"failOn":     settings.FailOn,
 	}
 	_ = templates.RenderVerbTemplate(verbCandidates, settings.Root, settingsMap, templateData)
 

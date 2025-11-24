@@ -29,20 +29,20 @@ type SearchCommand struct {
 
 // SearchSettings holds the parameters for the search command
 type SearchSettings struct {
-	Query              string   `glazed.parameter:"query"`
-	Ticket             string   `glazed.parameter:"ticket"`
-	Topics             []string `glazed.parameter:"topics"`
-	DocType            string   `glazed.parameter:"doc-type"`
-	Status             string   `glazed.parameter:"status"`
-	Files              bool     `glazed.parameter:"files"`
-	File               string   `glazed.parameter:"file"`
-	Dir                string   `glazed.parameter:"dir"`
-	ExternalSource     string   `glazed.parameter:"external-source"`
-	Since              string   `glazed.parameter:"since"`
-	Until              string   `glazed.parameter:"until"`
-	CreatedSince       string   `glazed.parameter:"created-since"`
-	UpdatedSince       string   `glazed.parameter:"updated-since"`
-	Root               string   `glazed.parameter:"root"`
+	Query               string   `glazed.parameter:"query"`
+	Ticket              string   `glazed.parameter:"ticket"`
+	Topics              []string `glazed.parameter:"topics"`
+	DocType             string   `glazed.parameter:"doc-type"`
+	Status              string   `glazed.parameter:"status"`
+	Files               bool     `glazed.parameter:"files"`
+	File                string   `glazed.parameter:"file"`
+	Dir                 string   `glazed.parameter:"dir"`
+	ExternalSource      string   `glazed.parameter:"external-source"`
+	Since               string   `glazed.parameter:"since"`
+	Until               string   `glazed.parameter:"until"`
+	CreatedSince        string   `glazed.parameter:"created-since"`
+	UpdatedSince        string   `glazed.parameter:"updated-since"`
+	Root                string   `glazed.parameter:"root"`
 	PrintTemplateSchema bool     `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string   `glazed.parameter:"schema-format"`
 }
@@ -200,7 +200,7 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 			Snippet string
 		}
 		templateData := map[string]interface{}{
-			"Query":       "",
+			"Query":        "",
 			"TotalResults": 0,
 			"Results": []SearchResult{
 				{

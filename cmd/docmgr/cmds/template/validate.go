@@ -13,4 +13,3 @@ func newValidateCommand() (*cobra.Command, error) {
 	}
 	return common.BuildCommand(cmd)
 }
-

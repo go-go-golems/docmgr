@@ -192,4 +192,3 @@ func validateTemplate(templatePath string, funcMap template.FuncMap, verbose boo
 func getTemplateFuncMap() template.FuncMap {
 	return templates.GetTemplateFuncMap()
 }
-

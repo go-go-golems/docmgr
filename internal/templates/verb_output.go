@@ -11,9 +11,9 @@ import (
 
 // CommonTemplateData is the common envelope available to all verb templates
 type CommonTemplateData struct {
-	Verbs    []string              // Full verb path, e.g., ["docmgr", "doc", "list"]
-	Root     string                // Absolute docs root used
-	Now      time.Time             // Rendering timestamp
+	Verbs    []string               // Full verb path, e.g., ["docmgr", "doc", "list"]
+	Root     string                 // Absolute docs root used
+	Now      time.Time              // Rendering timestamp
 	Settings map[string]interface{} // Parsed layer values relevant to the verb
 }
 
@@ -250,4 +250,3 @@ func GetTemplateFuncMap() template.FuncMap {
 		},
 	}
 }
-

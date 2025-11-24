@@ -23,10 +23,10 @@ type StatusCommand struct {
 }
 
 type StatusSettings struct {
-	Root               string `glazed.parameter:"root"`
-	Ticket             string `glazed.parameter:"ticket"`
-	StaleAfterDays     int    `glazed.parameter:"stale-after"`
-	SummaryOnly        bool   `glazed.parameter:"summary-only"`
+	Root                string `glazed.parameter:"root"`
+	Ticket              string `glazed.parameter:"ticket"`
+	StaleAfterDays      int    `glazed.parameter:"stale-after"`
+	SummaryOnly         bool   `glazed.parameter:"summary-only"`
 	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string `glazed.parameter:"schema-format"`
 }
@@ -101,40 +101,40 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type TicketInfo struct {
-			Ticket      string
-			Title       string
-			Status      string
-			Stale       bool
-			Docs        int
-			DesignDocs  int
+			Ticket        string
+			Title         string
+			Status        string
+			Stale         bool
+			Docs          int
+			DesignDocs    int
 			ReferenceDocs int
-			Playbooks   int
-			Path        string
-			LastUpdated string
+			Playbooks     int
+			Path          string
+			LastUpdated   string
 		}
 		templateData := map[string]interface{}{
-			"TicketsTotal":  0,
-			"TicketsStale":  0,
-			"DocsTotal":     0,
-			"DesignDocs":    0,
-			"ReferenceDocs": 0,
-			"Playbooks":     0,
+			"TicketsTotal":   0,
+			"TicketsStale":   0,
+			"DocsTotal":      0,
+			"DesignDocs":     0,
+			"ReferenceDocs":  0,
+			"Playbooks":      0,
 			"StaleAfterDays": 30,
-			"Root":          "",
-			"ConfigPath":    "",
+			"Root":           "",
+			"ConfigPath":     "",
 			"VocabularyPath": "",
 			"Tickets": []TicketInfo{
 				{
-					Ticket:       "",
-					Title:        "",
-					Status:       "",
-					Stale:        false,
-					Docs:         0,
-					DesignDocs:   0,
+					Ticket:        "",
+					Title:         "",
+					Status:        "",
+					Stale:         false,
+					Docs:          0,
+					DesignDocs:    0,
 					ReferenceDocs: 0,
-					Playbooks:    0,
-					Path:         "",
-					LastUpdated:  "",
+					Playbooks:     0,
+					Path:          "",
+					LastUpdated:   "",
 				},
 			},
 		}
@@ -302,40 +302,40 @@ func (c *StatusCommand) Run(
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type TicketInfo struct {
-			Ticket      string
-			Title       string
-			Status      string
-			Stale       bool
-			Docs        int
-			DesignDocs  int
+			Ticket        string
+			Title         string
+			Status        string
+			Stale         bool
+			Docs          int
+			DesignDocs    int
 			ReferenceDocs int
-			Playbooks   int
-			Path        string
-			LastUpdated string
+			Playbooks     int
+			Path          string
+			LastUpdated   string
 		}
 		templateData := map[string]interface{}{
-			"TicketsTotal":  0,
-			"TicketsStale":  0,
-			"DocsTotal":     0,
-			"DesignDocs":    0,
-			"ReferenceDocs": 0,
-			"Playbooks":     0,
+			"TicketsTotal":   0,
+			"TicketsStale":   0,
+			"DocsTotal":      0,
+			"DesignDocs":     0,
+			"ReferenceDocs":  0,
+			"Playbooks":      0,
 			"StaleAfterDays": 30,
-			"Root":          "",
-			"ConfigPath":    "",
+			"Root":           "",
+			"ConfigPath":     "",
 			"VocabularyPath": "",
 			"Tickets": []TicketInfo{
 				{
-					Ticket:       "",
-					Title:        "",
-					Status:       "",
-					Stale:        false,
-					Docs:         0,
-					DesignDocs:   0,
+					Ticket:        "",
+					Title:         "",
+					Status:        "",
+					Stale:         false,
+					Docs:          0,
+					DesignDocs:    0,
 					ReferenceDocs: 0,
-					Playbooks:    0,
-					Path:         "",
-					LastUpdated:  "",
+					Playbooks:     0,
+					Path:          "",
+					LastUpdated:   "",
 				},
 			},
 		}

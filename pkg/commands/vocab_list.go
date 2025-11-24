@@ -23,8 +23,8 @@ type VocabListCommand struct {
 
 // VocabListSettings holds the parameters for the vocab list command
 type VocabListSettings struct {
-	Category          string `glazed.parameter:"category"`
-	Root              string `glazed.parameter:"root"`
+	Category            string `glazed.parameter:"category"`
+	Root                string `glazed.parameter:"root"`
 	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string `glazed.parameter:"schema-format"`
 }

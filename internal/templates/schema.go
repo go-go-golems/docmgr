@@ -37,11 +37,12 @@ func buildSchema(rv reflect.Value) any {
 	if !rv.IsValid() {
 		return map[string]any{"type": "null"}
 	}
+	kind := rv.Kind()
 	t := rv.Type()
 	// Handle typed nils
-	if (t.Kind() == reflect.Ptr || t.Kind() == reflect.Interface || t.Kind() == reflect.Slice || t.Kind() == reflect.Map) && rv.IsNil() {
+	if (kind == reflect.Pointer || kind == reflect.Interface || kind == reflect.Slice || kind == reflect.Map) && rv.IsNil() {
 		// Return type info if possible
-		switch t.Kind() {
+		switch kind {
 		case reflect.Slice, reflect.Array:
 			return map[string]any{
 				"type":  "array",
@@ -52,25 +53,43 @@ func buildSchema(rv reflect.Value) any {
 				"type":       "object",
 				"properties": map[string]any{},
 			}
-		default:
-			return map[string]any{"type": kindToTypeName(t.Kind())}
+		case reflect.Interface, reflect.Pointer:
+			return map[string]any{"type": "any"}
+		case reflect.Invalid:
+			return map[string]any{"type": "null"}
+		case reflect.Bool:
+			return map[string]any{"type": "boolean"}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return map[string]any{"type": "integer"}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			return map[string]any{"type": "integer"}
+		case reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
+			return map[string]any{"type": "number"}
+		case reflect.String:
+			return map[string]any{"type": "string"}
+		case reflect.Struct:
+			return map[string]any{"type": "object"}
+		case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+			return map[string]any{"type": "any"}
 		}
 	}
 
-	switch t.Kind() {
+	switch kind {
+	case reflect.Invalid:
+		return map[string]any{"type": "null"}
 	case reflect.Bool:
 		return map[string]any{"type": "boolean"}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return map[string]any{"type": "integer"}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return map[string]any{"type": "integer"}
-	case reflect.Float32, reflect.Float64:
+	case reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
 		return map[string]any{"type": "number"}
 	case reflect.String:
 		return map[string]any{"type": "string"}
 	case reflect.Slice, reflect.Array:
 		// Try to infer item type from element type or first element
-		itemSchema := any(map[string]any{"type": "any"})
+		var itemSchema any
 		if rv.Len() > 0 {
 			itemSchema = buildSchema(rv.Index(0))
 		} else {
@@ -113,36 +132,12 @@ func buildSchema(rv reflect.Value) any {
 			"type":       "object",
 			"properties": props,
 		}
-	case reflect.Interface, reflect.Ptr:
+	case reflect.Interface, reflect.Pointer:
 		return buildSchema(rv.Elem())
-	default:
-		return map[string]any{"type": kindToTypeName(t.Kind())}
+	case reflect.Chan, reflect.Func, reflect.UnsafePointer:
+		return map[string]any{"type": "any"}
 	}
-}
-
-func kindToTypeName(k reflect.Kind) string {
-	switch k {
-	case reflect.Invalid:
-		return "null"
-	case reflect.Bool:
-		return "boolean"
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return "integer"
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return "integer"
-	case reflect.Float32, reflect.Float64:
-		return "number"
-	case reflect.String:
-		return "string"
-	case reflect.Map, reflect.Struct:
-		return "object"
-	case reflect.Slice, reflect.Array:
-		return "array"
-	case reflect.Interface, reflect.Ptr:
-		return "any"
-	default:
-		return "any"
-	}
+	return map[string]any{"type": "any"}
 }
 
 // parseJSONTagName extracts the field name from a `json:"name,omitempty"` tag.
@@ -160,5 +155,3 @@ func parseJSONTagName(tag string, fallback string) string {
 	}
 	return tag
 }
-
-

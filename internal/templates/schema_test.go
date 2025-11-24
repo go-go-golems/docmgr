@@ -71,5 +71,3 @@ func TestPrintSchema_YAML_Simple(t *testing.T) {
 		t.Fatalf("expected yaml with type: object, got: %s", s)
 	}
 }
-
-

@@ -6,6 +6,7 @@ toolchain go1.24.9
 
 require (
 	github.com/adrg/frontmatter v0.2.0
+	github.com/carapace-sh/carapace v1.10.2
 	github.com/charmbracelet/glamour v0.10.0
 	github.com/go-go-golems/glazed v0.6.14
 	github.com/mattn/go-isatty v0.0.20
@@ -27,6 +28,7 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.9.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/carapace-sh/carapace-shlex v1.1.1 // indirect
 	github.com/charmbracelet/bubbles v0.21.0 // indirect
 	github.com/charmbracelet/bubbletea v1.3.5 // indirect
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect

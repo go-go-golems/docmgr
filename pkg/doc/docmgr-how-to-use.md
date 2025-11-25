@@ -263,6 +263,32 @@ docmgr doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Ch
 
 > **Tip:** Want structure guidance? Run: `docmgr doc guidelines --doc-type design-doc`
 
+### Best Practice: Relate Files When Creating Documents
+
+**⚠️ Important:** Every time you create or modify a document, relate the source files you used or referenced. This creates bidirectional links that make your documentation discoverable from code and vice versa.
+
+**Immediately after creating a document:**
+
+```bash
+# After creating a design-doc, relate the files it describes
+docmgr doc add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+docmgr doc relate --ticket MEN-4242 --doc-type design-doc \
+  --file-note "backend/api/register.go:Implements path normalization logic" \
+  --file-note "backend/api/router.go:Route configuration"
+
+# After creating a reference doc, relate the files it documents
+docmgr doc add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Lifecycle"
+docmgr doc relate --ticket MEN-4242 --doc-type reference \
+  --file-note "backend/ws/manager.go:WebSocket connection lifecycle"
+```
+
+**Why this matters:**
+- Code reviewers can find design docs instantly: `docmgr doc search --file backend/api/register.go`
+- Future developers can answer "Where's the spec for this file?" without searching
+- Documentation stays connected to implementation, preventing drift
+
+**Workflow tip:** Make relating files part of your document creation routine. If you're analyzing code to write a doc, relate those files immediately. See [Relating Files to Docs](#8-relating-files-to-docs-intermediate) for detailed guidance.
+
 ---
 
 ## 6. Search for Documents [BASIC]
@@ -412,9 +438,13 @@ Bidirectional linking between documentation and code is one of docmgr's most pow
 ### The Workflow
 
 **When to relate files:**
-1. **During design** — Identify which code files will implement your design
-2. **After implementation** — Link the key implementation files
-3. **Before code review** — So reviewers can find context
+1. **When creating a document** — Relate the source files you're analyzing or documenting (best practice: do this immediately after `docmgr doc add`)
+2. **When modifying a document** — Relate any new files you reference or analyze
+3. **During design** — Identify which code files will implement your design
+4. **After implementation** — Link the key implementation files
+5. **Before code review** — So reviewers can find context
+
+**Key principle:** Every document creation or modification should include relating the relevant source files. This creates bidirectional links that make documentation discoverable from code and prevents documentation drift.
 
 ### Basic Usage
 
@@ -472,6 +502,16 @@ docmgr doc relate --doc "$DOC" \
   --file-note "backend/api/register.go:Normalization entrypoint and router setup"
 ```
 
+**Path handling tips:**
+- **Use `--ticket` when possible** — Simplest approach, automatically targets the ticket's `index.md` or works with `--doc-type`
+- **For subdocuments, use paths relative to workspace root** — Paths should start from your workspace root (where `.ttmp.yaml` lives), not from `ttmp/`
+- **Use shell variables for long paths** — Store the document path in a variable to avoid typos:
+  ```bash
+  DOC="docmgr/ttmp/2025/11/19/MEN-4242-chat-persistence/reference/01-carapace-analysis.md"
+  docmgr doc relate --doc "$DOC" --file-note "carapace/storage.go:Storage system"
+  ```
+- **Common mistake:** Using paths relative to `ttmp/` instead of workspace root — docmgr expects paths from the workspace root where the config file lives
+
 ### Advanced patterns and best practices
 
 **Reverse lookup:** See [Search for Documents](#6-search-for-documents-basic) for reverse lookup examples.
@@ -486,6 +526,17 @@ docmgr doc relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.
 - Keep `index.md` as an overview; relate most files to the specific design/reference/playbook document that explains them.
 - Aim for 3-7 `RelatedFiles` entries per ticket; more than 10 usually means you're listing everything.
 - Run the quick checklist: relate files → update the Summary → `docmgr doctor --ticket YOUR-123 --stale-after 30`.
+
+**Best practice: Relate files immediately after document creation/modification**
+
+Make relating files part of your document workflow:
+
+1. **Create the document** → `docmgr doc add --ticket T --doc-type TYPE --title "Title"`
+2. **Immediately relate source files** → `docmgr doc relate --ticket T --doc-type TYPE --file-note "path:reason"`
+3. **Update changelog** → `docmgr changelog update --ticket T --entry "Created doc, related files"`
+4. **Validate** → `docmgr doctor --ticket T`
+
+This ensures documentation stays connected to code from the start, preventing "orphaned" docs that reference files but aren't discoverable from those files.
 
 ## 9. Recording Changes [BASIC]
 

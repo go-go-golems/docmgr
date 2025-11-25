@@ -12,6 +12,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace"
+	"github.com/go-go-golems/docmgr/pkg/completion"
 	"github.com/go-go-golems/glazed/pkg/help"
 	help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
 	"github.com/spf13/cobra"
@@ -34,6 +35,9 @@ Helpful docs (built-in):
 	}
 
 	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
+
+	// Enable carapace dynamic completion (adds hidden `_carapace` and bridges cobra)
+	completion.Attach(rootCmd)
 
 	if err := workspace.Attach(rootCmd); err != nil {
 		return nil, err

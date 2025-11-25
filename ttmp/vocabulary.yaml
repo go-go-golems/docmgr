@@ -23,6 +23,8 @@ topics:
       description: Glazed framework and structured output topics
     - slug: docmgr
       description: docmgr tool itself (CLI, workflows, documentation)
+    - slug: ai
+      description: AI and LLM related
 docTypes:
     - slug: index
       description: Ticket index
@@ -32,6 +34,8 @@ docTypes:
       description: API/reference
     - slug: playbook
       description: Operational playbook
+    - slug: til
+      description: Today I Learned entries
 intent:
     - slug: long-term
       description: Long-term documentation, only use for documents that are expected to be maintained for a long time and moved to the actual repository. This includes for example design documents and architecture notes, as well as reference documents and playbooks.

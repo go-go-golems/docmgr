@@ -59,6 +59,72 @@ cd docmgr
 go run ./cmd/docmgr --help
 ```
 
+## Shell Completion
+
+docmgr supports both dynamic completions (via carapace) and static completions (via cobra). Dynamic completions are recommended because they reflect live workspace state (tickets, vocabulary values, files).
+
+### Dynamic (recommended) — carapace
+
+- Bash (current session):
+  ```bash
+  source <(docmgr _carapace bash)
+  ```
+  Persist (typical):
+  ```bash
+  echo 'source <(docmgr _carapace bash)' >> ~/.bashrc
+  # or system-wide (requires sudo):
+  # docmgr _carapace bash | sudo tee /etc/bash_completion.d/docmgr >/dev/null
+  ```
+
+- Zsh:
+  ```bash
+  source <(docmgr _carapace zsh)
+  # For persistent setup, add the same line to ~/.zshrc (after `compinit`)
+  ```
+
+- Fish:
+  ```bash
+  docmgr _carapace fish | source
+  # Persist:
+  docmgr _carapace fish > ~/.config/fish/completions/docmgr.fish
+  ```
+
+- PowerShell:
+  ```powershell
+  docmgr _carapace powershell | Out-String | Invoke-Expression
+  # Persist: add the same line to $PROFILE
+  ```
+
+Notes:
+- The dynamic snippet calls back into `docmgr` via a hidden `_carapace` subcommand to compute completions at runtime.
+- This enables live suggestions for flags like `--ticket`, `--doc-type`, `--status`, `--intent`, `--topics`, and file/directory flags.
+
+### Static — cobra
+
+If you prefer cobra’s static completion scripts:
+
+- Bash:
+  ```bash
+  docmgr completion bash | sudo tee /etc/bash_completion.d/docmgr >/dev/null
+  # or user shell: echo 'source <(docmgr completion bash)' >> ~/.bashrc
+  ```
+- Zsh:
+  ```bash
+  docmgr completion zsh > ~/.zfunc/_docmgr
+  echo 'fpath+=~/.zfunc' >> ~/.zshrc
+  echo 'autoload -Uz compinit && compinit' >> ~/.zshrc
+  ```
+- Fish:
+  ```bash
+  docmgr completion fish > ~/.config/fish/completions/docmgr.fish
+  ```
+- PowerShell:
+  ```powershell
+  docmgr completion powershell | Out-String | Invoke-Expression
+  ```
+
+Static scripts don’t reflect live values for dynamic flags; use dynamic completions for most workflows.
+
 ## Quick Start
 
 ```bash

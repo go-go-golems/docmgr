@@ -410,6 +410,8 @@ docmgr doc relate --ticket MEN-4242 \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 ```
 
+**Re-running with the same notes:** If you call `docmgr doc relate` again with identical `--file-note` entries (and nothing else), docmgr now emits a warning row like `status=noop` with a reason such as `file-note entries matched existing notes` instead of failing. Add a new note, change the note text, or use `--remove-files` to make a real change.
+
 ### Advanced patterns
 
 **Structured RelatedFiles (with notes)**
@@ -919,9 +921,9 @@ cd "ttmp/MEN-XXXX-name-\(with-parens\)"
 
 ### "Error: no changes specified"
 
-- **What it means:** You ran `docmgr meta update` or `docmgr doc relate` without providing any fields/flags that would change the file.
-- **Common causes:** Forgetting `--field Summary --value ...` or running `doc relate` without any `--file-note` entries.
-- **Fix it:** Re-run the command with at least one change, e.g. `docmgr meta update --ticket MEN-4242 --field Status --value review`.
+- **What it means:** You ran a command without providing any fields/flags that would change the file.
+- **Common causes:** Forgetting `--field Summary --value ...` on `meta update`, or running `doc relate` without any new/changed `--file-note` entries.
+- **Fix it:** Re-run with at least one change, e.g. `docmgr meta update --ticket MEN-4242 --field Status --value review`. For `doc relate`, if you re-run with identical notes you’ll now see a `status=noop` warning row explaining why; update the note text or remove/add files to make a change.
 
 ### `"Unknown topic: <slug>"`
 

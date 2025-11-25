@@ -208,7 +208,7 @@ This creates `ttmp/YYYY/MM/DD/MEN-4242-.../` with `index.md`, `tasks.md`, and `c
 **What this creates:**
 
 ```
-ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
+ttmp/YYYY/MM/DD/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
 ├── index.md        # Ticket overview (you're here)
 ├── tasks.md        # Todo list
 ├── changelog.md    # History of changes
@@ -217,6 +217,8 @@ ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
 ├── playbook/       # Created when you add a playbook
 └── <doc-type>/     # Any other doc-type creates its own subdir
 ```
+
+> **Note:** Tickets are stored under `ttmp/YYYY/MM/DD/` using the date the ticket was created. This keeps workspaces organized chronologically. You can override the layout with `--path-template` if needed.
 
 **Understanding index.md:**
 
@@ -287,6 +289,29 @@ docmgr doc search --dir backend/api/
 - **Refactoring:** "Which docs mention this directory I'm changing?"
 
 Search is fast (< 100ms even with 200+ docs) and case-insensitive.
+
+### Interpreting Results
+
+```bash
+# No results
+docmgr doc search --query "nonexistent-term"
+# Output: (no results)
+
+# Multiple results with snippets (default human output)
+docmgr doc search --query "API"
+# Example:
+# 2025/11/19/MEN-4242-chat-persistence/reference/02-api-contracts.md — Chat API Contracts [MEN-4242]
+# ... "Normalized API paths for chat endpoints" ...
+#
+# 2025/11/20/MEN-4300-auth/reference/01-auth-api.md — Auth API [MEN-4300]
+# ... "All API requests require JWT tokens" ...
+
+# Narrow with metadata filters
+docmgr doc search --query "API" --topics backend --doc-type design-doc
+
+# Script/CI-friendly JSON
+docmgr doc search --query "API" --with-glaze-output --output json
+```
 
 ---
 
@@ -404,31 +429,52 @@ docmgr doc relate --ticket MEN-4242 \
 
 **Notes are required.** Always provide a note for each file when running `docmgr doc relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked. The legacy `\-\-files` flag was removed to enforce this behavior; use repeated `--file-note "path:reason"` entries instead.
 
-```bash
-docmgr doc relate --ticket MEN-4242 \
-  --file-note "backend/api/register.go:Registers API routes (normalization logic)" \
-  --file-note "backend/ws/manager.go:WebSocket lifecycle management"
-```
+For examples, see Basic Usage above.
+
+#### File-note format
+
+> **Format:** `--file-note "FILE_PATH:DESCRIPTIVE_NOTE"`
+>
+> The colon (`:`) separates the file path from the note.
+>
+> Examples:
+>
+> - ✅ `--file-note "backend/api/register.go:Registers API routes"`
+> - ✅ `--file-note "web/src/store/api/chatApi.ts:Frontend integration"`
+> - ❌ `--file-note "backend/api/register.go - Registers API routes"` (wrong delimiter)
 
 **Re-running with the same notes:** If you call `docmgr doc relate` again with identical `--file-note` entries (and nothing else), docmgr now emits a warning row like `status=noop` with a reason such as `file-note entries matched existing notes` instead of failing. Add a new note, change the note text, or use `--remove-files` to make a real change.
 
-### Advanced patterns
+### When to Relate to Ticket vs. Subdocument
 
-**Structured RelatedFiles (with notes)**
+> Use this quick decision guide to keep `index.md` concise and implementation details in the right place.
 
-```yaml
-RelatedFiles:
-    - path: backend/api/register.go
-      note: Registers API routes (normalization logic)
-    - path: backend/ws/manager.go
-      note: WebSocket lifecycle management
-```
+**Relate to ticket index (`--ticket`) when:**
+- You’re establishing high-level context or overview links
+- The file is core to understanding the ticket’s scope
+- You want a minimal map from the ticket entry point
 
-**Reverse lookup (during code review)**
-
+Example:
 ```bash
-docmgr doc search --file backend/api/register.go
+docmgr doc relate --ticket MEN-4242 \
+  --file-note "backend/api/register.go:Entry point and router setup"
 ```
+
+**Relate to a subdocument (`--doc PATH`) when:**
+- The file implements a specific design/reference/playbook
+- You want tightly scoped relationships per document type
+- Reviewers should land on a focused doc, not the ticket index
+
+Example:
+```bash
+DOC="ttmp/2025/11/19/MEN-4242-chat-persistence/design-doc/01-path-normalization-strategy.md"
+docmgr doc relate --doc "$DOC" \
+  --file-note "backend/api/register.go:Normalization entrypoint and router setup"
+```
+
+### Advanced patterns and best practices
+
+**Reverse lookup:** See [Search for Documents](#6-search-for-documents-basic) for reverse lookup examples.
 
 **Subdocument-first linking**
 
@@ -455,19 +501,11 @@ docmgr changelog update --ticket MEN-4242 \
 
 Changelogs are dated automatically. Keep entries short — mention what changed and link relevant files.
 
-### Changelog Hygiene (Always Link Files and Provide Notes)
-
 **Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design-doc/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
 
 **The workflow:**
 
-1) Relate files with notes (to ticket index):
-
-```bash
-docmgr doc relate --ticket MEN-4242 \
-  --file-note \"backend/api/register.go:Path normalization source\" \
-  --file-note \"web/src/store/api/chatApi.ts:Frontend integration\"
-```
+1) Relate files with notes (see [Relating Files to Docs](#8-relating-files-to-docs-intermediate))
 
 2) Add changelog entry (mention linked files):
 
@@ -520,6 +558,16 @@ docmgr task remove --ticket MEN-4242 --id 3
 ```
 
 Output shows checkboxes: `[x]` for done, `[ ]` for pending.
+
+### Quick Hands-on
+
+```bash
+# Edit a task inline (safe updates to just the target line)
+docmgr task edit --ticket MEN-4242 --id 1 --text "Write API docs for /v2"
+
+# Remove a task while keeping the rest intact
+docmgr task remove --ticket MEN-4242 --id 1
+```
 
 **When to use which doc:**
 - Keep *tasks* focused on actionable steps ("Add monitoring dashboard").
@@ -586,9 +634,7 @@ Status values are vocabulary-guided (teams can customize). Default values keep w
 
 Discover the current list (including custom entries) with:
 
-```bash
-docmgr vocab list --category status --with-glaze-output --output yaml
-```
+See [Vocabulary Management](#16-vocabulary-management-intermediate) for listing and customizing status values.
 
 Suggested transitions (not enforced):
 - `draft` → `active` → `review` → `complete` → `archived`
@@ -597,11 +643,7 @@ Suggested transitions (not enforced):
 
 `docmgr doctor` warns (does not fail) if a ticket uses a status value that's not part of the vocabulary and lists the valid values plus the `docmgr vocab list --category status` command to help you correct or extend the list.
 
-Add custom status values with:
-
-```bash
-docmgr vocab add --category status --slug on-hold --description "Work paused"
-```
+To customize status values, see [Vocabulary Management](#16-vocabulary-management-intermediate).
 
 **Pro tip:** When you check off the last task, `task check` suggests running `ticket close`:
 ```bash
@@ -810,13 +852,7 @@ docmgr changelog update --ticket MEN-4242 --entry "Completed authentication flow
 ```
 
 **Run validation periodically:**
-```bash
-# Check for issues
-docmgr doctor --ticket MEN-4242
-
-# Or check entire workspace
-docmgr doctor --all --stale-after 30
-```
+See [Validation with Doctor](#12-validation-with-doctor-intermediate) for commands and options.
 
 **Consult guidelines when writing:**
 ```bash
@@ -845,41 +881,23 @@ docmgr vocab add --category docTypes --slug til \
   --description "Today I Learned entries"
 ```
 
+**Verify changes and categories:**
+```bash
+# Supported categories include: topics, status, docTypes
+
+# Before adding a doc type (expect no 'til' entry)
+docmgr vocab list --category docTypes | grep -E "^docTypes: til" || true
+
+# Add and verify
+docmgr vocab add --category docTypes --slug til --description "Today I Learned entries"
+docmgr vocab list --category docTypes | grep -E "^docTypes: til"
+```
+
 **Remember:** Unknown topics/doc-types are allowed. They just trigger warnings in `docmgr doctor`. The vocabulary is for documentation and team consistency, not enforcement.
 
 ---
 
-## 17. Numeric Prefixes [INTERMEDIATE]
-
-Numeric prefixes keep long directories readable (`01-overview.md`, `02-api.md`, …). docmgr adds them automatically when you scaffold new docs, but deletes, renames, and bulk moves can knock the ordering out of sync.
-
-**What happens automatically:**
-- New docs get numeric prefixes: `01-`, `02-`, `03-`
-- Keeps files ordered in directory listings
-- Switches to 3 digits after 99 files
-- Ticket-root files (`index.md`, `tasks.md`, `changelog.md`) are exempt
-
-### When to run `docmgr doc renumber`
-
-Run the renumber command whenever you:
-- Delete or insert docs mid-sequence and want clean numbering again.
-- Import older tickets whose files never had prefixes.
-- Rearrange files manually and need docmgr to update intra-ticket links.
-
-```bash
-# Resequence every doc under a ticket and fix references
-docmgr doc renumber --ticket MEN-4242
-```
-
-`docmgr doc renumber` walks every doc-type directory, renames files to the next sequential prefix (switching to 3 digits once you exceed 99 files), and updates all markdown links inside the ticket so nothing breaks. Commit or stash unrelated changes first—the command edits every file that still references old paths.
-
-> No `--dry-run` flag yet, so lean on Git to preview the diff if you need to approve the rename list.
-
-**Doctor warns if files are missing prefixes** (you can suppress with `.docmgrignore`).
-
----
-
-## 18. Tips and Best Practices
+## 17. Tips and Best Practices
 
 ### Workflow Recommendations
 
@@ -896,12 +914,11 @@ docmgr doc renumber --ticket MEN-4242
 **3. Update changelog regularly**
 - After significant changes
 - Link files you modified
-- Keep entries short
 
-**4. Use doctor in CI**
-- Catch broken links and missing files
-- Adjust --stale-after to your team's pace
-- Use .docmgrignore for false positives
+**4. Use tasks to track progress**
+- Add tasks using `docmgr task add`
+- Check off tasks as you complete them
+- Add changelog entries after significant changes
 
 ### Shell Gotchas
 
@@ -911,91 +928,5 @@ docmgr doc renumber --ticket MEN-4242
 cd "ttmp/MEN-XXXX-name-\(with-parens\)"
 ```
 
-**Tab completion:**
-- Most shells support tab completion for paths
-- Helps with long ticket directory names
-
----
-
-## Appendix A: Troubleshooting Common Errors
-
-### "Error: no changes specified"
-
-- **What it means:** You ran a command without providing any fields/flags that would change the file.
-- **Common causes:** Forgetting `--field Summary --value ...` on `meta update`, or running `doc relate` without any new/changed `--file-note` entries.
-- **Fix it:** Re-run with at least one change, e.g. `docmgr meta update --ticket MEN-4242 --field Status --value review`. For `doc relate`, if you re-run with identical notes you’ll now see a `status=noop` warning row explaining why; update the note text or remove/add files to make a change.
-
-### `"Unknown topic: <slug>"`
-
-- **What it means:** The topic in your document isn't listed in `ttmp/vocabulary.yaml`, so validation produced a warning.
-- **Common causes:** New feature areas, typos, or collaborators using different casing.
-- **Fix it:** Either add the topic via `docmgr vocab add --category topics --slug your-topic` **or** update the doc's `Topics` list to an existing slug.
-
-### "Must specify --doc or --ticket"
-
-- **What it means:** Commands like `doc relate`, `meta update`, and `changelog update` need to know which file to touch.
-- **Common causes:** Running a command from deep inside the repo without flags, or copying an example that omitted `--ticket`.
-- **Fix it:** Add `--ticket YOUR-123` to target the ticket's `index.md`, or pass `--doc path/to/doc.md` for a subdocument.
-
-### "open <path>: no such file or directory"
-
-- **What it means:** docmgr tried to read/write a file that doesn't exist yet.
-- **Common causes:** Typos in `--doc` paths, moving files without updating `RelatedFiles`, or running commands from the wrong directory/root.
-- **Fix it:** Double-check the path relative to the docs root, run `docmgr status --summary-only` to confirm the root, and re-run from the repository root for consistent discovery.
-
-### "warning: document stale (45 days old)"
-
-- **What it means:** `docmgr doctor` found a doc whose `LastUpdated` timestamp is older than the `--stale-after` threshold.
-- **Common causes:** Work paused, docs written once and never revisited, or automated updates not touching the content body.
-- **Fix it:** Review the content, make necessary updates (even adding a short status note counts), then rerun `docmgr doctor --ticket YOUR-123 --stale-after 30` to verify the warning cleared. Adjust `--stale-after` only if the cadence is truly different.
-
----
-
-## Appendix B: Quick Reference
-
-### Common Commands
-
-```bash
-# Setup (once per repo)
-docmgr init --seed-vocabulary
-
-# Create ticket
-docmgr ticket create-ticket --ticket YOUR-123 --title "..." --topics ...
-
-# Add docs
-docmgr doc add --ticket YOUR-123 --doc-type TYPE --title "..."
-
-# Search
-docmgr doc search --query "..."
-docmgr doc search --file path/to/file.go
-
-# Relate files
-docmgr doc relate --ticket YOUR-123 --file-note "path:note" --file-note "path2:note2"
-
-# Validate
-docmgr doctor --ticket YOUR-123
-
-# Tasks
-docmgr task add --ticket YOUR-123 --text "..."
-docmgr task check --ticket YOUR-123 --id 1,2
-
-# Changelog
-docmgr changelog update --ticket YOUR-123 --entry "..."
-
-# Automation
-docmgr list docs --with-glaze-output --output json
-```
-
-### Field Names for Metadata
-
-**Common fields in frontmatter:**
-- `Title` — Document title
-- `Ticket` — Ticket identifier
-- `Status` — active, draft, review, complete
-- `Topics` — Array of topics (inherited from ticket)
-- `DocType` — design-doc, reference, playbook, etc.
-- `Intent` — long-term, temporary, etc.
-- `Owners` — Array of owner names
-- `RelatedFiles` — Array of paths (with optional notes)
-- `ExternalSources` — Array of URLs
-- `Summary` — One-line description
+Don't use ! in strings because it confuses shells like zsh. 
+Avoid : in file notes themselves since it confuses the argument parser (which uses it to separate the path from the note).

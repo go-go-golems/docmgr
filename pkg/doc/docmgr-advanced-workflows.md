@@ -228,6 +228,36 @@ All docmgr commands will now look for `docs/` instead of `ttmp/`.
 
 ---
 
+## 6. Numeric Prefixes and Renumber
+
+Numeric prefixes keep long directories readable (`01-overview.md`, `02-api.md`, …). docmgr adds them automatically when you scaffold new docs, but deletes, renames, and bulk moves can knock the ordering out of sync.
+
+**What happens automatically:**
+- New docs get numeric prefixes: `01-`, `02-`, `03-`
+- Keeps files ordered in directory listings
+- Switches to 3 digits after 99 files
+- Ticket-root files (`index.md`, `tasks.md`, `changelog.md`) are exempt
+
+### When to run `docmgr doc renumber`
+
+Run the renumber command whenever you:
+- Delete or insert docs mid-sequence and want clean numbering again.
+- Import older tickets whose files never had prefixes.
+- Rearrange files manually and need docmgr to update intra-ticket links.
+
+```bash
+# Resequence every doc under a ticket and fix references
+docmgr doc renumber --ticket MEN-4242
+```
+
+`docmgr doc renumber` walks every doc-type directory, renames files to the next sequential prefix (switching to 3 digits once you exceed 99 files), and updates all markdown links inside the ticket so nothing breaks. Commit or stash unrelated changes first—the command edits every file that still references old paths.
+
+> No `--dry-run` flag yet, so lean on Git to preview the diff if you need to approve the rename list.
+
+**Doctor warns if files are missing prefixes** (you can suppress with `.docmgrignore`).
+
+---
+
 ## See Also
 
 - `docmgr help how-to-use` — Core tutorial

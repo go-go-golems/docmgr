@@ -1,7 +1,6 @@
 package cmds
 
 import (
-	"github.com/go-go-golems/docmgr/pkg/completion"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/changelog"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/configcmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/doc"
@@ -13,6 +12,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace"
+	"github.com/go-go-golems/docmgr/pkg/completion"
 	"github.com/go-go-golems/glazed/pkg/help"
 	help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
 	"github.com/spf13/cobra"

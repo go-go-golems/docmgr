@@ -1,8 +1,10 @@
 package ticket
 
 import (
+	"github.com/carapace-sh/carapace"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/common"
 	"github.com/go-go-golems/docmgr/pkg/commands"
+	"github.com/go-go-golems/docmgr/pkg/completion"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/spf13/cobra"
 )
@@ -20,5 +22,11 @@ func newCloseCommand() (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
+	carapace.Gen(cobraCmd).FlagCompletion(carapace.ActionMap{
+		"ticket": completion.ActionTickets(),
+		"status": completion.ActionStatus(),
+		"intent": completion.ActionIntent(),
+		"root":   completion.ActionDirectories(),
+	})
 	return cobraCmd, nil
 }

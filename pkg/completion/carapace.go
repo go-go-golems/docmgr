@@ -10,5 +10,3 @@ import (
 func Attach(root *cobra.Command) {
 	carapace.Gen(root)
 }
-
-

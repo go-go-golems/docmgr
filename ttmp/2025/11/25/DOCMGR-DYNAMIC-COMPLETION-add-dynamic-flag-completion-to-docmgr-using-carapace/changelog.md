@@ -51,3 +51,13 @@ Verified dynamic completion updates: added docType 'til' and topic 'ai' now appe
 
 - docmgr/ttmp/2025/11/25/DOCMGR-DYNAMIC-COMPLETION-add-dynamic-flag-completion-to-docmgr-using-carapace/scripts/01-tmux-completion-test.sh — Helper used for testing
 
+
+## 2025-11-25
+
+Completed FlagCompletion wiring across verbs (doc list/search/relate, ticket create/list/close/rename, tasks list/add/check/uncheck/edit/remove, meta update, changelog update, vocab list/add, workspace doctor, template validate).
+
+### Related Files
+
+- docmgr/cmd/docmgr/cmds/** — Registered completions across commands
+- docmgr/pkg/completion/actions.go — Added helpers (TaskIDs
+

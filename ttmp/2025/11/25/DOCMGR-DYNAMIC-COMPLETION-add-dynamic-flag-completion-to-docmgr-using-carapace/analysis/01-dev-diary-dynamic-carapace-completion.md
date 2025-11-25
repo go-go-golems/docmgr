@@ -55,3 +55,38 @@ topics: backend, cli, docmgr, documentation, glaze, …
 tickets: DOCMGR-DYNAMIC-COMPLETION, DOCMGR-*, …
 ```
 
+## 2025-11-25 — Verb wiring, zsh checks, and README completion docs
+
+- What I did:
+  - Wired carapace FlagCompletion across verbs:
+    - doc: add, list, search, relate, renumber, guidelines
+    - ticket: create, list/tickets, close, rename-ticket
+    - tasks: list, add, check, uncheck, edit, remove (dynamic id completion)
+    - meta: update (field enum + dynamic value for status/intent/topics/docType)
+    - changelog: update (ticket, file-note multiparts, topics)
+    - vocab: list/add (category enum)
+    - workspace: doctor, init/status (root)
+    - template: validate (root, path)
+  - Built docmgr and verified zsh completion using tmux (two panes: bash/zsh). Confirmed root commands and flag names still autocomplete, and dynamic values work.
+  - Added a Shell Completion section to README covering dynamic (carapace) and static (cobra) install for bash, zsh, fish, and PowerShell.
+
+- What worked:
+  - Dynamic flags return live values (tickets, vocabulary, files/dirs).
+  - Traditional command/flag completions unaffected.
+  - Zsh testing flows via `_carapace` snippet; tabbing shows menus (menu select enabled).
+
+- What didn’t work:
+  - Capturing zsh’s interactive menu isn’t very verbose in logs (expected behavior). The helper still sends TAB and we confirmed behavior manually.
+
+- What I learned:
+  - Centralizing completion actions (tickets/vocab/files/dirs/task IDs/meta fields/values) simplifies per-verb registration.
+  - The postfix templates (e.g., tasks, list docs/tickets) intentionally print YAML at the end; it’s controlled by verb templates under `ttmp/templates/**`.
+
+- What to do better next time:
+  - Extend the tmux helper to run a verb-by-verb zsh matrix and save concise “expected” lists side-by-side for easier diffing.
+  - Add fish coverage to the helper for parity.
+
+- Next steps:
+  - Fish and PowerShell snippet validation.
+  - Optional: suppress postfix templates for certain human outputs or add a flag to hide them.
+

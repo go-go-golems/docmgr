@@ -10,3 +10,8 @@
 - [x] Phase 1 Day 3 - add topic intros and move glossary earlier
 - [x] Phase 1 Day 4 - document missing commands (tasks, completion, aliasing)
 - [x] Phase 1 Day 5 - write troubleshooting appendix and revalidate tutorial
+- [x] Phase 2: document layout-fix/config-show/renumber workflows
+- [x] Phase 2: write import file workflows with examples
+- [x] Phase 2: polish style (long sentences, bash comments, examples)
+- [x] Phase 2: build terminology table and fix inconsistencies
+- [x] Phase 2: audit/remove remaining duplicate sections

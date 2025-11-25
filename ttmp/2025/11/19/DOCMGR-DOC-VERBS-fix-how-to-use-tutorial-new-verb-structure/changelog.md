@@ -37,3 +37,41 @@ Phase 1: tutorial fixes, helper scripts split, and troubleshooting appendix
 - docmgr/ttmp/2025/11/19/DOCMGR-DOC-VERBS-fix-how-to-use-tutorial-new-verb-structure/script/setup-practice-repo.sh — Added lightweight setup script for hands-on practice.
 - docmgr/ttmp/2025/11/19/DOCMGR-DOC-VERBS-fix-how-to-use-tutorial-new-verb-structure/script/validate-tutorial.sh — Renamed reset helper and verified iterative workflow.
 
+
+## 2025-11-25
+
+Phase 2: documented layout-fix/config-show/renumber maintenance workflows
+
+### Related Files
+
+- docmgr/pkg/doc/docmgr-how-to-use.md — Added maintenance sections covering layout-fix
+
+
+## 2025-11-25
+
+Phase 2: documented import-file workflows and data flow
+
+### Related Files
+
+- docmgr/pkg/doc/docmgr-how-to-use.md — Added Section 14 with import file use cases
+
+
+## 2025-11-25
+
+Phase 2: audited and removed duplicate content (Appendix B fragment)
+
+### Related Files
+
+- docmgr/pkg/doc/docmgr-how-to-use.md — Removed doctor output fragment from Appendix B; verified no other substantive duplicates remain.
+
+
+## 2025-11-25
+
+Phase 2: extracted advanced content to separate guides (247 lines removed)
+
+### Related Files
+
+- docmgr/pkg/doc/docmgr-advanced-workflows.md — Created new guide covering import/root-config/layout-fix/multi-repo.
+- docmgr/pkg/doc/docmgr-ci-automation.md — Added Glaze field contracts and automation patterns from tutorial.
+- docmgr/pkg/doc/docmgr-how-to-use.md — Moved Glaze/CI/import/root-config to other docs; tutorial now 999 lines (was 1246).
+

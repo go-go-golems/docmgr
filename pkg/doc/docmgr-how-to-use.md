@@ -416,10 +416,10 @@ docmgr doc relate --ticket MEN-4242 \
 
 ```yaml
 RelatedFiles:
-  - path: backend/api/register.go
-    note: Registers API routes (normalization logic)
-  - path: backend/ws/manager.go
-    note: WebSocket lifecycle management
+    - path: backend/api/register.go
+      note: Registers API routes (normalization logic)
+    - path: backend/ws/manager.go
+      note: WebSocket lifecycle management
 ```
 
 **Reverse lookup (during code review)**
@@ -671,176 +671,40 @@ This part covers advanced features for power users and automation.
 
 ---
 
-## 13. Structured Output (Glaze) [ADVANCED]
+## 13. Automation and CI [ADVANCED]
 
-Automation-minded teams often need machine-readable output. Glaze lets every docmgr command emit JSON/YAML/CSV/TSV without writing new scripts. Once you understand the field contracts, you can feed docmgr data straight into CI pipelines, dashboards, or quick one-off shell loops.
+Most docmgr commands support structured output for automation. Add `--with-glaze-output --output json` to any command to get machine-readable results. This enables CI validation, bulk operations, and reporting dashboards without custom parsers.
 
-Every docmgr command that produces output can render it in multiple structured formats (JSON, CSV, YAML, TSV) through the Glaze framework. This design decouples the command's business logic from its output format, enabling the same command to serve both human users (with readable tables and text) and automation scripts (with parseable JSON or CSV). The stable field contracts ensure your scripts won't break when docmgr is updated, making it safe to build CI/CD integrations, reporting dashboards, and bulk operation scripts on top of docmgr.
-
-### Quick Examples
+**Quick examples:**
 
 ```bash
-# JSON output (for scripts)
+# JSON output for scripts
 docmgr list tickets --with-glaze-output --output json
-
-# CSV output (for spreadsheets)
-docmgr list docs --with-glaze-output --output csv > docs.csv
-
-# Extract just paths (one per line)
-docmgr list docs --ticket MEN-4242 --with-glaze-output --select path
 
 # Validate in CI with proper exit code
 docmgr doctor --all --fail-on error || exit 1
-```
 
-### Available Output Formats
-
-- `json` — Valid JSON, parseable
-- `csv` — Comma-separated (for spreadsheets)
-- `tsv` — Tab-separated
-- `yaml` — YAML format
-- `table` — ASCII table (human-readable)
-
-### Stable Field Names (API Contract)
-
-Use these with `--fields`, `--filter`, `--select`:
-
-**Tickets:**
-- `ticket`, `title`, `status`, `topics`, `path`, `last_updated`
-
-**Docs:**
-- `ticket`, `doc_type`, `title`, `status`, `topics`, `path`, `last_updated`
-
-**Tasks:**
-- `index`, `checked`, `text`, `file`
-
-**Vocabulary:**
-- `category`, `slug`, `description`
-
-### Field Selection Examples
-
-```bash
-# Paths only (newline-separated)
+# Extract paths for bulk operations
 docmgr list docs --ticket MEN-4242 --with-glaze-output --select path
-
-# Custom columns (CSV)
-docmgr list docs --with-glaze-output --output csv \
-  --fields doc_type,title,path
-
-# Templated output
-docmgr list docs --ticket MEN-4242 --with-glaze-output \
-  --select-template '{{.doc_type}}: {{.title}}' --select _0
 ```
 
-### Automation Patterns
-
-**Pattern 1: Find and update stale docs**
+**For complete automation patterns, CI integration examples, and field contracts, see:**
 
 ```bash
-# Find docs older than 60 days, mark for review
-docmgr doc search --updated-since "60 days ago" --with-glaze-output --output json | \
-  jq -r '.[] | .path' | \
-  while read doc; do
-    docmgr meta update --doc "$doc" --field Status --value "needs-review"
-  done
+docmgr help ci-automation
 ```
 
-**Pattern 2: CI validation**
-
-```bash
-#!/bin/bash
-# .github/workflows/validate-docs.yml
-
-if ! docmgr doctor --all --stale-after 14 --fail-on error; then
-  echo "ERROR: Documentation validation failed"
-  # Get list of issues
-  docmgr doctor --all --with-glaze-output --output json | \
-    jq -r '.[] | select(.issue != "none") | "\(.path): \(.message)"'
-  exit 1
-fi
-```
-
-**Pattern 3: Weekly doc report**
-
-```bash
-# Generate report of doc activity
-docmgr status --stale-after 7 --with-glaze-output --output json | \
-  jq -r '.docs[] | select(.stale) | "\(.ticket): \(.title) (stale \(.days_since_update) days)"'
-```
-
-**Pattern 4: Bulk operations**
-
-```bash
-# Create similar tickets
-for i in {1..5}; do
-    TICKET=PROJ-00$i
-    docmgr ticket create-ticket --ticket $TICKET --title "Feature $i" --topics backend
-    docmgr doc add --ticket $TICKET --doc-type design-doc --title "Design $i"
-done
-
-# Update all docs of a type
-docmgr meta update --ticket MEN-4242 --doc-type design-doc \
-    --field Status --value complete
-```
-
----
-
-## 14. CI Integration Examples [ADVANCED]
-
-### GitHub Actions
-
-```yaml
-name: Validate Docs
-
-on: [pull_request]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install docmgr
-        run: go install github.com/go-go-golems/docmgr@latest
-      - name: Validate docs
-        run: docmgr doctor --all --fail-on error
-```
-
-### Pre-commit Hook
-
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-
-# Check docs aren't broken
-if ! docmgr doctor --all --fail-on error; then
-  echo "ERROR: Doc validation failed. Fix issues or use 'git commit --no-verify'"
-  exit 1
-fi
-```
-
-### Makefile Integration
-
-```makefile
-.PHONY: docs-validate docs-report
-
-docs-validate:
-	docmgr doctor --all --stale-after 30 --fail-on error
-
-docs-report:
-	@docmgr status --with-glaze-output --output yaml
-	@echo ""
-	@docmgr doc search --updated-since "7 days ago"
-```
+That guide covers GitHub Actions, GitLab CI, pre-commit hooks, Makefile integration, bulk operation patterns, and stable field names for scripting.
 
 ---
 
 ✅ **Milestone: You Can Now Automate Everything!**
 
-You know: structured output, CI integration, bulk operations, scripting patterns.
+You know: structured output basics and where to find complete automation patterns.
 
 **What's next?**
-- Read [Part 4: Reference](#part-4-reference-📖) for advanced topics
-- Or close this doc and build your automation!
+- Read [Part 4: Reference](#part-4-reference-📖) for list/status commands and vocabulary
+- Or close this doc and start working!
 
 ---
 
@@ -850,7 +714,7 @@ You know: structured output, CI integration, bulk operations, scripting patterns
 
 ---
 
-## 15. List and Status Commands [BASIC]
+## 14. List and Status Commands [BASIC]
 
 Explore what's in your workspace:
 
@@ -900,7 +764,7 @@ Paths are relative to this root.
 
 ---
 
-## 16. Iterate and Maintain [INTERMEDIATE]
+## 15. Iterate and Maintain [INTERMEDIATE]
 
 **Keep your documentation workspace healthy over time:**
 
@@ -958,35 +822,11 @@ docmgr doc guidelines --doc-type design-doc
 docmgr doc guidelines --doc-type reference
 ```
 
----
-
-## 17. Root Discovery and Configuration [ADVANCED]
-
-### How docmgr Finds the Docs Root
-
-1. Looks for `.ttmp.yaml` walking up from CWD
-2. If found, uses `root` field from that file
-3. If not found, defaults to `<cwd>/ttmp` or `<git-root>/ttmp` if in Git repo
-
-### Custom Configuration (.ttmp.yaml)
-
-Create at repository root:
-
-```yaml
-root: ttmp
-vocabulary: ttmp/vocabulary.yaml
-```
-
-Useful for:
-- Multi-repo setups
-- Custom root directory names
-- Centralizing vocabulary across repos
-
-**Most users don't need this** — defaults work for typical setups.
+**Advanced maintenance:** For layout fixes, config debugging, and multi-repo setups, see `docmgr help advanced-workflows`.
 
 ---
 
-## 18. Vocabulary Management [INTERMEDIATE]
+## 16. Vocabulary Management [INTERMEDIATE]
 
 Vocabulary defines valid topics, doc types, and intents (used for warnings, not enforcement).
 
@@ -1007,7 +847,9 @@ docmgr vocab add --category docTypes --slug til \
 
 ---
 
-## 19. Numeric Prefixes [INTERMEDIATE]
+## 17. Numeric Prefixes [INTERMEDIATE]
+
+Numeric prefixes keep long directories readable (`01-overview.md`, `02-api.md`, …). docmgr adds them automatically when you scaffold new docs, but deletes, renames, and bulk moves can knock the ordering out of sync.
 
 **What happens automatically:**
 - New docs get numeric prefixes: `01-`, `02-`, `03-`
@@ -1015,44 +857,27 @@ docmgr vocab add --category docTypes --slug til \
 - Switches to 3 digits after 99 files
 - Ticket-root files (`index.md`, `tasks.md`, `changelog.md`) are exempt
 
-**Resequencing:**
+### When to run `docmgr doc renumber`
+
+Run the renumber command whenever you:
+- Delete or insert docs mid-sequence and want clean numbering again.
+- Import older tickets whose files never had prefixes.
+- Rearrange files manually and need docmgr to update intra-ticket links.
 
 ```bash
-# If you delete files and want to renumber
-docmgr renumber --ticket MEN-4242
+# Resequence every doc under a ticket and fix references
+docmgr doc renumber --ticket MEN-4242
 ```
 
-This updates prefixes and fixes internal links between docs.
+`docmgr doc renumber` walks every doc-type directory, renames files to the next sequential prefix (switching to 3 digits once you exceed 99 files), and updates all markdown links inside the ticket so nothing breaks. Commit or stash unrelated changes first—the command edits every file that still references old paths.
+
+> No `--dry-run` flag yet, so lean on Git to preview the diff if you need to approve the rename list.
 
 **Doctor warns if files are missing prefixes** (you can suppress with `.docmgrignore`).
 
 ---
 
-## 20. Command Aliasing [REFERENCE]
-
-The CLI ships friendly aliases so you can type the style that matches your brain—or the screenshots in older docs. Each pair executes the exact same command and produces the same output.
-
-| Primary command | Alias | When to use |
-|-----------------|-------|-------------|
-| `docmgr init` | `docmgr workspace init` | Prefer the `workspace` form when scripting multiple roots |
-| `docmgr doctor` | `docmgr workspace doctor` | Helpful when thinking in terms of workspace health |
-| `docmgr status` | `docmgr workspace status` | Same data; workspace prefix clarifies the scope |
-| `docmgr doc list` | `docmgr list docs` | Use whichever ordering matches your muscle memory |
-
-Check the aliases that are available in your build:
-
-```bash
-docmgr help workspace init
-docmgr help workspace doctor
-docmgr help workspace status
-docmgr help doc list
-```
-
-If you document a workflow, mention both names the first time (e.g., "`docmgr doc list` (alias: `docmgr list docs`)") so new users are never blocked by mismatched wording.
-
----
-
-## 21. Tips and Best Practices
+## 18. Tips and Best Practices
 
 ### Workflow Recommendations
 
@@ -1172,16 +997,3 @@ docmgr list docs --with-glaze-output --output json
 - `RelatedFiles` — Array of paths (with optional notes)
 - `ExternalSources` — Array of URLs
 - `Summary` — One-line description
-# Human vs Glaze output
-
-`docmgr doctor` now mirrors other dual-mode commands:
-
-```bash
-# Human-readable report (default)
-docmgr doctor --ticket MEN-4242
-
-# Structured output (default JSON)
-docmgr doctor --ticket MEN-4242 --with-glaze-output --output yaml
-```
-
-The human report groups findings per ticket with Markdown bullets, while `--with-glaze-output` switches back to Glaze rows (table/json/yaml/csv) for automation.

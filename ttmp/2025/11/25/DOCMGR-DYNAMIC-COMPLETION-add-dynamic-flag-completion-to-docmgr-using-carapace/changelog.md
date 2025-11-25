@@ -42,3 +42,12 @@ Added tmux helper script to send actual TAB and capture pane outputs for bash/zs
 - docmgr/ttmp/2025/11/25/DOCMGR-DYNAMIC-COMPLETION-add-dynamic-flag-completion-to-docmgr-using-carapace/analysis/01-dev-diary-dynamic-carapace-completion.md — Diary updated with tmux test notes
 - docmgr/ttmp/2025/11/25/DOCMGR-DYNAMIC-COMPLETION-add-dynamic-flag-completion-to-docmgr-using-carapace/scripts/01-tmux-completion-test.sh — Tmux completion test helper
 
+
+## 2025-11-25
+
+Verified dynamic completion updates: added docType 'til' and topic 'ai' now appear; new ticket 'DEMO-100' appears under --ticket completion.
+
+### Related Files
+
+- docmgr/ttmp/2025/11/25/DOCMGR-DYNAMIC-COMPLETION-add-dynamic-flag-completion-to-docmgr-using-carapace/scripts/01-tmux-completion-test.sh — Helper used for testing
+

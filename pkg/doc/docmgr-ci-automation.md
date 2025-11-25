@@ -279,7 +279,107 @@ make ci              # Full CI locally
 
 ---
 
-## 5. Automated Reporting
+## 5. Structured Output (Glaze Framework)
+
+Every docmgr command that produces output can render it in multiple structured formats (JSON, CSV, YAML, TSV) through the Glaze framework. This design decouples the command's business logic from its output format, enabling the same command to serve both human users (with readable tables and text) and automation scripts (with parseable JSON or CSV).
+
+### Available Output Formats
+
+- `json` — Valid JSON, parseable
+- `csv` — Comma-separated (for spreadsheets)
+- `tsv` — Tab-separated
+- `yaml` — YAML format
+- `table` — ASCII table (human-readable)
+
+### Stable Field Names (API Contract)
+
+Use these with `--fields`, `--filter`, `--select`:
+
+**Tickets:**
+- `ticket`, `title`, `status`, `topics`, `path`, `last_updated`
+
+**Docs:**
+- `ticket`, `doc_type`, `title`, `status`, `topics`, `path`, `last_updated`
+
+**Tasks:**
+- `index`, `checked`, `text`, `file`
+
+**Vocabulary:**
+- `category`, `slug`, `description`
+
+### Field Selection Examples
+
+```bash
+# Paths only (newline-separated)
+docmgr list docs --ticket MEN-4242 --with-glaze-output --select path
+
+# Custom columns (CSV)
+docmgr list docs --with-glaze-output --output csv \
+  --fields doc_type,title,path
+
+# Templated output
+docmgr list docs --ticket MEN-4242 --with-glaze-output \
+  --select-template '{{.doc_type}}: {{.title}}' --select _0
+```
+
+The stable field contracts ensure your scripts won't break when docmgr is updated, making it safe to build CI/CD integrations, reporting dashboards, and bulk operation scripts on top of docmgr.
+
+---
+
+## 6. Automation Patterns
+
+**Pattern 1: Find and update stale docs**
+
+```bash
+# Find docs older than 60 days, mark for review
+docmgr doc search --updated-since "60 days ago" --with-glaze-output --output json | \
+  jq -r '.[] | .path' | \
+  while read doc; do
+    docmgr meta update --doc "$doc" --field Status --value "needs-review"
+  done
+```
+
+**Pattern 2: CI validation**
+
+```bash
+#!/bin/bash
+# .github/workflows/validate-docs.yml
+
+if ! docmgr doctor --all --stale-after 14 --fail-on error; then
+  echo "ERROR: Documentation validation failed"
+  # Get list of issues
+  docmgr doctor --all --with-glaze-output --output json | \
+    jq -r '.[] | select(.issue != "none") | "\(.path): \(.message)"'
+  exit 1
+fi
+```
+
+**Pattern 3: Weekly doc report**
+
+```bash
+# Generate report of doc activity
+docmgr status --stale-after 7 --with-glaze-output --output json | \
+  jq -r '.docs[] | select(.stale) | "\(.ticket): \(.title) (stale \(.days_since_update) days)"'
+```
+
+**Pattern 4: Bulk operations**
+
+```bash
+# Create similar tickets
+for i in {1..5}; do
+    TICKET=PROJ-00$i
+    docmgr ticket create-ticket --ticket $TICKET --title "Feature $i" --topics backend
+    docmgr doc add --ticket $TICKET --doc-type design-doc --title "Design $i"
+done
+
+# Update all docs of a type
+docmgr meta update --ticket MEN-4242 --doc-type design-doc \
+    --field Status --value complete
+```
+
+---
+
+## 7. Automated Reporting
 
 ### Weekly Documentation Report
 

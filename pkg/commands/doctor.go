@@ -49,6 +49,23 @@ invalid metadata, or broken structure. Respects a repository-level .docmgrignore
 for path exclusions (similar to .gitignore). Each non-empty line is a glob or name to
 ignore; lines starting with # are treated as comments.
 
+Common findings (doctor message ⇒ likely cause ⇒ how to fix):
+  • invalid_frontmatter — YAML block can’t be parsed. Ensure the file starts with '---',
+    quote strings containing ':' or '#', and use 'docmgr meta update' to rewrite fields safely.
+  • missing_required_fields — Title/Summary/DocType/etc. are missing. Run
+    'docmgr meta update --ticket T --field FieldName --value ...' (or edit frontmatter) to add them.
+  • missing_index — Ticket directories without index.md. Re-run 'docmgr ticket create-ticket'
+    or copy the template back into place.
+  • unknown_topics / unknown_status — Value not present in vocabulary.yaml. Either add it via
+    'docmgr vocab add --category topics --slug your-topic' (or status/doc-type) or update the doc’s fields.
+  • stale — LastUpdated is older than '--stale-after' days (default 30). Review the doc, make an update,
+    or pass '--stale-after N' if the cadence should be different for this run.
+
+Tips:
+  • Use '--fail-on warning' (or 'error') to make CI fail when issues are detected.
+  • '--ignore-glob' is handy for suppressing known noisy paths; the command also reads patterns from
+    both repository and docs-root .docmgrignore files.
+
 Example:
   docmgr doctor --ticket MEN-3475
   docmgr doctor --all

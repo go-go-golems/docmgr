@@ -405,6 +405,9 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 
 	// Apply removals
 	removedCount := 0
+	skippedRemovals := 0
+	unchangedNotes := []string{}
+	seenUnchanged := map[string]struct{}{}
 	for _, rf := range settings.RemoveFiles {
 		rf = strings.TrimSpace(rf)
 		if rf == "" {
@@ -413,6 +416,8 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		if _, ok := current[rf]; ok {
 			delete(current, rf)
 			removedCount++
+		} else {
+			skippedRemovals++
 		}
 	}
 
@@ -431,6 +436,11 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 					rf.Note = merged
 					current[p] = rf
 					updatedCount++
+				} else {
+					if _, seen := seenUnchanged[p]; !seen {
+						unchangedNotes = append(unchangedNotes, p)
+						seenUnchanged[p] = struct{}{}
+					}
 				}
 			}
 		} else {
@@ -461,6 +471,11 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 					rf.Note = merged
 					current[f] = rf
 					updatedCount++
+				} else {
+					if _, seen := seenUnchanged[f]; !seen {
+						unchangedNotes = append(unchangedNotes, f)
+						seenUnchanged[f] = struct{}{}
+					}
 				}
 			}
 		}
@@ -468,7 +483,31 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 
 	// When not in suggestion-listing mode, ensure at least one change was requested
 	if !settings.Suggest && addedCount == 0 && removedCount == 0 && updatedCount == 0 {
-		return fmt.Errorf("no changes specified. Use --file-note 'path:note' to add/update, --remove-files to remove, or --suggest --apply-suggestions to apply suggestions")
+		reasons := []string{}
+		if len(noteMap) > 0 {
+			if len(unchangedNotes) > 0 {
+				reasons = append(reasons, fmt.Sprintf("file-note entries already present for: %s", strings.Join(unchangedNotes, ", ")))
+			} else {
+				reasons = append(reasons, "file-note entries matched existing notes")
+			}
+		}
+		if len(settings.RemoveFiles) > 0 && skippedRemovals > 0 {
+			reasons = append(reasons, "remove targets were not present")
+		}
+		if len(reasons) == 0 {
+			reasons = append(reasons, "no changes requested")
+		}
+		row := types.NewRow(
+			types.MRP("doc", targetDocPath),
+			types.MRP("added", addedCount),
+			types.MRP("updated", updatedCount),
+			types.MRP("removed", removedCount),
+			types.MRP("total", len(doc.RelatedFiles)),
+			types.MRP("status", "noop"),
+			types.MRP("reason", strings.Join(reasons, "; ")),
+			types.MRP("unchanged", strings.Join(unchangedNotes, ", ")),
+		)
+		return gp.AddRow(ctx, row)
 	}
 
 	// Serialize back to sorted slice
@@ -495,6 +534,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		types.MRP("removed", removedCount),
 		types.MRP("total", len(doc.RelatedFiles)),
 		types.MRP("status", "updated"),
+		types.MRP("unchanged", strings.Join(unchangedNotes, ", ")),
 	)
 	return gp.AddRow(ctx, row)
 }
@@ -550,6 +590,21 @@ func (c *RelateCommand) Run(
 	first := collector.rows[0]
 	if _, ok := first.Get("doc"); ok {
 		docPath, _ := first.Get("doc")
+		statusVal, _ := first.Get("status")
+		status := fmt.Sprint(statusVal)
+		unchangedVal, _ := first.Get("unchanged")
+		unchanged := strings.TrimSpace(fmt.Sprint(unchangedVal))
+		if status == "noop" {
+			reasonVal, _ := first.Get("reason")
+			fmt.Printf("No related file changes for %v\n", docPath)
+			if reasonVal != nil {
+				fmt.Printf("- Reason: %v\n", reasonVal)
+			}
+			if unchanged != "" && unchanged != "<nil>" {
+				fmt.Printf("- Unchanged: %s\n", unchanged)
+			}
+			return nil
+		}
 		added, _ := first.Get("added")
 		updated, _ := first.Get("updated")
 		removed, _ := first.Get("removed")
@@ -559,6 +614,9 @@ func (c *RelateCommand) Run(
 		fmt.Printf("- Updated: %v\n", updated)
 		fmt.Printf("- Removed: %v\n", removed)
 		fmt.Printf("- Total: %v\n", total)
+		if unchanged != "" && unchanged != "<nil>" {
+			fmt.Printf("- Unchanged (already present with same note): %s\n", unchanged)
+		}
 		return nil
 	}
 

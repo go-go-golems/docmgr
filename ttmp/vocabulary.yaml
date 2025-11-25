@@ -21,6 +21,8 @@ topics:
       description: Template system and templating topics
     - slug: glaze
       description: Glazed framework and structured output topics
+    - slug: docmgr
+      description: docmgr tool itself (CLI, workflows, documentation)
 docTypes:
     - slug: index
       description: Ticket index

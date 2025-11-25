@@ -49,10 +49,11 @@ ls -R /tmp/test-git-repo/ttmp | head -50
 2. **Reset the practice repo:**  
    ```bash
    cd /home/manuel/workspaces/2025-11-24/review-docmgr-how-to-use-doc
-   docmgr/ttmp/2025/11/19/DOCMGR-DOC-VERBS-fix-how-to-use-tutorial-new-verb-structure/script/02-reset-and-recreate-repo.sh /tmp/test-git-repo
+   docmgr/ttmp/2025/11/19/DOCMGR-DOC-VERBS-fix-how-to-use-tutorial-new-verb-structure/script/setup-practice-repo.sh /tmp/test-git-repo
+   # Optional: run the full validation workflow multiple times
+   ITERATIONS=3 docmgr/ttmp/2025/11/19/DOCMGR-DOC-VERBS-fix-how-to-use-tutorial-new-verb-structure/script/validate-tutorial.sh /tmp/test-git-repo
    ```  
-   (Set `ITERATIONS=3` to repeat the workflow back-to-back.)
-   Note: The script wipes the target each run; you do not need (and should not) `rm -rf` the directory yourself.
+   The setup script wipes the target each run; you do not need (and should not) `rm -rf` the directory yourself. Use `validate-tutorial.sh` when you want to rehearse the entire CLI flow back-to-back; otherwise the setup script is enough to create a clean sandbox.
 3. **Walk through the tutorial manually:** After the script run, cd into `/tmp/test-git-repo` and re-run each command from the tutorial yourself (init, ticket create, doc add, relate, task, changelog, doctor). Compare the CLI output to the tutorial screenshots/snippets. Ensure `docmgr doc relate` is invoked with **multiple** `--file-note` flags in a single command so they experience the batching workflow.
    Before continuing, confirm the repo exists and print status:
    ```bash
@@ -96,4 +97,4 @@ ls -R /tmp/test-git-repo/ttmp | head -50
 
 - Expected warning: `docmgr doctor` will emit `unknown_topics: [test]` because the seeded vocabulary doesn't include `test`; that's fine for now.
 - Use `/tmp/docmgr-validation-logs/docmgr-run-*.log` if you need to attach raw command output to a bug report.
-- The reset script resets the target directory each run; prefer re-running it over manually deleting `/tmp/test-git-repo`.
+- Both helper scripts wipe the target directory each run; prefer re-running `setup-practice-repo.sh` or `validate-tutorial.sh` over manually deleting `/tmp/test-git-repo`.

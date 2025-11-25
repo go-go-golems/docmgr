@@ -46,11 +46,12 @@ $ DOCMGR_BIN=/home/manuel/.local/bin/docmgr \
 
 ## Related scripts
 
-- `script/02-reset-and-recreate-repo.sh`: Thin wrapper that calls `docmgr-tutorial-validation-run.sh` `ITERATIONS` times (default 1) so you can repeatedly wipe and recreate `/tmp/test-git-repo`. Logs for each pass are stored under `/tmp/docmgr-validation-logs` unless you override `LOG_PATH_BASE`.
+- `script/setup-practice-repo.sh`: Creates a clean `/tmp/docmgr-practice` workspace, runs `docmgr init`, and scaffolds a placeholder ticket so beginners can follow Part 1 manually without touching production repos.
+- `script/validate-tutorial.sh`: Calls `docmgr-tutorial-validation-run.sh` `ITERATIONS` times (default 1) so you can benchmark the entire workflow for usability tests. Logs for each pass are stored under `/tmp/docmgr-validation-logs` unless you override `LOG_PATH_BASE`.
 
 ```bash
 # Run the validation workflow three times in a row
-$ ITERATIONS=3 script/02-reset-and-recreate-repo.sh /tmp/test-git-repo
+$ ITERATIONS=3 script/validate-tutorial.sh /tmp/test-git-repo
 ```
 
 ## Notes
@@ -58,4 +59,5 @@ $ ITERATIONS=3 script/02-reset-and-recreate-repo.sh /tmp/test-git-repo
 - Requires Git and a writable `/tmp`.
 - Safe to rerun; the script wipes the target directory each time.
 - Use `LOG_PATH=/custom/path.log` if you need to stash the transcript elsewhere.
-- Use the wrapper (`02-reset-and-recreate-repo.sh`) when you want iterative practice or need a consistent repro sequence for usability tests.
+- Use `validate-tutorial.sh` when you want iterative practice or need a consistent repro sequence for usability tests.
+- Use `setup-practice-repo.sh` when you only need a clean sandbox plus ticket scaffolding (no automation).

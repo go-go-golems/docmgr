@@ -62,19 +62,6 @@ If you're used to unstructured markdown files, docmgr adds metadata and command 
 
 ---
 
-## Key Concepts (Glossary)
-
-Quick definitions for terms used in this tutorial:
-
-- **Ticket** — An identifier for a unit of work (like JIRA-123 or FEAT-042)
-- **Ticket workspace** — A directory containing all docs related to a ticket
-- **Docs root** — The `ttmp/` directory that contains all ticket workspaces
-- **Frontmatter** — YAML metadata at the top of markdown files (Title, Topics, Status, etc.)
-- **RelatedFiles** — Code files referenced in a doc's frontmatter with notes explaining why
-- **Vocabulary** — Defines valid topics/docTypes/intent for validation (not enforcement)
-
----
-
 # Part 1: Essentials 📚
 
 **[10 minute read — START HERE]**
@@ -94,9 +81,41 @@ This part covers everything you need to start using docmgr.
 
 > **Note:** docmgr works without Git. It just uses the file system. Git is only useful for making file paths in RelatedFiles more meaningful to your team.
 
+### Optional: Enable Shell Completion
+
+Typing long command names gets old fast. Enable the built-in completion once and every follow-up exercise is less error-prone.
+
+```bash
+# Generate completion script for your shell
+docmgr completion bash
+docmgr completion zsh
+docmgr completion fish
+docmgr completion powershell
+```
+
+- **Bash:** `docmgr completion bash | sudo tee /etc/bash_completion.d/docmgr >/dev/null` then restart your shell (or `source ~/.bashrc`).
+- **Zsh:** `docmgr completion zsh > ~/.zfunc/_docmgr`, add `fpath+=~/.zfunc` to `.zshrc`, then `autoload -Uz compinit && compinit`.
+- **Fish:** `docmgr completion fish > ~/.config/fish/completions/docmgr.fish`.
+- **PowerShell:** `docmgr completion powershell | Out-String | Invoke-Expression` for the current session; persist by adding the command to your `$PROFILE`.
+
+Once configured, `docmgr doc rel<TAB>` expands to `docmgr doc relate`, and flags like `--with-glaze-output` autocomplete automatically.
+
 ---
 
-## 2. First-Time Setup [BASIC]
+## 2. Key Concepts (Glossary) [BASIC]
+
+These definitions show up throughout the tutorial. Skim them once so the later sections flow faster.
+
+- **Ticket** — An identifier for a unit of work (like JIRA-123 or FEAT-042)
+- **Ticket workspace** — Directory that contains every doc for a ticket
+- **Docs root** — The `ttmp/` directory that stores all ticket workspaces
+- **Frontmatter** — YAML metadata block at the top of each markdown doc
+- **RelatedFiles** — Code references stored in frontmatter with notes explaining why a file matters
+- **Vocabulary** — Optional list of topics/docTypes/intent used for validation warnings (not hard enforcement)
+
+---
+
+## 3. First-Time Setup [BASIC]
 
 **⚠️ IMPORTANT:** Run this ONCE per repository before creating your first ticket.
 
@@ -118,7 +137,7 @@ root=/path/to/ttmp config=/path/.ttmp.yaml vocabulary=/path/vocabulary.yaml tick
 Error: root directory does not exist: /path/ttmp
 ```
 
-If you see the first output (with root, vocabulary paths), **you're already set up!** Skip to [Section 3](#3-create-your-first-ticket-basic).
+If you see the first output (with root, vocabulary paths), **you're already set up!** Skip to [Section 4](#4-create-your-first-ticket-basic).
 
 ### Initialize the Documentation Workspace
 
@@ -176,7 +195,7 @@ If you see these, initialization succeeded!
 
 ---
 
-## 3. Create Your First Ticket [BASIC]
+## 4. Create Your First Ticket [BASIC]
 
 ```bash
 docmgr ticket create-ticket --ticket MEN-4242 \
@@ -217,7 +236,7 @@ The `index.md` file is your ticket's single entry point. It:
 
 ---
 
-## 4. Add Documents [BASIC]
+## 5. Add Documents [BASIC]
 
 Add documents to organize your thinking:
 
@@ -244,7 +263,7 @@ docmgr doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Ch
 
 ---
 
-## 5. Search for Documents [BASIC]
+## 6. Search for Documents [BASIC]
 
 Find docs by content or metadata:
 
@@ -294,9 +313,11 @@ This part covers common workflows beyond the basics.
 
 ---
 
-## 6. Managing Metadata [INTERMEDIATE]
+## 7. Managing Metadata [INTERMEDIATE]
 
-Metadata (frontmatter) defines how docs are discovered, filtered, and validated. docmgr provides the `meta update` command to modify frontmatter fields programmatically, ensuring valid YAML syntax, consistent formatting, and automated timestamp updates. This approach is particularly powerful for bulk operations (updating status across all design docs) and automation (syncing metadata from external systems), while keeping single-doc updates simple through command shortcuts.
+Metadata (frontmatter) is the fuel that powers docmgr's search, validation, and automation. When the YAML is accurate, teammates can filter by status/topics and the `doctor` command can warn you before stale docs pile up. This section shows how to update fields safely without breaking formatting or forgetting timestamps.
+
+docmgr provides the `meta update` command to modify frontmatter fields programmatically, ensuring valid YAML syntax, consistent formatting, and automated timestamp updates. This approach is particularly powerful for bulk operations (updating status across all design docs) and automation (syncing metadata from external systems), while keeping single-doc updates simple through command shortcuts.
 
 ### Update Specific Document
 
@@ -357,7 +378,9 @@ docmgr doc add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
 
 ---
 
-## 7. Relating Files to Docs [INTERMEDIATE]
+## 8. Relating Files to Docs [INTERMEDIATE]
+
+> **Why this matters:** Relating files creates a breadcrumb trail between the prose (design/reference/playbook) and the code you just touched. Reviewers can jump from a file path to the design doc in one command, and future you can answer "Where is the spec for this file?" without spelunking.
 
 Bidirectional linking between documentation and code is one of docmgr's most powerful features. By relating code files to docs with explanatory notes, you create a navigation map that answers two critical questions: "What's the design for this code file?" (code review context) and "Which code implements this design?" (implementation reference). The `docmgr doc relate` command manages these relationships in frontmatter, while `docmgr doc search --file` provides instant reverse lookup from any code file to its related documentation.
 
@@ -379,7 +402,7 @@ docmgr doc relate --ticket MEN-4242 \
 
 ### Relating with Notes (ALWAYS)
 
-**Notes are required.** Always provide a note for each file when running `docmgr doc relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked. The legacy `--files` flag was removed to enforce this behavior; use repeated `--file-note "path:reason"` entries instead.
+**Notes are required.** Always provide a note for each file when running `docmgr doc relate` or `docmgr changelog`. Notes turn file lists into navigation maps that explain why a file is linked. The legacy `\-\-files` flag was removed to enforce this behavior; use repeated `--file-note "path:reason"` entries instead.
 
 ```bash
 docmgr doc relate --ticket MEN-4242 \
@@ -387,415 +410,38 @@ docmgr doc relate --ticket MEN-4242 \
   --file-note "backend/ws/manager.go:WebSocket lifecycle management"
 ```
 
-## 8. Record Changes in Changelog
+### Advanced patterns
 
-Append dated entries to `changelog.md` and include related files when useful:
+**Structured RelatedFiles (with notes)**
 
-```bash
-# Minimal entry
-docmgr changelog update --ticket MEN-4242 --entry "Normalized chat API paths"
-
-# With related files and notes
-docmgr changelog update --ticket MEN-4242 \
-  --file-note "backend/chat/api/register.go:Source of path normalization" \
-  --file-note "web/src/store/api/chatApi.ts:Frontend integration"
-
-# Use suggestions (print only) or apply them
-docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
-docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
-```
-
-> `--files` was removed from `docmgr changelog update`; attach files by repeating `--file-note "path:reason"` for each path you want to capture.
-
-### What `changelog.md` is for
-
-- Running log of notable changes, decisions, and learnings during the ticket
-- Timestamped entries to reconstruct context later (e.g., date‑grouped notes)
-- Lightweight status anchor for reviewers; keep lines short and clear
-- Link to PRs, commits, references as relevant; add related files with short notes
-- Update frequently as work progresses; prefer many small entries over one big dump
-
-## 9. Validate with Doctor
-
-```bash
-# Preferred (when .docmgrignore is present): flags not needed
-docmgr doctor --root ttmp --stale-after 30 --fail-on error
-
-# Ad-hoc suppression example (optional)
-docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
-```
-
-Warnings to expect in real projects:
-
-- Unknown topic/docType/intent (if not in vocabulary)
-- Missing files listed in `RelatedFiles`
-- Multiple `index.md` under a ticket (use `--ignore-glob` to suppress known duplicates)
-
-## 10. Manage Tasks
-
-Use the `tasks` commands to track the concrete steps for your ticket directly in `tasks.md`.
-
-```bash
-# List tasks with indexes
-docmgr task list --ticket MEN-4242
-
-# Add a new task
-docmgr task add --ticket MEN-4242 --text "Update API docs for /chat/v2"
-
-# Check / uncheck by id
-docmgr task check   --ticket MEN-4242 --id 1
-docmgr task uncheck --ticket MEN-4242 --id 1
-
-# Edit and remove
-docmgr task edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
-docmgr task remove --ticket MEN-4242 --id 3
-```
-
-Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
-
-### What `tasks.md` is for
-
-- Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
-- Tracks day‑to‑day execution; keep it current as tasks start/finish
-- Break work into small, actionable items; optionally tag owners inline
-- Use the `docmgr task` commands to add/check/edit/remove without manual formatting
-
-## 11. Check Workspace Status
-
-Use `status` to see a concise overview of the docs under the root, including staleness based on `LastUpdated`:
-
-```bash
-docmgr status
-docmgr status --summary-only
-docmgr status --stale-after 30
-```
-
-## 12. Output Modes and UX
-
-docmgr supports human-friendly defaults and structured output via Glaze.
-
-- Human-friendly (default):
-  - list tickets/docs: markdown sections with per-ticket bullet summaries (status, topics, tasks, path relative to docs root; root shown once at top)
-  - add/create/relate/meta/vocab/import/layout-fix/renumber/configure/init/task edit/doctor: readable summaries highlighting paths, counts, and status; add `--with-glaze-output` when automation needs rows
-  - status: summary line (+ per-ticket lines unless `--summary-only`)
-  - search: `path — title [ticket] :: snippet`; `--files` shows `file — reason (source=...)`
-  - guidelines: raw guideline text (or list types with `--list`)
-  - tasks list: `[#idx] [x| ] text (file=...)`
-  - vocab list: `category: slug — description`
-
-- Structured output:
-  - Add `--with-glaze-output --output json|yaml|csv|table`
-  - Available on: `list tickets`, `list docs`, `status`, `search`, `guidelines`, `vocab list`, `tasks list`
-
-Examples:
-```bash
-# Human
-docmgr list tickets
-docmgr status --summary-only
-docmgr doc search --query websocket
-docmgr doc guidelines --doc-type design-doc
-
-# Structured
-docmgr list tickets --with-glaze-output --output json
-docmgr status --with-glaze-output --output yaml
-docmgr doc search --query websocket --with-glaze-output --output yaml
-docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
-```
-
-### Root discovery and shell gotchas
-
-- `.ttmp.yaml` discovery walks up from CWD. If you need consistent behavior from nested subdirs, set an absolute `root` in `.ttmp.yaml` or run from repo root.
-- When neither flag nor `.ttmp.yaml` is present, docmgr anchors the default root to the Git repository root if found (`<git-root>/ttmp`), else uses `<cwd>/ttmp`.
-- `.ttmp.yaml` does not need to live in the repository root. In multi-repo or monorepo setups, place it at a parent directory to centralize a shared docs root and point different repos at distinct `ttmp/` directories as needed via `root` or `vocabulary`.
-- Avoid parentheses in ticket dir names; quote/escape if you must use them:
-  ```bash
-  cd "ttmp/YYYY/MM/DD/MEN-XXXX-name-\(with-parens\)"
-  ```
-
-## 13. Iterate and Maintain
-
-- Keep `Owners`, `Summary`, and `RelatedFiles` current
-- Regularly update `index.md`, `changelog.md`, and `tasks.md` as work progresses
-- Use `guidelines`
-
-## 14. Advanced: RelatedFiles with notes and ignores
-
-### Structured RelatedFiles (with notes)
-
-Prefer structured entries with short notes to explain why a file matters.
-
-||||||| b5e05e7
-## 8. Record Changes in Changelog
-
-Append dated entries to `changelog.md` and include related files when useful:
-
-```bash
-# Minimal entry
-docmgr changelog update --ticket MEN-4242 --entry "Normalized chat API paths"
-
-# With related files and notes
-docmgr changelog update --ticket MEN-4242 \
-  --file-note "backend/chat/api/register.go:Source of path normalization" \
-  --file-note "web/src/store/api/chatApi.ts:Frontend integration"
-
-# Use suggestions (print only) or apply them
-docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
-docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
-```
-
-### What `changelog.md` is for
-
-- Running log of notable changes, decisions, and learnings during the ticket
-- Timestamped entries to reconstruct context later (e.g., date‑grouped notes)
-- Lightweight status anchor for reviewers; keep lines short and clear
-- Link to PRs, commits, references as relevant; add related files with short notes
-- Update frequently as work progresses; prefer many small entries over one big dump
-
-## 9. Validate with Doctor
-
-```bash
-# Preferred (when .docmgrignore is present): flags not needed
-docmgr doctor --root ttmp --stale-after 30 --fail-on error
-
-# Ad-hoc suppression example (optional)
-docmgr doctor --root ttmp --ignore-glob "ttmp/*/design/index.md" --fail-on warning
-```
-
-Warnings to expect in real projects:
-
-- Unknown topic/docType/intent (if not in vocabulary)
-- Missing files listed in `RelatedFiles`
-- Multiple `index.md` under a ticket (use `--ignore-glob` to suppress known duplicates)
-
-## 10. Manage Tasks
-
-Use the `tasks` commands to track the concrete steps for your ticket directly in `tasks.md`.
-
-```bash
-# List tasks with indexes
-docmgr task list --ticket MEN-4242
-
-# Add a new task
-docmgr task add --ticket MEN-4242 --text "Update API docs for /chat/v2"
-
-# Check / uncheck by id
-docmgr task check   --ticket MEN-4242 --id 1
-docmgr task uncheck --ticket MEN-4242 --id 1
-
-# Edit and remove
-docmgr task edit   --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
-docmgr task remove --ticket MEN-4242 --id 3
-```
-
-Tasks are standard Markdown checkboxes (`- [ ]` / `- [x]`). The commands only edit the specific task line, preserving the rest of the file.
-
-### What `tasks.md` is for
-
-- Canonical, machine‑readable checklist for the ticket (Markdown checkboxes)
-- Tracks day‑to‑day execution; keep it current as tasks start/finish
-- Break work into small, actionable items; optionally tag owners inline
-- Use the `docmgr task` commands to add/check/edit/remove without manual formatting
-
-## 11. Check Workspace Status
-
-Use `status` to see a concise overview of the docs under the root, including staleness based on `LastUpdated`:
-
-```bash
-docmgr status
-docmgr status --summary-only
-docmgr status --stale-after 30
-```
-
-## 12. Output Modes and UX
-
-docmgr supports human-friendly defaults and structured output via Glaze.
-
-- Human-friendly (default):
-  - list tickets/docs: concise one-liners (ticket/title/status/topics/path/updated)
-  - status: summary line (+ per-ticket lines unless `--summary-only`)
-  - search: `path — title [ticket] :: snippet`; `--files` shows `file — reason (source=...)`
-  - guidelines: raw guideline text (or list types with `--list`)
-  - tasks list: `[#idx] [x| ] text (file=...)`
-  - vocab list: `category: slug — description`
-
-- Structured output:
-  - Add `--with-glaze-output --output json|yaml|csv|table`
-  - Available on: `list tickets`, `list docs`, `status`, `search`, `guidelines`, `vocab list`, `tasks list`
-
-Examples:
-```bash
-# Human
-docmgr list tickets
-docmgr status --summary-only
-docmgr doc search --query websocket
-docmgr doc guidelines --doc-type design-doc
-
-# Structured
-docmgr list tickets --with-glaze-output --output json
-docmgr status --with-glaze-output --output yaml
-docmgr doc search --query websocket --with-glaze-output --output yaml
-docmgr doc guidelines --doc-type design-doc --with-glaze-output --output json
-```
-
-### Template Schema Discovery
-
-Many commands support **postfix templates** — custom templates that render LLM-friendly output after the human-readable output. To discover what data is available for templates, use `--print-template-schema`:
-
-```bash
-# Print schema for list docs command
-docmgr list docs --print-template-schema --schema-format yaml
-
-# Print schema for status command
-docmgr status --print-template-schema --schema-format json
-
-# Print schema for search command
-docmgr doc search --query "test" --print-template-schema --schema-format yaml
-```
-
-**What you get:**
-- YAML or JSON schema showing all available fields and their types
-- Nested structures for complex data (e.g., arrays of tickets with nested docs)
-- Schema-only output (no human-readable content) — useful for automation
-
-**Available on:** `list docs`, `list tickets`, `doctor`, `status`, `tasks list`, `doc search`, `vocab list`, `doc guidelines`
-
-**Use cases:**
-- **Template development:** Understand available data before writing templates
-- **Documentation:** Generate reference docs for template authors
-- **Automation:** Parse schema to generate template scaffolding tools
-
-> **Tip:** Templates are stored in `ttmp/templates/` following the command path (e.g., `ttmp/templates/status.templ`, `ttmp/templates/tasks/list.templ`). See the [template data contracts reference](../../ttmp/2025/11/19/DOCMGR-OUTPUT-TEMPLATES-external-postfix-templates-for-verb-outputs/reference/01-template-data-contracts-reference.md) for detailed field documentation.
-
-### Root discovery and shell gotchas
-
-- `.ttmp.yaml` discovery walks up from CWD. If you need consistent behavior from nested subdirs, set an absolute `root` in `.ttmp.yaml` or run from repo root.
-- When neither flag nor `.ttmp.yaml` is present, docmgr anchors the default root to the Git repository root if found (`<git-root>/ttmp`), else uses `<cwd>/ttmp`.
-- `.ttmp.yaml` does not need to live in the repository root. In multi-repo or monorepo setups, place it at a parent directory to centralize a shared docs root and point different repos at distinct `ttmp/` directories as needed via `root` or `vocabulary`.
-- Avoid parentheses in ticket dir names; quote/escape if you must use them:
-  ```bash
-  cd "ttmp/MEN-XXXX-name-\(with-parens\)"
-  ```
-
-## 13. Iterate and Maintain
-
-- Keep `Owners`, `Summary`, and `RelatedFiles` current
-- Regularly update `index.md`, `changelog.md`, and `tasks.md` as work progresses
-- Use `guidelines`
-
-## 14. Advanced: RelatedFiles with notes and ignores
-
-### Structured RelatedFiles (with notes)
-
-Prefer structured entries with short notes to explain why a file matters.
-
-**Result in frontmatter:**
 ```yaml
 RelatedFiles:
-    - path: backend/api/register.go
-      note: Registers API routes (normalization logic)
-    - path: backend/ws/manager.go
-      note: WebSocket lifecycle management
+  - path: backend/api/register.go
+    note: Registers API routes (normalization logic)
+  - path: backend/ws/manager.go
+    note: WebSocket lifecycle management
 ```
 
-Now readers know WHY each file matters and WHERE to start reading.
-
-### Reverse Lookup (Code Review Superpower)
-
-Find design context from code files:
+**Reverse lookup (during code review)**
 
 ```bash
-# During code review: "What's the design for this file?"
-$ docmgr doc search --file backend/api/register.go
-
-MEN-4242/design-doc/01-path-normalization.md — Path Normalization [MEN-4242] ::
-  file=backend/api/register.go note=Registers API routes
-
-# Add to a specific document (notes required)
-docmgr doc relate --doc ttmp/YYYY/MM/DD/MEN-3083-.../design/sem-event-flow.md \
-  --file-note "pkg/timeline/controller.go:TUI timeline lifecycle (apply/render)"
-
-# Let docmgr suggest related files and store reasons as notes
-docmgr doc relate --ticket MEN-3083 --suggest --apply-suggestions --query timeline --topics conversation,events
+docmgr doc search --file backend/api/register.go
 ```
 
-**Saves 2-3 minutes per file review** by surfacing design context instantly.
+**Subdocument-first linking**
 
-### Choosing Files to Relate
-
-**DO relate:**
-- ✅ Key implementation files (handlers, services, core logic)
-- ✅ Files reviewers need to understand the feature
-- ✅ Files that would impact docs if refactored
-
-**DON'T relate:**
-- ❌ Every file (creates noise)
-- ❌ Generated files or build artifacts
-- ❌ Test files (unless documenting test strategy)
-
-**Rule of thumb:** 3-7 files per ticket. More than 10? You're probably over-relating.
-
-### Writing Good Notes
-
-**Good notes explain WHY a file matters:**
-
-```yaml
-# ❌ Bad (states the obvious)
-- path: auth/handler.go
-  note: Auth handler
-
-# ✅ Good (explains role and responsibilities)
-- path: auth/handler.go
-  note: Implements login, logout, refresh endpoints; validates credentials
-```
-
-**Template:** `[What it does]; [Key responsibilities or functions]`
-
-### Subdocument-first linking
-
-Prefer relating most files to the specific subdocument that explains them (design-doc/reference/playbook) rather than directly to `index.md`. Keep `index.md` minimal and use it to reference those subdocuments.
-
-- Why: Subdocuments keep context close to code and prevent `index.md` bloat.
-- How: Add `RelatedFiles` on the subdocument; in `index.md`, add a short link to that subdocument.
-- Exception: Truly ticket-wide anchors (e.g., top-level diagrams or scripts) can live on `index.md`.
-
-Example:
 ```bash
-# Relate implementation files to the design doc (preferred)
 docmgr doc relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.md \
   --file-note "backend/api/register.go:Normalization entrypoint and router setup"
 ```
 
-### Index Playbook (Quick Checklist)
+- Keep `index.md` as an overview; relate most files to the specific design/reference/playbook document that explains them.
+- Aim for 3-7 `RelatedFiles` entries per ticket; more than 10 usually means you're listing everything.
+- Run the quick checklist: relate files → update the Summary → `docmgr doctor --ticket YOUR-123 --stale-after 30`.
 
-**Keep your ticket index clean and current with this 3-step workflow:**
+## 9. Recording Changes [BASIC]
 
-1) **Relate files with notes** to the ticket index
-
-```bash
-docmgr doc relate --ticket MEN-4242 \
-  --file-note \"backend/api/register.go:Registers API routes (normalization logic)\" \
-  --file-note \"web/src/store/api/chatApi.ts:Frontend API integration\"
-```
-
-2) **Update the one-line Summary** in frontmatter
-
-```bash
-docmgr meta update --ticket MEN-4242 \
-  --field Summary \
-  --value "MEN-4242: normalize API paths; update WS lifecycle; docs + tests."
-```
-
-3) **Validate** to catch issues
-
-```bash
-docmgr doctor --ticket MEN-4242 --stale-after 30 --fail-on error
-```
-
-Run this checklist whenever you've made significant progress on a ticket.
-
----
-
-## 8. Recording Changes [BASIC]
+Changelog entries are your running field notes. They document *when* something changed, *why* it changed, and *where* to look in the code. Keeping them current prevents "why was this file touched?" detective work weeks later.
 
 Track progress in `changelog.md`:
 
@@ -840,7 +486,9 @@ docmgr doctor --ticket MEN-4242 --stale-after 30 --fail-on error
 
 ---
 
-## 9. Managing Tasks [BASIC]
+## 10. Managing Tasks [BASIC]
+
+Tasks capture the atomic steps required to finish a ticket. They pair nicely with changelog entries: tasks show the *plan*, changelog entries show the *history*. Keep the list short, actionable, and owned so anyone opening the ticket knows what remains.
 
 Track concrete steps in `tasks.md`:
 
@@ -856,11 +504,31 @@ docmgr task check --ticket MEN-4242 --id 1,2
 docmgr task list --ticket MEN-4242
 ```
 
+### Edit, uncheck, or remove tasks
+
+```bash
+# Fix the text without touching other lines
+docmgr task edit --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
+
+# Re-open work that needs more attention
+docmgr task uncheck --ticket MEN-4242 --id 2
+
+# Remove noisy items (docmgr keeps the rest of the list intact)
+docmgr task remove --ticket MEN-4242 --id 3
+```
+
 Output shows checkboxes: `[x]` for done, `[ ]` for pending.
+
+**When to use which doc:**
+- Keep *tasks* focused on actionable steps ("Add monitoring dashboard").
+- Use the *changelog* to describe what actually changed ("Added grafana dashboard; linked api/metrics.go").
+- Reference tasks inside the changelog when the status changes (e.g., "Task #4 complete").
 
 ---
 
-## 10. Closing Tickets [INTERMEDIATE]
+## 11. Closing Tickets [INTERMEDIATE]
+
+Closing a ticket is more than flipping Status to `complete`. The `ticket close` command updates status, writes a final changelog line, and warns if open tasks remain so reviewers can trust that the documentation reflects production reality.
 
 When you've finished work on a ticket, use `ticket close` to atomically update status, changelog, and metadata. Ticket status must match the shared vocabulary; see [Status Vocabulary & Transitions](#status-vocabulary--transitions) if you're unsure which value to pick.
 
@@ -941,7 +609,9 @@ docmgr task check --ticket MEN-4242 --id 3
 
 ---
 
-## 11. Validation with Doctor [INTERMEDIATE]
+## 12. Validation with Doctor [INTERMEDIATE]
+
+`docmgr doctor` is your safety net. It catches broken frontmatter, missing files, stale docs, and unknown vocabulary before a reviewer—or worse, a user—finds them. Run it early and often, especially before you open a PR or hand off work.
 
 Check for problems before they bite you:
 
@@ -1001,7 +671,9 @@ This part covers advanced features for power users and automation.
 
 ---
 
-## 11. Structured Output (Glaze) [ADVANCED]
+## 13. Structured Output (Glaze) [ADVANCED]
+
+Automation-minded teams often need machine-readable output. Glaze lets every docmgr command emit JSON/YAML/CSV/TSV without writing new scripts. Once you understand the field contracts, you can feed docmgr data straight into CI pipelines, dashboards, or quick one-off shell loops.
 
 Every docmgr command that produces output can render it in multiple structured formats (JSON, CSV, YAML, TSV) through the Glaze framework. This design decouples the command's business logic from its output format, enabling the same command to serve both human users (with readable tables and text) and automation scripts (with parseable JSON or CSV). The stable field contracts ensure your scripts won't break when docmgr is updated, making it safe to build CI/CD integrations, reporting dashboards, and bulk operation scripts on top of docmgr.
 
@@ -1113,7 +785,7 @@ docmgr meta update --ticket MEN-4242 --doc-type design-doc \
 
 ---
 
-## 12. CI Integration Examples [ADVANCED]
+## 14. CI Integration Examples [ADVANCED]
 
 ### GitHub Actions
 
@@ -1178,7 +850,7 @@ You know: structured output, CI integration, bulk operations, scripting patterns
 
 ---
 
-## 13. List and Status Commands [BASIC]
+## 15. List and Status Commands [BASIC]
 
 Explore what's in your workspace:
 
@@ -1228,7 +900,7 @@ Paths are relative to this root.
 
 ---
 
-## 14. Iterate and Maintain [INTERMEDIATE]
+## 16. Iterate and Maintain [INTERMEDIATE]
 
 **Keep your documentation workspace healthy over time:**
 
@@ -1288,7 +960,7 @@ docmgr doc guidelines --doc-type reference
 
 ---
 
-## 15. Root Discovery and Configuration [ADVANCED]
+## 17. Root Discovery and Configuration [ADVANCED]
 
 ### How docmgr Finds the Docs Root
 
@@ -1314,7 +986,7 @@ Useful for:
 
 ---
 
-## 15. Vocabulary Management [INTERMEDIATE]
+## 18. Vocabulary Management [INTERMEDIATE]
 
 Vocabulary defines valid topics, doc types, and intents (used for warnings, not enforcement).
 
@@ -1335,7 +1007,7 @@ docmgr vocab add --category docTypes --slug til \
 
 ---
 
-## 16. Numeric Prefixes [INTERMEDIATE]
+## 19. Numeric Prefixes [INTERMEDIATE]
 
 **What happens automatically:**
 - New docs get numeric prefixes: `01-`, `02-`, `03-`
@@ -1356,7 +1028,31 @@ This updates prefixes and fixes internal links between docs.
 
 ---
 
-## 17. Tips and Best Practices
+## 20. Command Aliasing [REFERENCE]
+
+The CLI ships friendly aliases so you can type the style that matches your brain—or the screenshots in older docs. Each pair executes the exact same command and produces the same output.
+
+| Primary command | Alias | When to use |
+|-----------------|-------|-------------|
+| `docmgr init` | `docmgr workspace init` | Prefer the `workspace` form when scripting multiple roots |
+| `docmgr doctor` | `docmgr workspace doctor` | Helpful when thinking in terms of workspace health |
+| `docmgr status` | `docmgr workspace status` | Same data; workspace prefix clarifies the scope |
+| `docmgr doc list` | `docmgr list docs` | Use whichever ordering matches your muscle memory |
+
+Check the aliases that are available in your build:
+
+```bash
+docmgr help workspace init
+docmgr help workspace doctor
+docmgr help workspace status
+docmgr help doc list
+```
+
+If you document a workflow, mention both names the first time (e.g., "`docmgr doc list` (alias: `docmgr list docs`)") so new users are never blocked by mismatched wording.
+
+---
+
+## 21. Tips and Best Practices
 
 ### Workflow Recommendations
 
@@ -1394,7 +1090,41 @@ cd "ttmp/MEN-XXXX-name-\(with-parens\)"
 
 ---
 
-## Appendix: Quick Reference
+## Appendix A: Troubleshooting Common Errors
+
+### "Error: no changes specified"
+
+- **What it means:** You ran `docmgr meta update` or `docmgr doc relate` without providing any fields/flags that would change the file.
+- **Common causes:** Forgetting `--field Summary --value ...` or running `doc relate` without any `--file-note` entries.
+- **Fix it:** Re-run the command with at least one change, e.g. `docmgr meta update --ticket MEN-4242 --field Status --value review`.
+
+### `"Unknown topic: <slug>"`
+
+- **What it means:** The topic in your document isn't listed in `ttmp/vocabulary.yaml`, so validation produced a warning.
+- **Common causes:** New feature areas, typos, or collaborators using different casing.
+- **Fix it:** Either add the topic via `docmgr vocab add --category topics --slug your-topic` **or** update the doc's `Topics` list to an existing slug.
+
+### "Must specify --doc or --ticket"
+
+- **What it means:** Commands like `doc relate`, `meta update`, and `changelog update` need to know which file to touch.
+- **Common causes:** Running a command from deep inside the repo without flags, or copying an example that omitted `--ticket`.
+- **Fix it:** Add `--ticket YOUR-123` to target the ticket's `index.md`, or pass `--doc path/to/doc.md` for a subdocument.
+
+### "open <path>: no such file or directory"
+
+- **What it means:** docmgr tried to read/write a file that doesn't exist yet.
+- **Common causes:** Typos in `--doc` paths, moving files without updating `RelatedFiles`, or running commands from the wrong directory/root.
+- **Fix it:** Double-check the path relative to the docs root, run `docmgr status --summary-only` to confirm the root, and re-run from the repository root for consistent discovery.
+
+### "warning: document stale (45 days old)"
+
+- **What it means:** `docmgr doctor` found a doc whose `LastUpdated` timestamp is older than the `--stale-after` threshold.
+- **Common causes:** Work paused, docs written once and never revisited, or automated updates not touching the content body.
+- **Fix it:** Review the content, make necessary updates (even adding a short status note counts), then rerun `docmgr doctor --ticket YOUR-123 --stale-after 30` to verify the warning cleared. Adjust `--stale-after` only if the cadence is truly different.
+
+---
+
+## Appendix B: Quick Reference
 
 ### Common Commands
 

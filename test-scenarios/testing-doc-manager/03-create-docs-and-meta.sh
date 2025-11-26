@@ -8,12 +8,12 @@ cd "${REPO}"
 DOCMGR="${DOCMGR_PATH:-docmgr}"
 
 # Add documents
-${DOCMGR} add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
-${DOCMGR} add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Lifecycle"
-${DOCMGR} add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
+${DOCMGR} doc add --ticket MEN-4242 --doc-type design-doc --title "Path Normalization Strategy"
+${DOCMGR} doc add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Lifecycle"
+${DOCMGR} doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
 
 # Show guidelines for design-doc
-${DOCMGR} guidelines --doc-type design-doc --output markdown || true
+${DOCMGR} doc guidelines --doc-type design-doc --output markdown || true
 
 # Enrich metadata on index.md
 INDEX_MD=$(find ttmp -type f -path "*/MEN-4242-*/index.md" -print -quit)
@@ -26,9 +26,9 @@ ${DOCMGR} meta update --doc "${INDEX_MD}" --field Summary --value "Unify chat HT
 ${DOCMGR} meta update --doc "${INDEX_MD}" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
 
 # Add documents for second ticket
-${DOCMGR} add --ticket MEN-5678 --doc-type design-doc --title "WebSocket Reconnection Strategy"
-${DOCMGR} add --ticket MEN-5678 --doc-type reference  --title "Reconnect Lifecycle"
-${DOCMGR} add --ticket MEN-5678 --doc-type playbook   --title "Reconnect Smoke Tests"
+${DOCMGR} doc add --ticket MEN-5678 --doc-type design-doc --title "WebSocket Reconnection Strategy"
+${DOCMGR} doc add --ticket MEN-5678 --doc-type reference  --title "Reconnect Lifecycle"
+${DOCMGR} doc add --ticket MEN-5678 --doc-type playbook   --title "Reconnect Smoke Tests"
 
 # Enrich metadata on second ticket index.md
 INDEX2_MD=$(find ttmp -type f -path "*/MEN-5678-*/index.md" -print -quit)
@@ -39,6 +39,42 @@ fi
 ${DOCMGR} meta update --doc "${INDEX2_MD}" --field Owners --value "manuel"
 ${DOCMGR} meta update --doc "${INDEX2_MD}" --field Summary --value "Plan WebSocket reconnection strategy."
 ${DOCMGR} meta update --doc "${INDEX2_MD}" --field ExternalSources --value "https://example.com/ws-reconnect"
+
+# Add a reference doc with intentionally denormalized paths for MEN-4242
+TICKET_DIR=$(dirname "${INDEX_MD}")
+WONKY_DOC="${TICKET_DIR}/reference/99-wonky-paths-fixture.md"
+ABS_REGISTER="${REPO}/backend/chat/api/register.go"
+ABS_WS="${REPO}/backend/chat/ws/manager.go"
+cat > "${WONKY_DOC}" <<EOF
+---
+Title: Wonky Path Fixture
+Ticket: MEN-4242
+Status: active
+Topics:
+  - chat
+  - backend
+DocType: reference
+Intent: long-term
+Owners:
+  - manuel
+RelatedFiles:
+  - Path: ../../../../../backend/chat/api/register.go
+    Note: Doc-relative path reference (deep traversal)
+  - Path: ../backend/chat/api/register.go
+    Note: Ttmp-relative path reference (shallower traversal)
+  - Path: ${ABS_WS}
+    Note: Absolute path reference (host-specific)
+Summary: >
+  Fixture document that records RelatedFiles using doc-relative, ttmp-relative,
+  and absolute paths so search regression scripts can exercise fuzzy matching.
+LastUpdated: $(date -Iseconds)
+---
+
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+frontmatter entries with denormalized paths stored as-is.
+EOF
 
 # List docs and tickets for both tickets
 ${DOCMGR} list tickets --ticket MEN-4242

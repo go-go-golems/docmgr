@@ -17,7 +17,7 @@ func tempRelateTest() {}
 EOF
 
 # Suggest and apply changed files from git working tree
-${DOCMGR} relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
+${DOCMGR} doc relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
 
 echo "[ok] relate --from-git suggestions applied"
 

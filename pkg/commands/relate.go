@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -55,6 +56,8 @@ type RelateResult struct {
 	Suggestions []RelateSuggestion
 	Update      *RelateUpdateSummary
 }
+
+type reasonSet map[string]bool
 
 func NewRelateCommand() (*RelateCommand, error) {
 	return &RelateCommand{
@@ -165,6 +168,15 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
+	configDir := ""
+	if cfgPath, err := workspace.FindTTMPConfigPath(); err == nil {
+		if absCfg, err := filepath.Abs(cfgPath); err == nil {
+			configDir = filepath.Dir(absCfg)
+		} else {
+			configDir = filepath.Dir(cfgPath)
+		}
+	}
+
 	// Resolve target document path
 	var targetDocPath string
 	var ticketDir string
@@ -183,8 +195,18 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		targetDocPath = filepath.Join(ticketDir, "index.md")
 	}
 
+	targetDocPath, err = filepath.Abs(targetDocPath)
+	if err != nil {
+		return fmt.Errorf("failed to resolve document path: %w", err)
+	}
+
+	resolver := paths.NewResolver(paths.ResolverOptions{
+		DocsRoot:  settings.Root,
+		DocPath:   targetDocPath,
+		ConfigDir: configDir,
+	})
+
 	// Optional: collect suggestions
-	type reasonSet map[string]bool
 	suggestions := map[string]reasonSet{}
 	// Optional notes from existing documents for the same file
 	existingNotes := map[string]map[string]bool{}
@@ -202,27 +224,17 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			// Only from git status (changed files)
 			if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
 				for _, f := range modified {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["working tree modified"] = true
+					addSuggestion(suggestions, resolver, f, "working tree modified")
 				}
 				for _, f := range staged {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["staged for commit"] = true
+					addSuggestion(suggestions, resolver, f, "staged for commit")
 				}
 				for _, f := range untracked {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["untracked new file"] = true
+					addSuggestion(suggestions, resolver, f, "untracked new file")
 				}
 			}
 		} else {
 			// Default heuristic blend: existing docs, git history, ripgrep, git status
-			existing := map[string]bool{}
 			_ = filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
 				if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
 					return nil
@@ -249,26 +261,29 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 						return nil
 					}
 				}
+				docResolver := paths.NewResolver(paths.ResolverOptions{
+					DocsRoot:  settings.Root,
+					DocPath:   path,
+					ConfigDir: configDir,
+				})
 				for _, rf := range doc.RelatedFiles {
-					if rf.Path != "" {
-						existing[rf.Path] = true
-						if rf.Note != "" {
-							if _, ok := existingNotes[rf.Path]; !ok {
-								existingNotes[rf.Path] = map[string]bool{}
-							}
-							existingNotes[rf.Path][rf.Note] = true
+					if rf.Path == "" {
+						continue
+					}
+					canonical := canonicalizeWithResolver(docResolver, rf.Path)
+					if canonical == "" {
+						continue
+					}
+					addSuggestion(suggestions, resolver, canonical, "referenced by documents")
+					if rf.Note != "" {
+						if _, ok := existingNotes[canonical]; !ok {
+							existingNotes[canonical] = map[string]bool{}
 						}
+						existingNotes[canonical][rf.Note] = true
 					}
 				}
 				return nil
 			})
-
-			for f := range existing {
-				if _, ok := suggestions[f]; !ok {
-					suggestions[f] = reasonSet{}
-				}
-				suggestions[f]["referenced by documents"] = true
-			}
 
 			terms := []string{}
 			if settings.Query != "" {
@@ -277,38 +292,24 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			terms = append(terms, settings.Topics...)
 			if files, err := suggestFilesFromGit(searchRoot, terms); err == nil {
 				for _, f := range files {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["recent commit activity"] = true
+					addSuggestion(suggestions, resolver, f, "recent commit activity")
 				}
 			}
 			if files, err := suggestFilesFromRipgrep(searchRoot, terms); err == nil {
+				label := fmt.Sprintf("content match: %s", firstTerm(terms))
 				for _, f := range files {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f][fmt.Sprintf("content match: %s", firstTerm(terms))] = true
+					addSuggestion(suggestions, resolver, f, label)
 				}
 			}
 			if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
 				for _, f := range modified {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["working tree modified"] = true
+					addSuggestion(suggestions, resolver, f, "working tree modified")
 				}
 				for _, f := range staged {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["staged for commit"] = true
+					addSuggestion(suggestions, resolver, f, "staged for commit")
 				}
 				for _, f := range untracked {
-					if _, ok := suggestions[f]; !ok {
-						suggestions[f] = reasonSet{}
-					}
-					suggestions[f]["untracked new file"] = true
+					addSuggestion(suggestions, resolver, f, "untracked new file")
 				}
 			}
 		}
@@ -364,13 +365,26 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// Build maps for add/remove with notes retained
 	current := map[string]models.RelatedFile{}
 	for _, rf := range doc.RelatedFiles {
-		if rf.Path != "" {
-			current[rf.Path] = rf
+		if rf.Path == "" {
+			continue
 		}
+		canonical := canonicalizeWithResolver(resolver, rf.Path)
+		if canonical == "" {
+			continue
+		}
+		rf.Path = canonical
+		if existing, ok := current[canonical]; ok && strings.TrimSpace(rf.Note) != "" {
+			if merged, changed := appendNote(existing.Note, rf.Note); changed {
+				existing.Note = merged
+				current[canonical] = existing
+			}
+			continue
+		}
+		current[canonical] = rf
 	}
 
 	// Parse provided file-note mappings
-	noteMap := map[string]string{}
+	rawNotes := map[string]string{}
 	for _, m := range settings.FileNotes {
 		s := strings.TrimSpace(m)
 		if s == "" {
@@ -385,7 +399,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			continue
 		}
 		if key != "" {
-			noteMap[key] = val
+			rawNotes[key] = strings.TrimSpace(val)
 		}
 	}
 
@@ -397,10 +411,26 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Validate that all provided file-note mappings contain a non-empty note
-	for p, n := range noteMap {
+	for p, n := range rawNotes {
 		if strings.TrimSpace(n) == "" {
 			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
 		}
+	}
+
+	// Canonicalize provided paths
+	noteMap := map[string]string{}
+	for rawPath, note := range rawNotes {
+		key := canonicalizeWithResolver(resolver, rawPath)
+		if key == "" {
+			continue
+		}
+		if existing, ok := noteMap[key]; ok {
+			if merged, changed := appendNote(existing, note); changed {
+				noteMap[key] = merged
+			}
+			continue
+		}
+		noteMap[key] = note
 	}
 
 	// Apply removals
@@ -409,12 +439,15 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	unchangedNotes := []string{}
 	seenUnchanged := map[string]struct{}{}
 	for _, rf := range settings.RemoveFiles {
-		rf = strings.TrimSpace(rf)
-		if rf == "" {
+		canonical := canonicalizeWithResolver(resolver, rf)
+		if canonical == "" {
+			canonical = filepath.ToSlash(strings.TrimSpace(rf))
+		}
+		if canonical == "" {
 			continue
 		}
-		if _, ok := current[rf]; ok {
-			delete(current, rf)
+		if _, ok := current[canonical]; ok {
+			delete(current, canonical)
 			removedCount++
 		} else {
 			skippedRemovals++
@@ -425,26 +458,22 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	addedCount := 0
 	updatedCount := 0
 	for path, note := range noteMap {
-		p := strings.TrimSpace(path)
-		if p == "" {
-			continue
-		}
-		if rf, ok := current[p]; ok {
+		if rf, ok := current[path]; ok {
 			if strings.TrimSpace(note) != "" {
 				merged, changed := appendNote(rf.Note, note)
 				if changed {
 					rf.Note = merged
-					current[p] = rf
+					current[path] = rf
 					updatedCount++
 				} else {
-					if _, seen := seenUnchanged[p]; !seen {
-						unchangedNotes = append(unchangedNotes, p)
-						seenUnchanged[p] = struct{}{}
+					if _, seen := seenUnchanged[path]; !seen {
+						unchangedNotes = append(unchangedNotes, path)
+						seenUnchanged[path] = struct{}{}
 					}
 				}
 			}
 		} else {
-			current[p] = models.RelatedFile{Path: p, Note: note}
+			current[path] = models.RelatedFile{Path: path, Note: note}
 			addedCount++
 		}
 	}
@@ -556,6 +585,41 @@ func appendNote(existing, addition string) (string, bool) {
 		return existing + addition, true
 	}
 	return existing + "\n" + addition, true
+}
+
+func canonicalizeWithResolver(resolver *paths.Resolver, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if resolver == nil {
+		return filepath.ToSlash(raw)
+	}
+	normalized := resolver.Normalize(raw)
+	switch {
+	case strings.TrimSpace(normalized.Canonical) != "":
+		return normalized.Canonical
+	case strings.TrimSpace(normalized.Abs) != "":
+		return normalized.Abs
+	case strings.TrimSpace(normalized.OriginalClean) != "":
+		return normalized.OriginalClean
+	default:
+		return filepath.ToSlash(raw)
+	}
+}
+
+func addSuggestion(out map[string]reasonSet, resolver *paths.Resolver, rawPath, reason string) string {
+	canonical := canonicalizeWithResolver(resolver, rawPath)
+	if canonical == "" {
+		return ""
+	}
+	if _, ok := out[canonical]; !ok {
+		out[canonical] = reasonSet{}
+	}
+	if reason != "" {
+		out[canonical][reason] = true
+	}
+	return canonical
 }
 
 var _ cmds.GlazeCommand = &RelateCommand{}

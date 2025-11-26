@@ -48,6 +48,13 @@ Helpful docs (built-in):
 	if err := doc.Attach(rootCmd); err != nil {
 		return nil, err
 	}
+	// Add alias: docmgr search -> docmgr doc search
+	searchCmd, err := doc.NewSearchCommand()
+	if err != nil {
+		return nil, err
+	}
+	searchCmd.Use = "search"
+	rootCmd.AddCommand(searchCmd)
 	if err := tasks.Attach(rootCmd); err != nil {
 		return nil, err
 	}

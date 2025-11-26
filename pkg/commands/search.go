@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
@@ -188,6 +189,15 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
+	configDir := ""
+	if cfgPath, err := workspace.FindTTMPConfigPath(); err == nil {
+		if absCfg, err := filepath.Abs(cfgPath); err == nil {
+			configDir = filepath.Dir(absCfg)
+		} else {
+			configDir = filepath.Dir(cfgPath)
+		}
+	}
+
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type SearchResult struct {
@@ -253,6 +263,9 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	}
 
 	queryLower := strings.ToLower(settings.Query)
+	fileQueryRaw := strings.TrimSpace(settings.File)
+	dirQueryRaw := strings.TrimSpace(settings.Dir)
+	dirQueryRawSlash := filepath.ToSlash(dirQueryRaw)
 
 	// Search all markdown files
 	err = filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
@@ -305,18 +318,42 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 			}
 		}
 
-		// Apply file filter (reverse lookup)
+		docResolver := paths.NewResolver(paths.ResolverOptions{
+			DocsRoot:  settings.Root,
+			DocPath:   path,
+			ConfigDir: configDir,
+		})
+
+		type normalizedRelated struct {
+			file models.RelatedFile
+			norm paths.NormalizedPath
+		}
+
+		related := make([]normalizedRelated, 0, len(doc.RelatedFiles))
+		for _, rf := range doc.RelatedFiles {
+			related = append(related, normalizedRelated{
+				file: rf,
+				norm: docResolver.Normalize(rf.Path),
+			})
+		}
+
 		var matchedFiles []string
 		var matchedNotes []string
-		if settings.File != "" {
+		if fileQueryRaw != "" {
+			fileQueryNorm := docResolver.Normalize(fileQueryRaw)
+			if fileQueryNorm.Empty() && fileQueryRaw != "" {
+				fileQueryNorm = paths.NormalizedPath{
+					Canonical:     filepath.ToSlash(fileQueryRaw),
+					OriginalClean: filepath.ToSlash(fileQueryRaw),
+				}
+			}
 			fileMatch := false
-			for _, rf := range doc.RelatedFiles {
-				relatedFile := rf.Path
-				if relatedFile != "" && settings.File != "" && (strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile)) {
+			for _, entry := range related {
+				if paths.MatchPaths(fileQueryNorm, entry.norm) {
 					fileMatch = true
-					matchedFiles = append(matchedFiles, relatedFile)
-					if strings.TrimSpace(rf.Note) != "" {
-						matchedNotes = append(matchedNotes, rf.Note)
+					matchedFiles = append(matchedFiles, bestDisplay(entry.norm, entry.file.Path))
+					if strings.TrimSpace(entry.file.Note) != "" {
+						matchedNotes = append(matchedNotes, entry.file.Note)
 					}
 				}
 			}
@@ -325,18 +362,17 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 			}
 		}
 
-		// Apply directory filter (reverse lookup)
-		if settings.Dir != "" {
+		if dirQueryRaw != "" {
+			dirQueryNorm := docResolver.Normalize(dirQueryRawSlash)
 			dirMatch := false
-			// Check if document is in the directory
-			relPath, _ := filepath.Rel(settings.Root, path)
-			if strings.HasPrefix(relPath, settings.Dir) {
+			relPathForDoc, _ := filepath.Rel(settings.Root, path)
+			relPathForDoc = filepath.ToSlash(relPathForDoc)
+			if strings.HasPrefix(relPathForDoc, dirQueryRawSlash) {
 				dirMatch = true
 			}
-			// Check if any RelatedFiles are in the directory
 			if !dirMatch {
-				for _, rf := range doc.RelatedFiles {
-					if strings.HasPrefix(rf.Path, settings.Dir) {
+				for _, entry := range related {
+					if paths.DirectoryMatch(dirQueryNorm, entry.norm) || (dirQueryRawSlash != "" && strings.HasPrefix(filepath.ToSlash(entry.file.Path), dirQueryRawSlash)) {
 						dirMatch = true
 						break
 					}
@@ -397,6 +433,7 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		if err != nil {
 			relPath = path
 		}
+		relPath = filepath.ToSlash(relPath)
 
 		// Extract snippet around query match
 		snippet := extractSnippet(content, settings.Query, 100)
@@ -864,6 +901,13 @@ func extractSnippet(content, query string, contextLen int) string {
 	}
 
 	return snippet
+}
+
+func bestDisplay(norm paths.NormalizedPath, fallback string) string {
+	if best := norm.Best(); strings.TrimSpace(best) != "" {
+		return best
+	}
+	return filepath.ToSlash(strings.TrimSpace(fallback))
 }
 
 // parseDate parses relative and absolute date strings

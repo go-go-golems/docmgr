@@ -11,10 +11,10 @@ DOCMGR="${DOCMGR_PATH:-docmgr}"
 ${DOCMGR} init --seed-vocabulary || true
 
 # Create ticket workspace (RFC-aligned under ttmp/)
-${DOCMGR} create-ticket --ticket MEN-4242 --title "Normalize chat API paths and WebSocket lifecycle" --topics chat,backend,websocket
+${DOCMGR} ticket create-ticket --ticket MEN-4242 --title "Normalize chat API paths and WebSocket lifecycle" --topics chat,backend,websocket
 
 # Create a second ticket using explicit --root ttmp (tests flag-based root)
-${DOCMGR} create-ticket --root ttmp --ticket MEN-5678 --title "Secondary ticket — WebSocket reconnection plan" --topics chat,backend
+${DOCMGR} ticket create-ticket --root ttmp --ticket MEN-5678 --title "Secondary ticket — WebSocket reconnection plan" --topics chat,backend
 
 # Verify scaffolding (both tickets should be listed)
 ${DOCMGR} list tickets

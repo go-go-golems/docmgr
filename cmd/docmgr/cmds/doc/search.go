@@ -10,6 +10,11 @@ import (
 )
 
 func newSearchCommand() (*cobra.Command, error) {
+	return NewSearchCommand()
+}
+
+// NewSearchCommand creates a new search command. Exported for use as an alias.
+func NewSearchCommand() (*cobra.Command, error) {
 	cmd, err := commands.NewSearchCommand()
 	if err != nil {
 		return nil, err

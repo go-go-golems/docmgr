@@ -19,3 +19,8 @@ Created diary entry documenting issues encountered while moving ticket from ttmp
 
 Merged how-to-work-on-any-ticket.md into docmgr-how-to-use.md as section 12.5, added clarifications about command aliases and flag usage
 
+
+## 2025-11-26
+
+Removed how-to-work-on-any-ticket.md file since content has been merged into docmgr-how-to-use.md
+

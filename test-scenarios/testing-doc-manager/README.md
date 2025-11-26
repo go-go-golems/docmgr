@@ -17,9 +17,11 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 - `03-create-docs-and-meta.sh` — add documents and update frontmatter metadata
 - `04-relate-and-doctor.sh` — relate code files and run doctor checks
 - `05-search-scenarios.sh` — run search scenarios (content, metadata, reverse lookup, external sources, dates, file suggestions)
+- `03-create-docs-and-meta.sh` also seeds `reference/99-wonky-paths-fixture.md` with doc-relative, ttmp-relative, and absolute RelatedFiles to exercise normalization
 - `06-doctor-advanced.sh` — exercise doctor warnings, ignore-glob, and recovery
 - `07-status.sh` — show workspace summary and staleness
 - `13-template-schema-output.sh` — verify --print-template-schema outputs only schema (no human output)
+- `14-path-normalization.sh` — validate path normalization + fuzzy search against doc-relative, ttmp-relative, and absolute paths
 - `run-all.sh` — convenience script to run all steps in order
 - `SCENARIO.md` — detailed explanation of the scenario and expected outputs
 

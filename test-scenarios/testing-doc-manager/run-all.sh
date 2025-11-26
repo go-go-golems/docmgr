@@ -20,5 +20,6 @@ bash ./10-status-warnings.sh "${ROOT_DIR}"
 bash ./11-changelog-file-notes.sh "${ROOT_DIR}"
 bash ./12-vocab-add-output.sh "${ROOT_DIR}"
 bash ./13-template-schema-output.sh "${ROOT_DIR}"
+bash ./14-path-normalization.sh "${ROOT_DIR}"
 
 echo "[ok] Scenario completed at ${ROOT_DIR}/acme-chat-app"

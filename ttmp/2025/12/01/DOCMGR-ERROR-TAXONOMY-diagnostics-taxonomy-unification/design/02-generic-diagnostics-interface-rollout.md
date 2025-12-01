@@ -9,11 +9,35 @@ Topics:
 DocType: design
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: pkg/diagnostics/core/types.go
+      Note: Taxonomy core types and wrapping
+    - Path: pkg/diagnostics/docmgrctx/related_files.go
+      Note: Related files taxonomy context
+    - Path: pkg/diagnostics/docmgrctx/vocabulary.go
+      Note: Vocabulary taxonomy context
+    - Path: pkg/diagnostics/docmgrrules/default.go
+      Note: Registry seeding for docmgr rules
+    - Path: pkg/diagnostics/docmgrrules/related_files_rule.go
+      Note: Related files rule
+    - Path: pkg/diagnostics/docmgrrules/related_files_rule_test.go
+      Note: Rule test
+    - Path: pkg/diagnostics/docmgrrules/vocabulary_rule.go
+      Note: Vocabulary rule
+    - Path: pkg/diagnostics/docmgrrules/vocabulary_rule_test.go
+      Note: Rule test
+    - Path: pkg/diagnostics/render/render.go
+      Note: Text/JSON renderers for diagnostics
+    - Path: pkg/diagnostics/rules/rules.go
+      Note: Rule registry and scoring
+    - Path: test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh
+      Note: Diagnostics smoke exercising docmgr binary
 ExternalSources: []
-Summary: "Design a generic diagnostics interface (ContextPayload-based) and map docmgr validation/error surfaces to it for consistent rule-driven output."
+Summary: Design a generic diagnostics interface (ContextPayload-based) and map docmgr validation/error surfaces to it for consistent rule-driven output.
 LastUpdated: 2025-12-01T11:56:30-05:00
 ---
+
+
 
 # Generic diagnostics interface rollout
 

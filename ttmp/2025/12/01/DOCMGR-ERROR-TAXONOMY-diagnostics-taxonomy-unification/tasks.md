@@ -2,11 +2,11 @@
 
 ## TODO
 
-- [ ] Create diagnostics core scaffolding in `pkg/diagnostics/core` (ContextPayload, Taxonomy, Severity, Stage/Symptom types, AsTaxonomy/WrapTaxonomy helpers).
-- [ ] Add registry + rendering plumbing in `pkg/diagnostics/rules` (registry, scoring) and `pkg/diagnostics/render` (text + JSON output).
+- [x] Create diagnostics core scaffolding in `pkg/diagnostics/core` (ContextPayload, Taxonomy, Severity, Stage/Symptom types, AsTaxonomy/WrapTaxonomy helpers).
+- [x] Add registry + rendering plumbing in `pkg/diagnostics/rules` (registry, scoring) and `pkg/diagnostics/render` (text + JSON output).
 - [ ] Define frontmatter stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/frontmatter.go` (parse, schema).
-- [ ] Define vocabulary stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/vocabulary.go`.
-- [ ] Define related-files stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/related_files.go`.
+- [x] Define vocabulary stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/vocabulary.go`.
+- [x] Define related-files stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/related_files.go`.
 - [ ] Define template stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/templates.go`.
 - [ ] Define listing/skip stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/listing.go`.
 - [ ] Define workspace/staleness stage/symptom enums + contexts in `pkg/diagnostics/docmgrctx/workspace.go`.

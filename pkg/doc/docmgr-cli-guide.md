@@ -182,6 +182,22 @@ docmgr ticket create-ticket --ticket MEN-4242 \
 
 Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` under a standard structure.
 
+#### 4.3.1 Move a Legacy Ticket to the Current Template
+
+If a ticket was created under an older layout (for example, a flat `ttmp/MEN-1234`), move it to the current date-based template:
+```bash
+docmgr ticket move --ticket MEN-1234
+
+# Override the path template or allow overwrite if the destination already exists
+docmgr ticket move --ticket MEN-1234 --path-template "{{YYYY}}/{{MM}}/{{DD}}/{{TICKET}}-{{SLUG}}" --overwrite
+```
+
+The command:
+- Finds the existing ticket directory by Ticket frontmatter
+- Renders the destination path from the template
+- Renames the directory (fails unless `--overwrite` is set when destination exists)
+- Touches `LastUpdated` in `index.md` (best effort)
+
 ### 4.4 Add Documents
 
 Create additional documents as needed. Use short, descriptive titles; you can refine content later.

@@ -1,6 +1,6 @@
 ---
-Title: Add doc move command
-Ticket: DOCMGR-DOC-MOVE
+Title: Move ticket directories to current template
+Ticket: DOCMGR-TICKET-MOVE
 Status: complete
 Topics:
     - tooling
@@ -11,11 +11,11 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-01T16:21:42.53343729-05:00
+LastUpdated: 2025-12-01T16:34:25.597515033-05:00
 ---
 
 
-# Add doc move command
+# Move ticket directories to current template
 
 ## Overview
 

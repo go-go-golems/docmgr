@@ -74,3 +74,8 @@ Wired doctor to emit frontmatter schema taxonomies (required fields, missing sta
 
 Added doctor --diagnostics-json flag + renderer collector, updated diagnostics smoke to assert JSON output, and added adapter unit test.
 
+
+## 2025-12-01
+
+Added schema rule unit test, documented doctor --diagnostics-json in how-to-use, and reran go test ./pkg/diagnostics/... ./pkg/commands.
+

@@ -718,6 +718,9 @@ docmgr doctor --all --stale-after 30 --fail-on error
 
 # Validate specific ticket
 docmgr doctor --ticket MEN-4242
+
+# Capture diagnostics for CI (JSON)
+docmgr doctor --all --diagnostics-json diagnostics.json --fail-on warning
 ```
 
 **What doctor checks:**

@@ -19,7 +19,7 @@
 - [x] Add CLI adapter `cmd/docmgr/internal/diagnostics/render.go` to render rule cards on taxonomy-bearing errors while preserving glaze rows/exit codes.
 - [x] Implement docmgr rule set in `pkg/diagnostics/docmgrrules` (syntax pointer, schema missing/invalid, vocabulary suggestion, related file missing, template parse, listing skip, workspace structure, staleness) with scores/actions.
 - [x] Extend outputs to include diagnostics JSON/CI via shared adapter/renderer and ensure `doctor --fail-on` semantics remain stable.
-- [ ] Add additional tests for frontmatter schema wrapping + diagnostics JSON flag; update help/tutorial docs (how-to-use/ci-automation) to mention diagnostics outputs.
+- [x] Add additional tests for frontmatter schema wrapping + diagnostics JSON flag; update help/tutorial docs (how-to-use/ci-automation) to mention diagnostics outputs.
 - [x] Add listing/skip taxonomy contexts and rules, wire list_docs/search to emit taxonomy instead of silent skips.
 - [x] Add workspace/staleness taxonomy and rule(s), wire discovery/doctor staleness checks.
 - [x] Create shared diagnostics adapter in pkg/diagnostics/docmgr and refactor doctor to use it

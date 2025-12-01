@@ -27,7 +27,7 @@ const (
 
 var ColumnsTickets = []string{ColTicket, ColTitle, ColStatus, ColTopics, ColTasksOpen, ColTasksDone, ColPath, ColLastUpdated}
 var ColumnsDocs = []string{ColTicket, ColDocType, ColTitle, ColStatus, ColTopics, ColPath, ColLastUpdated}
-var ColumnsTasksList = []string{ColIndex, ColChecked, ColText, ColFile}
+var ColumnsTasksList = []string{ColIndex, ColChecked, ColText}
 var ColumnsVocabList = []string{ColCategory, ColSlug, ColDescription}
 
 func ColumnsListString(cols []string) string { return strings.Join(cols, ",") }

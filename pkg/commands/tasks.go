@@ -126,7 +126,7 @@ func NewTasksListCommand() (*TasksListCommand, error) {
 		cmds.WithLong(`List checkbox tasks found in the ticket's tasks.md.
 
 Columns:
-  index,checked,text,file
+  index,checked,text
 
 Examples:
   # Human output
@@ -179,7 +179,7 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 		return nil
 	}
 
-	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	_, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
 	}
@@ -188,7 +188,6 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 			types.MRP(ColIndex, t.TaskIndex),
 			types.MRP(ColChecked, t.Checked),
 			types.MRP(ColText, t.Text),
-			types.MRP(ColFile, path),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
 			return fmt.Errorf("failed to emit tasks list row %d: %w", t.TaskIndex, err)
@@ -242,7 +241,7 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 		if t.Checked {
 			mark = "x"
 		}
-		fmt.Printf("[%d] [%s] %s (file=%s)\n", t.TaskIndex, mark, t.Text, path)
+		fmt.Printf("[%d] [%s] %s\n", t.TaskIndex, mark, t.Text)
 	}
 
 	// Render postfix template if it exists

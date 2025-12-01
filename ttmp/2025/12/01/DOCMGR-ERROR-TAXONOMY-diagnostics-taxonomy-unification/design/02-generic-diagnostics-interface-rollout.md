@@ -10,14 +10,34 @@ DocType: design
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: internal/documents/frontmatter.go
+      Note: Wrapped parse errors into taxonomy
+    - Path: pkg/commands/doctor.go
+      Note: Doctor now calls adapter for vocabulary/related diagnostics
+    - Path: pkg/commands/template_validate.go
+      Note: Wrapped template parse errors
     - Path: pkg/diagnostics/core/types.go
       Note: Taxonomy core types and wrapping
+    - Path: pkg/diagnostics/docmgr/adapter.go
+      Note: Shared diagnostics adapter
+    - Path: pkg/diagnostics/docmgrctx/frontmatter.go
+      Note: Frontmatter taxonomy contexts
+    - Path: pkg/diagnostics/docmgrctx/listing.go
+      Note: Listing skip taxonomy
     - Path: pkg/diagnostics/docmgrctx/related_files.go
       Note: Related files taxonomy context
+    - Path: pkg/diagnostics/docmgrctx/templates.go
+      Note: Template taxonomy context
     - Path: pkg/diagnostics/docmgrctx/vocabulary.go
       Note: Vocabulary taxonomy context
+    - Path: pkg/diagnostics/docmgrctx/workspace.go
+      Note: Workspace/staleness taxonomies
     - Path: pkg/diagnostics/docmgrrules/default.go
       Note: Registry seeding for docmgr rules
+    - Path: pkg/diagnostics/docmgrrules/frontmatter_rules.go
+      Note: Frontmatter rules
+    - Path: pkg/diagnostics/docmgrrules/listing_rule.go
+      Note: Listing skip rule
     - Path: pkg/diagnostics/docmgrrules/related_files_rule.go
       Note: Related files rule
     - Path: pkg/diagnostics/docmgrrules/related_files_rule_test.go
@@ -26,16 +46,23 @@ RelatedFiles:
       Note: Vocabulary rule
     - Path: pkg/diagnostics/docmgrrules/vocabulary_rule_test.go
       Note: Rule test
+    - Path: pkg/diagnostics/docmgrrules/workspace_rule.go
+      Note: Workspace/staleness rules
     - Path: pkg/diagnostics/render/render.go
       Note: Text/JSON renderers for diagnostics
     - Path: pkg/diagnostics/rules/rules.go
       Note: Rule registry and scoring
     - Path: test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh
       Note: Diagnostics smoke exercising docmgr binary
+    - Path: ttmp/2025/12/01/DOCMGR-ERROR-TAXONOMY-diagnostics-taxonomy-unification/working-note/01-diagnostics-integration-diary.md
+      Note: Work log
 ExternalSources: []
 Summary: Design a generic diagnostics interface (ContextPayload-based) and map docmgr validation/error surfaces to it for consistent rule-driven output.
 LastUpdated: 2025-12-01T11:56:30-05:00
 ---
+
+
+
 
 
 

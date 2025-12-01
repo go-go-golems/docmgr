@@ -9,5 +9,9 @@ func DefaultRegistry() *rules.Registry {
 	reg := rules.NewRegistry()
 	reg.Register(&VocabularySuggestionRule{})
 	reg.Register(&RelatedFileMissingRule{})
+	reg.Register(&FrontmatterSyntaxRule{})
+	reg.Register(&FrontmatterSchemaRule{})
+	reg.Register(&ListingSkipRule{})
+	reg.Register(&WorkspaceRule{})
 	return reg
 }

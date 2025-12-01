@@ -12,6 +12,8 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -185,7 +187,8 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 
 		doc, err := readDocumentFrontmatter(path)
 		if err != nil {
-			return nil // Skip files with invalid frontmatter
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewListingSkipTaxonomy("list_docs", path, err.Error(), err))
+			return nil
 		}
 
 		// Apply filters

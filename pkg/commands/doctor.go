@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -196,16 +197,22 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// Load vocabulary for validation (best-effort)
 	vocab, _ := LoadVocabulary()
 	topicSet := map[string]struct{}{}
+	topicList := make([]string, 0, len(vocab.Topics))
 	for _, it := range vocab.Topics {
 		topicSet[it.Slug] = struct{}{}
+		topicList = append(topicList, it.Slug)
 	}
 	docTypeSet := map[string]struct{}{}
+	docTypeList := make([]string, 0, len(vocab.DocTypes))
 	for _, it := range vocab.DocTypes {
 		docTypeSet[it.Slug] = struct{}{}
+		docTypeList = append(docTypeList, it.Slug)
 	}
 	intentSet := map[string]struct{}{}
+	intentList := make([]string, 0, len(vocab.Intent))
 	for _, it := range vocab.Intent {
 		intentSet[it.Slug] = struct{}{}
+		intentList = append(intentList, it.Slug)
 	}
 	statusSet := map[string]struct{}{}
 	statusList := make([]string, 0, len(vocab.Status))
@@ -365,6 +372,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (unknown_topics) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderVocabularyUnknown(ctx, indexPath, "Topics", strings.Join(unknownTopics, ","), topicList)
 		}
 
 		// Unknown docType
@@ -382,6 +390,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_doc_type) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderVocabularyUnknown(ctx, indexPath, "DocType", doc.DocType, docTypeList)
 			}
 		}
 
@@ -400,6 +409,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderVocabularyUnknown(ctx, indexPath, "Intent", doc.Intent, intentList)
 			}
 		}
 
@@ -418,6 +428,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_status) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderVocabularyUnknown(ctx, indexPath, "Status", doc.Status, statusList)
 			}
 		}
 
@@ -490,6 +501,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (missing_related_file) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderRelatedFileMissing(ctx, indexPath, rf.Path, rf.Note)
 			}
 		}
 

@@ -1,11 +1,12 @@
 package documents
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/adrg/frontmatter"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +23,8 @@ func ReadDocumentWithFrontmatter(path string) (*models.Document, string, error) 
 	var doc models.Document
 	body, err := frontmatter.Parse(f, &doc)
 	if err != nil {
-		return nil, "", fmt.Errorf("parse frontmatter in %s: %w", path, err)
+		tax := docmgrctx.NewFrontmatterParseTaxonomy(path, 0, 0, "", err.Error(), err)
+		return nil, "", core.WrapWithCause(err, tax)
 	}
 
 	return &doc, string(body), nil

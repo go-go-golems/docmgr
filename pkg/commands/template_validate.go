@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -181,7 +183,8 @@ func validateTemplate(templatePath string, funcMap template.FuncMap, verbose boo
 	// Parse template (this will catch syntax errors)
 	_, err = tmpl.Parse(string(content))
 	if err != nil {
-		return fmt.Errorf("parse error: %w", err)
+		tax := docmgrctx.NewTemplateParseTaxonomy(templatePath, err.Error(), err)
+		return core.WrapWithCause(err, tax)
 	}
 
 	return nil

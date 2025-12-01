@@ -18,3 +18,8 @@ Created ticket for YAML frontmatter parsing improvements including enhanced erro
 
 Auto-closed: ticket was active but not created today
 
+
+## 2025-12-01
+
+Added position-aware frontmatter parsing with line/snippet diagnostics; introduced 'docmgr validate frontmatter' subcommand under 'validate'; added parser unit test and a frontmatter validation smoke script.
+

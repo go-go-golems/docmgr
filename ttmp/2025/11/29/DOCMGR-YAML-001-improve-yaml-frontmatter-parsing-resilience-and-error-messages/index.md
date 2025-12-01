@@ -1,7 +1,7 @@
 ---
 Title: Improve YAML frontmatter parsing resilience and error messages
 Ticket: DOCMGR-YAML-001
-Status: complete
+Status: active
 Topics:
     - yaml
     - ux

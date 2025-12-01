@@ -126,7 +126,14 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 func (c *CreateTicketCommand) createTicketWorkspace(settings *CreateTicketSettings) (*CreateTicketResult, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	slug := utils.Slugify(settings.Title)
+	// Strip ticket identifier from title before slugifying to avoid duplication
+	titleForSlug := utils.StripTicketFromTitle(settings.Title, settings.Ticket)
+	var slug string
+	if titleForSlug == "" || titleForSlug == settings.Title {
+		slug = utils.Slugify(settings.Ticket)
+	} else {
+		slug = utils.Slugify(titleForSlug)
+	}
 	now := time.Now()
 	ticketPath, err := renderTicketPath(settings.Root, settings.PathTemplate, settings.Ticket, slug, settings.Title, now)
 	if err != nil {

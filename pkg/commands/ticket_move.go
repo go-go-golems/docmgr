@@ -127,7 +127,13 @@ func (c *TicketMoveCommand) applyMove(settings *TicketMoveSettings) (*TicketMove
 	title := settings.Ticket
 	if srcDoc != nil && strings.TrimSpace(srcDoc.Title) != "" {
 		title = strings.TrimSpace(srcDoc.Title)
-		slug = utils.Slugify(title)
+		// Strip ticket identifier from title before slugifying to avoid duplication
+		titleForSlug := utils.StripTicketFromTitle(title, settings.Ticket)
+		if titleForSlug == "" {
+			slug = utils.Slugify(settings.Ticket)
+		} else {
+			slug = utils.Slugify(titleForSlug)
+		}
 	}
 
 	// Use current time for new path template rendering.

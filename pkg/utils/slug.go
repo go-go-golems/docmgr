@@ -35,3 +35,27 @@ func Slugify(input string) string {
 	}
 	return out
 }
+
+// StripTicketFromTitle removes common ticket identifier patterns from the beginning of a title
+// before slugifying. This prevents duplicate ticket identifiers in directory names.
+// Handles patterns like "TICKET:", "TICKET -", "TICKET ".
+func StripTicketFromTitle(title, ticket string) string {
+	if ticket == "" {
+		return title
+	}
+	title = strings.TrimSpace(title)
+	patterns := []string{
+		ticket + ":",
+		ticket + " -",
+		ticket + " ",
+	}
+	for _, pattern := range patterns {
+		if strings.HasPrefix(title, pattern) {
+			cleaned := strings.TrimSpace(strings.TrimPrefix(title, pattern))
+			if cleaned != "" {
+				return cleaned
+			}
+		}
+	}
+	return title
+}

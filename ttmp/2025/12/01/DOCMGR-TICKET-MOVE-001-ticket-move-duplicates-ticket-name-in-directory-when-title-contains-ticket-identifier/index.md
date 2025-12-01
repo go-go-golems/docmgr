@@ -9,11 +9,14 @@ Topics:
 DocType: index
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: pkg/utils/slug.go
+      Note: Added StripTicketFromTitle helper function to prevent ticket name duplication
 ExternalSources: []
 Summary: When ticket title contains the ticket identifier, ticket move command creates directory names with duplicate ticket identifiers (e.g., TEST-9999-test-9999-...)
 LastUpdated: 2025-12-01T17:59:16.503048347-05:00
 ---
+
 
 
 # Ticket move duplicates ticket name in directory when title contains ticket identifier

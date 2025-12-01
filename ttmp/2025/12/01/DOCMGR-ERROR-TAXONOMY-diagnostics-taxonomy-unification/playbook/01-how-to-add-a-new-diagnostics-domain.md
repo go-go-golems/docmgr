@@ -30,7 +30,7 @@ RelatedFiles:
       Note: Smoke exercises new domains
 ExternalSources: []
 Summary: Playbook for adding a new diagnostics domain (taxonomy, rules, wiring, tests) in docmgr.
-LastUpdated: 2025-12-01T13:32:04-05:00
+LastUpdated: 2025-12-01T17:15:00-05:00
 ---
 
 
@@ -77,6 +77,7 @@ Step-by-step recipe to add a new diagnostics domain (stage/symptom/context, rule
 
 5) **Adapter reuse**
    - Commands should not duplicate rendering; use `pkg/diagnostics/docmgr/adapter.go`.
+   - For CI/automation, attach a renderer with a collector (`ctx = docmgr.ContextWithRenderer(ctx, docmgr.NewRenderer(docmgr.WithCollector()))`) or pass `--diagnostics-json <path|->` to `docmgr doctor` to emit rule results as JSON.
 
 6) **Tests**
    - Add/extend rule tests under `pkg/diagnostics/docmgrrules`.

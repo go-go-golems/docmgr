@@ -54,3 +54,23 @@ Added constructors helper for taxonomies; wired missing_index/stale to taxonomy;
 
 Updated diagnostics playbook to reference constructors helper usage.
 
+
+## 2025-12-01
+
+Expanded diagnostics handover doc with context, code map, open work, and pseudocode per style guide.
+
+
+## 2025-12-01
+
+Expanded diagnostics handover doc with detailed context, steps, and file pointers per style guide.
+
+
+## 2025-12-01
+
+Wired doctor to emit frontmatter schema taxonomies (required fields, missing status/topics) and render parse errors; go test ./pkg/commands ./pkg/diagnostics/...
+
+
+## 2025-12-01
+
+Added doctor --diagnostics-json flag + renderer collector, updated diagnostics smoke to assert JSON output, and added adapter unit test.
+

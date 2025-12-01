@@ -12,8 +12,10 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
+	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -29,13 +31,14 @@ type DoctorCommand struct {
 
 // DoctorSettings holds the parameters for the doctor command
 type DoctorSettings struct {
-	Root           string   `glazed.parameter:"root"`
-	Ticket         string   `glazed.parameter:"ticket"`
-	All            bool     `glazed.parameter:"all"`
-	IgnoreDirs     []string `glazed.parameter:"ignore-dir"`
-	IgnoreGlobs    []string `glazed.parameter:"ignore-glob"`
-	StaleAfterDays int      `glazed.parameter:"stale-after"`
-	FailOn         string   `glazed.parameter:"fail-on"`
+	Root            string   `glazed.parameter:"root"`
+	Ticket          string   `glazed.parameter:"ticket"`
+	All             bool     `glazed.parameter:"all"`
+	IgnoreDirs      []string `glazed.parameter:"ignore-dir"`
+	IgnoreGlobs     []string `glazed.parameter:"ignore-glob"`
+	StaleAfterDays  int      `glazed.parameter:"stale-after"`
+	FailOn          string   `glazed.parameter:"fail-on"`
+	DiagnosticsJSON string   `glazed.parameter:"diagnostics-json"`
 	// Schema printing flags (human mode only)
 	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string `glazed.parameter:"schema-format"`
@@ -65,6 +68,7 @@ Common findings (doctor message ⇒ likely cause ⇒ how to fix):
 
 Tips:
   • Use '--fail-on warning' (or 'error') to make CI fail when issues are detected.
+  • '--diagnostics-json path' captures rule results as JSON (use '-' for stdout) for CI/automation.
   • '--ignore-glob' is handy for suppressing known noisy paths; the command also reads patterns from
     both repository and docs-root .docmgrignore files.
 
@@ -127,6 +131,12 @@ Example:
 					parameters.WithHelp("Fail with non-zero exit on severity: none|warning|error (default none)"),
 					parameters.WithDefault("none"),
 				),
+				parameters.NewParameterDefinition(
+					"diagnostics-json",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Write diagnostics rule output to JSON (file path or '-' for stdout)"),
+					parameters.WithDefault(""),
+				),
 			),
 		),
 	}, nil
@@ -144,6 +154,13 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// Optional diagnostics collector for JSON output
+	var diagRenderer *docmgr.Renderer
+	if settings.DiagnosticsJSON != "" {
+		diagRenderer = docmgr.NewRenderer(docmgr.WithCollector())
+		ctx = docmgr.ContextWithRenderer(ctx, diagRenderer)
+	}
 
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
@@ -279,6 +296,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", filepath.Base(ticketPath), err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
+			renderFrontmatterParseTaxonomy(ctx, ws.FrontmatterErr, indexPath)
 			continue
 		}
 
@@ -343,15 +361,28 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
+			for _, field := range missingRequiredFields(doc) {
+				detail := fmt.Sprintf("%s is required", field)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(indexPath, field, detail, core.SeverityError))
+			}
 		}
 
 		// Additional validation: Status and Topics (not in Validate() but checked by doctor)
-		issues := []string{}
+		optionalIssues := []struct {
+			field  string
+			detail string
+		}{}
 		if doc.Status == "" {
-			issues = append(issues, "missing Status")
+			optionalIssues = append(optionalIssues, struct {
+				field  string
+				detail string
+			}{field: "Status", detail: "missing Status"})
 		}
 		if len(doc.Topics) == 0 {
-			issues = append(issues, "missing Topics")
+			optionalIssues = append(optionalIssues, struct {
+				field  string
+				detail string
+			}{field: "Topics", detail: "missing Topics"})
 		}
 
 		// Validate vocabulary: Topics, DocType, Intent
@@ -508,20 +539,21 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			}
 		}
 
-		if len(issues) > 0 {
+		if len(optionalIssues) > 0 {
 			hasIssues = true
-			for _, issue := range issues {
+			for _, issue := range optionalIssues {
 				row := types.NewRow(
 					types.MRP("ticket", doc.Ticket),
 					types.MRP("issue", "missing_field"),
 					types.MRP("severity", "warning"),
-					types.MRP("message", issue),
+					types.MRP("message", issue.detail),
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
 					return fmt.Errorf("failed to emit doctor row (missing_field) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(indexPath, issue.field, issue.detail, core.SeverityWarning))
 			}
 		}
 
@@ -566,6 +598,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 							return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", path, err)
 						}
 						highestSeverity = maxInt(highestSeverity, 2)
+						renderFrontmatterParseTaxonomy(ctx, err, path)
 					}
 				}
 
@@ -605,6 +638,11 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	// Enforce fail-on behavior
+	if diagRenderer != nil && settings.DiagnosticsJSON != "" {
+		if err := writeDiagnosticsJSON(diagRenderer, settings.DiagnosticsJSON); err != nil {
+			return err
+		}
+	}
 	threshold := severityThreshold(settings.FailOn)
 	if threshold >= 0 && highestSeverity >= threshold && threshold > 0 {
 		return fmt.Errorf("doctor failed: severity >= %s", settings.FailOn)
@@ -696,6 +734,60 @@ func loadDocmgrIgnore(repoRoot string) ([]string, error) {
 		patterns = append(patterns, l)
 	}
 	return patterns, nil
+}
+
+func missingRequiredFields(doc *models.Document) []string {
+	fields := []string{}
+	if strings.TrimSpace(doc.Title) == "" {
+		fields = append(fields, "Title")
+	}
+	if strings.TrimSpace(doc.Ticket) == "" {
+		fields = append(fields, "Ticket")
+	}
+	if strings.TrimSpace(doc.DocType) == "" {
+		fields = append(fields, "DocType")
+	}
+	return fields
+}
+
+func renderFrontmatterParseTaxonomy(ctx context.Context, err error, path string) {
+	if err == nil {
+		return
+	}
+	if tax, ok := core.AsTaxonomy(err); ok && tax != nil {
+		docmgr.RenderTaxonomy(ctx, tax)
+		return
+	}
+	docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterParse(path, 0, 0, "", err.Error(), err))
+}
+
+func writeDiagnosticsJSON(renderer *docmgr.Renderer, destination string) error {
+	if renderer == nil || destination == "" {
+		return nil
+	}
+	data, err := renderer.JSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal diagnostics JSON: %w", err)
+	}
+	if len(data) == 0 {
+		data = []byte("[]")
+	}
+	if data[len(data)-1] != '\n' {
+		data = append(data, '\n')
+	}
+	if destination == "-" {
+		if _, err := os.Stdout.Write(data); err != nil {
+			return fmt.Errorf("failed to write diagnostics JSON to stdout: %w", err)
+		}
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		return fmt.Errorf("failed to create diagnostics JSON directory: %w", err)
+	}
+	if err := os.WriteFile(destination, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write diagnostics JSON: %w", err)
+	}
+	return nil
 }
 
 func maxInt(a, b int) int {

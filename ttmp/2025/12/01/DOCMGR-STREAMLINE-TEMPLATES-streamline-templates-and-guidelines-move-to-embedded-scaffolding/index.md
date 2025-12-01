@@ -9,11 +9,32 @@ Topics:
 DocType: index
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: examples/verb-templates
+      Note: Moved verb templates from ttmp/templates/ to codebase examples
+    - Path: internal/templates/embedded.go
+      Note: New embedded FS loading for templates/guidelines (scaffolding only)
+    - Path: internal/templates/templates.go
+      Note: Removed legacy string map fallback from runtime resolution
+    - Path: pkg/commands/add.go
+      Note: Updated to use filesystem-only template loading
+    - Path: pkg/commands/guidelines_cmd.go
+      Note: Updated to use filesystem-only guideline loading
+    - Path: pkg/commands/scaffold.go
+      Note: Updated to use embedded templates/guidelines for init scaffolding
+    - Path: pkg/doc/templates-and-guidelines.md
+      Note: Comprehensive rewrite following glazed style guide
+    - Path: pkg/doc/verb-templates-and-schema.md
+      Note: New comprehensive guide for verb templates and schema introspection
+    - Path: ttmp/2025/12/01/DOCMGR-STREAMLINE-TEMPLATES-streamline-templates-and-guidelines-move-to-embedded-scaffolding/analysis/01-template-analysis-useful-vs-slop.md
+      Note: Comprehensive analysis identifying useful vs slop templates
 ExternalSources: []
-Summary: ""
-LastUpdated: 2025-12-01T14:29:53.602687985-05:00
+Summary: 'Streamlined templates and guidelines system: moved to embedded FS for scaffolding only, removed legacy fallbacks, moved verb templates to examples/, and created comprehensive documentation following glazed style guide'
+LastUpdated: 2025-12-01T15:01:32.400651902-05:00
 ---
+
+
+
 
 # Streamline templates and guidelines - move to embedded scaffolding
 

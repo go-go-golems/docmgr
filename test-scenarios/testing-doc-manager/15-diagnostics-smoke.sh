@@ -10,6 +10,7 @@ set -euo pipefail
 ROOT_DIR="${1:-/tmp/docmgr-scenario}"
 REPO="${ROOT_DIR}/acme-chat-app"
 DOCMGR="${DOCMGR_PATH:-docmgr}"
+DIAG_JSON="${ROOT_DIR}/diagnostics-output.json"
 
 if [[ ! -d "${REPO}" ]]; then
   echo "Repository not found at ${REPO}. Run 01-create-mock-codebase.sh and 02-init-ticket.sh first." >&2
@@ -63,7 +64,14 @@ EOF
 ${DOCMGR} doctor \
   --ignore-dir _templates --ignore-dir _guidelines \
   --stale-after 30 \
-  --fail-on none
+  --fail-on none \
+  --diagnostics-json "${DIAG_JSON}"
+
+if [[ ! -s "${DIAG_JSON}" ]]; then
+  echo "Diagnostics JSON not generated at ${DIAG_JSON}" >&2
+  exit 1
+fi
+echo "Diagnostics JSON written to ${DIAG_JSON}"
 
 # Run list docs to surface listing skip taxonomy (broken frontmatter)
 ${DOCMGR} list docs --ticket MEN-4242 || true

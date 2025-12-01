@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
+	"github.com/go-go-golems/docmgr/pkg/frontmatter"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"gopkg.in/yaml.v3"
 )
@@ -30,6 +31,9 @@ func ReadDocumentWithFrontmatter(path string) (*models.Document, string, error) 
 		tax := docmgrctx.NewFrontmatterParseTaxonomy(path, 0, 0, "", err.Error(), err)
 		return nil, "", core.WrapWithCause(err, tax)
 	}
+
+	// Auto-quote risky scalars before decode to reduce YAML failures.
+	fm = frontmatter.PreprocessYAML(fm)
 
 	lines := strings.Split(string(raw), "\n")
 
@@ -77,12 +81,8 @@ func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string
 		_ = os.Remove(tmp.Name())
 	}()
 
-	if _, err := tmp.WriteString("---\n"); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-
-	enc := yaml.NewEncoder(tmp)
+	var fmBuf bytes.Buffer
+	enc := yaml.NewEncoder(&fmBuf)
 	if err := enc.Encode(doc); err != nil {
 		_ = tmp.Close()
 		return err
@@ -91,7 +91,16 @@ func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string
 		_ = tmp.Close()
 		return err
 	}
+	fmBytes := frontmatter.PreprocessYAML(fmBuf.Bytes())
 
+	if _, err := tmp.WriteString("---\n"); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if _, err := tmp.Write(fmBytes); err != nil {
+		_ = tmp.Close()
+		return err
+	}
 	if _, err := tmp.WriteString("---\n\n"); err != nil {
 		_ = tmp.Close()
 		return err
@@ -141,6 +150,11 @@ func extractFrontmatter(raw []byte) ([]byte, []byte, int, error) {
 	// YAML parser line numbers start at 1 for the frontmatter content (first line after initial ---).
 	fmStartLine := start + 2
 	return bytes.Join(fmLines, []byte("\n")), bodyLines, fmStartLine, nil
+}
+
+// SplitFrontmatter exposes frontmatter/body split to other internal consumers (e.g., fixers).
+func SplitFrontmatter(raw []byte) ([]byte, []byte, int, error) {
+	return extractFrontmatter(raw)
 }
 
 // extractLineCol best-effort extracts line/col and maps to absolute file line using the start line offset.

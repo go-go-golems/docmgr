@@ -19,6 +19,7 @@ type FrontmatterParseContext struct {
 	Column  int
 	Snippet string
 	Problem string
+	Fixes   []string
 }
 
 func (c *FrontmatterParseContext) Stage() core.StageCode { return StageFrontmatterParse }

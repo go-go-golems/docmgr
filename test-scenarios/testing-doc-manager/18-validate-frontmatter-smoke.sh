@@ -24,26 +24,40 @@ if [[ -z "${INDEX_MD}" ]]; then
 fi
 
 BROKEN_DOC="ttmp/2025/12/01/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/reference/validate-broken.md"
-mkdir -p "$(dirname "${BROKEN_DOC}")"
-cat > "${BROKEN_DOC}" <<'EOF'
+BROKEN_DOC_ABS="${REPO}/${BROKEN_DOC}"
+mkdir -p "$(dirname "${BROKEN_DOC_ABS}")"
+cat > "${BROKEN_DOC_ABS}" <<'EOF'
 ---
 Title: Broken validation doc
 Ticket: MEN-4242
 DocType: reference
-Summary: unquoted: colon causes parse error
----
-Body is irrelevant for this smoke test.
+Summary: broken frontmatter delimiters
+----
+Body is irrelevant for this smoke test (no closing ---).
 EOF
 
 echo "==> Expecting validation failure (YAML syntax) ..."
-if ${DOCMGR} validate frontmatter --doc "${BROKEN_DOC}"; then
+if ${DOCMGR} validate frontmatter --doc "${BROKEN_DOC_ABS}"; then
   echo "Expected validate frontmatter to fail on bad YAML, but it succeeded" >&2
   exit 1
 else
   echo "Validation failed as expected for broken frontmatter"
 fi
 
-cat > "${BROKEN_DOC}" <<'EOF'
+echo "==> Suggest fixes (should show quoting guidance) ..."
+if ! ${DOCMGR} validate frontmatter --doc "${BROKEN_DOC_ABS}" --suggest-fixes; then
+  echo "Suggest-fixes returned non-zero (expected due to parse error), continuing" >&2
+fi
+
+echo "==> Auto-fix (creates .bak and attempts repair) ..."
+${DOCMGR} validate frontmatter --doc "${BROKEN_DOC_ABS}" --auto-fix || true
+
+if [[ ! -f "${BROKEN_DOC_ABS}.bak" ]]; then
+  echo "Expected backup file ${BROKEN_DOC_ABS}.bak" >&2
+  exit 1
+fi
+
+cat > "${BROKEN_DOC_ABS}" <<'EOF'
 ---
 Title: Fixed validation doc
 Ticket: MEN-4242
@@ -54,5 +68,5 @@ Body is irrelevant for this smoke test.
 EOF
 
 echo "==> Expecting validation success after fix ..."
-${DOCMGR} validate frontmatter --doc "${BROKEN_DOC}"
+${DOCMGR} validate frontmatter --doc "${BROKEN_DOC_ABS}"
 echo "Frontmatter validation smoke completed."

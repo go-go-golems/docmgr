@@ -23,3 +23,13 @@ Auto-closed: ticket was active but not created today
 
 Added position-aware frontmatter parsing with line/snippet diagnostics; introduced 'docmgr validate frontmatter' subcommand under 'validate'; added parser unit test and a frontmatter validation smoke script.
 
+
+## 2025-12-01
+
+Added YAML preprocessing/quoting helpers and wired them into read/write paths; frontmatter writer now enforces quoting and has unit coverage; added frontmatter validation smoke script.
+
+
+## 2025-12-01
+
+Validation now emits taxonomies with fix suggestions; added --suggest-fixes/--auto-fix, delimiter/peel scrubbing, and backups; extended frontmatter smoke to cover suggest/auto-fix and reran all scenarios (00-03, 15, 18).
+

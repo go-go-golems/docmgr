@@ -34,8 +34,14 @@ func (r *FrontmatterSyntaxRule) Render(ctx context.Context, t *core.Taxonomy) (*
 		b.WriteString("\nSnippet:\n")
 		b.WriteString(payload.Snippet + "\n")
 	}
+	if len(payload.Fixes) > 0 {
+		b.WriteString("\nSuggested fixes:\n")
+		for i, fix := range payload.Fixes {
+			b.WriteString(fmt.Sprintf("  %d. %s\n", i+1, fix))
+		}
+	}
 	actions := []rules.Action{
-		{Label: "Validate frontmatter", Command: "docmgr", Args: []string{"validate-frontmatter", payload.File}},
+		{Label: "Validate frontmatter", Command: "docmgr", Args: []string{"validate", "frontmatter", "--doc", payload.File}},
 	}
 	return &rules.RuleResult{
 		Headline: "YAML/frontmatter syntax error",

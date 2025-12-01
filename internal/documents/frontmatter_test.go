@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
+	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
 func TestReadDocumentWithFrontmatter_Valid(t *testing.T) {
@@ -44,7 +46,7 @@ func TestReadDocumentWithFrontmatter_InvalidReportsLine(t *testing.T) {
 Title: Broken
 Ticket: TEST-2
 DocType: design-doc
-Summary: unquoted: colon
+Topics: [chat
 ---
 Body
 `
@@ -70,7 +72,34 @@ Body
 	if ctx.Problem == "" {
 		t.Fatalf("expected problem message")
 	}
-	if ctx.Snippet == "" || !strings.Contains(ctx.Snippet, "Summary: unquoted: colon") {
-		t.Fatalf("expected snippet with summary line, got: %q", ctx.Snippet)
+	if ctx.Snippet == "" || !strings.Contains(ctx.Snippet, "Topics: [chat") {
+		t.Fatalf("expected snippet with topics line, got: %q", ctx.Snippet)
+	}
+}
+
+func TestWriteDocumentWithFrontmatter_QuotesUnsafeScalars(t *testing.T) {
+	tmp := t.TempDir()
+	path := filepath.Join(tmp, "out.md")
+	doc := &models.Document{
+		Title:       "Hello",
+		Ticket:      "TEST-3",
+		DocType:     "design-doc",
+		Summary:     "colon: here",
+		LastUpdated: time.Now(),
+	}
+	if err := WriteDocumentWithFrontmatter(path, doc, "body", true); err != nil {
+		t.Fatalf("write failed: %v", err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read back: %v", err)
+	}
+	text := string(b)
+	if !strings.Contains(text, "Summary: 'colon: here'") {
+		t.Fatalf("expected quoted summary, got:\n%s", text)
+	}
+	// Ensure it remains parseable.
+	if _, _, err := ReadDocumentWithFrontmatter(path); err != nil {
+		t.Fatalf("round-trip parse failed: %v", err)
 	}
 }

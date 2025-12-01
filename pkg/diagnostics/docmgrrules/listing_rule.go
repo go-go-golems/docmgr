@@ -23,7 +23,7 @@ func (r *ListingSkipRule) Render(ctx context.Context, t *core.Taxonomy) (*rules.
 	}
 	body := fmt.Sprintf("Command: %s\nFile: %s\nReason: %s\n", payload.Command, payload.File, payload.Reason)
 	actions := []rules.Action{
-		{Label: "Validate frontmatter", Command: "docmgr", Args: []string{"validate-frontmatter", payload.File}},
+		{Label: "Validate frontmatter", Command: "docmgr", Args: []string{"validate", "frontmatter", "--doc", payload.File}},
 	}
 	return &rules.RuleResult{
 		Headline: "Document skipped during listing",

@@ -16,6 +16,8 @@ RelatedFiles:
       Note: Design context
     - Path: pkg/commands/list_docs.go
       Note: Listing taxonomy wiring
+    - Path: pkg/diagnostics/docmgrctx/constructors.go
+      Note: Constructors helper
     - Path: pkg/diagnostics/docmgrctx/listing.go
       Note: Listing taxonomy
     - Path: pkg/diagnostics/docmgrctx/workspace.go
@@ -30,6 +32,7 @@ ExternalSources: []
 Summary: Playbook for adding a new diagnostics domain (taxonomy, rules, wiring, tests) in docmgr.
 LastUpdated: 2025-12-01T13:32:04-05:00
 ---
+
 
 
 

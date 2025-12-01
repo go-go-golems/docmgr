@@ -187,7 +187,7 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 
 		doc, err := readDocumentFrontmatter(path)
 		if err != nil {
-			docmgr.RenderTaxonomy(ctx, docmgrctx.NewListingSkipTaxonomy("list_docs", path, err.Error(), err))
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewListingSkip("list_docs", path, err.Error(), err))
 			return nil
 		}
 

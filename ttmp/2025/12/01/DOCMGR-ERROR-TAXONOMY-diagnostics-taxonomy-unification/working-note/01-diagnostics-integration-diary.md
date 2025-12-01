@@ -22,6 +22,8 @@ RelatedFiles:
       Note: Taxonomy wrapping
     - Path: pkg/diagnostics/docmgr/adapter.go
       Note: Adapter created
+    - Path: pkg/diagnostics/docmgrctx/constructors.go
+      Note: Constructors helper
     - Path: pkg/diagnostics/docmgrctx/frontmatter.go
       Note: Frontmatter taxonomy
     - Path: pkg/diagnostics/docmgrctx/listing.go
@@ -45,6 +47,7 @@ ExternalSources: []
 Summary: Daily log for diagnostics taxonomy integration.
 LastUpdated: 2025-12-01T13:06:20-05:00
 ---
+
 
 
 

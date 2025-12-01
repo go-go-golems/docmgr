@@ -261,7 +261,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			return fmt.Errorf("failed to emit doctor row (missing_index) for %s: %w", missing, err)
 		}
 		highestSeverity = maxInt(highestSeverity, 2)
-		docmgr.RenderTaxonomy(ctx, docmgrctx.NewMissingIndexTaxonomy(missing))
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceMissingIndex(missing))
 	}
 
 	for _, ws := range workspaces {
@@ -325,7 +325,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
-				docmgr.RenderTaxonomy(ctx, docmgrctx.NewStaleDocTaxonomy(indexPath, doc.LastUpdated, settings.StaleAfterDays))
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceStale(indexPath, doc.LastUpdated, settings.StaleAfterDays))
 			}
 		}
 
@@ -375,7 +375,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (unknown_topics) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
-			docmgr.RenderVocabularyUnknown(ctx, indexPath, "Topics", strings.Join(unknownTopics, ","), topicList)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Topics", strings.Join(unknownTopics, ","), topicList))
 		}
 
 		// Unknown docType
@@ -393,7 +393,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_doc_type) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
-				docmgr.RenderVocabularyUnknown(ctx, indexPath, "DocType", doc.DocType, docTypeList)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "DocType", doc.DocType, docTypeList))
 			}
 		}
 
@@ -412,7 +412,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
-				docmgr.RenderVocabularyUnknown(ctx, indexPath, "Intent", doc.Intent, intentList)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Intent", doc.Intent, intentList))
 			}
 		}
 
@@ -431,7 +431,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_status) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
-				docmgr.RenderVocabularyUnknown(ctx, indexPath, "Status", doc.Status, statusList)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Status", doc.Status, statusList))
 			}
 		}
 
@@ -504,7 +504,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (missing_related_file) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
-				docmgr.RenderRelatedFileMissing(ctx, indexPath, rf.Path, rf.Note)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewRelatedFileMissing(indexPath, rf.Path, rf.Note))
 			}
 		}
 

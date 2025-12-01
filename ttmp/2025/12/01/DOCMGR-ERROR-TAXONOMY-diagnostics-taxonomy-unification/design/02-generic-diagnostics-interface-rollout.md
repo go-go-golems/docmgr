@@ -20,6 +20,8 @@ RelatedFiles:
       Note: Taxonomy core types and wrapping
     - Path: pkg/diagnostics/docmgr/adapter.go
       Note: Shared diagnostics adapter
+    - Path: pkg/diagnostics/docmgrctx/constructors.go
+      Note: Constructors helper
     - Path: pkg/diagnostics/docmgrctx/frontmatter.go
       Note: Frontmatter taxonomy contexts
     - Path: pkg/diagnostics/docmgrctx/listing.go
@@ -62,6 +64,7 @@ ExternalSources: []
 Summary: Design a generic diagnostics interface (ContextPayload-based) and map docmgr validation/error surfaces to it for consistent rule-driven output.
 LastUpdated: 2025-12-01T11:56:30-05:00
 ---
+
 
 
 

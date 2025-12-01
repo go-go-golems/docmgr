@@ -183,7 +183,7 @@ func validateTemplate(templatePath string, funcMap template.FuncMap, verbose boo
 	// Parse template (this will catch syntax errors)
 	_, err = tmpl.Parse(string(content))
 	if err != nil {
-		tax := docmgrctx.NewTemplateParseTaxonomy(templatePath, err.Error(), err)
+		tax := docmgrctx.NewTemplateParse(templatePath, err.Error(), err)
 		return core.WrapWithCause(err, tax)
 	}
 

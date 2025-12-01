@@ -44,3 +44,8 @@ Wired listing and workspace taxonomies (missing_index, stale) in doctor and list
 
 Expanded diagnostics smoke to cover vocab/related/listing/workspace/frontmatter/template cases; fixed paths and reran successfully (expected template parse error).
 
+
+## 2025-12-01
+
+Added constructors helper for taxonomies; wired missing_index/stale to taxonomy; reran expanded diagnostics smoke; updated related files.
+

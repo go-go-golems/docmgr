@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
-	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrrules"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/render"
 )
@@ -27,14 +26,4 @@ func RenderTaxonomy(ctx context.Context, tax *core.Taxonomy) {
 	if strings.TrimSpace(out) != "" {
 		fmt.Fprintln(os.Stderr, out)
 	}
-}
-
-// RenderVocabularyUnknown builds and renders a vocabulary taxonomy.
-func RenderVocabularyUnknown(ctx context.Context, file, field, value string, known []string) {
-	RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknownTaxonomy(file, field, value, known))
-}
-
-// RenderRelatedFileMissing builds and renders a related-file taxonomy.
-func RenderRelatedFileMissing(ctx context.Context, docPath, filePath, note string) {
-	RenderTaxonomy(ctx, docmgrctx.NewRelatedFileMissingTaxonomy(docPath, filePath, note))
 }

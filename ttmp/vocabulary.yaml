@@ -36,6 +36,8 @@ docTypes:
       description: Operational playbook
     - slug: til
       description: Today I Learned entries
+    - slug: ticket-temporary-document
+      description: "Temporary document for ticket work (default intent: short-term)"
 intent:
     - slug: long-term
       description: Long-term documentation, only use for documents that are expected to be maintained for a long time and moved to the actual repository. This includes for example design documents and architecture notes, as well as reference documents and playbooks.

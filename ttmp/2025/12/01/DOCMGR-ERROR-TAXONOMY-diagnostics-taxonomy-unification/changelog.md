@@ -29,3 +29,18 @@ Added frontmatter/template taxonomies and rules; wrapped frontmatter parsing and
 
 Added listing/workspace taxonomies and rules; wired list_docs parse skips to taxonomy; cleaned imports and reran tests/smoke.
 
+
+## 2025-12-01
+
+Wired doctor staleness warnings to workspace taxonomy rendering; added listing/workspace taxonomies and rules earlier.
+
+
+## 2025-12-01
+
+Wired listing and workspace taxonomies (missing_index, stale) in doctor and list_docs; ensured meta_update/relate use taxonomy-wrapped errors via frontmatter parsing; added playbook guidance.
+
+
+## 2025-12-01
+
+Expanded diagnostics smoke to cover vocab/related/listing/workspace/frontmatter/template cases; fixed paths and reran successfully (expected template parse error).
+

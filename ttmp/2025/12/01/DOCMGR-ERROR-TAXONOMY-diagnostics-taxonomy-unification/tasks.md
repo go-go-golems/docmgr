@@ -20,11 +20,16 @@
 - [x] Implement docmgr rule set in `pkg/diagnostics/docmgrrules` (syntax pointer, schema missing/invalid, vocabulary suggestion, related file missing, template parse, listing skip, workspace structure, staleness) with scores/actions.
 - [ ] Extend outputs to include diagnostics JSON/CI and ensure `doctor --fail-on` semantics remain stable.
 - [ ] Add tests: unit/snapshot coverage for taxonomy wrapping, rules matching/rendering, renderers; update help/tutorial docs to describe diagnostics behavior.
-- [ ] Add listing/skip taxonomy contexts and rules, wire list_docs/search to emit taxonomy instead of silent skips.
-- [ ] Add workspace/staleness taxonomy and rule(s), wire discovery/doctor staleness checks.
+- [x] Add listing/skip taxonomy contexts and rules, wire list_docs/search to emit taxonomy instead of silent skips.
+- [x] Add workspace/staleness taxonomy and rule(s), wire discovery/doctor staleness checks.
 - [x] Create shared diagnostics adapter in pkg/diagnostics/docmgr and refactor doctor to use it
 - [x] Wire frontmatter parse errors to taxonomy via internal/documents/frontmatter
 - [ ] Wire frontmatter schema validation warnings to taxonomy
 - [x] Wire template parse errors to taxonomy
-- [ ] Add listing/skip taxonomy contexts and rules, wire list_docs/search to emit taxonomy instead of silent skips
-- [ ] Add workspace/staleness taxonomy and rule(s), wire discovery/doctor staleness checks
+- [x] Add listing/skip taxonomy contexts and rules, wire list_docs/search to emit taxonomy instead of silent skips
+- [x] Add workspace/staleness taxonomy and rule(s), wire discovery/doctor staleness checks
+- [x] Wire workspace missing_index/stale findings in doctor to emit workspace taxonomies
+- [x] Wire meta_update/relate/rename_ticket error paths to taxonomy
+- [x] Wire missing_index findings to workspace taxonomy in doctor
+- [x] Wire meta_update/relate/rename_ticket to wrap frontmatter parse errors with taxonomy
+- [ ] Add CLI adapter for CI/JSON diagnostics output (shared renderer)

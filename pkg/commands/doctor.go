@@ -13,6 +13,7 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -260,6 +261,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			return fmt.Errorf("failed to emit doctor row (missing_index) for %s: %w", missing, err)
 		}
 		highestSeverity = maxInt(highestSeverity, 2)
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewMissingIndexTaxonomy(missing))
 	}
 
 	for _, ws := range workspaces {
@@ -323,6 +325,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewStaleDocTaxonomy(indexPath, doc.LastUpdated, settings.StaleAfterDays))
 			}
 		}
 

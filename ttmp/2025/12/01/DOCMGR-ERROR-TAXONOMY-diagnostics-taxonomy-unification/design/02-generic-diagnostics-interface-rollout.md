@@ -53,13 +53,16 @@ RelatedFiles:
     - Path: pkg/diagnostics/rules/rules.go
       Note: Rule registry and scoring
     - Path: test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh
-      Note: Diagnostics smoke exercising docmgr binary
+      Note: |-
+        Diagnostics smoke exercising docmgr binary
+        Expanded smoke for vocab/related/listing/workspace/template
     - Path: ttmp/2025/12/01/DOCMGR-ERROR-TAXONOMY-diagnostics-taxonomy-unification/working-note/01-diagnostics-integration-diary.md
       Note: Work log
 ExternalSources: []
 Summary: Design a generic diagnostics interface (ContextPayload-based) and map docmgr validation/error surfaces to it for consistent rule-driven output.
 LastUpdated: 2025-12-01T11:56:30-05:00
 ---
+
 
 
 

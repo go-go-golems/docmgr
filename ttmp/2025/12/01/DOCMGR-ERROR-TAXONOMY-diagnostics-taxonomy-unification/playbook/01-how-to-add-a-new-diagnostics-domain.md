@@ -24,10 +24,13 @@ RelatedFiles:
       Note: Listing rule
     - Path: pkg/diagnostics/docmgrrules/workspace_rule.go
       Note: Workspace rule
+    - Path: test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh
+      Note: Smoke exercises new domains
 ExternalSources: []
 Summary: Playbook for adding a new diagnostics domain (taxonomy, rules, wiring, tests) in docmgr.
 LastUpdated: 2025-12-01T13:32:04-05:00
 ---
+
 
 
 
@@ -75,6 +78,7 @@ Step-by-step recipe to add a new diagnostics domain (stage/symptom/context, rule
 6) **Tests**
    - Add/extend rule tests under `pkg/diagnostics/docmgrrules`.
    - Run: `go test ./pkg/diagnostics/docmgrrules ./pkg/commands`.
+   - If your domain affects list/search or template parsing, add targeted tests or update scenario scripts.
 
 7) **Scenario (optional)**
    - If helpful, add a script under `docmgr/test-scenarios/testing-doc-manager/` that triggers the new domain and shows doctor output.

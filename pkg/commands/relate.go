@@ -359,7 +359,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// Read the target document
 	doc, content, err := documents.ReadDocumentWithFrontmatter(targetDocPath)
 	if err != nil {
-		return fmt.Errorf("failed to read document frontmatter: %w", err)
+		return err
 	}
 
 	// Build maps for add/remove with notes retained

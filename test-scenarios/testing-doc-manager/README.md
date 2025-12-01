@@ -22,6 +22,8 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 - `07-status.sh` — show workspace summary and staleness
 - `13-template-schema-output.sh` — verify --print-template-schema outputs only schema (no human output)
 - `14-path-normalization.sh` — validate path normalization + fuzzy search against doc-relative, ttmp-relative, and absolute paths
+- `15-diagnostics-smoke.sh` — diagnostics taxonomy smoke (vocab, related, listing, workspace, frontmatter, template)
+- `16-doc-move.sh` — move a document between tickets and rewrite its Ticket field
 - `run-all.sh` — convenience script to run all steps in order
 - `SCENARIO.md` — detailed explanation of the scenario and expected outputs
 

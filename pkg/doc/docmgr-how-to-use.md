@@ -248,6 +248,22 @@ docmgr doc add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Li
 docmgr doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
 ```
 
+### Move a doc between tickets
+
+If a document was created under the wrong ticket, move it and fix its frontmatter in one command:
+
+```bash
+# Keep same relative path under destination; overwrite if it already exists
+docmgr doc move --doc ttmp/2025/12/01/MEN-4242-.../reference/01-chat-websocket-lifecycle.md \
+  --dest-ticket MEN-5678 \
+  --overwrite
+
+# Place it in a different subdirectory within the destination
+docmgr doc move --doc path/to/doc.md --dest-ticket MEN-5678 --dest-dir reference/migrations
+```
+
+`doc move` rewrites the Ticket field, writes the destination copy, and deletes the source after a successful move.
+
 **What happens:**
 - Each doc is created from a template in `_templates/`
 - Frontmatter fields (Title, Ticket, Topics) are auto-filled

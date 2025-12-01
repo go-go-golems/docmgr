@@ -207,6 +207,20 @@ Notes:
 - If a doc type has a template at `ttmp/_templates/<docType>.md`, its body is rendered automatically.
 - Unknown/other doc types are accepted and stored under a subdirectory named after the doc-type (frontmatter `DocType` is still set for filtering).
 
+### 4.4.1 Move Documents Between Tickets
+
+If a document was created under the wrong ticket, move it and rewrite its Ticket field:
+```bash
+docmgr doc move --doc ttmp/2025/12/01/MEN-4242-.../reference/01-chat-websocket-lifecycle.md \
+  --dest-ticket MEN-5678 \
+  --overwrite
+
+# Optional: change the subdirectory under the destination ticket
+docmgr doc move --doc path/to/doc.md --dest-ticket MEN-5678 --dest-dir reference/migrations
+```
+
+The command writes the destination copy with an updated Ticket frontmatter value and deletes the source after a successful move. Use `--overwrite` if a file with the same name already exists at the destination.
+
 ### 4.5 Guidelines
 
 Guidelines provide structure and “what good looks like” for each doc type. They help new contributors produce consistent, reviewable docs.

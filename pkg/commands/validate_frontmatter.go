@@ -160,19 +160,21 @@ func validateFrontmatterFile(ctx context.Context, path string, suggestFixes bool
 		if suggestFixes || autoFix {
 			applied = tryAttachFixes(tax, raw, path, autoFix)
 			if applied && autoFix {
-				// Re-parse after auto-fix.
+				// Re-parse after auto-fix; if it fails, emit the new taxonomy from that error.
 				fixedDoc, _, parseErr := documents.ReadDocumentWithFrontmatter(path)
 				if parseErr == nil {
-					docmgr.RenderTaxonomy(ctx, tax)
+					fmt.Fprintf(os.Stdout, "Frontmatter auto-fixed: %s\n", path)
 					return fixedDoc, nil
 				}
-				err = parseErr
+				if newTax, ok := core.AsTaxonomy(parseErr); ok && newTax != nil {
+					docmgr.RenderTaxonomy(ctx, newTax)
+				} else {
+					docmgr.RenderTaxonomy(ctx, tax)
+				}
+				return nil, fmt.Errorf("auto-fix applied but re-parse failed: %w", parseErr)
 			}
 		}
 		docmgr.RenderTaxonomy(ctx, tax)
-		if applied && autoFix {
-			return nil, fmt.Errorf("auto-fix applied but re-parse failed: %w", err)
-		}
 		return nil, err
 	}
 

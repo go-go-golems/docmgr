@@ -33,3 +33,8 @@ Added YAML preprocessing/quoting helpers and wired them into read/write paths; f
 
 Validation now emits taxonomies with fix suggestions; added --suggest-fixes/--auto-fix, delimiter/peel scrubbing, and backups; extended frontmatter smoke to cover suggest/auto-fix and reran all scenarios (00-03, 15, 18).
 
+
+## 2025-12-01
+
+Auto-fix flow polished: suppress error taxonomy after successful fix and re-parse; if re-parse fails, render the new taxonomy. Reran validation smoke (18) with success.
+

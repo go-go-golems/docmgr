@@ -121,27 +121,10 @@ func (c *GuidelinesCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("must specify --doc-type or use --list to see available types")
 	}
 
-	// Try to load from file system first
-	guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
-	if _, err := os.Stat(guidelinePath); err == nil {
-		// File exists, read and output it
-		content, err := os.ReadFile(guidelinePath)
-		if err != nil {
-			return fmt.Errorf("failed to read guideline file: %w", err)
-		}
-
-		// Output as a single row with the content
-		row := types.NewRow(
-			types.MRP("doc_type", settings.DocType),
-			types.MRP("content", string(content)),
-		)
-		return gp.AddRow(ctx, row)
-	}
-
-	// Fall back to embedded guidelines
-	guideline, ok := GetGuideline(settings.DocType)
+	// Load guideline from filesystem only
+	guideline, ok := templates.LoadGuideline(settings.Root, settings.DocType)
 	if !ok {
-		return fmt.Errorf("unknown document type: %s (use --list to see available types)", settings.DocType)
+		return fmt.Errorf("no guideline found for document type: %s (use --list to see available types, or create one at %s/_guidelines/%s.md)", settings.DocType, settings.Root, settings.DocType)
 	}
 
 	row := types.NewRow(
@@ -190,32 +173,25 @@ func (c *GuidelinesCommand) Run(
 		return fmt.Errorf("must specify --doc-type or use --list to see available types")
 	}
 
-	// Try filesystem guideline first
-	guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
-	var guidelineText string
+	// Load guideline from filesystem only
+	guidelineText, ok := templates.LoadGuideline(settings.Root, settings.DocType)
+	if !ok {
+		return fmt.Errorf("no guideline found for document type: %s (use --list to see available types, or create one at %s/_guidelines/%s.md)", settings.DocType, settings.Root, settings.DocType)
+	}
+
+	// Determine source for display
 	var source string
 	var path string
-
+	guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
 	if _, err := os.Stat(guidelinePath); err == nil {
-		content, err := os.ReadFile(guidelinePath)
-		if err != nil {
-			return fmt.Errorf("failed to read guideline file: %w", err)
-		}
-		guidelineText = string(content)
 		source = "filesystem"
 		path = guidelinePath
-		fmt.Printf("%s\n", guidelineText)
 	} else {
-		// Fallback to embedded
-		guideline, ok := GetGuideline(settings.DocType)
-		if !ok {
-			return fmt.Errorf("unknown document type: %s (use --list to see available types)", settings.DocType)
-		}
-		guidelineText = guideline
 		source = "embedded"
 		path = ""
-		fmt.Printf("%s\n", guidelineText)
 	}
+
+	fmt.Printf("%s\n", guidelineText)
 
 	// Render postfix template if it exists
 	templateData := map[string]interface{}{

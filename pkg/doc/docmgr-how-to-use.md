@@ -111,7 +111,7 @@ These definitions show up throughout the tutorial. Skim them once so the later s
 - **Docs root** — The `ttmp/` directory that stores all ticket workspaces
 - **Frontmatter** — YAML metadata block at the top of each markdown doc
 - **RelatedFiles** — Code references stored in frontmatter with notes explaining why a file matters
-- **Vocabulary** — Optional list of topics/docTypes/intent used for validation warnings (not hard enforcement)
+- **Vocabulary** — Optional list of topics/docTypes/intent used for validation warnings (not hard enforcement). View with `docmgr vocab list` to familiarize yourself with repository conventions.
 
 ---
 
@@ -770,6 +770,19 @@ docmgr task list --ticket <TICKET-ID>
 ```
 
 > **Note:** Both `docmgr ticket list` and `docmgr list tickets` work (they're aliases). Similarly, `docmgr doc list` and `docmgr list docs` are both valid forms.
+
+**Review the repository vocabulary:** Familiarize yourself with the team's shared vocabulary by viewing the available topics, doc types, intent values, and status values. This helps you understand the repository's conventions and use consistent metadata when creating or updating documents.
+
+```bash
+# View all vocabulary entries
+docmgr vocab list
+
+# View specific categories
+docmgr vocab list --category topics
+docmgr vocab list --category docTypes
+docmgr vocab list --category intent
+docmgr vocab list --category status
+```
 
 If any command fails, fix the repository setup (see `docmgr help how-to-setup`) before proceeding.
 

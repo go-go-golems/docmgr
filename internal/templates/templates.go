@@ -2,8 +2,6 @@ package templates
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -444,14 +442,9 @@ func GetTemplate(docType string) (string, bool) {
 	return template, ok
 }
 
-// loadTemplate loads a template from the filesystem first, then falls back to embedded content
-func LoadTemplate(root, docType string) (string, bool) {
-	path := filepath.Join(root, "_templates", docType+".md")
-	if b, err := os.ReadFile(path); err == nil {
-		return string(b), true
-	}
-	return GetTemplate(docType)
-}
+// LoadTemplate is now implemented in embedded.go with priority:
+// filesystem (for customization) > embedded FS > legacy string map
+// This function is kept for backwards compatibility but delegates to embedded.go
 
 // extractFrontmatterAndBody splits a template into (frontmatter, body) using adrg/frontmatter library.
 // If no frontmatter is found, returns ("", template).

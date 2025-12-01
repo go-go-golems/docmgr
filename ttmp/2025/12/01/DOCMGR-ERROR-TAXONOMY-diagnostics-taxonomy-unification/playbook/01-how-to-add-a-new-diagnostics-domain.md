@@ -71,7 +71,7 @@ Step-by-step recipe to add a new diagnostics domain (stage/symptom/context, rule
    - Locate the producing code (e.g., command parse, validator, walker).
    - Wrap the error/condition with the constructor and call adapter:
      ```go
-     docmgr.RenderTaxonomy(ctx, docmgrctx.New<Domain>Taxonomy(...))
+     docmgr.RenderTaxonomy(ctx, docmgrctx.New<Domain>(...)) // constructors live in docmgrctx/constructors.go
      ```
    - Replace silent skips with warnings where appropriate (list/search).
 

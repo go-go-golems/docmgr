@@ -49,3 +49,8 @@ Expanded diagnostics smoke to cover vocab/related/listing/workspace/frontmatter/
 
 Added constructors helper for taxonomies; wired missing_index/stale to taxonomy; reran expanded diagnostics smoke; updated related files.
 
+
+## 2025-12-01
+
+Updated diagnostics playbook to reference constructors helper usage.
+

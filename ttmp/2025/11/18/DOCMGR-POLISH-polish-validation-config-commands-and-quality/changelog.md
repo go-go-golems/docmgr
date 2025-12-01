@@ -51,3 +51,8 @@ Updated 'docmgr init' command to automatically create .ttmp.yaml config file tem
 
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/pkg/commands/init.go — Added automatic .ttmp.yaml config file creation
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

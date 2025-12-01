@@ -1,7 +1,7 @@
 ---
 Title: Docmgr — root resolution, status API, unknown doc types, docs
 Ticket: DOC
-Status: active
+Status: complete
 Topics:
     - infrastructure
     - backend
@@ -52,8 +52,9 @@ ExternalSources:
     - local:glazed-build-first-command.md
     - local:glazed-doc-style-guide.md
 Summary: Unified repo-root detection; default stale-after=30; relate --from-git documented; warnings in status; updated docs.
-LastUpdated: 2025-11-04T17:56:55.02560684-05:00
+LastUpdated: 2025-12-01T16:01:37.542643749-05:00
 ---
+
 
 
 

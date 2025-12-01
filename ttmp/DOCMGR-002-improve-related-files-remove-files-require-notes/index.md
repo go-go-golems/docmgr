@@ -1,7 +1,7 @@
 ---
 Title: 'Improve related files: remove --files, require notes'
 Ticket: DOCMGR-002
-Status: active
+Status: complete
 Topics:
     - docmgr
     - ux
@@ -13,8 +13,9 @@ Owners:
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-07T13:49:25.339622795-05:00
+LastUpdated: 2025-12-01T16:01:37.58782642-05:00
 ---
+
 
 
 # Improve related files: remove --files, require notes

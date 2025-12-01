@@ -43,6 +43,7 @@ Read these in order to understand the intent and pattern before editing code:
 - `working-note/01-diagnostics-integration-diary.md` — chronological log of what changed.
 - `test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh` — end-to-end smoke.
 - `tasks.md` — remaining TODOs for this ticket.
+- `pkg/doc/docmgr-diagnostics-and-rules.md` — help-system page describing architecture, rules, taxonomies, and CLI usage.
 
 ## What’s implemented (code map)
 Docmgr now uses a shared diagnostics stack (taxonomy + rules + adapter) across several domains.

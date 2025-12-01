@@ -129,3 +129,8 @@ Verify file notes rendering
 - docmgr/pkg/commands/configure.go — CLI configure command
 - docmgr/pkg/commands/init.go — --seed-vocabulary flag
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

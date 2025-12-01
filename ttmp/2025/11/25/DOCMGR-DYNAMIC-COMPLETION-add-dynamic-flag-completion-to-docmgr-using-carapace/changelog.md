@@ -61,3 +61,8 @@ Completed FlagCompletion wiring across verbs (doc list/search/relate, ticket cre
 - docmgr/cmd/docmgr/cmds/** — Registered completions across commands
 - docmgr/pkg/completion/actions.go — Added helpers (TaskIDs
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

@@ -1,7 +1,7 @@
 ---
 Title: 'docmgr: scriptable output and path resolution improvements'
 Ticket: DOCMGR-UX
-Status: active
+Status: complete
 Topics:
     - tooling
     - ux
@@ -25,8 +25,9 @@ ExternalSources:
     - glazed/pkg/doc/tutorials/build-first-command.md
     - go-go-mento/docs/how-to-use-docmgr.md
 Summary: Make docmgr scripting friendlier (default-to-index verified)
-LastUpdated: 2025-11-05T14:44:55.653782119-05:00
+LastUpdated: 2025-12-01T16:01:38.097517-05:00
 ---
+
 
 
 

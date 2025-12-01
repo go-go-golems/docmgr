@@ -1,7 +1,7 @@
 ---
 Title: Diagnostics taxonomy unification
 Ticket: DOCMGR-ERROR-TAXONOMY
-Status: active
+Status: complete
 Topics:
     - errors
     - ux
@@ -12,8 +12,9 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-01T11:56:14.015938445-05:00
+LastUpdated: 2025-12-01T15:49:40.216274418-05:00
 ---
+
 
 # Diagnostics taxonomy unification
 

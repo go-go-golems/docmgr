@@ -45,7 +45,7 @@ RelatedFiles:
         Expanded coverage
 ExternalSources: []
 Summary: Daily log for diagnostics taxonomy integration.
-LastUpdated: 2025-12-01T17:40:00-05:00
+LastUpdated: 2025-12-01T18:10:00-05:00
 ---
 
 
@@ -67,6 +67,7 @@ LastUpdated: 2025-12-01T17:40:00-05:00
 - 2025-12-01: Wired doctor to emit frontmatter schema taxonomies for missing required fields/status/topics and render parse errors from discovery/walkers; reran go test ./pkg/commands and ./pkg/diagnostics/... to confirm.
 - 2025-12-01: Added diagnostics renderer collector + doctor --diagnostics-json flag, adapter unit test, and smoke script check for generated JSON output.
 - 2025-12-01: Added frontmatter schema rule unit test, documented doctor --diagnostics-json in how-to-use, and marked remaining tasks complete.
+- 2025-12-01: Rebuilt docmgr, reran diagnostics smoke with JSON flag (using built binary), and added a comprehensive diagnostics architecture/reference page under pkg/doc/docmgr-diagnostics-and-rules.md for the help system.
 
 ## Decisions
 - Use shared adapter package to avoid command-specific helpers and to enable other verbs to render diagnostics.

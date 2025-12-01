@@ -37,3 +37,8 @@ Updated top-level help to point to built-in docs (how-to-use, how-to-setup, help
 
 - docmgr/cmd/docmgr/main.go
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

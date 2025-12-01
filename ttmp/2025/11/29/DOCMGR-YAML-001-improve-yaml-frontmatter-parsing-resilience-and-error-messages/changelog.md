@@ -13,3 +13,8 @@ Created ticket for YAML frontmatter parsing improvements including enhanced erro
 
 - design/01-yaml-frontmatter-parsing-improvements.md — Comprehensive design document covering all proposed improvements
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

@@ -79,3 +79,13 @@ Added doctor --diagnostics-json flag + renderer collector, updated diagnostics s
 
 Added schema rule unit test, documented doctor --diagnostics-json in how-to-use, and reran go test ./pkg/diagnostics/... ./pkg/commands.
 
+
+## 2025-12-01
+
+Ran diagnostics smoke with new binary (docmgr --diagnostics-json) and added diagnostics architecture guide under pkg/doc/docmgr-diagnostics-and-rules.md.
+
+
+## 2025-12-01
+
+Ticket closed
+

@@ -1,5 +1,5 @@
 ---
-Title: doc list --ticket fails in multi-repo setup when running from workspace root
+Title: doc list --ticket fails in multi-repo setup and silently skips broken documents
 Ticket: DOCMGR-BUG-001
 Status: active
 Topics:
@@ -10,15 +10,21 @@ Intent: long-term
 Owners: []
 RelatedFiles: []
 ExternalSources: []
-Summary: ""
-LastUpdated: 2025-12-01T15:39:20.324570751-05:00
+Summary: 'doc list command has two issues: 1) may fail in multi-repo setups due to root resolution, 2) silently skips documents with broken frontmatter without warnings'
+LastUpdated: 2025-12-01T15:45:32.21490823-05:00
 ---
 
-# doc list --ticket fails in multi-repo setup when running from workspace root
+
+# doc list --ticket fails in multi-repo setup and silently skips broken documents
 
 ## Overview
 
-<!-- Provide a brief overview of the ticket, its goals, and current status -->
+Two related issues with `docmgr doc list`:
+
+1. **Multi-repo root resolution**: May fail to find tickets when run from workspace root in multi-repo setups
+2. **Silent skipping**: Documents with broken frontmatter are silently skipped without warnings, making it appear as if no documents exist
+
+See the bug report in `reference/01-bug-report-doc-list-ticket-fails-in-multi-repo-setup.md` for detailed analysis and proposed fixes.
 
 ## Key Links
 

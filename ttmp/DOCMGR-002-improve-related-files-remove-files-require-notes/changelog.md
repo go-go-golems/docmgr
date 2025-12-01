@@ -23,3 +23,8 @@ Relate: removed --files; require --file-note; docs updated; doctor warns on miss
 
 Changelog: removed --files; require notes via --file-note; updated docs & scenarios
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

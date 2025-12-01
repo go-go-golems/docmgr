@@ -1,7 +1,7 @@
 ---
 Title: 'Demo: Guidelines on Add'
 Ticket: MEN-9998
-Status: active
+Status: complete
 Topics:
     - docmgr
     - guidelines
@@ -12,8 +12,9 @@ Owners:
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-19T12:55:48.763966018-05:00
+LastUpdated: 2025-12-01T16:01:38.248328423-05:00
 ---
+
 
 ---
 Title: Demo: Guidelines on Add

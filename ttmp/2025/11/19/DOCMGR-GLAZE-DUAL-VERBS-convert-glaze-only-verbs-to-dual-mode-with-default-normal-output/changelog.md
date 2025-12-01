@@ -28,3 +28,8 @@ List tickets human output now includes docs root header plus relative paths
 
 - Converted remaining glaze-only verbs (add/create/meta/relate/task edit/vocab add/import/layout-fix/renumber/configure/init) plus list docs into human-first markdown outputs
 - Added dual-mode `doctor` output (grouped human report + glaze toggle) and restored the documented `docmgr workspace <verb>` namespace so docs match the CLI
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

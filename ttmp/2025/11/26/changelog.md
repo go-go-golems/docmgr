@@ -24,3 +24,8 @@ Merged how-to-work-on-any-ticket.md into docmgr-how-to-use.md as section 12.5, a
 
 Removed how-to-work-on-any-ticket.md file since content has been merged into docmgr-how-to-use.md
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

@@ -18,7 +18,10 @@ LastUpdated: 2025-12-01T15:39:22.592622015-05:00
 
 ## Goal
 
-Document the bug where `docmgr doc list --ticket SOME-TICKET` fails to find tickets when run from a workspace root in a multi-repo setup, even though the ticket exists and can be found when running from the project's ttmp directory.
+Document two related issues with `docmgr doc list`:
+
+1. **Multi-repo root resolution**: `doc list --ticket` may fail to find tickets when run from a workspace root in a multi-repo setup
+2. **Silent skipping of broken documents**: Documents with invalid frontmatter are silently skipped without warnings, making it appear as if no documents exist
 
 ## Context
 
@@ -114,9 +117,9 @@ The command fails to find documents, likely because:
 - The resolved root path is relative or not properly resolved
 - `filepath.Walk` is called with a relative path, causing it to walk from the wrong location
 
-## Proposed Fix
+## Proposed Fixes
 
-### Option 1: Ensure Absolute Path in `RunIntoGlazeProcessor`
+### Fix 1: Ensure Absolute Path in `RunIntoGlazeProcessor`
 
 Add the same absolute path check that exists in `Run` method to `RunIntoGlazeProcessor`:
 
@@ -132,16 +135,44 @@ if !filepath.IsAbs(settings.Root) {
 }
 ```
 
-### Option 2: Ensure `ResolveRoot` Always Returns Absolute Path
+**Rationale**: Consistent with existing `Run` method, localized fix, ensures path is absolute before use.
 
-Modify `ResolveRoot` in `internal/workspace/config.go` to always return an absolute path by using `filepath.Abs()` on the final resolved path.
+### Fix 2: Show Warnings for Skipped Documents
 
-### Recommendation
+Modify `list_docs.go` to collect and display warnings when documents are skipped:
 
-**Option 1** is preferred because:
-- It's consistent with the existing `Run` method
-- It's a localized fix that doesn't change the behavior of `ResolveRoot` (which may be used elsewhere)
-- It ensures the path is absolute right before use
+**In `RunIntoGlazeProcessor`**:
+```go
+var skippedDocs []struct {
+    path  string
+    error string
+}
+
+// In the filepath.Walk callback:
+doc, err := readDocumentFrontmatter(path)
+if err != nil {
+    skippedDocs = append(skippedDocs, struct{path, error string}{
+        path: path,
+        error: err.Error(),
+    })
+    docmgr.RenderTaxonomy(ctx, docmgrctx.NewListingSkip("list_docs", path, err.Error(), err))
+    return nil
+}
+
+// After walk completes, print warnings if any:
+if len(skippedDocs) > 0 {
+    fmt.Fprintf(os.Stderr, "Warning: Skipped %d document(s) due to frontmatter parsing errors:\n", len(skippedDocs))
+    for _, skipped := range skippedDocs {
+        relPath, _ := filepath.Rel(settings.Root, skipped.path)
+        fmt.Fprintf(os.Stderr, "  - %s: %s\n", relPath, skipped.error)
+    }
+    fmt.Fprintf(os.Stderr, "\n")
+}
+```
+
+**In `Run` method**: Similar approach, but integrate warnings into the human-readable output format.
+
+**Rationale**: Makes it immediately clear to users why documents aren't appearing, improving debuggability and user experience.
 
 ## Usage Examples
 
@@ -182,3 +213,80 @@ docmgr doc list --ticket SOME-TICKET
 - `pkg/commands/list_docs.go` - Implementation of doc list command
 - `internal/workspace/config.go` - Root resolution logic
 - Similar issue may affect other commands that use `ResolveRoot` without ensuring absolute paths
+
+## Additional Finding: Silent Skipping of Documents with Broken Frontmatter
+
+During investigation of the real-world case (`INTEGRATE-MOMENTS-PERSISTENCE` ticket), a critical usability issue was discovered:
+
+### Problem
+
+Documents with broken or invalid frontmatter are **silently skipped** in `doc list` output, making it appear as if no documents exist when they actually do.
+
+**Example**: Documents with legacy `RelatedFiles` format (scalar strings) fail to parse:
+```yaml
+RelatedFiles:
+    - go-go-mento/go/pkg/webchat/turns_persistence.go
+    - go-go-mento/go/pkg/persistence/turns/repo.go
+```
+
+**Error**: `yaml: unmarshal errors: cannot unmarshal !!str into models.RelatedFile`
+
+**Current behavior**: Documents are silently skipped with no indication to the user:
+- `doc list --ticket INTEGRATE-MOMENTS-PERSISTENCE` returns "No documents found."
+- User has no way to know that documents exist but were skipped due to parsing errors
+- Only `docmgr doctor` reveals the frontmatter parsing errors
+
+**Impact**: 
+- Confusing user experience - appears as if documents don't exist
+- Difficult to debug why documents aren't showing up
+- Users must run `doctor` separately to discover parsing issues
+
+### Root Cause
+
+In `pkg/commands/list_docs.go`, when `readDocumentFrontmatter` fails:
+
+```go
+doc, err := readDocumentFrontmatter(path)
+if err != nil {
+    docmgr.RenderTaxonomy(ctx, docmgrctx.NewListingSkip("list_docs", path, err.Error(), err))
+    return nil  // Silently skip
+}
+```
+
+The diagnostic taxonomy is rendered, but:
+1. In human-readable output (`Run` method), these diagnostics may not be visible
+2. In structured output (`RunIntoGlazeProcessor`), diagnostics are rendered but may be ignored
+3. No clear warning message is shown to the user
+
+### Required Behavior
+
+When `doc list` encounters documents with broken frontmatter, it should:
+
+1. **Show warnings** indicating which documents were skipped and why
+2. **Continue listing** other valid documents
+3. **Make it clear** that some documents exist but couldn't be parsed
+
+### Proposed Solution
+
+Add warning output to `doc list` when documents are skipped:
+
+**For human-readable output** (`Run` method):
+- Print warnings to stderr before the document listing
+- Format: `Warning: Skipped document due to frontmatter error: <path> - <error>`
+
+**For structured output** (`RunIntoGlazeProcessor`):
+- Include skipped documents in output with a `skipped: true` field and `error` field
+- Or render diagnostics more prominently
+
+**Example output**:
+```
+Warning: Skipped 2 documents due to frontmatter parsing errors:
+  - moments/ttmp/.../reference/persistence-port-analysis.md: yaml: unmarshal errors: ...
+  - moments/ttmp/.../reference/web-port-analysis.md: yaml: unmarshal errors: ...
+
+## Documents (0)
+
+No documents found.
+```
+
+This would immediately alert users that documents exist but have parsing issues, making debugging much easier.

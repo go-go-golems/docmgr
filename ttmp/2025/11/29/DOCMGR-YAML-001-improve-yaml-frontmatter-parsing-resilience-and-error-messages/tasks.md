@@ -42,4 +42,4 @@
 - [x] Update ticket `changelog.md` with implemented milestones and note any new flags/verbs
 - [ ] Additional validation polish
 - [x] Suppress/adjust taxonomy emission after successful auto-fix so a passing run doesn’t show an error taxonomy
-  - [ ] Ensure doctor/list/search consume richer frontmatter context without double-reporting after auto-fix (if integration needed)
+- [x] Ensure doctor/list/search consume richer frontmatter context without double-reporting after auto-fix (if integration needed)

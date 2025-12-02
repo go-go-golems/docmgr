@@ -1,17 +1,20 @@
 ---
 Title: Validation smoke plan
-Ticket: DOCMGR-YAML-001
+Ticket: DOCMGR-DOCTOR-AUTOFIX
 Status: active
 Topics:
-  - yaml
-  - validation
-  - diagnostics
+    - yaml
+    - validation
+    - diagnostics
 DocType: design
 Intent: short-term
 Owners: []
+RelatedFiles: []
+ExternalSources: []
 Summary: Inventory of current validation-related smoke tests and plan for additions.
-LastUpdated: 2025-12-02
+LastUpdated: 2025-12-02T00:00:00Z
 ---
+
 
 # Validation smoke plan
 

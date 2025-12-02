@@ -19,3 +19,4 @@
 - [ ] Docs:
   - [ ] Update `pkg/doc/docmgr-diagnostics-and-rules.md`, CLI guides, and the YAML validation help page to mention doctor’s suggest/auto-fix behavior.
 - [ ] Design doctor suggest/auto-fix flags and scope (per-file/per-ticket) with safety (backups/dry-run).
+- [ ] When doctor gains auto-fix, extend smokes to ensure post-fix runs don’t double-report stale errors (validate suppression).

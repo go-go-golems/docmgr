@@ -449,3 +449,4 @@ Templates can format output specifically for LLM consumption, providing structur
 
 Commands can provide custom template functions beyond Sprig. Check command documentation or source code for command-specific functions like `countBy` used in doctor templates.
 
+

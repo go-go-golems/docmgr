@@ -53,3 +53,13 @@ Added comprehensive frontmatter healing/validation guide (reference/02-frontmatt
 
 Frontmatter rules now link to help via 'docmgr help yaml-frontmatter-validation'; added help doc (pkg/doc/docmgr-yaml-frontmatter-validation.md) for YAML validation/fix workflow.
 
+
+## 2025-12-02
+
+Added doctor/validation workflow guide (pkg/doc/docmgr-doctor-validation-workflow.md) and linked to ticket; refined validate frontmatter schema reuse via doc.Validate(); added doctor single-file path with parse/schema/vocab checks; frontmatter rules now include help link.
+
+
+## 2025-12-02
+
+Docs updated: added doctor/validation workflow guide and YAML validation help linking; outstanding schema validators and docs remain in new ticket DOCMGR-FRONTMATTER-SCHEMA.
+

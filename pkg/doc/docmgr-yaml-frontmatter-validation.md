@@ -35,6 +35,7 @@ If a command reports `yaml_syntax` or `frontmatter parse` errors:
 - Doctor (workspace scan): `docmgr doctor --ticket <TICKET>` (will report invalid frontmatter and point to validation)
 
 ## Implementation references
+- For full details, see the technical reference: `docmgr help yaml-frontmatter-validation-reference`
 - Parser + diagnostics: `internal/documents/frontmatter.go`
 - Validation verb + auto-fix: `pkg/commands/validate_frontmatter.go`
 - Rules rendering guidance: `pkg/diagnostics/docmgrrules/frontmatter_rules.go`

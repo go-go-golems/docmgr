@@ -33,6 +33,7 @@ type DoctorCommand struct {
 type DoctorSettings struct {
 	Root            string   `glazed.parameter:"root"`
 	Ticket          string   `glazed.parameter:"ticket"`
+	Doc             string   `glazed.parameter:"doc"`
 	All             bool     `glazed.parameter:"all"`
 	IgnoreDirs      []string `glazed.parameter:"ignore-dir"`
 	IgnoreGlobs     []string `glazed.parameter:"ignore-glob"`
@@ -99,6 +100,12 @@ Example:
 					"ticket",
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Check specific ticket"),
+					parameters.WithDefault(""),
+				),
+				parameters.NewParameterDefinition(
+					"doc",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Validate a single markdown file (overrides --ticket/--all)"),
 					parameters.WithDefault(""),
 				),
 				parameters.NewParameterDefinition(
@@ -255,6 +262,26 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			return true
 		}
 		return false
+	}
+
+	// Single-file mode: validate one doc and return.
+	if settings.Doc != "" {
+		docPath := settings.Doc
+		if !filepath.IsAbs(docPath) {
+			docPath = filepath.Join(settings.Root, docPath)
+		}
+		sev, err := validateSingleDoc(ctx, docPath, topicSet, topicList, docTypeSet, docTypeList, intentSet, intentList, statusSet, statusList, statusValidText, gp)
+		highestSeverity = maxInt(highestSeverity, sev)
+		if diagRenderer != nil && settings.DiagnosticsJSON != "" {
+			if err := writeDiagnosticsJSON(diagRenderer, settings.DiagnosticsJSON); err != nil {
+				return err
+			}
+		}
+		threshold := severityThreshold(settings.FailOn)
+		if threshold >= 0 && highestSeverity >= threshold && threshold > 0 {
+			return fmt.Errorf("doctor failed: severity >= %s", settings.FailOn)
+		}
+		return err
 	}
 
 	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, skipFn)
@@ -816,6 +843,164 @@ var _ cmds.GlazeCommand = &DoctorCommand{}
 
 type doctorRowCollector struct {
 	rows []types.Row
+}
+
+// validateSingleDoc validates one markdown file (frontmatter parse + required fields + vocab warnings).
+func validateSingleDoc(
+	ctx context.Context,
+	docPath string,
+	topicSet map[string]struct{},
+	topicList []string,
+	docTypeSet map[string]struct{},
+	docTypeList []string,
+	intentSet map[string]struct{},
+	intentList []string,
+	statusSet map[string]struct{},
+	statusList []string,
+	statusValidText string,
+	gp glazedMiddlewares.Processor,
+) (int, error) {
+	highestSeverity := 0
+
+	doc, err := readDocumentFrontmatter(docPath)
+	if err != nil {
+		row := types.NewRow(
+			types.MRP("ticket", ""),
+			types.MRP("issue", "invalid_frontmatter"),
+			types.MRP("severity", "error"),
+			types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", err)),
+			types.MRP("path", docPath),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return highestSeverity, fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", docPath, err)
+		}
+		highestSeverity = maxInt(highestSeverity, 2)
+		renderFrontmatterParseTaxonomy(ctx, err, docPath)
+		return highestSeverity, nil
+	}
+
+	// Required fields
+	if err := doc.Validate(); err != nil {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "missing_required_fields"),
+			types.MRP("severity", "error"),
+			types.MRP("message", err.Error()),
+			types.MRP("path", docPath),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return highestSeverity, fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", docPath, err)
+		}
+		highestSeverity = maxInt(highestSeverity, 2)
+		for _, field := range missingRequiredFields(doc) {
+			detail := fmt.Sprintf("%s is required", field)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, field, detail, core.SeverityError))
+		}
+	}
+
+	// Optional fields: Status, Topics
+	if doc.Status == "" {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "missing_field"),
+			types.MRP("severity", "warning"),
+			types.MRP("message", "missing Status"),
+			types.MRP("path", docPath),
+		)
+		_ = gp.AddRow(ctx, row)
+		highestSeverity = maxInt(highestSeverity, 1)
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, "Status", "missing Status", core.SeverityWarning))
+	}
+	if len(doc.Topics) == 0 {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "missing_field"),
+			types.MRP("severity", "warning"),
+			types.MRP("message", "missing Topics"),
+			types.MRP("path", docPath),
+		)
+		_ = gp.AddRow(ctx, row)
+		highestSeverity = maxInt(highestSeverity, 1)
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, "Topics", "missing Topics", core.SeverityWarning))
+	}
+
+	// Vocabulary checks
+	if len(doc.Topics) > 0 {
+		var unknownTopics []string
+		for _, t := range doc.Topics {
+			if _, ok := topicSet[t]; !ok && t != "" {
+				unknownTopics = append(unknownTopics, t)
+			}
+		}
+		if len(unknownTopics) > 0 {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_topics"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown topics: %v", unknownTopics)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Topics", strings.Join(unknownTopics, ","), topicList))
+		}
+	}
+	if doc.DocType != "" {
+		if _, ok := docTypeSet[doc.DocType]; !ok {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_doc_type"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown docType: %s", doc.DocType)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "DocType", doc.DocType, docTypeList))
+		}
+	}
+	if doc.Intent != "" {
+		if _, ok := intentSet[doc.Intent]; !ok {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_intent"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown intent: %s", doc.Intent)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Intent", doc.Intent, intentList))
+		}
+	}
+	if doc.Status != "" {
+		if _, ok := statusSet[doc.Status]; !ok {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_status"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status')", doc.Status, statusValidText)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Status", doc.Status, statusList))
+		}
+	}
+
+	// Success row
+	if highestSeverity == 0 {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "none"),
+			types.MRP("severity", "ok"),
+			types.MRP("message", "All checks passed"),
+			types.MRP("path", docPath),
+		)
+		_ = gp.AddRow(ctx, row)
+	}
+
+	return highestSeverity, nil
 }
 
 func (c *doctorRowCollector) AddRow(ctx context.Context, row types.Row) error {

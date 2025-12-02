@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
@@ -152,6 +153,10 @@ func validateFrontmatterFile(ctx context.Context, path string, suggestFixes bool
 
 	doc, _, err := documents.ReadDocumentWithFrontmatter(path)
 	if err == nil {
+		// Schema validation after successful parse
+		if schemaErr := validateSchema(ctx, path, doc); schemaErr != nil {
+			return nil, schemaErr
+		}
 		return doc, nil
 	}
 
@@ -164,6 +169,10 @@ func validateFrontmatterFile(ctx context.Context, path string, suggestFixes bool
 				fixedDoc, _, parseErr := documents.ReadDocumentWithFrontmatter(path)
 				if parseErr == nil {
 					fmt.Fprintf(os.Stdout, "Frontmatter auto-fixed: %s\n", path)
+					// Schema validation after fix
+					if schemaErr := validateSchema(ctx, path, fixedDoc); schemaErr != nil {
+						return nil, schemaErr
+					}
 					return fixedDoc, nil
 				}
 				if newTax, ok := core.AsTaxonomy(parseErr); ok && newTax != nil {
@@ -347,6 +356,23 @@ func peelTrailingNonKeyLines(lines *[][]byte) []byte {
 		return nil
 	}
 	return bytes.Join(peeled, []byte("\n"))
+}
+
+// validateSchema emits schema taxonomies for missing required fields and returns error if any.
+func validateSchema(ctx context.Context, path string, doc *models.Document) error {
+	if err := doc.Validate(); err != nil {
+		// doc.Validate returns "missing required fields: X, Y"
+		missing := strings.TrimPrefix(err.Error(), "missing required fields: ")
+		for _, f := range strings.Split(missing, ",") {
+			field := strings.TrimSpace(f)
+			if field == "" {
+				continue
+			}
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(path, field, fmt.Sprintf("%s is required", field), core.SeverityError))
+		}
+		return fmt.Errorf("schema validation failed: %w", err)
+	}
+	return nil
 }
 
 var _ cmds.GlazeCommand = &ValidateFrontmatterCommand{}

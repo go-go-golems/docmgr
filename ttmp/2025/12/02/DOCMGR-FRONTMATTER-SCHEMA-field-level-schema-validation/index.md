@@ -1,25 +1,24 @@
 ---
-Title: Improve YAML frontmatter parsing resilience and error messages
-Ticket: DOCMGR-YAML-001
+Title: Add field-level schema validation and frontmatter schema taxonomies
+Ticket: DOCMGR-FRONTMATTER-SCHEMA
 Status: active
 Topics:
     - yaml
-    - ux
-    - errors
+    - validation
+    - diagnostics
 DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: pkg/doc/docmgr-doctor-validation-workflow.md
-      Note: doctor/validate workflow walkthrough
+    - Path: ttmp/2025/12/02/DOCMGR-FRONTMATTER-SCHEMA-field-level-schema-validation/analysis/01-schema-validation-context.md
+      Note: onboarding for field-level schema validation
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-01T16:01:38.152228447-05:00
+LastUpdated: 2025-12-02T12:22:57.814323268-05:00
 ---
 
 
-
-# Improve YAML frontmatter parsing resilience and error messages
+# Add field-level schema validation and frontmatter schema taxonomies
 
 ## Overview
 
@@ -37,8 +36,8 @@ Current status: **active**
 ## Topics
 
 - yaml
-- ux
-- errors
+- validation
+- diagnostics
 
 ## Tasks
 

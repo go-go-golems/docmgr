@@ -9,7 +9,7 @@
 - [x] Fix slug computation in create_ticket.go to use stripped title
 - [x] Test fix with reproduction scenarios
 - [x] Update changelog and verify fix works
-- [ ] Implement helper to strip ticket identifier from titles before slugifying
-- [ ] Apply helper in create-ticket and ticket-move commands
-- [ ] Add regression coverage (unit tests + scenario 17 update)
-- [ ] Document fix in changelog/tutorial
+- [x] Implement helper to strip ticket identifier from titles before slugifying
+- [x] Apply helper in create-ticket and ticket-move commands
+- [x] Add regression coverage (unit tests + scenario 17 update)
+- [x] Document fix in changelog/tutorial

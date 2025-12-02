@@ -39,6 +39,10 @@ func Attach(root *cobra.Command) error {
 	if err != nil {
 		return err
 	}
+	moveCmd, err := newMoveCommand()
+	if err != nil {
+		return err
+	}
 
 	docCmd.AddCommand(
 		addCmd,
@@ -48,6 +52,7 @@ func Attach(root *cobra.Command) error {
 		relateCmd,
 		layoutFixCmd,
 		renumberCmd,
+		moveCmd,
 	)
 	root.AddCommand(docCmd)
 	return nil

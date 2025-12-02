@@ -34,3 +34,8 @@ Bare mode reminder test
 
 Changelog update: dual-mode + reminder; linked changelog.go and main.go.
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

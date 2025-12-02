@@ -154,7 +154,7 @@ docmgr ticket create-ticket --ticket MEN-4242 \
 
 But then the on-disk layout shows:
 ```
-ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
+ttmp/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/
 ```
 
 This **works correctly**, but the path structure isn't explicitly called out. A newcomer might wonder: "Where does this directory go? Why is there a date path?" The tutorial should clarify:
@@ -362,7 +362,7 @@ But doesn't show the **edit cycle**. A newcomer might wonder: "Do I edit index.m
 Add a subsection in Part 2 called "Editing Document Content" with:
 ```bash
 # Example: Open your design doc in your editor
-vim ttmp/2025/11/25/MEN-4242-.../design-doc/01-path-normalization.md
+vim ttmp/2025/11/25/MEN-4242--.../design-doc/01-path-normalization.md
 
 # Edit the body (below the frontmatter), then save.
 # The frontmatter is managed by docmgr; don't edit it manually.

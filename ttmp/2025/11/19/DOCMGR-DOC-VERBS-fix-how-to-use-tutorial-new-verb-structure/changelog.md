@@ -75,3 +75,8 @@ Phase 2: extracted advanced content to separate guides (247 lines removed)
 - docmgr/pkg/doc/docmgr-ci-automation.md — Added Glaze field contracts and automation patterns from tutorial.
 - docmgr/pkg/doc/docmgr-how-to-use.md — Moved Glaze/CI/import/root-config to other docs; tutorial now 999 lines (was 1246).
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

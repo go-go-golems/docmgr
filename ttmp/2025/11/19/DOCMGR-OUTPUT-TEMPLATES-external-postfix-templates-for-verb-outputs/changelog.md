@@ -207,3 +207,8 @@ Implemented docmgr template validate command: validates template syntax before r
 - docmgr/internal/templates/verb_output.go — Exported GetTemplateFuncMap() for use in validation
 - docmgr/pkg/commands/template_validate.go — New template validate command implementation
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

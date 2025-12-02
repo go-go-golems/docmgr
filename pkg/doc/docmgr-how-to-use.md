@@ -111,7 +111,7 @@ These definitions show up throughout the tutorial. Skim them once so the later s
 - **Docs root** — The `ttmp/` directory that stores all ticket workspaces
 - **Frontmatter** — YAML metadata block at the top of each markdown doc
 - **RelatedFiles** — Code references stored in frontmatter with notes explaining why a file matters
-- **Vocabulary** — Optional list of topics/docTypes/intent used for validation warnings (not hard enforcement)
+- **Vocabulary** — Optional list of topics/docTypes/intent used for validation warnings (not hard enforcement). View with `docmgr vocab list` to familiarize yourself with repository conventions.
 
 ---
 
@@ -203,12 +203,12 @@ docmgr ticket create-ticket --ticket MEN-4242 \
   --topics chat,backend,websocket
 ```
 
-This creates `ttmp/YYYY/MM/DD/MEN-4242-.../` with `index.md`, `tasks.md`, and `changelog.md` under a standard structure. Use `--path-template` to override the relative directory layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`). If your repository doesn’t have a docs root yet (with `vocabulary.yaml`, `_templates/`, `_guidelines/`), run `docmgr init` first.
+This creates `ttmp/YYYY/MM/DD/MEN-4242--.../` with `index.md`, `tasks.md`, and `changelog.md` under a standard structure. Use `--path-template` to override the relative directory layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`). If your repository doesn’t have a docs root yet (with `vocabulary.yaml`, `_templates/`, `_guidelines/`), run `docmgr init` first.
 
 **What this creates:**
 
 ```
-ttmp/YYYY/MM/DD/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
+ttmp/YYYY/MM/DD/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/
 ├── index.md        # Ticket overview (you're here)
 ├── tasks.md        # Todo list
 ├── changelog.md    # History of changes
@@ -247,6 +247,22 @@ docmgr doc add --ticket MEN-4242 --doc-type design-doc --title "Path Normalizati
 docmgr doc add --ticket MEN-4242 --doc-type reference --title "Chat WebSocket Lifecycle"
 docmgr doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for Chat"
 ```
+
+### Move a doc between tickets
+
+If a document was created under the wrong ticket, move it and fix its frontmatter in one command:
+
+```bash
+# Keep same relative path under destination; overwrite if it already exists
+docmgr doc move --doc ttmp/2025/12/01/MEN-4242--.../reference/01-chat-websocket-lifecycle.md \
+  --dest-ticket MEN-5678 \
+  --overwrite
+
+# Place it in a different subdirectory within the destination
+docmgr doc move --doc path/to/doc.md --dest-ticket MEN-5678 --dest-dir reference/migrations
+```
+
+`doc move` rewrites the Ticket field, writes the destination copy, and deletes the source after a successful move.
 
 **What happens:**
 - Each doc is created from a template in `_templates/`
@@ -326,7 +342,7 @@ docmgr doc search --query "nonexistent-term"
 # Multiple results with snippets (default human output)
 docmgr doc search --query "API"
 # Example:
-# 2025/11/19/MEN-4242-chat-persistence/reference/02-api-contracts.md — Chat API Contracts [MEN-4242]
+# 2025/11/19/MEN-4242--chat-persistence/reference/02-api-contracts.md — Chat API Contracts [MEN-4242]
 # ... "Normalized API paths for chat endpoints" ...
 #
 # 2025/11/20/MEN-4300-auth/reference/01-auth-api.md — Auth API [MEN-4300]
@@ -379,7 +395,7 @@ docmgr meta update --ticket MEN-4242 --field Status --value review
 docmgr meta update --ticket MEN-4242 --field Owners --value "manuel,alex"
 
 # Update a specific subdocument (use --doc with explicit path)
-DOC="ttmp/MEN-4242-normalize-chat-api/reference/03-foobar.md"
+DOC="ttmp/MEN-4242--normalize-chat-api/reference/03-foobar.md"
 docmgr meta update --doc "$DOC" --field Summary --value "Unify API paths"
 ```
 
@@ -499,7 +515,7 @@ docmgr doc relate --ticket MEN-4242 \
 
 Example:
 ```bash
-DOC="ttmp/2025/11/19/MEN-4242-chat-persistence/design-doc/01-path-normalization-strategy.md"
+DOC="ttmp/2025/11/19/MEN-4242--chat-persistence/design-doc/01-path-normalization-strategy.md"
 docmgr doc relate --doc "$DOC" \
   --file-note "backend/api/register.go:Normalization entrypoint and router setup"
 ```
@@ -509,7 +525,7 @@ docmgr doc relate --doc "$DOC" \
 - **For subdocuments, use paths relative to workspace root** — Paths should start from your workspace root (where `.ttmp.yaml` lives), not from `ttmp/`
 - **Use shell variables for long paths** — Store the document path in a variable to avoid typos:
   ```bash
-  DOC="docmgr/ttmp/2025/11/19/MEN-4242-chat-persistence/reference/01-carapace-analysis.md"
+  DOC="docmgr/ttmp/2025/11/19/MEN-4242--chat-persistence/reference/01-carapace-analysis.md"
   docmgr doc relate --doc "$DOC" --file-note "carapace/storage.go:Storage system"
   ```
 - **Common mistake:** Using paths relative to `ttmp/` instead of workspace root — docmgr expects paths from the workspace root where the config file lives
@@ -555,6 +571,18 @@ docmgr changelog update --ticket MEN-4242 \
 Changelogs are dated automatically. Keep entries short — mention what changed and link relevant files.
 
 **Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design-doc/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
+
+### Validate and fix YAML/frontmatter
+
+- **Quick check:** `docmgr validate frontmatter --doc <file>` shows line/col, snippet, and suggestions for YAML/frontmatter issues. Add `--suggest-fixes` to see suggested repairs, or `--auto-fix` to rewrite the file (creates `<file>.bak`).
+- **Workspace scan:** `docmgr doctor --ticket <T>` or `--all` reports frontmatter/schema/vocab issues across a ticket. Use `--doc <file>` for a single-file doctor run (parse + schema + vocab checks).
+- **Help:** `docmgr help yaml-frontmatter-validation` for common issues and commands. Diagnostics output also links to this help.
+- **Examples:**
+  - View issues: `docmgr validate frontmatter --doc ttmp/.../index.md --suggest-fixes`
+  - Attempt repair: `docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix`
+  - Scan ticket: `docmgr doctor --ticket MEN-4242 --fail-on warning`
+
+These commands reuse the same parser and diagnostics rules described in `docmgr help docmgr-diagnostics-and-rules`.
 
 **The workflow:**
 
@@ -718,6 +746,9 @@ docmgr doctor --all --stale-after 30 --fail-on error
 
 # Validate specific ticket
 docmgr doctor --ticket MEN-4242
+
+# Capture diagnostics for CI (JSON)
+docmgr doctor --all --diagnostics-json diagnostics.json --fail-on warning
 ```
 
 **What doctor checks:**
@@ -770,6 +801,19 @@ docmgr task list --ticket <TICKET-ID>
 ```
 
 > **Note:** Both `docmgr ticket list` and `docmgr list tickets` work (they're aliases). Similarly, `docmgr doc list` and `docmgr list docs` are both valid forms.
+
+**Review the repository vocabulary:** Familiarize yourself with the team's shared vocabulary by viewing the available topics, doc types, intent values, and status values. This helps you understand the repository's conventions and use consistent metadata when creating or updating documents.
+
+```bash
+# View all vocabulary entries
+docmgr vocab list
+
+# View specific categories
+docmgr vocab list --category topics
+docmgr vocab list --category docTypes
+docmgr vocab list --category intent
+docmgr vocab list --category status
+```
 
 If any command fails, fix the repository setup (see `docmgr help how-to-setup`) before proceeding.
 
@@ -968,7 +1012,7 @@ Paths are relative to this root.
 - Topics: backend, chat
 - Tasks: 2 open / 5 done
 - Updated: 2025-11-19 14:20
-- Path: `2025/11/19/MEN-4242-chat-persistence`
+- Path: `2025/11/19/MEN-4242--chat-persistence`
 ```
 
 `docmgr list docs` mirrors the same style, grouped by ticket with per-document bullet summaries (doc type, status, topics, updated, path).

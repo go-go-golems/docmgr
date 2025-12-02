@@ -79,3 +79,8 @@ Captured a Round 4 implementation diary describing the search/doctor error-conte
 
 - /home/manuel/workspaces/2025-11-18/code-review-docmgr/docmgr/ttmp/2025/11/18/DOCMGR-REFACTOR-code-refactoring-hierarchical-commands-and-utilities/various/2025-11-18-implementation-diary.md — New diary
 
+
+## 2025-12-01
+
+Auto-closed: ticket was active but not created today
+

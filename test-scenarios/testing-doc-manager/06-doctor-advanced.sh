@@ -6,7 +6,7 @@ REPO="${ROOT_DIR}/acme-chat-app"
 cd "${REPO}"
 
 DOCMGR="${DOCMGR_PATH:-docmgr}"
-TICKET_DIR=$(find ttmp -type d -path "*/MEN-4242-*" -print -quit)
+TICKET_DIR=$(find ttmp -type d -path "*/MEN-4242--*" -print -quit)
 if [[ -z "${TICKET_DIR}" ]]; then
 	echo "Could not locate MEN-4242 workspace" >&2
 	exit 1

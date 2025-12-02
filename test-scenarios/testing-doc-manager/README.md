@@ -22,6 +22,9 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 - `07-status.sh` — show workspace summary and staleness
 - `13-template-schema-output.sh` — verify --print-template-schema outputs only schema (no human output)
 - `14-path-normalization.sh` — validate path normalization + fuzzy search against doc-relative, ttmp-relative, and absolute paths
+- `15-diagnostics-smoke.sh` — diagnostics taxonomy smoke (vocab, related, listing, workspace, frontmatter, template)
+- `16-doc-move.sh` — move a document between tickets and rewrite its Ticket field
+- `17-ticket-move.sh` — move a ticket directory to the current path template
 - `run-all.sh` — convenience script to run all steps in order
 - `SCENARIO.md` — detailed explanation of the scenario and expected outputs
 
@@ -48,7 +51,7 @@ export DOCMGR_PATH=/absolute/path/to/docmgr
 
 - The scenario uses ticket `MEN-4242` with title "Normalize chat API paths and WebSocket lifecycle".
 - The ticket workspace will be created under `ttmp/` using the default date-based structure, for example:
-  - `ttmp/2025/11/03/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
+  - `ttmp/2025/11/03/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/`
 - Doctor now supports:
   - `--ignore-dir` and `--ignore-glob` to filter out paths (scenario demonstrates `_templates`, `_guidelines` and design-doc/index.md via `--ignore-glob`)
   - `--stale-after <days>` to tune staleness threshold

@@ -263,7 +263,7 @@ func (c *MetaUpdateCommand) Run(
 func updateDocumentField(filePath string, fieldName string, value string) error {
 	doc, content, err := documents.ReadDocumentWithFrontmatter(filePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse frontmatter: %w", err)
+		return err
 	}
 
 	// Update field based on field name

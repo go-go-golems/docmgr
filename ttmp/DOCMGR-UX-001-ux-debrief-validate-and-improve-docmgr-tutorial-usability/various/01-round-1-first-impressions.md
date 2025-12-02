@@ -505,10 +505,10 @@ docmgr create-ticket --ticket MEN-4242 \
   --topics chat,backend,websocket
 ```
 
-This creates `ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/` with:
+This creates `ttmp/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/` with:
 
 ```
-ttmp/MEN-4242-.../
+ttmp/MEN-4242--.../
 ├── index.md        # Ticket overview (you're here)
 ├── tasks.md        # Todo list
 ├── changelog.md    # History of changes

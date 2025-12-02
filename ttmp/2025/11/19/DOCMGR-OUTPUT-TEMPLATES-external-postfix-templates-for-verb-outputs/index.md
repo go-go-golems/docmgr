@@ -1,7 +1,7 @@
 ---
 Title: External postfix templates for verb outputs
 Ticket: DOCMGR-OUTPUT-TEMPLATES
-Status: active
+Status: complete
 Topics:
     - cli
     - templates
@@ -45,8 +45,9 @@ RelatedFiles:
       Note: Example template file for vocab list command
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-19T20:23:21.630363211-05:00
+LastUpdated: 2025-12-01T16:01:37.91252771-05:00
 ---
+
 
 
 

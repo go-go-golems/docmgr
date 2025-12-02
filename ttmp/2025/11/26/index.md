@@ -1,7 +1,7 @@
 ---
 Title: Verify docmgr command references in documentation
 Ticket: DOCMGR-DOC-VERIFY
-Status: active
+Status: complete
 Topics:
     - docmgr
     - documentation
@@ -20,8 +20,9 @@ RelatedFiles:
       Note: Workflow guide verified
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-26T14:16:27.640610601-05:00
+LastUpdated: 2025-12-01T16:01:37.769140191-05:00
 ---
+
 
 
 

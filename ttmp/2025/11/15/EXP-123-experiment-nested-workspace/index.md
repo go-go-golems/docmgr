@@ -1,7 +1,7 @@
 ---
 Title: Experiment nested workspace
 Ticket: EXP-123
-Status: active
+Status: complete
 Topics:
     - demo
 DocType: index
@@ -10,8 +10,9 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-15T15:32:44.186057797-05:00
+LastUpdated: 2025-12-01T16:01:38.203850109-05:00
 ---
+
 
 
 # Experiment nested workspace

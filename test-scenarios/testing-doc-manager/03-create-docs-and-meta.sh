@@ -16,7 +16,7 @@ ${DOCMGR} doc add --ticket MEN-4242 --doc-type playbook --title "Smoke Tests for
 ${DOCMGR} doc guidelines --doc-type design-doc --output markdown || true
 
 # Enrich metadata on index.md
-INDEX_MD=$(find ttmp -type f -path "*/MEN-4242-*/index.md" -print -quit)
+INDEX_MD=$(find ttmp -type f -path "*/MEN-4242--*/index.md" -print -quit)
 if [[ -z "${INDEX_MD}" ]]; then
 	echo "Could not locate MEN-4242 index.md" >&2
 	exit 1

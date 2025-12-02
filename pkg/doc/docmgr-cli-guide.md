@@ -56,7 +56,7 @@ docmgr doc add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for 
 
 # 6) Update metadata on the ticket index
 # Owners and Summary improve discoverability; RelatedFiles enable reverse lookup.
-INDEX_MD=$(find ttmp -type f -path "*/MEN-4242-*/index.md" -print -quit)
+INDEX_MD=$(find ttmp -type f -path "*/MEN-4242--*/index.md" -print -quit)
 test -n "$INDEX_MD"
 docmgr meta update --doc "$INDEX_MD" --field Owners          --value "manuel,alex"
 docmgr meta update --doc "$INDEX_MD" --field Summary         --value "Unify chat HTTP paths and stabilize WebSocket flows."
@@ -105,7 +105,7 @@ Vocabulary path is resolved similarly via `.ttmp.yaml:vocabulary` (absolute or r
 
 Each ticket gets its own workspace under `ttmp/` (configurable with `--root`). This keeps short-lived artifacts connected to code while avoiding sprawling wiki pages. Workspaces are easy to archive or pivot as tickets evolve.
 
-- `MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
+- `MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/`
   - `index.md` (frontmatter and summary)
   - `design-doc/` (design documents)
   - `reference/` (contracts, API references)
@@ -182,6 +182,22 @@ docmgr ticket create-ticket --ticket MEN-4242 \
 
 Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` under a standard structure.
 
+#### 4.3.1 Move a Legacy Ticket to the Current Template
+
+If a ticket was created under an older layout (for example, a flat `ttmp/MEN-1234`), move it to the current date-based template:
+```bash
+docmgr ticket move --ticket MEN-1234
+
+# Override the path template or allow overwrite if the destination already exists
+docmgr ticket move --ticket MEN-1234 --path-template "{{YYYY}}/{{MM}}/{{DD}}/{{TICKET}}--{{SLUG}}" --overwrite
+```
+
+The command:
+- Finds the existing ticket directory by Ticket frontmatter
+- Renders the destination path from the template
+- Renames the directory (fails unless `--overwrite` is set when destination exists)
+- Touches `LastUpdated` in `index.md` (best effort)
+
 ### 4.4 Add Documents
 
 Create additional documents as needed. Use short, descriptive titles; you can refine content later.
@@ -207,6 +223,20 @@ Notes:
 - If a doc type has a template at `ttmp/_templates/<docType>.md`, its body is rendered automatically.
 - Unknown/other doc types are accepted and stored under a subdirectory named after the doc-type (frontmatter `DocType` is still set for filtering).
 
+### 4.4.1 Move Documents Between Tickets
+
+If a document was created under the wrong ticket, move it and rewrite its Ticket field:
+```bash
+docmgr doc move --doc ttmp/2025/12/01/MEN-4242--.../reference/01-chat-websocket-lifecycle.md \
+  --dest-ticket MEN-5678 \
+  --overwrite
+
+# Optional: change the subdirectory under the destination ticket
+docmgr doc move --doc path/to/doc.md --dest-ticket MEN-5678 --dest-dir reference/migrations
+```
+
+The command writes the destination copy with an updated Ticket frontmatter value and deletes the source after a successful move. Use `--overwrite` if a file with the same name already exists at the destination.
+
 ### 4.5 Guidelines
 
 Guidelines provide structure and “what good looks like” for each doc type. They help new contributors produce consistent, reviewable docs.
@@ -226,7 +256,7 @@ See also: `docmgr help templates-and-guidelines` for how templates and guideline
 Keep `Owners`, `Summary`, and `RelatedFiles` current. This makes search, review, and onboarding faster.
 ```bash
 # Update a specific document
-docmgr meta update --doc ttmp/YYYY/MM/DD/MEN-4242-.../index.md --field Owners --value "manuel,alex"
+docmgr meta update --doc ttmp/YYYY/MM/DD/MEN-4242--.../index.md --field Owners --value "manuel,alex"
 
 # Update all docs for a ticket (optionally filter by type)
 docmgr meta update --ticket MEN-4242 --doc-type design-doc --field Topics --value "chat,backend"

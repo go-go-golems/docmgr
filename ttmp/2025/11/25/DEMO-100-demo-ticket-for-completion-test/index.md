@@ -1,7 +1,7 @@
 ---
 Title: Demo ticket for completion test
 Ticket: DEMO-100
-Status: active
+Status: complete
 Topics:
     - demo
 DocType: index
@@ -10,8 +10,9 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-25T16:54:45.769125795-05:00
+LastUpdated: 2025-12-01T16:01:37.49918697-05:00
 ---
+
 
 # Demo ticket for completion test
 

@@ -35,3 +35,52 @@ func Slugify(input string) string {
 	}
 	return out
 }
+
+// SlugifyTitleForTicket generates a slug from a title while avoiding duplicating
+// the ticket identifier. If the title begins with the ticket identifier (a
+// common pattern like "MEN-1234: Title"), the ticket prefix and any separators
+// are removed before slugifying. When the stripped title becomes empty, the
+// ticket identifier itself is slugified as a fallback.
+func SlugifyTitleForTicket(ticket, title string) string {
+	cleanTicket := strings.TrimSpace(ticket)
+	cleanTitle := strings.TrimSpace(title)
+
+	if cleanTitle == "" {
+		return Slugify(cleanTicket)
+	}
+
+	stripped := stripTicketPrefix(cleanTitle, cleanTicket)
+	if stripped == "" {
+		if cleanTicket == "" {
+			return Slugify(cleanTitle)
+		}
+		return Slugify(cleanTicket)
+	}
+	return Slugify(stripped)
+}
+
+func stripTicketPrefix(title, ticket string) string {
+	if title == "" || ticket == "" {
+		return title
+	}
+
+	trimmedTicket := strings.TrimSpace(ticket)
+	if trimmedTicket == "" || len(title) < len(trimmedTicket) {
+		return title
+	}
+
+	if !strings.EqualFold(title[:len(trimmedTicket)], trimmedTicket) {
+		return title
+	}
+
+	remainder := title[len(trimmedTicket):]
+	remainder = strings.TrimLeftFunc(remainder, func(r rune) bool {
+		switch r {
+		case ' ', '\t', '-', '–', '—', ':', '_':
+			return true
+		default:
+			return false
+		}
+	})
+	return strings.TrimSpace(remainder)
+}

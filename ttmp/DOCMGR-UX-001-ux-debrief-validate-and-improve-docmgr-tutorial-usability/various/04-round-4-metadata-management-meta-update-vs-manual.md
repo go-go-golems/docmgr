@@ -133,7 +133,7 @@ $ OWNERS=$(docmgr list tickets --ticket MEN-4242 --with-glaze-output --output js
 $ docmgr meta update --ticket MEN-4242 --field Owners --value "$OWNERS"
 
 # Pattern 3: Add topic to all docs in directory
-$ for doc in ttmp/MEN-4242-*/design/*.md; do
+$ for doc in ttmp/MEN-4242--*/design/*.md; do
     docmgr meta update --doc "$doc" --field Topics --value "backend,api"
   done
 ```
@@ -142,7 +142,7 @@ $ for doc in ttmp/MEN-4242-*/design/*.md; do
 
 ```bash
 # This is TOO VERBOSE for a single-field update:
-$ docmgr meta update --doc ttmp/MEN-4242-normalize-chat-api/design/01-path-normalization.md --field Summary --value "Path normalization strategy for chat API"
+$ docmgr meta update --doc ttmp/MEN-4242--normalize-chat-api/design/01-path-normalization.md --field Summary --value "Path normalization strategy for chat API"
 # 168 characters!
 
 # vs just:
@@ -535,7 +535,7 @@ docmgr meta update --ticket MEN-4242 --doc-type design-doc \
 ## 5. Enrich Metadata
 
 ```bash
-INDEX_MD="ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/index.md"
+INDEX_MD="ttmp/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md"
 docmgr meta update --doc "$INDEX_MD" --field Owners --value "manuel,alex"
 docmgr meta update --doc "$INDEX_MD" --field Summary --value "Unify chat HTTP paths..."
 ...
@@ -576,7 +576,7 @@ docmgr meta update --ticket MEN-4242 --doc-type design-doc \
     --field Status --value review
 
 # Update specific doc (automation/scripts)
-docmgr meta update --doc ttmp/MEN-4242-.../design/01-design.md \
+docmgr meta update --doc ttmp/MEN-4242--.../design/01-design.md \
     --field Summary --value "New summary"
 ```
 

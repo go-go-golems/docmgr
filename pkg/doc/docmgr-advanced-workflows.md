@@ -47,7 +47,7 @@ docmgr import file --ticket MEN-4242 \
   --name websocket-spec-v2
 ```
 
-- Files land under `ttmp/.../MEN-4242-.../sources/local/`. The `--name` flag changes the basename while keeping the original extension.
+- Files land under `ttmp/.../MEN-4242--.../sources/local/`. The `--name` flag changes the basename while keeping the original extension.
 - `.meta/sources.yaml` records every import (type, original path, timestamp) so you can refresh or replace them later.
 - `index.md` automatically gains an `ExternalSources` entry such as `local:websocket-spec-v2.pdf`, making the attachment searchable via `docmgr doc search --external-source`.
 

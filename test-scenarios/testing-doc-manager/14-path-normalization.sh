@@ -7,7 +7,7 @@ cd "${REPO}"
 
 DOCMGR="${DOCMGR_PATH:-docmgr}"
 
-TICKET_DIR="$(find ttmp -maxdepth 5 -type d -name 'MEN-4242-*' | head -n 1)"
+TICKET_DIR="$(find ttmp -maxdepth 5 -type d -name 'MEN-4242--*' | head -n 1)"
 if [[ -z "${TICKET_DIR}" ]]; then
   echo "Ticket directory for MEN-4242 not found under ttmp/" >&2
   exit 1

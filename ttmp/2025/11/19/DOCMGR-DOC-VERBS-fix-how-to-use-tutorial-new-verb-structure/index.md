@@ -1,7 +1,7 @@
 ---
 Title: 'Fix how-to-use tutorial: new verb structure'
 Ticket: DOCMGR-DOC-VERBS
-Status: active
+Status: complete
 Topics:
     - docmgr
     - documentation
@@ -43,8 +43,9 @@ RelatedFiles:
       Note: Final action plan with all 41 findings (validation + CLI + style guide)
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-19T13:58:24.683790459-05:00
+LastUpdated: 2025-12-01T16:01:37.725346944-05:00
 ---
+
 
 
 

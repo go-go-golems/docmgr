@@ -12,6 +12,10 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
+	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -27,13 +31,15 @@ type DoctorCommand struct {
 
 // DoctorSettings holds the parameters for the doctor command
 type DoctorSettings struct {
-	Root           string   `glazed.parameter:"root"`
-	Ticket         string   `glazed.parameter:"ticket"`
-	All            bool     `glazed.parameter:"all"`
-	IgnoreDirs     []string `glazed.parameter:"ignore-dir"`
-	IgnoreGlobs    []string `glazed.parameter:"ignore-glob"`
-	StaleAfterDays int      `glazed.parameter:"stale-after"`
-	FailOn         string   `glazed.parameter:"fail-on"`
+	Root            string   `glazed.parameter:"root"`
+	Ticket          string   `glazed.parameter:"ticket"`
+	Doc             string   `glazed.parameter:"doc"`
+	All             bool     `glazed.parameter:"all"`
+	IgnoreDirs      []string `glazed.parameter:"ignore-dir"`
+	IgnoreGlobs     []string `glazed.parameter:"ignore-glob"`
+	StaleAfterDays  int      `glazed.parameter:"stale-after"`
+	FailOn          string   `glazed.parameter:"fail-on"`
+	DiagnosticsJSON string   `glazed.parameter:"diagnostics-json"`
 	// Schema printing flags (human mode only)
 	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
 	SchemaFormat        string `glazed.parameter:"schema-format"`
@@ -63,6 +69,7 @@ Common findings (doctor message ⇒ likely cause ⇒ how to fix):
 
 Tips:
   • Use '--fail-on warning' (or 'error') to make CI fail when issues are detected.
+  • '--diagnostics-json path' captures rule results as JSON (use '-' for stdout) for CI/automation.
   • '--ignore-glob' is handy for suppressing known noisy paths; the command also reads patterns from
     both repository and docs-root .docmgrignore files.
 
@@ -96,6 +103,12 @@ Example:
 					parameters.WithDefault(""),
 				),
 				parameters.NewParameterDefinition(
+					"doc",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Validate a single markdown file (overrides --ticket/--all)"),
+					parameters.WithDefault(""),
+				),
+				parameters.NewParameterDefinition(
 					"all",
 					parameters.ParameterTypeBool,
 					parameters.WithHelp("Check all tickets"),
@@ -125,6 +138,12 @@ Example:
 					parameters.WithHelp("Fail with non-zero exit on severity: none|warning|error (default none)"),
 					parameters.WithDefault("none"),
 				),
+				parameters.NewParameterDefinition(
+					"diagnostics-json",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Write diagnostics rule output to JSON (file path or '-' for stdout)"),
+					parameters.WithDefault(""),
+				),
 			),
 		),
 	}, nil
@@ -142,6 +161,13 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
+
+	// Optional diagnostics collector for JSON output
+	var diagRenderer *docmgr.Renderer
+	if settings.DiagnosticsJSON != "" {
+		diagRenderer = docmgr.NewRenderer(docmgr.WithCollector())
+		ctx = docmgr.ContextWithRenderer(ctx, diagRenderer)
+	}
 
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
@@ -196,16 +222,22 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// Load vocabulary for validation (best-effort)
 	vocab, _ := LoadVocabulary()
 	topicSet := map[string]struct{}{}
+	topicList := make([]string, 0, len(vocab.Topics))
 	for _, it := range vocab.Topics {
 		topicSet[it.Slug] = struct{}{}
+		topicList = append(topicList, it.Slug)
 	}
 	docTypeSet := map[string]struct{}{}
+	docTypeList := make([]string, 0, len(vocab.DocTypes))
 	for _, it := range vocab.DocTypes {
 		docTypeSet[it.Slug] = struct{}{}
+		docTypeList = append(docTypeList, it.Slug)
 	}
 	intentSet := map[string]struct{}{}
+	intentList := make([]string, 0, len(vocab.Intent))
 	for _, it := range vocab.Intent {
 		intentSet[it.Slug] = struct{}{}
+		intentList = append(intentList, it.Slug)
 	}
 	statusSet := map[string]struct{}{}
 	statusList := make([]string, 0, len(vocab.Status))
@@ -232,6 +264,26 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return false
 	}
 
+	// Single-file mode: validate one doc and return.
+	if settings.Doc != "" {
+		docPath := settings.Doc
+		if !filepath.IsAbs(docPath) {
+			docPath = filepath.Join(settings.Root, docPath)
+		}
+		sev, err := validateSingleDoc(ctx, docPath, topicSet, topicList, docTypeSet, docTypeList, intentSet, intentList, statusSet, statusList, statusValidText, gp)
+		highestSeverity = maxInt(highestSeverity, sev)
+		if diagRenderer != nil && settings.DiagnosticsJSON != "" {
+			if err := writeDiagnosticsJSON(diagRenderer, settings.DiagnosticsJSON); err != nil {
+				return err
+			}
+		}
+		threshold := severityThreshold(settings.FailOn)
+		if threshold >= 0 && highestSeverity >= threshold && threshold > 0 {
+			return fmt.Errorf("doctor failed: severity >= %s", settings.FailOn)
+		}
+		return err
+	}
+
 	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, skipFn)
 	if err != nil {
 		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
@@ -253,6 +305,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			return fmt.Errorf("failed to emit doctor row (missing_index) for %s: %w", missing, err)
 		}
 		highestSeverity = maxInt(highestSeverity, 2)
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceMissingIndex(missing))
 	}
 
 	for _, ws := range workspaces {
@@ -270,6 +323,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", filepath.Base(ticketPath), err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
+			renderFrontmatterParseTaxonomy(ctx, ws.FrontmatterErr, indexPath)
 			continue
 		}
 
@@ -316,6 +370,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceStale(indexPath, doc.LastUpdated, settings.StaleAfterDays))
 			}
 		}
 
@@ -333,15 +388,28 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 2)
+			for _, field := range missingRequiredFields(doc) {
+				detail := fmt.Sprintf("%s is required", field)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(indexPath, field, detail, core.SeverityError))
+			}
 		}
 
 		// Additional validation: Status and Topics (not in Validate() but checked by doctor)
-		issues := []string{}
+		optionalIssues := []struct {
+			field  string
+			detail string
+		}{}
 		if doc.Status == "" {
-			issues = append(issues, "missing Status")
+			optionalIssues = append(optionalIssues, struct {
+				field  string
+				detail string
+			}{field: "Status", detail: "missing Status"})
 		}
 		if len(doc.Topics) == 0 {
-			issues = append(issues, "missing Topics")
+			optionalIssues = append(optionalIssues, struct {
+				field  string
+				detail string
+			}{field: "Topics", detail: "missing Topics"})
 		}
 
 		// Validate vocabulary: Topics, DocType, Intent
@@ -365,6 +433,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 				return fmt.Errorf("failed to emit doctor row (unknown_topics) for %s: %w", doc.Ticket, err)
 			}
 			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Topics", strings.Join(unknownTopics, ","), topicList))
 		}
 
 		// Unknown docType
@@ -382,6 +451,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_doc_type) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "DocType", doc.DocType, docTypeList))
 			}
 		}
 
@@ -400,6 +470,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Intent", doc.Intent, intentList))
 			}
 		}
 
@@ -418,6 +489,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (unknown_status) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Status", doc.Status, statusList))
 			}
 		}
 
@@ -490,23 +562,25 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					return fmt.Errorf("failed to emit doctor row (missing_related_file) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewRelatedFileMissing(indexPath, rf.Path, rf.Note))
 			}
 		}
 
-		if len(issues) > 0 {
+		if len(optionalIssues) > 0 {
 			hasIssues = true
-			for _, issue := range issues {
+			for _, issue := range optionalIssues {
 				row := types.NewRow(
 					types.MRP("ticket", doc.Ticket),
 					types.MRP("issue", "missing_field"),
 					types.MRP("severity", "warning"),
-					types.MRP("message", issue),
+					types.MRP("message", issue.detail),
 					types.MRP("path", indexPath),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
 					return fmt.Errorf("failed to emit doctor row (missing_field) for %s: %w", doc.Ticket, err)
 				}
 				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(indexPath, issue.field, issue.detail, core.SeverityWarning))
 			}
 		}
 
@@ -551,6 +625,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 							return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", path, err)
 						}
 						highestSeverity = maxInt(highestSeverity, 2)
+						renderFrontmatterParseTaxonomy(ctx, err, path)
 					}
 				}
 
@@ -590,6 +665,11 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	// Enforce fail-on behavior
+	if diagRenderer != nil && settings.DiagnosticsJSON != "" {
+		if err := writeDiagnosticsJSON(diagRenderer, settings.DiagnosticsJSON); err != nil {
+			return err
+		}
+	}
 	threshold := severityThreshold(settings.FailOn)
 	if threshold >= 0 && highestSeverity >= threshold && threshold > 0 {
 		return fmt.Errorf("doctor failed: severity >= %s", settings.FailOn)
@@ -683,6 +763,60 @@ func loadDocmgrIgnore(repoRoot string) ([]string, error) {
 	return patterns, nil
 }
 
+func missingRequiredFields(doc *models.Document) []string {
+	fields := []string{}
+	if strings.TrimSpace(doc.Title) == "" {
+		fields = append(fields, "Title")
+	}
+	if strings.TrimSpace(doc.Ticket) == "" {
+		fields = append(fields, "Ticket")
+	}
+	if strings.TrimSpace(doc.DocType) == "" {
+		fields = append(fields, "DocType")
+	}
+	return fields
+}
+
+func renderFrontmatterParseTaxonomy(ctx context.Context, err error, path string) {
+	if err == nil {
+		return
+	}
+	if tax, ok := core.AsTaxonomy(err); ok && tax != nil {
+		docmgr.RenderTaxonomy(ctx, tax)
+		return
+	}
+	docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterParse(path, 0, 0, "", err.Error(), err))
+}
+
+func writeDiagnosticsJSON(renderer *docmgr.Renderer, destination string) error {
+	if renderer == nil || destination == "" {
+		return nil
+	}
+	data, err := renderer.JSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal diagnostics JSON: %w", err)
+	}
+	if len(data) == 0 {
+		data = []byte("[]")
+	}
+	if data[len(data)-1] != '\n' {
+		data = append(data, '\n')
+	}
+	if destination == "-" {
+		if _, err := os.Stdout.Write(data); err != nil {
+			return fmt.Errorf("failed to write diagnostics JSON to stdout: %w", err)
+		}
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		return fmt.Errorf("failed to create diagnostics JSON directory: %w", err)
+	}
+	if err := os.WriteFile(destination, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write diagnostics JSON: %w", err)
+	}
+	return nil
+}
+
 func maxInt(a, b int) int {
 	if a > b {
 		return a
@@ -709,6 +843,164 @@ var _ cmds.GlazeCommand = &DoctorCommand{}
 
 type doctorRowCollector struct {
 	rows []types.Row
+}
+
+// validateSingleDoc validates one markdown file (frontmatter parse + required fields + vocab warnings).
+func validateSingleDoc(
+	ctx context.Context,
+	docPath string,
+	topicSet map[string]struct{},
+	topicList []string,
+	docTypeSet map[string]struct{},
+	docTypeList []string,
+	intentSet map[string]struct{},
+	intentList []string,
+	statusSet map[string]struct{},
+	statusList []string,
+	statusValidText string,
+	gp glazedMiddlewares.Processor,
+) (int, error) {
+	highestSeverity := 0
+
+	doc, err := readDocumentFrontmatter(docPath)
+	if err != nil {
+		row := types.NewRow(
+			types.MRP("ticket", ""),
+			types.MRP("issue", "invalid_frontmatter"),
+			types.MRP("severity", "error"),
+			types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", err)),
+			types.MRP("path", docPath),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return highestSeverity, fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", docPath, err)
+		}
+		highestSeverity = maxInt(highestSeverity, 2)
+		renderFrontmatterParseTaxonomy(ctx, err, docPath)
+		return highestSeverity, nil
+	}
+
+	// Required fields
+	if err := doc.Validate(); err != nil {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "missing_required_fields"),
+			types.MRP("severity", "error"),
+			types.MRP("message", err.Error()),
+			types.MRP("path", docPath),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return highestSeverity, fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", docPath, err)
+		}
+		highestSeverity = maxInt(highestSeverity, 2)
+		for _, field := range missingRequiredFields(doc) {
+			detail := fmt.Sprintf("%s is required", field)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, field, detail, core.SeverityError))
+		}
+	}
+
+	// Optional fields: Status, Topics
+	if doc.Status == "" {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "missing_field"),
+			types.MRP("severity", "warning"),
+			types.MRP("message", "missing Status"),
+			types.MRP("path", docPath),
+		)
+		_ = gp.AddRow(ctx, row)
+		highestSeverity = maxInt(highestSeverity, 1)
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, "Status", "missing Status", core.SeverityWarning))
+	}
+	if len(doc.Topics) == 0 {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "missing_field"),
+			types.MRP("severity", "warning"),
+			types.MRP("message", "missing Topics"),
+			types.MRP("path", docPath),
+		)
+		_ = gp.AddRow(ctx, row)
+		highestSeverity = maxInt(highestSeverity, 1)
+		docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, "Topics", "missing Topics", core.SeverityWarning))
+	}
+
+	// Vocabulary checks
+	if len(doc.Topics) > 0 {
+		var unknownTopics []string
+		for _, t := range doc.Topics {
+			if _, ok := topicSet[t]; !ok && t != "" {
+				unknownTopics = append(unknownTopics, t)
+			}
+		}
+		if len(unknownTopics) > 0 {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_topics"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown topics: %v", unknownTopics)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Topics", strings.Join(unknownTopics, ","), topicList))
+		}
+	}
+	if doc.DocType != "" {
+		if _, ok := docTypeSet[doc.DocType]; !ok {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_doc_type"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown docType: %s", doc.DocType)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "DocType", doc.DocType, docTypeList))
+		}
+	}
+	if doc.Intent != "" {
+		if _, ok := intentSet[doc.Intent]; !ok {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_intent"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown intent: %s", doc.Intent)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Intent", doc.Intent, intentList))
+		}
+	}
+	if doc.Status != "" {
+		if _, ok := statusSet[doc.Status]; !ok {
+			row := types.NewRow(
+				types.MRP("ticket", doc.Ticket),
+				types.MRP("issue", "unknown_status"),
+				types.MRP("severity", "warning"),
+				types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status')", doc.Status, statusValidText)),
+				types.MRP("path", docPath),
+			)
+			_ = gp.AddRow(ctx, row)
+			highestSeverity = maxInt(highestSeverity, 1)
+			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Status", doc.Status, statusList))
+		}
+	}
+
+	// Success row
+	if highestSeverity == 0 {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "none"),
+			types.MRP("severity", "ok"),
+			types.MRP("message", "All checks passed"),
+			types.MRP("path", docPath),
+		)
+		_ = gp.AddRow(ctx, row)
+	}
+
+	return highestSeverity, nil
 }
 
 func (c *doctorRowCollector) AddRow(ctx context.Context, row types.Row) error {

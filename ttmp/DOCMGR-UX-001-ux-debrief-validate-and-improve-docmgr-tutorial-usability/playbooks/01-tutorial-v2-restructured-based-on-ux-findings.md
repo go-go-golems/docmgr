@@ -194,7 +194,7 @@ docmgr create-ticket --ticket MEN-4242 \
 **What this creates:**
 
 ```
-ttmp/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/
+ttmp/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/
 ├── index.md        # Ticket overview (you're here)
 ├── tasks.md        # Todo list
 ├── changelog.md    # History of changes
@@ -304,7 +304,7 @@ Documents have metadata (frontmatter) that you update using `docmgr meta update`
 
 ```bash
 # Update one field on one doc
-INDEX="ttmp/MEN-4242-normalize-chat-api/index.md"
+INDEX="ttmp/MEN-4242--normalize-chat-api/index.md"
 docmgr meta update --doc "$INDEX" --field Summary --value "Unify API paths"
 docmgr meta update --doc "$INDEX" --field Status --value review
 docmgr meta update --doc "$INDEX" --field Owners --value "manuel,alex"
@@ -456,7 +456,7 @@ docmgr relate --ticket MEN-4242 \
 
 ```bash
 docmgr meta update \
-  --doc ttmp/MEN-4242-.../index.md \
+  --doc ttmp/MEN-4242--.../index.md \
   --field Summary \
   --value "MEN-4242: normalize API paths; update WS lifecycle; docs + tests."
 ```

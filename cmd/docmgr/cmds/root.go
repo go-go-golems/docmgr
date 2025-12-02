@@ -10,6 +10,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/tasks"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/template"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket"
+	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace"
 	"github.com/go-go-golems/docmgr/pkg/completion"
@@ -77,6 +78,9 @@ Helpful docs (built-in):
 		return nil, err
 	}
 	if err := template.Attach(rootCmd); err != nil {
+		return nil, err
+	}
+	if err := validate.Attach(rootCmd); err != nil {
 		return nil, err
 	}
 

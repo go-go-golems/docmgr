@@ -279,21 +279,18 @@ func (c *AddCommand) createDocument(settings *AddSettings) (*AddResult, error) {
 		_, body := templates.ExtractFrontmatterAndBody(tpl)
 		doc.Title = settings.Title
 		content = templates.RenderTemplateBody(body, &doc)
-	} else {
-		content = fmt.Sprintf("# %s\n\n<!-- Add your content here -->\n", settings.Title)
 	}
+	// If no template found, content remains empty - document will have only frontmatter
 
 	if err := documents.WriteDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
 		return nil, fmt.Errorf("failed to write document: %w", err)
 	}
 
 	guidelineText := ""
-	guidelinePath := filepath.Join(settings.Root, "_guidelines", fmt.Sprintf("%s.md", settings.DocType))
-	if b, err := os.ReadFile(guidelinePath); err == nil {
-		guidelineText = string(b)
-	} else if guideline, ok := GetGuideline(settings.DocType); ok {
+	if guideline, ok := templates.LoadGuideline(settings.Root, settings.DocType); ok {
 		guidelineText = guideline
 	}
+	// No guideline found - that's fine, just don't show any
 
 	return &AddResult{
 		Ticket:         settings.Ticket,

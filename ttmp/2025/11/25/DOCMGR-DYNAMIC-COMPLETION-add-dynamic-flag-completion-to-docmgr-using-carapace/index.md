@@ -1,7 +1,7 @@
 ---
 Title: Add dynamic flag completion to docmgr using carapace
 Ticket: DOCMGR-DYNAMIC-COMPLETION
-Status: active
+Status: complete
 Topics:
     - backend
     - cli
@@ -26,8 +26,9 @@ RelatedFiles:
       Note: Command-line traversal logic that determines what to complete
 ExternalSources: []
 Summary: Add dynamic flag completion to docmgr using carapace library, enabling context-aware completion for flags like --ticket, --doc-type, --file, etc.
-LastUpdated: 2025-11-25T15:17:44.53306002-05:00
+LastUpdated: 2025-12-01T16:01:37.817138709-05:00
 ---
+
 
 
 

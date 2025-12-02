@@ -55,12 +55,12 @@ The bug originates in the path rendering logic in `pkg/commands/ticket_move.go` 
    }
    ```
 
-4. **Result**: `{{TICKET}}-{{SLUG}}` becomes `TEST-9999-test-9999-test-ticket-with-ticket-in-title`
+4. **Result**: `{{TICKET}}--{{SLUG}}` becomes `TEST-9999--test-9999-test-ticket-with-ticket-in-title` (with single dash, would be `TEST-9999-test-9999-test-ticket-with-ticket-in-title`)
 
 ### Why This Happens
 
 - The `utils.Slugify()` function lowercases and slugifies the entire title string, including any ticket identifier that appears in it.
-- The path template `{{TICKET}}-{{SLUG}}` assumes the slug is derived from a title that doesn't include the ticket identifier.
+- The path template `{{TICKET}}--{{SLUG}}` (now using double dash) assumes the slug is derived from a title that doesn't include the ticket identifier. With single dash, ticket identifiers in titles would cause duplication.
 - When the title contains the ticket identifier (common in some workflows), the slug includes it, causing duplication.
 
 ## Affected Code Locations

@@ -38,3 +38,8 @@ Validation now emits taxonomies with fix suggestions; added --suggest-fixes/--au
 
 Auto-fix flow polished: suppress error taxonomy after successful fix and re-parse; if re-parse fails, render the new taxonomy. Reran validation smoke (18) with success.
 
+
+## 2025-12-02
+
+Added unit tests for validate frontmatter fix heuristics (delimiter normalization, stray delimiter cleanup). Polished auto-fix flow to rerender only on failure and report success cleanly.
+

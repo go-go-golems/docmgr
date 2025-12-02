@@ -51,7 +51,7 @@ export DOCMGR_PATH=/absolute/path/to/docmgr
 
 - The scenario uses ticket `MEN-4242` with title "Normalize chat API paths and WebSocket lifecycle".
 - The ticket workspace will be created under `ttmp/` using the default date-based structure, for example:
-  - `ttmp/2025/11/03/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/`
+  - `ttmp/2025/11/03/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/`
 - Doctor now supports:
   - `--ignore-dir` and `--ignore-glob` to filter out paths (scenario demonstrates `_templates`, `_guidelines` and design-doc/index.md via `--ignore-glob`)
   - `--stale-after <days>` to tune staleness threshold

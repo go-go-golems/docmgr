@@ -123,18 +123,11 @@ func (c *TicketMoveCommand) applyMove(settings *TicketMoveSettings) (*TicketMove
 
 	indexPath := filepath.Join(srcDir, "index.md")
 	srcDoc, _, _ := readDocumentWithContent(indexPath)
-	slug := utils.Slugify(settings.Ticket)
-	title := settings.Ticket
+	title := strings.TrimSpace(settings.Ticket)
 	if srcDoc != nil && strings.TrimSpace(srcDoc.Title) != "" {
 		title = strings.TrimSpace(srcDoc.Title)
-		// Strip ticket identifier from title before slugifying to avoid duplication
-		titleForSlug := utils.StripTicketFromTitle(title, settings.Ticket)
-		if titleForSlug == "" {
-			slug = utils.Slugify(settings.Ticket)
-		} else {
-			slug = utils.Slugify(titleForSlug)
-		}
 	}
+	slug := utils.SlugifyTitleForTicket(settings.Ticket, title)
 
 	// Use current time for new path template rendering.
 	now := time.Now()

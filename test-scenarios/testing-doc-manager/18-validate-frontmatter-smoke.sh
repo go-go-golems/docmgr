@@ -17,13 +17,13 @@ fi
 
 cd "${REPO}"
 
-INDEX_MD="$(find ttmp -maxdepth 5 -type f -name index.md -path '*MEN-4242-*' | head -n1 || true)"
+INDEX_MD="$(find ttmp -maxdepth 5 -type f -name index.md -path '*MEN-4242--*' | head -n1 || true)"
 if [[ -z "${INDEX_MD}" ]]; then
   echo "Could not locate MEN-4242 index.md under ttmp/. Ensure earlier scenario steps ran." >&2
   exit 1
 fi
 
-BROKEN_DOC="ttmp/2025/12/01/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/reference/validate-broken.md"
+BROKEN_DOC="ttmp/2025/12/01/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/validate-broken.md"
 BROKEN_DOC_ABS="${REPO}/${BROKEN_DOC}"
 mkdir -p "$(dirname "${BROKEN_DOC_ABS}")"
 cat > "${BROKEN_DOC_ABS}" <<'EOF'

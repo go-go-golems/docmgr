@@ -25,7 +25,7 @@ type CreateTicketCommand struct {
 	*cmds.CommandDescription
 }
 
-const DefaultTicketPathTemplate = "{{YYYY}}/{{MM}}/{{DD}}/{{TICKET}}-{{SLUG}}"
+const DefaultTicketPathTemplate = "{{YYYY}}/{{MM}}/{{DD}}/{{TICKET}}--{{SLUG}}"
 
 // CreateTicketSettings holds the parameters for the create-ticket command
 type CreateTicketSettings struct {
@@ -126,14 +126,7 @@ func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 func (c *CreateTicketCommand) createTicketWorkspace(settings *CreateTicketSettings) (*CreateTicketResult, error) {
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	// Strip ticket identifier from title before slugifying to avoid duplication
-	titleForSlug := utils.StripTicketFromTitle(settings.Title, settings.Ticket)
-	var slug string
-	if titleForSlug == "" || titleForSlug == settings.Title {
-		slug = utils.Slugify(settings.Ticket)
-	} else {
-		slug = utils.Slugify(titleForSlug)
-	}
+	slug := utils.SlugifyTitleForTicket(settings.Ticket, settings.Title)
 	now := time.Now()
 	ticketPath, err := renderTicketPath(settings.Root, settings.PathTemplate, settings.Ticket, slug, settings.Title, now)
 	if err != nil {

@@ -20,7 +20,7 @@ fi
 cd "${REPO}"
 
 # Find the MEN-4242 ticket index (created by earlier scripts)
-INDEX_MD="$(find ttmp -maxdepth 5 -type f -name index.md -path '*MEN-4242-*' | head -n1 || true)"
+INDEX_MD="$(find ttmp -maxdepth 5 -type f -name index.md -path '*MEN-4242--*' | head -n1 || true)"
 if [[ -z "${INDEX_MD}" ]]; then
   echo "Could not locate MEN-4242 index.md under ttmp/. Ensure earlier scenario steps ran." >&2
   exit 1
@@ -36,7 +36,7 @@ ${DOCMGR} doc relate --doc "${INDEX_MD}" \
   --file-note "missing/path.go:expected missing file for diagnostics smoke"
 
 # 3) Create a broken frontmatter doc to trigger YAML parse error (listing skip + doctor invalid frontmatter)
-BROKEN_DOC="ttmp/2025/12/01/MEN-4242-normalize-chat-api-paths-and-websocket-lifecycle/reference/zz-broken.md"
+BROKEN_DOC="ttmp/2025/12/01/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/zz-broken.md"
 cat > "${BROKEN_DOC}" <<'EOF'
 ---
 Title: Broken FM

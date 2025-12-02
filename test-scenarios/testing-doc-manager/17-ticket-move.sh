@@ -26,6 +26,13 @@ if [[ -z "${CUR_DIR}" ]]; then
   exit 1
 fi
 
+# Update the ticket title to include the ticket identifier, matching common
+# workflows where people prefix titles with the ticket slug (this used to cause
+# directory duplication bugs).
+${DOCMGR} meta update --ticket "${TICKET}" \
+  --field Title \
+  --value "${TICKET}: Secondary ticket — WebSocket reconnection plan"
+
 # Simulate legacy flat layout by moving the ticket to ttmp/<ticket>-legacy
 LEGACY_DIR="ttmp/${TICKET}-legacy"
 if [[ -d "${LEGACY_DIR}" ]]; then
@@ -54,4 +61,10 @@ if [[ ! -f "${NEW_DIR}/index.md" ]]; then
   exit 1
 fi
 
-echo "Ticket move succeeded: ${NEW_DIR}"
+LOWER_TICKET="$(echo "${TICKET}" | tr '[:upper:]' '[:lower:]')"
+if [[ "${NEW_DIR}" == *"-${LOWER_TICKET}-"* ]]; then
+  echo "Destination path still duplicates ticket identifier: ${NEW_DIR}" >&2
+  exit 1
+fi
+
+echo "Ticket move succeeded without duplicate slug: ${NEW_DIR}"

@@ -40,8 +40,10 @@ func (r *FrontmatterSyntaxRule) Render(ctx context.Context, t *core.Taxonomy) (*
 			b.WriteString(fmt.Sprintf("  %d. %s\n", i+1, fix))
 		}
 	}
+	b.WriteString("\nFor more guidance, run: docmgr help yaml-frontmatter-validation\n")
 	actions := []rules.Action{
 		{Label: "Validate frontmatter", Command: "docmgr", Args: []string{"validate", "frontmatter", "--doc", payload.File}},
+		{Label: "Help: yaml-frontmatter-validation", Command: "docmgr", Args: []string{"help", "yaml-frontmatter-validation"}},
 	}
 	return &rules.RuleResult{
 		Headline: "YAML/frontmatter syntax error",
@@ -69,6 +71,11 @@ func (r *FrontmatterSchemaRule) Render(ctx context.Context, t *core.Taxonomy) (*
 			Label:   "Update field",
 			Command: "docmgr",
 			Args:    []string{"meta", "update", "--doc", payload.File, "--field", payload.Field, "--value", "<value>"},
+		},
+		{
+			Label:   "Help: yaml-frontmatter-validation",
+			Command: "docmgr",
+			Args:    []string{"help", "yaml-frontmatter-validation"},
 		},
 	}
 	return &rules.RuleResult{

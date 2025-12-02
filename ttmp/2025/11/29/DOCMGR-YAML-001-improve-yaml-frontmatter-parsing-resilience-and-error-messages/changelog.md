@@ -43,3 +43,13 @@ Auto-fix flow polished: suppress error taxonomy after successful fix and re-pars
 
 Added unit tests for validate frontmatter fix heuristics (delimiter normalization, stray delimiter cleanup). Polished auto-fix flow to rerender only on failure and report success cleanly.
 
+
+## 2025-12-02
+
+Added comprehensive frontmatter healing/validation guide (reference/02-frontmatter-healing-and-validation-guide.md) with algorithms, file/symbol map, and examples.
+
+
+## 2025-12-02
+
+Frontmatter rules now link to help via 'docmgr help yaml-frontmatter-validation'; added help doc (pkg/doc/docmgr-yaml-frontmatter-validation.md) for YAML validation/fix workflow.
+

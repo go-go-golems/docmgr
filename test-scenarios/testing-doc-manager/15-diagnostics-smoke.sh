@@ -78,3 +78,9 @@ ${DOCMGR} list docs --ticket MEN-4242 || true
 
 # Run template validate to trigger template parse taxonomy
 ${DOCMGR} template validate --path "${BAD_TEMPLATE_REL}" || true
+
+# Run single-file doctor on the broken doc to show parsing/schema/vocab in single-file mode
+${DOCMGR} doctor --doc "${BROKEN_DOC}" --fail-on none || true
+
+# Run validate frontmatter on the broken doc to show suggest-fixes (non-fatal)
+${DOCMGR} validate frontmatter --doc "${BROKEN_DOC}" --suggest-fixes || true

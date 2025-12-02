@@ -10,12 +10,25 @@ DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/commands/doctor.go
+      Note: doctor entrypoint
+    - Path: pkg/commands/validate_frontmatter.go
+      Note: validation verb
     - Path: pkg/doc/docmgr-doctor-validation-workflow.md
-      Note: doctor/validate workflow walkthrough
+      Note: |-
+        doctor/validate workflow walkthrough
+        workflow doc
+    - Path: test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh
+      Note: diagnostics smoke
+    - Path: test-scenarios/testing-doc-manager/18-validate-frontmatter-smoke.sh
+      Note: validation/auto-fix smoke
+    - Path: ttmp/2025/11/29/DOCMGR-YAML-001-improve-yaml-frontmatter-parsing-resilience-and-error-messages/design/03-validation-smoke-plan.md
+      Note: validation smoke inventory/plan
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-01T16:01:38.152228447-05:00
 ---
+
 
 
 

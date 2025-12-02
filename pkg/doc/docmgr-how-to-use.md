@@ -572,6 +572,18 @@ Changelogs are dated automatically. Keep entries short — mention what changed 
 
 **Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design-doc/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
 
+### Validate and fix YAML/frontmatter
+
+- **Quick check:** `docmgr validate frontmatter --doc <file>` shows line/col, snippet, and suggestions for YAML/frontmatter issues. Add `--suggest-fixes` to see suggested repairs, or `--auto-fix` to rewrite the file (creates `<file>.bak`).
+- **Workspace scan:** `docmgr doctor --ticket <T>` or `--all` reports frontmatter/schema/vocab issues across a ticket. Use `--doc <file>` for a single-file doctor run (parse + schema + vocab checks).
+- **Help:** `docmgr help yaml-frontmatter-validation` for common issues and commands. Diagnostics output also links to this help.
+- **Examples:**
+  - View issues: `docmgr validate frontmatter --doc ttmp/.../index.md --suggest-fixes`
+  - Attempt repair: `docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix`
+  - Scan ticket: `docmgr doctor --ticket MEN-4242 --fail-on warning`
+
+These commands reuse the same parser and diagnostics rules described in `docmgr help docmgr-diagnostics-and-rules`.
+
 **The workflow:**
 
 1) Relate files with notes (see [Relating Files to Docs](#8-relating-files-to-docs-intermediate))

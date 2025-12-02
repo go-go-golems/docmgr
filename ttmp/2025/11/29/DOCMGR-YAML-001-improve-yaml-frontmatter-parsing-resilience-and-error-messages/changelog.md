@@ -63,3 +63,8 @@ Added doctor/validation workflow guide (pkg/doc/docmgr-doctor-validation-workflo
 
 Docs updated: added doctor/validation workflow guide and YAML validation help linking; outstanding schema validators and docs remain in new ticket DOCMGR-FRONTMATTER-SCHEMA.
 
+
+## 2025-12-02
+
+Ticket closed
+

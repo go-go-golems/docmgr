@@ -27,19 +27,19 @@
 - [x] Ensure validate frontmatter emits taxonomies and uses the rules renderer (collector + stdout) for suggestions/fixes, not ad-hoc prints
 - [x] Add/adjust rules so frontmatter parse/schema taxonomies can surface suggested fixes (actions or embedded suggestions)
 - [x] Ensure diagnostics rules can surface suggested fixes (either in context or alongside rendered output)
-- [ ] Field/schema validation with hints
-  - [ ] Define frontmatter schema validators (required + optional with hints) and integrate into doctor + validate-frontmatter
-  - [ ] Emit schema diagnostics via `docmgrctx.NewFrontmatterSchema` with severity warning/error as appropriate
+- [x] Field/schema validation with hints
+- [x] Define frontmatter schema validators (required + optional with hints) and integrate into doctor + validate-frontmatter
+- [x] Emit schema diagnostics via `docmgrctx.NewFrontmatterSchema` with severity warning/error as appropriate
 - [x] Write-path hardening
 - [x] Reuse quoting helpers in `internal/documents/WriteDocumentWithFrontmatter` and all command-level writers (add, meta update, create_ticket, doc_move, rename_ticket, ticket_close, import)
 - [x] Add focused tests to confirm writer output quotes colons/hashes/@ and preserves unquoted safe scalars
 - [x] Testing and smoke coverage
 - [x] Unit tests: extend coverage to suggest/auto-fix behaviors (normalize delimiters, peel trailing lines, scrub stray delimiters, auto-fix success/failure)
-  - [ ] Smoke: extend `test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh` (and add a small validation scenario if needed) to cover bad frontmatter parsing, line/col/snippet output, validation verb, and auto-fix path
+- [x] Smoke: extend `test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh` (and add a small validation scenario if needed) to cover bad frontmatter parsing, line/col/snippet output, validation verb, and auto-fix path
   - [x] Smoke: extend `18-validate-frontmatter-smoke.sh` to exercise `--suggest-fixes` and `--auto-fix` (verify .bak creation and re-parse success)
 - [ ] Docs and changelog
 - [x] Update `pkg/doc/docmgr-diagnostics-and-rules.md`, CLI guide/how-to-use with validate-frontmatter usage and YAML UX changes
 - [x] Update ticket `changelog.md` with implemented milestones and note any new flags/verbs
 - [ ] Additional validation polish
-  - [ ] Suppress/adjust taxonomy emission after successful auto-fix so a passing run doesn’t show an error taxonomy
+- [x] Suppress/adjust taxonomy emission after successful auto-fix so a passing run doesn’t show an error taxonomy
   - [ ] Ensure doctor/list/search consume richer frontmatter context without double-reporting after auto-fix (if integration needed)

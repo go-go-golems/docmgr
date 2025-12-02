@@ -1,7 +1,7 @@
 ---
 Title: Improve YAML frontmatter parsing resilience and error messages
 Ticket: DOCMGR-YAML-001
-Status: active
+Status: complete
 Topics:
     - yaml
     - ux
@@ -26,8 +26,9 @@ RelatedFiles:
       Note: validation smoke inventory/plan
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-01T16:01:38.152228447-05:00
+LastUpdated: 2025-12-02T13:16:42.289711322-05:00
 ---
+
 
 
 

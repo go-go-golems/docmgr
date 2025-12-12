@@ -222,3 +222,15 @@ Implemented Workspace in-memory index ingestion (InitIndex): walk docs, parse fr
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/index_builder_test.go — Ingestion smoke test.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/workspace.go — Workspace now owns DB handle and InitIndex.
 
+
+## 2025-12-12
+
+Added workspace export-sqlite command to export the in-memory index to a SQLite file. Exported DB includes a README table populated from embedded pkg/doc/*.md so the DB is self-describing. Added scenario smoke test and ran it successfully.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_export.go — README table + VACUUM INTO export implementation.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/workspace_export_sqlite.go — New CLI verb (classic Run) for exporting sqlite.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/doc/embedded_docs.go — Reads embedded docs for README table.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/19-export-sqlite.sh — Scenario smoke test for export-sqlite.
+

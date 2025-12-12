@@ -9,6 +9,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: cmd/docmgr/cmds/workspace/export_sqlite.go
+      Note: Cobra wiring for workspace export-sqlite.
     - Path: internal/documents/walk.go
       Note: Current document walking contract (path, doc, body, readErr) → future DocHandle contract.
     - Path: internal/paths/resolver.go
@@ -25,14 +27,26 @@ RelatedFiles:
       Note: Canonical ingest-time skip policy + path tagging helpers (Task 4, Spec §6).
     - Path: internal/workspace/skip_policy_test.go
       Note: Unit tests for skip policy + path tagging.
+    - Path: internal/workspace/sqlite_export.go
+      Note: Exports index to file; populates README table; uses VACUUM INTO.
+    - Path: internal/workspace/sqlite_export_test.go
+      Note: Smoke test for exported sqlite README table.
     - Path: internal/workspace/sqlite_schema.go
       Note: In-memory SQLite open + schema DDL (Task 3, Spec §9.1–§9.2).
     - Path: internal/workspace/sqlite_schema_test.go
       Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
       Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2, Spec §5.1).
+    - Path: pkg/commands/workspace_export_sqlite.go
+      Note: Implements  as a classic Run() command.
+    - Path: pkg/doc/embedded_docs.go
+      Note: Exports embedded pkg/doc/*.md (go:embed) for README table population.
+    - Path: test-scenarios/testing-doc-manager/19-export-sqlite.sh
+      Note: Scenario smoke test for export-sqlite + README table.
     - Path: test-scenarios/testing-doc-manager/run-all.sh
-      Note: Used to validate both system and local refactor binaries.
+      Note: |-
+        Used to validate both system and local refactor binaries.
+        Runs the scenario suite; now includes export-sqlite smoke.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
       Note: Decision record for when/how we add integration tests during the refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
@@ -43,6 +57,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -340,4 +355,46 @@ With the schema and ingest policy in place, this step makes the index “real”
   - `internal/workspace/index_builder.go`
   - `internal/workspace/index_builder_test.go`
   - `internal/workspace/workspace.go` (now holds `db *sql.DB` and `DB()` accessor)
+- Commit: (pending — waiting for the task checkpoint commit hash)
+
+## Step 9: Add `workspace export-sqlite` + self-describing README table + scenario smoke test
+
+This step turns the in-memory index into a shareable artifact. The goal is to make debugging easier (“send me the DB you’re seeing”) and to make the exported file self-explanatory: someone can open it with any SQLite browser, inspect the schema, and immediately find embedded documentation inside a dedicated table.
+
+### What I did
+- Implemented an export path that writes the in-memory workspace index to a persistent SQLite file using SQLite’s `VACUUM INTO`.
+- Added a `README` table to the exported DB and populated it with:
+  - `__about__.md` (a short explainer for the exported DB), and
+  - all `pkg/doc/*.md` embedded docs (via `go:embed`) so the DB is self-describing.
+- Added a new CLI verb: `docmgr workspace export-sqlite` (bare `Run()` only; no structured output).
+- Added a scenario smoke test that:
+  - runs `workspace export-sqlite`,
+  - then checks `README` and a couple known rows (`__about__.md`, `docmgr-how-to-use.md`) via Python `sqlite3`.
+
+### Why
+- Exporting as a file lets us:
+  - diff DBs between versions,
+  - share a reproducible snapshot for debugging,
+  - and inspect the schema/data with common tooling.
+- The `README` table makes the DB useful even out of context: a new person can open it and learn how docmgr works without having the repo checked out.
+
+### What worked
+- The command is registered under `docmgr workspace export-sqlite` and works against the scenario repo.
+- The scenario suite passes with the new smoke test included.
+
+### What didn’t work
+- A raw-string markdown snippet inside `sqlite_export.go` initially caused a Go syntax error (due to backticks). Fixed by switching to a normal concatenated string.
+
+### What I learned
+- Keeping the export command “classic” (BareCommand only) is simpler for debugging: it’s a side-effecting operation where a single success message is enough, and JSON output would add little value.
+
+### Technical details
+- Code:
+  - `pkg/doc/embedded_docs.go` (exports embedded docs from `go:embed`)
+  - `internal/workspace/sqlite_export.go` + `_test.go` (README table + VACUUM INTO)
+  - `pkg/commands/workspace_export_sqlite.go` (command implementation; `Run()` only)
+  - `cmd/docmgr/cmds/workspace/export_sqlite.go` (cobra wiring)
+- Scenario:
+  - `test-scenarios/testing-doc-manager/19-export-sqlite.sh`
+  - `test-scenarios/testing-doc-manager/run-all.sh` (wired in)
 - Commit: (pending — waiting for the task checkpoint commit hash)

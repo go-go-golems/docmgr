@@ -5,7 +5,7 @@
 - [ ] Add tasks here
 
 - [x] Implement workspace.Workspace core type + context + constructors (DiscoverWorkspace/NewWorkspaceFromContext) — Spec §4.1, §5.1, §11.1
-- [ ] Define SQLite schema + indexes for docs/topics/related_files (including multi-key normalization columns) — Spec §9.1–§9.2
+- [x] Define SQLite schema + indexes for docs/topics/related_files (including multi-key normalization columns) — Spec §9.1–§9.2
 - [ ] Implement ingest-time skip rules + tagging (archive/scripts/sources/control-docs/.meta/_*/index.md) — Spec §6, §12.3
 - [ ] Implement ingestion walker: parse frontmatter, store parse_ok/parse_err, extract topics + related_files, store path-category tags — Spec §6, §7.1, §9.2
 - [ ] Implement path normalization pipeline using paths.Resolver; store canonical + fallback keys for RelatedFiles; document fallback matching strategy — Spec §5.1, §7.3, §9.2, §12.1

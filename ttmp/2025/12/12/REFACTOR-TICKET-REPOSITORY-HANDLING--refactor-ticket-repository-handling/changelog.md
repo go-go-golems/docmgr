@@ -171,3 +171,33 @@ Added integration-first testing plan; will use existing test-scenarios harness a
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Integration scenario baseline for regression comparison.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md — Testing plan for this refactor.
 
+
+## 2025-12-12
+
+Ran baseline integration scenario suite against system docmgr; scenario completed OK. This run is our pre-refactor behavior reference.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Baseline integration test harness (passed on 2025-12-12).
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/15-diary.md — Recorded the exact command + scenario root used for baseline run.
+
+
+## 2025-12-12
+
+Ran integration scenario suite against locally built refactor docmgr binary (DOCMGR_PATH=/tmp/docmgr-refactor-local-2025-12-12); scenario completed OK.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Integration harness (passed against local refactor binary).
+- /tmp/docmgr-refactor-local-2025-12-12 — Local built binary under test.
+
+
+## 2025-12-12
+
+Implemented in-memory SQLite bootstrap + Workspace index schema (docs/doc_topics/related_files) per spec; added schema smoke test.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema.go — Schema DDL + in-memory DB open.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema_test.go — Schema creation smoke test.
+

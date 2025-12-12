@@ -17,8 +17,14 @@ RelatedFiles:
       Note: Existing root/config/vocab discovery helpers (basis for WorkspaceContext).
     - Path: internal/workspace/discovery.go
       Note: Existing ticket workspace discovery helpers (to be centralized in Workspace).
+    - Path: internal/workspace/sqlite_schema.go
+      Note: In-memory SQLite open + schema DDL (Task 3
+    - Path: internal/workspace/sqlite_schema_test.go
+      Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
       Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2
+    - Path: test-scenarios/testing-doc-manager/run-all.sh
+      Note: Used to validate both system and local refactor binaries.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
       Note: Decision record for when/how we add integration tests during the refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
@@ -29,6 +35,8 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
+
 
 
 
@@ -158,3 +166,82 @@ N/A — this document is the usage example; it’s written as we implement.
   - `test-scenarios/testing-doc-manager/05-search-scenarios.sh`
   - `test-scenarios/testing-doc-manager/14-path-normalization.sh`
   - `test-scenarios/testing-doc-manager/15-diagnostics-smoke.sh`
+
+## Step 4: Run baseline integration tests (system docmgr)
+
+### What I did
+- Ran the full integration scenario suite with the **system** `docmgr` to confirm the baseline currently passes.
+
+### Why
+- Before changing command wiring to the new `Workspace` backend, we need a “known good” reference run so we can detect regressions and unintended behavior changes.
+
+### What worked
+- The scenario completed successfully (`[ok] Scenario completed ...`).
+
+### What didn’t work
+- Nothing (this was a clean pass).
+
+### What I learned
+- The scenario already exercises the core behaviors we’re about to refactor:
+  - `doc search --file/--dir` reverse lookup
+  - wonky path normalization cases
+  - diagnostics smoke / taxonomy wiring
+
+### Technical details
+- Command:
+  - `DOCMGR_PATH=$(which docmgr) bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-baseline-2025-12-12`
+- Result root:
+  - `/tmp/docmgr-scenario-baseline-2025-12-12/acme-chat-app`
+
+## Step 5: Run integration tests against the locally built (refactor) docmgr binary
+
+### What I did
+- Built a local `docmgr` binary from this repo and ran the same scenario suite with `DOCMGR_PATH` pointing at the local binary.
+
+### Why
+- This is the cleanest “integration test the refactor” loop:
+  - same scenario inputs,
+  - same scripts,
+  - only the tested executable changes.
+
+### What worked
+- The scenario completed successfully against the local binary.
+
+### What didn’t work
+- Nothing (this was a clean pass).
+
+### What I learned
+- At this stage (only adding the `Workspace` skeleton), behavior is unchanged, and the end-to-end harness is already a good safety net for upcoming QueryDocs/SQLite changes.
+
+### Technical details
+- Build + run:
+  - `go build -o /tmp/docmgr-refactor-local-2025-12-12 ./cmd/docmgr`
+  - `DOCMGR_PATH=/tmp/docmgr-refactor-local-2025-12-12 bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-local-2025-12-12`
+- Result root:
+  - `/tmp/docmgr-scenario-local-2025-12-12/acme-chat-app`
+
+## Step 6: Add in-memory SQLite schema for Workspace index (Task 3)
+
+### What I did
+- Implemented in-memory SQLite bootstrap + schema creation under `internal/workspace`:
+  - `docs`
+  - `doc_topics`
+  - `related_files`
+- Added a small unit test to ensure schema creation works.
+
+### Why
+- Querying and reverse lookup become SQL joins, so we need a stable minimal schema before implementing ingestion and `QueryDocs`.
+
+### What worked
+- `go test ./...` passes with the new schema + test.
+
+### What didn’t work
+- Nothing yet.
+
+### What I learned
+- There was no existing SQLite wrapper in the repo, so creating a focused schema module in `internal/workspace` keeps the implementation localized and ready for ingestion.
+
+### Technical details
+- Files:
+  - `internal/workspace/sqlite_schema.go`
+  - `internal/workspace/sqlite_schema_test.go`

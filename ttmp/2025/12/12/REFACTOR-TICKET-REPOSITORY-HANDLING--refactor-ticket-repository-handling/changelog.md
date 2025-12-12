@@ -140,3 +140,34 @@ Design spec drafted: workspace.Workspace SQLite-backed repository lookup API (go
 
 - ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md — Design spec
 
+
+## 2025-12-12
+
+Started implementation: created implementation diary; reviewed existing workspace config/discovery + path normalization + document walking contracts.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/config.go — Baseline for WorkspaceContext discovery.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/discovery.go — Baseline for ticket discovery semantics.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/15-diary.md — Implementation diary for this refactor.
+
+
+## 2025-12-12
+
+Implemented Workspace skeleton: WorkspaceContext + DiscoverWorkspace/NewWorkspaceFromContext + Resolver wiring (best-effort config load).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/workspace.go — Workspace entry point + construction helpers.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/15-diary.md — Recorded implementation steps.
+
+
+## 2025-12-12
+
+Added integration-first testing plan; will use existing test-scenarios harness as baseline and extend as QueryDocs lands.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Integration scenario baseline for regression comparison.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md — Testing plan for this refactor.
+

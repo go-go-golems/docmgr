@@ -134,3 +134,12 @@ CREATE TABLE IF NOT EXISTS related_files (
 	}
 	return nil
 }
+
+func sqliteQuoteStringLiteral(s string) (string, error) {
+	// SQLite string literals are single-quoted. Escape by doubling single quotes.
+	// Disallow NUL which sqlite treats oddly in some contexts.
+	if strings.Contains(s, "\x00") {
+		return "", errors.New("sqlite string literal contains NUL byte")
+	}
+	return "'" + strings.ReplaceAll(s, "'", "''") + "'", nil
+}

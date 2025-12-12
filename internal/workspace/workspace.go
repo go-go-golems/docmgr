@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"database/sql"
 	"path/filepath"
 
 	"github.com/go-go-golems/docmgr/internal/paths"
@@ -17,6 +18,7 @@ import (
 type Workspace struct {
 	ctx      WorkspaceContext
 	resolver *paths.Resolver
+	db       *sql.DB
 }
 
 // WorkspaceContext captures the resolved "environment" for a workspace instance.
@@ -121,4 +123,9 @@ func (w *Workspace) Context() WorkspaceContext {
 // Resolver returns the resolver used for normalizing paths.
 func (w *Workspace) Resolver() *paths.Resolver {
 	return w.resolver
+}
+
+// DB returns the in-memory SQLite database backing this workspace (if initialized).
+func (w *Workspace) DB() *sql.DB {
+	return w.db
 }

@@ -17,6 +17,10 @@ RelatedFiles:
       Note: Existing root/config/vocab discovery helpers (basis for WorkspaceContext).
     - Path: internal/workspace/discovery.go
       Note: Existing ticket workspace discovery helpers (to be centralized in Workspace).
+    - Path: internal/workspace/index_builder.go
+      Note: Workspace.InitIndex + ingestion walker (Task 5).
+    - Path: internal/workspace/index_builder_test.go
+      Note: Index ingestion unit test (Task 5).
     - Path: internal/workspace/skip_policy.go
       Note: Canonical ingest-time skip policy + path tagging helpers (Task 4, Spec §6).
     - Path: internal/workspace/skip_policy_test.go
@@ -39,6 +43,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -297,4 +302,42 @@ This step is about making the definition of “what is a doc” consistent. Hist
 - Files:
   - `internal/workspace/skip_policy.go`
   - `internal/workspace/skip_policy_test.go`
+- Commit: (pending — waiting for the task checkpoint commit hash)
+
+## Step 8: Implement ingestion walker + index build (Task 5, Spec §6 / §7.1 / §9.2)
+
+With the schema and ingest policy in place, this step makes the index “real”: we walk the docs root once, parse each markdown file’s frontmatter, and store a normalized, queryable representation in the in-memory SQLite database. The main outcome is that later features (filters, reverse lookup, diagnostics) can be expressed as SQL queries instead of nested loops and ad-hoc maps.
+
+### What I did
+- Added an index builder to `internal/workspace`:
+  - `Workspace.InitIndex(ctx, opts)` opens a new in-memory SQLite DB, applies pragmas, creates schema, and ingests docs.
+  - Ingestion uses `documents.WalkDocuments` with the canonical ingest skip predicate.
+- During ingestion, we store:
+  - `docs` row for every `.md` encountered (absolute path, frontmatter fields, `parse_ok/parse_err`, path tags, optional body)
+  - `doc_topics` rows (lowercased topic key + original case)
+  - `related_files` rows for each frontmatter RelatedFiles entry, with normalized keys derived via `paths.Resolver`
+- Added a unit test that builds a small temporary docs root and asserts:
+  - `.meta/` and `_guidelines/` docs are skipped
+  - broken frontmatter produces `parse_ok=0` + non-empty `parse_err`
+  - ticket-root `tasks.md` is tagged as `is_control_doc=1`
+  - topics and related_files are ingested
+
+### Why
+- This is the core prerequisite for `QueryDocs`: once data is in the DB in a stable shape, query logic becomes “compile to SQL + scan rows”.
+- Indexing broken docs (but marking `parse_ok=0`) lets us surface diagnostics without silently dropping data.
+
+### What worked
+- `go test ./...` passes with the new ingestion builder + test.
+
+### What didn’t work
+- Initial version of the new test referenced helpers that didn’t exist; fixed by using `os.MkdirAll` + `os.WriteFile`.
+
+### What I learned
+- Using `paths.Resolver` with `DocPath=absPath` during ingestion is crucial: it makes doc-relative `RelatedFiles` normalize correctly, which is the entire reason reverse lookup becomes reliable with SQLite.
+
+### Technical details
+- Files:
+  - `internal/workspace/index_builder.go`
+  - `internal/workspace/index_builder_test.go`
+  - `internal/workspace/workspace.go` (now holds `db *sql.DB` and `DB()` accessor)
 - Commit: (pending — waiting for the task checkpoint commit hash)

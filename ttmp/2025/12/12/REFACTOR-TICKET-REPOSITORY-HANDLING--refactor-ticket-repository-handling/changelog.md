@@ -211,3 +211,14 @@ Implemented canonical ingest-time skip rules + path tagging helpers (skip .meta 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/skip_policy.go — Skip rules + tags used by ingestion.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/skip_policy_test.go — Skip/tagging unit tests.
 
+
+## 2025-12-12
+
+Implemented Workspace in-memory index ingestion (InitIndex): walk docs, parse frontmatter, store docs/topics/related_files with parse_ok/parse_err and path tags; added unit test.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/index_builder.go — Workspace index ingestion.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/index_builder_test.go — Ingestion smoke test.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/workspace.go — Workspace now owns DB handle and InitIndex.
+

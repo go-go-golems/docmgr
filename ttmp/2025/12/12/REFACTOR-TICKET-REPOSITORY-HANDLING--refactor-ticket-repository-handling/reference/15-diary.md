@@ -10,19 +10,23 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - Path: internal/documents/walk.go
-      Note: Current document walking contract (path
+      Note: Current document walking contract (path, doc, body, readErr) → future DocHandle contract.
     - Path: internal/paths/resolver.go
       Note: Path normalization engine to be used by Workspace index + reverse lookup.
     - Path: internal/workspace/config.go
       Note: Existing root/config/vocab discovery helpers (basis for WorkspaceContext).
     - Path: internal/workspace/discovery.go
       Note: Existing ticket workspace discovery helpers (to be centralized in Workspace).
+    - Path: internal/workspace/skip_policy.go
+      Note: Canonical ingest-time skip policy + path tagging helpers (Task 4, Spec §6).
+    - Path: internal/workspace/skip_policy_test.go
+      Note: Unit tests for skip policy + path tagging.
     - Path: internal/workspace/sqlite_schema.go
-      Note: In-memory SQLite open + schema DDL (Task 3
+      Note: In-memory SQLite open + schema DDL (Task 3, Spec §9.1–§9.2).
     - Path: internal/workspace/sqlite_schema_test.go
       Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
-      Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2
+      Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2, Spec §5.1).
     - Path: test-scenarios/testing-doc-manager/run-all.sh
       Note: Used to validate both system and local refactor binaries.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
@@ -35,6 +39,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -62,14 +67,15 @@ Capture the step-by-step implementation of the **Workspace + in-memory SQLite in
 ### Commands used frequently
 
 ```bash
-# List tasks
-go run ./cmd/docmgr task list --ticket REFACTOR-TICKET-REPOSITORY-HANDLING
+# Ticket docs (DIARY/CHANGELOG/RELATE/TASKS): always use the system docmgr
+docmgr task list --ticket REFACTOR-TICKET-REPOSITORY-HANDLING
+docmgr task check --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --id 1
+docmgr changelog update --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --entry "..."
+docmgr doc relate --doc ttmp/.../reference/15-diary.md --file-note "/abs/path:note"
 
-# Update changelog
-go run ./cmd/docmgr changelog update --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --entry "..."
-
-# Relate files to diary
-go run ./cmd/docmgr doc relate --doc ttmp/.../reference/15-diary.md --file-note "/abs/path:note"
+# Refactor testing: build a local docmgr binary and point scenarios at it
+go build -o /tmp/docmgr-refactor-local ./cmd/docmgr
+DOCMGR_PATH=/tmp/docmgr-refactor-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-local
 ```
 
 ## Usage Examples
@@ -82,6 +88,8 @@ N/A — this document is the usage example; it’s written as we implement.
 - `reference/13-design-log-repository-api.md`
 
 ## Step 1: Kickoff — diary + baseline scan
+
+We started by putting “meta tooling” in place so the refactor stays navigable. The goal of this step wasn’t to write production code yet, but to make sure every subsequent change is tied back to documentation and is discoverable from either direction (code → docs, docs → code).
 
 ### What I did
 - Created the ticket diary doc (`reference/15-diary.md`).
@@ -107,12 +115,15 @@ N/A — this document is the usage example; it’s written as we implement.
 
 ## Step 2: Implement `internal/workspace.Workspace` skeleton (Task 2, Spec §5.1)
 
+This step introduced the new “front door” object (`Workspace`) without changing any user-facing behavior yet. The purpose is to establish a single canonical place where discovery, normalization, and later indexing will live, so that commands stop reimplementing slightly different semantics.
+
 ### What I did
 - Added `internal/workspace/workspace.go`:
   - `WorkspaceContext` (Root/ConfigDir/RepoRoot + best-effort config)
   - `DiscoverWorkspace(ctx, opts)` and `NewWorkspaceFromContext(ctx)`
   - `paths.Resolver` wiring (anchors: docs root, config dir, repo root)
 - Ran `go test ./...` to ensure everything still compiles.
+- Commit: `5f1681b1f3ac5ed7ffa36fb4b2357b54ebaf6695` (":sparkles: First commit for the refactor towards a unified workspace and search functionality")
 
 ### Why
 - This gives every CLI command a single canonical entry point to obtain:
@@ -136,6 +147,8 @@ N/A — this document is the usage example; it’s written as we implement.
   - `RepoRoot`: `FindRepositoryRoot()`
 
 ## Step 3: Decide testing approach (integration-first) and document it
+
+Before we started wiring any commands to the new backend, we made an explicit call on the testing strategy. The key idea: we’re refactoring *behavioral plumbing* (discovery, filtering, reverse lookup), so scenario tests that drive the real CLI are the most cost-effective guardrail.
 
 ### What I did
 - Audited `test-scenarios/testing-doc-manager/` and identified the scripts that already cover the riskiest parts of this refactor:
@@ -169,6 +182,8 @@ N/A — this document is the usage example; it’s written as we implement.
 
 ## Step 4: Run baseline integration tests (system docmgr)
 
+With the testing plan written down, we immediately captured a “known good” run using the installed `docmgr`. This gives us a stable baseline to compare against when the refactor starts changing internals (SQLite ingestion/query compilation) and when we port commands.
+
 ### What I did
 - Ran the full integration scenario suite with the **system** `docmgr` to confirm the baseline currently passes.
 
@@ -194,6 +209,8 @@ N/A — this document is the usage example; it’s written as we implement.
   - `/tmp/docmgr-scenario-baseline-2025-12-12/acme-chat-app`
 
 ## Step 5: Run integration tests against the locally built (refactor) docmgr binary
+
+Next, we repeated the same scenario run, but swapped the tested executable to a locally built binary from this repo. This is the simplest apples-to-apples integration validation loop: same scripts, same mock repo, only the binary changes.
 
 ### What I did
 - Built a local `docmgr` binary from this repo and ran the same scenario suite with `DOCMGR_PATH` pointing at the local binary.
@@ -222,12 +239,15 @@ N/A — this document is the usage example; it’s written as we implement.
 
 ## Step 6: Add in-memory SQLite schema for Workspace index (Task 3)
 
+This step laid down the contract for what the in-memory index will store. The schema is intentionally minimal and aligned with the spec, so ingestion/query compilation can be built incrementally without “schema churn” each time we add a filter.
+
 ### What I did
 - Implemented in-memory SQLite bootstrap + schema creation under `internal/workspace`:
   - `docs`
   - `doc_topics`
   - `related_files`
 - Added a small unit test to ensure schema creation works.
+- Commit: `5b72f4ec08faad89c1219030daf4c96ca5456db0` (":sparkles: Add initial sqlite_schema")
 
 ### Why
 - Querying and reverse lookup become SQL joins, so we need a stable minimal schema before implementing ingestion and `QueryDocs`.
@@ -245,3 +265,36 @@ N/A — this document is the usage example; it’s written as we implement.
 - Files:
   - `internal/workspace/sqlite_schema.go`
   - `internal/workspace/sqlite_schema_test.go`
+
+## Step 7: Canonical ingest-time skip rules + tagging (Task 4, Spec §6)
+
+This step is about making the definition of “what is a doc” consistent. Historically, different commands implemented different skip logic (string contains, underscore-only, ignore globs), which meant “the set of docs” varied depending on which command you ran. For the SQLite index to be trustworthy, ingestion must apply a single canonical skip policy and tag docs so queries can hide/show categories consistently.
+
+### What I did
+- Implemented canonical ingest-time directory skip policy:
+  - always skip `.meta/`
+  - always skip underscore dirs (`_*/`) like `_templates/` and `_guidelines/`
+- Implemented path-derived tagging for docs (to persist into SQLite `docs`):
+  - `is_index`
+  - `is_archived_path` / `is_scripts_path` / `is_sources_path`
+  - `is_control_doc` (README/tasks/changelog when co-located with a ticket `index.md`)
+- Added unit tests covering the tricky cases (control-doc detection + segment-based path tagging).
+
+### Why
+- These tags are the “bridge” between ingest-time policies and query-time options (`IncludeArchivedPath`, `IncludeScriptsPath`, etc.).
+- A single canonical policy prevents subtle inconsistencies across commands and makes reverse lookup predictable.
+
+### What worked
+- `go test ./...` still passes with the new skip/tagging helpers + tests.
+
+### What didn’t work
+- Nothing yet.
+
+### What I learned
+- Requiring a sibling `index.md` for `is_control_doc` prevents accidental tagging of `sources/README.md` (or any nested README) as a ticket control doc.
+
+### Technical details
+- Files:
+  - `internal/workspace/skip_policy.go`
+  - `internal/workspace/skip_policy_test.go`
+- Commit: (pending — waiting for the task checkpoint commit hash)

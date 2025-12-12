@@ -201,3 +201,13 @@ Implemented in-memory SQLite bootstrap + Workspace index schema (docs/doc_topics
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema.go — Schema DDL + in-memory DB open.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema_test.go — Schema creation smoke test.
 
+
+## 2025-12-12
+
+Implemented canonical ingest-time skip rules + path tagging helpers (skip .meta and _*/; tag archive/scripts/sources/control-docs/index). Added unit tests.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/skip_policy.go — Skip rules + tags used by ingestion.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/skip_policy_test.go — Skip/tagging unit tests.
+

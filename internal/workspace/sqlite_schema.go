@@ -107,9 +107,12 @@ CREATE TABLE IF NOT EXISTS related_files (
     note TEXT,                              -- optional note from RelatedFiles entry
 
     -- Normalized path keys (multiple representations for reliable matching)
+    norm_canonical TEXT,                    -- canonical best-effort key (prefers repo_rel, then docs_rel, then doc_rel, then abs)
     norm_repo_rel TEXT,                     -- repo-relative path (preferred canonical key)
+    norm_docs_rel TEXT,                     -- docs-root relative path (fallback)
+    norm_doc_rel TEXT,                      -- doc-relative path (fallback; may include ../)
     norm_abs TEXT,                          -- absolute path (fallback)
-    norm_clean TEXT,                        -- cleaned relative path (fallback)
+    norm_clean TEXT,                        -- cleaned relative path derived from raw_path (fallback)
     anchor TEXT,                            -- which anchor was used (repo/doc/config/etc)
 
     -- Original raw path from frontmatter (for display/debugging)
@@ -119,8 +122,12 @@ CREATE TABLE IF NOT EXISTS related_files (
 );
 `,
 		`CREATE INDEX IF NOT EXISTS idx_related_files_doc_id ON related_files(doc_id);`,
+		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_canonical ON related_files(norm_canonical);`,
 		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_repo_rel ON related_files(norm_repo_rel);`,
+		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_docs_rel ON related_files(norm_docs_rel);`,
+		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_doc_rel ON related_files(norm_doc_rel);`,
 		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_abs ON related_files(norm_abs);`,
+		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_clean ON related_files(norm_clean);`,
 	}
 
 	for _, stmt := range ddl {

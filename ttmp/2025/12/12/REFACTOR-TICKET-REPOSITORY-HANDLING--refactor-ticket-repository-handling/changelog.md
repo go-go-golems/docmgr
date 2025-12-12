@@ -234,3 +234,15 @@ Added workspace export-sqlite command to export the in-memory index to a SQLite 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/doc/embedded_docs.go — Reads embedded docs for README table.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/19-export-sqlite.sh — Scenario smoke test for export-sqlite.
 
+
+## 2025-12-12
+
+Expanded RelatedFiles normalization: persist canonical + repo/docs/doc/abs + clean keys in sqlite for reliable reverse lookup; added helper + stronger ingestion test.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/index_builder.go — Persist norm_* columns.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/index_builder_test.go — Normalization assertions.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/normalization.go — Normalization helper.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema.go — Schema columns + indexes.
+

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -133,6 +134,45 @@ broken
 	}
 	if rfCount != 1 {
 		t.Fatalf("expected 1 related_files row for backend/main.go, got %d", rfCount)
+	}
+
+	// Related file should have canonical + fallback normalization keys.
+	var normCanonical, normRepoRel, normDocsRel, normDocRel, normAbs, normClean, anchor string
+	if err := db.QueryRowContext(ctx, `
+SELECT
+  COALESCE(norm_canonical,''),
+  COALESCE(norm_repo_rel,''),
+  COALESCE(norm_docs_rel,''),
+  COALESCE(norm_doc_rel,''),
+  COALESCE(norm_abs,''),
+  COALESCE(norm_clean,''),
+  COALESCE(anchor,'')
+FROM related_files
+WHERE raw_path='backend/main.go'
+LIMIT 1
+`).Scan(&normCanonical, &normRepoRel, &normDocsRel, &normDocRel, &normAbs, &normClean, &anchor); err != nil {
+		t.Fatalf("select related_files normalization: %v", err)
+	}
+	if normCanonical != "backend/main.go" {
+		t.Fatalf("expected norm_canonical=backend/main.go, got %q", normCanonical)
+	}
+	if normRepoRel != "backend/main.go" {
+		t.Fatalf("expected norm_repo_rel=backend/main.go, got %q", normRepoRel)
+	}
+	if normDocsRel != "" {
+		t.Fatalf("expected norm_docs_rel to be empty (not under docs root), got %q", normDocsRel)
+	}
+	if normDocRel == "" || !strings.HasSuffix(normDocRel, "backend/main.go") {
+		t.Fatalf("expected norm_doc_rel to be non-empty and end with backend/main.go, got %q", normDocRel)
+	}
+	if normAbs == "" || !strings.HasSuffix(normAbs, "/backend/main.go") {
+		t.Fatalf("expected norm_abs to end with /backend/main.go, got %q", normAbs)
+	}
+	if normClean != "backend/main.go" {
+		t.Fatalf("expected norm_clean=backend/main.go, got %q", normClean)
+	}
+	if anchor != "repo" {
+		t.Fatalf("expected anchor=repo, got %q", anchor)
 	}
 
 	// Topics should be lowercased in doc_topics.

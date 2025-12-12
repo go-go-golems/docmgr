@@ -84,8 +84,12 @@ VALUES (?, ?, ?)
 	defer func() { _ = insertTopicStmt.Close() }()
 
 	insertRFStmt, err := tx.PrepareContext(ctx, `
-INSERT INTO related_files (doc_id, note, norm_repo_rel, norm_abs, norm_clean, anchor, raw_path)
-VALUES (?, ?, ?, ?, ?, ?, ?)
+INSERT INTO related_files (
+  doc_id, note,
+  norm_canonical, norm_repo_rel, norm_docs_rel, norm_doc_rel, norm_abs, norm_clean,
+  anchor, raw_path
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `)
 	if err != nil {
 		return errors.Wrap(err, "prepare insert related_files")
@@ -179,16 +183,18 @@ VALUES (?, ?, ?, ?, ?, ?, ?)
 			if raw == "" {
 				continue
 			}
-			n := resolver.Normalize(raw)
-			normClean := normalizeCleanPath(raw)
+			n := normalizeRelatedFile(resolver, raw)
 			_, err := insertRFStmt.ExecContext(
 				ctx,
 				docID,
 				nullString(rf.Note),
+				nullString(n.Canonical),
 				nullString(n.RepoRelative),
+				nullString(n.DocsRelative),
+				nullString(n.DocRelative),
 				nullString(n.Abs),
-				nullString(normClean),
-				nullString(string(n.Anchor)),
+				nullString(n.Clean),
+				nullString(n.Anchor),
 				nullString(raw),
 			)
 			if err != nil {

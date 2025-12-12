@@ -20,9 +20,15 @@ RelatedFiles:
     - Path: internal/workspace/discovery.go
       Note: Existing ticket workspace discovery helpers (to be centralized in Workspace).
     - Path: internal/workspace/index_builder.go
-      Note: Workspace.InitIndex + ingestion walker (Task 5).
+      Note: |-
+        Workspace.InitIndex + ingestion walker (Task 5).
+        populate related_files norm_* columns (Task 6).
     - Path: internal/workspace/index_builder_test.go
-      Note: Index ingestion unit test (Task 5).
+      Note: |-
+        Index ingestion unit test (Task 5).
+        assert related_files normalization keys (Task 6).
+    - Path: internal/workspace/normalization.go
+      Note: RelatedFiles normalization pipeline + persisted key strategy (Task 6).
     - Path: internal/workspace/skip_policy.go
       Note: Canonical ingest-time skip policy + path tagging helpers (Task 4, Spec §6).
     - Path: internal/workspace/skip_policy_test.go
@@ -32,7 +38,9 @@ RelatedFiles:
     - Path: internal/workspace/sqlite_export_test.go
       Note: Smoke test for exported sqlite README table.
     - Path: internal/workspace/sqlite_schema.go
-      Note: In-memory SQLite open + schema DDL (Task 3, Spec §9.1–§9.2).
+      Note: |-
+        In-memory SQLite open + schema DDL (Task 3, Spec §9.1–§9.2).
+        related_files columns expanded for canonical+fallback keys (Task 6).
     - Path: internal/workspace/sqlite_schema_test.go
       Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
@@ -57,6 +65,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -355,6 +364,40 @@ With the schema and ingest policy in place, this step makes the index “real”
   - `internal/workspace/index_builder.go`
   - `internal/workspace/index_builder_test.go`
   - `internal/workspace/workspace.go` (now holds `db *sql.DB` and `DB()` accessor)
+- Commit: (pending — waiting for the task checkpoint commit hash)
+
+## Step 9: Path normalization pipeline + persisted keys (Task 6, Spec §7.3 / §12.1 / §9.2)
+
+This step tightens the contract for reverse lookup and “related files” matching. In real repos, people will write `RelatedFiles` entries in a bunch of different ways (repo-relative, absolute, doc-relative, config-relative, sometimes with `../` segments). If we only store one representation, reverse lookup becomes flaky and we regress into command-specific heuristics.
+
+So the goal here is: **persist enough normalized keys at ingest-time** so that later query logic can do reliable SQL matching without needing to reconstruct “how the path was meant” at query time.
+
+### What I did
+- Expanded the `related_files` schema to store **multiple normalization keys**:
+  - `norm_canonical` (best-effort “best” key)
+  - `norm_repo_rel`, `norm_docs_rel`, `norm_doc_rel`, `norm_abs`
+  - `norm_clean` (cleaned path derived from the raw string; preserves leading `..` but normalizes separators)
+  - plus `anchor` and `raw_path` for debugging and UX
+- Centralized ingestion-time normalization in `internal/workspace/normalization.go` so the index builder doesn’t hand-roll the mapping.
+- Strengthened the ingestion test to assert that for a repo-relative related file:
+  - canonical and repo-relative keys are both `backend/main.go`
+  - docs-relative is empty (as expected, because that file is outside docs root)
+  - doc-relative exists and ends with `backend/main.go` (we avoid asserting the exact number of `../`)
+  - anchor is `repo`
+
+### Fallback matching strategy (documented)
+The planned `QueryDocs` behavior for `RelatedFile` / `RelatedDir` matching is:
+1. Normalize the user-provided query path using `paths.Resolver`.
+2. Match by **equality against any persisted representation**, typically in this order:
+   - `norm_canonical`, `norm_repo_rel`, `norm_docs_rel`, `norm_doc_rel`, `norm_abs`, `norm_clean`
+3. If we later decide we want fuzzier semantics (suffix / substring), we can add explicit SQL `LIKE` fallbacks or precomputed suffix columns — but the **MVP is strict equality across multiple representations**, which already handles most of the “same file written differently” cases.
+
+### Technical details
+- Files:
+  - `internal/workspace/sqlite_schema.go`
+  - `internal/workspace/index_builder.go`
+  - `internal/workspace/index_builder_test.go`
+  - `internal/workspace/normalization.go`
 - Commit: (pending — waiting for the task checkpoint commit hash)
 
 ## Step 9: Add `workspace export-sqlite` + self-describing README table + scenario smoke test

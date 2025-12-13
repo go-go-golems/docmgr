@@ -32,6 +32,8 @@ RelatedFiles:
       Note: Phase 1.1 migrated to Workspace.QueryDocs
     - Path: pkg/commands/tasks.go
       Note: Phase 2.3 migrated to Workspace.QueryDocs
+    - Path: pkg/commands/ticket_close.go
+      Note: Phase 3.2 migrated ticket close ticket discovery to Workspace.QueryDocs (commit 35de822)
     - Path: pkg/commands/ticket_move.go
       Note: Phase 3.2 migrated ticket move ticket discovery to Workspace.QueryDocs (commit 5ce1a88)
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/09-cleanup-inventory-report-task-18.md
@@ -48,6 +50,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

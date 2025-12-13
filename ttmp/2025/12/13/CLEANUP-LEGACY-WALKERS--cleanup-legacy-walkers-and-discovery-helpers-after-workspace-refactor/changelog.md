@@ -141,3 +141,12 @@ Step 3.2: Migrated ticket_move.go ticket discovery to Workspace.QueryDocs (commi
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/ticket_move.go — Replaced findTicketDirectory with QueryDocs
 
+
+## 2025-12-13
+
+Step 3.2: Migrated ticket_close.go ticket discovery to Workspace.QueryDocs (commit 35de822)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/ticket_close.go — Replaced findTicketDirectory with QueryDocs
+

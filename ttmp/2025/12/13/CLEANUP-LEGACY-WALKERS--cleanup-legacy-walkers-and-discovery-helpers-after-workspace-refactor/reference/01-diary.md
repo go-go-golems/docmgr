@@ -18,8 +18,8 @@ RelatedFiles:
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
-    - Path: pkg/commands/ticket_move.go
-      Note: Phase 3.2 migrated ticket move to Workspace.QueryDocs (commit 5ce1a88)
+    - Path: pkg/commands/ticket_close.go
+      Note: Phase 3.2 migrated ticket close to Workspace.QueryDocs (commit 35de822)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
@@ -451,3 +451,37 @@ This step migrates `ticket move` off the legacy `findTicketDirectory` helper. Th
 
 ### Code review instructions
 - Start in `pkg/commands/ticket_move.go` and review `applyMove`.
+
+## Step 11: Migrate `ticket close` ticket discovery to Workspace+QueryDocs (Phase 3.2)
+
+This step removes `ticket close`’s remaining dependency on legacy ticket directory discovery (`findTicketDirectory`). Both the structured output path and human output path now discover the Workspace, build the index, and resolve the ticket directory via `QueryDocs` (ticket `index.md`) before operating on `index.md`, `tasks.md`, and `changelog.md`.
+
+**Commit (code):** `35de822` — "Cleanup: migrate ticket close to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/ticket_close.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve `ticketDir` via the shared `resolveTicketDirViaWorkspace(...)` helper (QueryDocs-based).
+- Removed the two `findTicketDirectory` call sites (glaze + bare) from this command.
+
+### Why
+- Continue eliminating legacy discovery helpers so we can delete them in Phase 4.
+- Ensure ticket close semantics follow the same canonical discovery/path normalization rules as other migrated commands.
+
+### What worked
+- Tests and lint stayed green.
+- Behavior of task-count warning, index frontmatter update, and changelog append remains the same (only discovery changed).
+
+### What was tricky to build
+- **Dual code paths**: the command has both Glaze output and human output implementations; both needed the same Workspace-backed ticketDir resolution.
+- **Control docs**: `ticket close` interacts with ticket-root docs; ticketDir resolution must match the ticket’s canonical directory as defined by the indexed `index.md`.
+
+### What warrants a second pair of eyes
+- **Root resolution**: confirm pinning `settings.Root` to `ws.Context().Root` is correct for all invocation contexts (nested cwd, root overrides).
+- **Failure modes**: confirm the “ticket not found / ambiguous” errors are acceptable for this write-path command.
+
+### What should be done in the future
+- Consider refactoring the duplicated “discover workspace + init index + resolve ticket dir” boilerplate into a small shared helper (still QueryDocs-backed) used by all write-path ticket commands.
+
+### Code review instructions
+- Start in `pkg/commands/ticket_close.go` and review both `RunIntoGlazeProcessor` and `Run` ticket resolution blocks.

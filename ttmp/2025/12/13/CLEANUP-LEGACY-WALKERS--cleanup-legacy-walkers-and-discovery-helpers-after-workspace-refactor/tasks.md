@@ -18,7 +18,7 @@
 - [x] [8] Migrate `search.go` suggestion mode to QueryDocs — Main search path already done; suggestion mode still uses `filepath.Walk`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.1
 - [x] [9] Migrate `doc_move.go` ticket discovery to QueryDocs — Replace both `findTicketDirectory` calls. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.2
 - [x] [10] Migrate `ticket_move.go` ticket discovery to QueryDocs — Replace `findTicketDirectory`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.2
-- [ ] [11] Migrate `ticket_close.go` ticket discovery to QueryDocs — Replace both `findTicketDirectory` calls. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.2
+- [x] [11] Migrate `ticket_close.go` ticket discovery to QueryDocs — Replace both `findTicketDirectory` calls. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.2
 - [ ] [12] Migrate `rename_ticket.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `WalkDocuments` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3
 - [ ] [13] Migrate `renumber.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `filepath.WalkDir` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3
 - [ ] [14] Migrate `layout_fix.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `filepath.WalkDir` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3

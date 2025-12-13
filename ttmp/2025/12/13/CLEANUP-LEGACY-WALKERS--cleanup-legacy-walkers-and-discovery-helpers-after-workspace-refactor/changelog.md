@@ -196,3 +196,12 @@ Phase 4.1: Deleted legacy findTicketDirectory helper (commit 3751433)
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/changelog.go — Removed remaining callsites
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/import_file.go — Removed findTicketDirectory
 
+
+## 2025-12-13
+
+Validation: integration scenario suite passed after Phase 3 (DOCMGR_PATH=/tmp/docmgr-scenario-local)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Scenario suite run (Phase 3)
+

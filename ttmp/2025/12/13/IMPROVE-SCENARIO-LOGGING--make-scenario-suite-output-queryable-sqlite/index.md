@@ -9,12 +9,17 @@ Topics:
 DocType: index
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: test-scenarios/testing-doc-manager/README.md
+      Note: Scenario suite documentation
+    - Path: test-scenarios/testing-doc-manager/run-all.sh
+      Note: Current harness entrypoint (to be instrumented)
 ExternalSources:
     - local:phase-3-scenario-log-2025-12-13.txt
 Summary: ""
 LastUpdated: 2025-12-13T16:15:22.087377798-05:00
 ---
+
 
 
 # Make scenario suite output queryable (sqlite)

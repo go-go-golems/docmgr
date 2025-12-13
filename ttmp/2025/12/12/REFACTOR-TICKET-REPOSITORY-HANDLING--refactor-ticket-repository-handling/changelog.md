@@ -426,3 +426,12 @@ Recorded doctor port commit hash in diary and added diary-driven code review wal
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/07-code-review-walkthrough-diary-driven.md — New walkthrough for reviewers
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/15-diary.md — Step 15 now includes commit hash + reviewer instructions sections
 
+
+## 2025-12-13
+
+Ported doc relate to Workspace.QueryDocs for resolving target docs and to Workspace-derived paths.Resolver for normalization; moved suggestion doc scanning onto QueryDocs.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/relate.go — Relate now uses DiscoverWorkspace+InitIndex+QueryDocs for doc selection and normalization
+

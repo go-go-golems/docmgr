@@ -66,6 +66,8 @@ RelatedFiles:
       Note: Ported doctor to Workspace.QueryDocs and switched RelatedFiles existence checks to doc-anchored paths.Resolver
     - Path: pkg/commands/list_docs.go
       Note: Ported list docs to Workspace.QueryDocs (Task 9).
+    - Path: pkg/commands/relate.go
+      Note: Ported doc relate to Workspace.QueryDocs-based doc lookup and Workspace-derived paths.Resolver normalization
     - Path: pkg/commands/search.go
       Note: Ported doc search to Workspace.QueryDocs (Task 10).
     - Path: pkg/commands/workspace_export_sqlite.go
@@ -95,6 +97,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -806,3 +809,67 @@ go run ./cmd/docmgr doctor --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --fail-o
 ```
 
 **Commit**: `a5af7454d006e6d80989f5cb5a82b190562f42ea`
+
+## Step 16: Port `doc relate` to Workspace-based doc lookup + normalization
+
+This step finishes the “plumbing consistency” story for file relationships: `doc relate` no longer tries to rediscover ticket directories with ad-hoc filesystem helpers, and instead resolves its target document via the same `Workspace.QueryDocs` index that powers list/search/doctor. That means “which doc am I editing?” is now backed by the central index, not bespoke heuristics.
+
+The second part of the change is about normalization correctness. The command now constructs its `paths.Resolver` directly from the Workspace context (docs root, config dir, repo root) and anchors it on the **target doc path**. That ensures that doc-relative paths entered by the user (and doc-relative paths already in frontmatter) normalize the same way the index does at ingest time, which reduces reverse lookup surprises.
+
+### What I did
+- Refactored `pkg/commands/relate.go` to:
+  - discover a `Workspace` via `workspace.DiscoverWorkspace`
+  - build the ephemeral SQLite index once via `ws.InitIndex`
+  - resolve `--doc` targets via `QueryDocs(ScopeDoc)`
+  - resolve `--ticket` targets via `QueryDocs(ScopeTicket + DocType=index)` and selecting `index.md`
+  - construct a doc-anchored `paths.Resolver` from `ws.Context()` (including `RepoRoot`)
+- Switched the “existing docs” portion of `--suggest` to query via `QueryDocs` instead of walking the filesystem, so skip rules and parse behavior match the rest of the tool.
+- Smoke-tested both modes without mutating any files by issuing a no-op removal:
+  - `--doc <path> --remove-files does/not/exist.go`
+  - `--ticket <ID> --remove-files does/not/exist.go`
+
+### Why
+- `doc relate` is the write-path for `RelatedFiles`. If it resolves docs differently than QueryDocs, we end up with confusing “write here, read there” mismatches.
+- Using a Workspace-derived resolver with `DocPath=<target doc>` makes doc-relative resolution deterministic and consistent with the ingestion/query normalization pipeline.
+
+### What worked
+- Both `--doc` and `--ticket` modes resolve their target docs through QueryDocs and correctly report no-op when no changes were requested.
+- `go test ./...` stays green after the refactor.
+
+### What didn’t work
+- Nothing notable in this port; the main “gotcha” was making sure we still support the suggestion heuristics that need a filesystem root (git/ripgrep), while moving doc discovery itself to QueryDocs.
+
+### What I learned
+- `ScopeDoc` is a great “escape hatch” for commands that accept an explicit doc path: normalize it once through the Workspace resolver, then treat the absolute path as the stable key (`docs.path`).
+
+### What was tricky to build
+- **Picking the ticket index doc reliably**: for `--ticket`, QueryDocs returns “docs in the ticket”, but we still have to decide which one is the index. Filtering by `DocType=index` and then requiring `basename=index.md` kept that selection explainable.
+- **Suggestions need two roots**: doc scanning can be index-backed, but git/ripgrep still needs an OS directory root; inferring the ticket dir from the doc path preserves the old behavior without reintroducing ticket-directory walkers.
+
+### What warrants a second pair of eyes
+- **Ticket-dir inference** (`inferTicketDirFromDocPath`) assumes the default docs layout `<docsRoot>/YYYY/MM/DD/<ticketDir>/...`. If we ever support alternate layouts, this is one of the first helpers that should become configurable.
+- **Suggestion semantics**: moving “existing docs” from filesystem walk to QueryDocs changes which docs are considered (e.g. it now honors canonical skip rules). That’s good, but worth confirming against any workflows that relied on indexing skipped paths.
+
+### Code review instructions (for a reviewer)
+- Start with `pkg/commands/relate.go`:
+  - look for `DiscoverWorkspace` → `InitIndex` → `QueryDocs` (doc resolution spine)
+  - confirm `paths.NewResolver(... DocPath: targetDocPath, RepoRoot: ws.Context().RepoRoot ...)` is used for canonicalization
+  - verify `--ticket` selection logic (DocType filter + `index.md` basename check)
+- Run the two smoke tests that should not mutate files:
+
+```bash
+go run ./cmd/docmgr doc relate --doc ttmp/.../reference/15-diary.md --remove-files does/not/exist.go
+go run ./cmd/docmgr doc relate --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --remove-files does/not/exist.go
+```
+
+### Technical details
+- Files:
+  - `pkg/commands/relate.go`
+- Commands:
+
+```bash
+gofmt -w pkg/commands/relate.go
+go test ./... -count=1
+```
+
+**Commit**: (next)

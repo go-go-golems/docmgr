@@ -18,14 +18,12 @@ RelatedFiles:
       Note: Self-contained tool module (dependencies + toolchain)
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
+    - Path: scenariolog/internal/scenariolog/kv.go
+      Note: KV tags
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
-    - Path: scenariolog/internal/scenariolog/search.go
-      Note: FTS search implementation
-    - Path: scenariolog/internal/scenariolog/search_fts5_test.go
-      Note: FTS5 test
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
@@ -266,6 +264,28 @@ This step made the indexed log lines actually queryable from the CLI by adding a
 
 ### Code review instructions
 - Start at `scenariolog/internal/scenariolog/search.go` and the `search` command wiring in `scenariolog/cmd/scenariolog/main.go`.
+
+## Step 5: Start emitting KV tags (provenance + step/command metadata)
+
+This step began using the `kv` table as intended: attach lightweight metadata to runs and steps so the DB “explains itself” (suite name, root_dir, user, and the step command argv). This will make debugging and future reporting much easier.
+
+**Commit (code):** 6f32b75a1c18854aeade72b299b8d5ff1c834596 — "scenariolog: add KV provenance tags"
+
+### What I did
+- Added `SetKV` upsert helper (`scenariolog/internal/scenariolog/kv.go`)
+- On `StartRun`, emit best-effort tags:
+  - `root_dir`
+  - `suite`
+  - `user.name` (best-effort)
+- On `ExecStep`, emit best-effort tags:
+  - `step.name`, `step.num`, `step.script_path`
+  - `cmd.argv0`, `cmd.args_json`
+
+### Why
+- The relational tables answer “what happened”; KV tags answer “under what conditions / with what inputs”.
+
+### What warrants a second pair of eyes
+- Confirm we want KV writes to be best-effort (ignored errors) rather than strict, and that key naming is acceptable.
 
 ## Related
 

@@ -33,6 +33,14 @@ LastUpdated: 2025-12-13T10:29:25.71572102-05:00
 
 This ticket continues the work started in **REFACTOR-TICKET-REPOSITORY-HANDLING**, which introduced a centralized `workspace.Workspace` object backed by an in-memory SQLite index for document discovery and metadata handling.
 
+## Compatibility policy (non-negotiable)
+
+This cleanup explicitly does **not** preserve backwards compatibility.
+
+- We will not add compatibility flags, shims, or fallback behaviors to emulate legacy semantics.
+- Behavior changes are acceptable and expected as part of removing duplicated walkers and consolidating semantics in `Workspace.QueryDocs`.
+- When legacy behavior differs from the canonical QueryDocs semantics, **QueryDocs wins**.
+
 ### What was built
 
 The refactor ticket delivered:
@@ -208,12 +216,12 @@ for _, h := range result.Docs {
 1. **Ticket filter semantics** (`list_tickets.go`):
    - **Current**: Substring match (`strings.Contains`)
    - **After**: Exact match
-   - **Mitigation**: Document change; consider `--ticket-contains` flag if needed
+   - This is intentional: we do not support compatibility modes.
 
 2. **Parse error visibility**:
    - **Current**: Many commands silently skip docs with parse errors
    - **After**: QueryDocs can surface them via `IncludeErrors=true` and `Diagnostics`
-   - **Mitigation**: Use `IncludeErrors=false` (default) to preserve current behavior
+   - This is intentional: commands should adopt the QueryDocs defaults and options, not legacy heuristics.
 
 3. **Index build overhead**:
    - Commands now build an in-memory SQLite index at startup

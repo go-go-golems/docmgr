@@ -10,12 +10,17 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/commands/list_tickets.go
+      Note: Phase 1.2 migration to Workspace.QueryDocs (commits 024993a
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
+    - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md
+      Note: 'Spec: no backwards compatibility; QueryDocs semantics win'
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 # Diary
@@ -98,3 +103,32 @@ This step removes the last major “status-style” legacy traversal: enumeratin
 - Smoke:
   - `docmgr status --summary-only`
   - `docmgr status --ticket CLEANUP-LEGACY-WALKERS`
+
+## Step 2: Migrate `list tickets` to Workspace+QueryDocs (Phase 1.2)
+
+This step migrates `list tickets` off the legacy `CollectTicketWorkspaces` walker and onto `Workspace.QueryDocs` with a `DocType=index` filter. The result is that ticket enumeration, metadata hydration, and ordering are now backed by the same canonical ingestion+skip rules used by `list docs`, `search`, `doctor`, and `relate`, while keeping the human output stable.
+
+**Commit (code):** `024993a` — "Cleanup: migrate list tickets to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/list_tickets.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - `QueryDocs(ScopeRepo, Filters{DocType=index, Ticket, Status}, OrderByLastUpdated DESC)` instead of `CollectTicketWorkspaces`.
+- Ran `gofmt` and `go test ./... -count=1`.
+
+### Why
+- Remove duplicated ticket discovery logic and centralize semantics in QueryDocs.
+- Keep `list tickets` consistent with the Workspace refactor’s “single source of truth”.
+
+### What worked
+- Tests and lint stayed green.
+- No changes required to the human-facing Markdown rendering or template schema behavior.
+
+### Behavior notes
+- **Ticket filter semantics** are now **exact match** (via `ticket_id = ?`) rather than substring matching. This was an intentional cleanup per the migration guide.
+
+### Code review instructions
+- Start in `pkg/commands/list_tickets.go` and review `queryTicketIndexDocs`.
+- Smoke:
+  - `docmgr list tickets`
+  - `docmgr list tickets --ticket CLEANUP-LEGACY-WALKERS`

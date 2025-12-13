@@ -10,12 +10,14 @@ DocType: analysis
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: test-scenarios/testing-doc-manager/01-create-mock-codebase.sh
-      Note: Creates small git repo used by scenarios
     - Path: test-scenarios/testing-doc-manager/19-export-sqlite.sh
-      Note: Failing step when using old system docmgr (unknown --out)
+      Note: Flag mismatch surfaced when running old system docmgr
+    - Path: test-scenarios/testing-doc-manager/README.md
+      Note: Docs now require pinned DOCMGR_PATH
+    - Path: test-scenarios/testing-doc-manager/SCENARIO.md
+      Note: Docs now explain how to run with pinned DOCMGR_PATH
     - Path: test-scenarios/testing-doc-manager/run-all.sh
-      Note: Scenario harness; uses DOCMGR_PATH if set
+      Note: Hardened harness; requires pinned DOCMGR_PATH
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T11:27:20.167996952-05:00
@@ -89,7 +91,7 @@ This also keeps console output small while preserving the full run log.
 ## What should be done in the future
 
 - When you see “unknown flag” in scenarios, verify **which `docmgr` binary** is being executed first (PATH vs `DOCMGR_PATH`).
-- Consider tightening the harness contract so it prints the resolved `DOCMGR_PATH` (or fails when unset) to prevent silent usage of an older system binary.
+- Tighten the harness contract so it prints the resolved `DOCMGR_PATH` and fails when unset, to prevent silent usage of an older system binary.
 
 ## Related files (jump points)
 

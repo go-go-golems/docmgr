@@ -2,7 +2,25 @@
 set -euo pipefail
 
 ROOT_DIR="${1:-/tmp/docmgr-scenario}"
-export DOCMGR_PATH="${DOCMGR_PATH:-docmgr}"
+export DOCMGR_PATH="${DOCMGR_PATH:-}"
+
+# NOTE: This scenario suite must run against an explicitly pinned docmgr binary.
+# If DOCMGR_PATH is unset, we'd silently fall back to `docmgr` from PATH, which can be an
+# older system install and can cause false failures (e.g. missing flags).
+#
+# To run against system docmgr intentionally, set:
+#   DOCMGR_PATH="$(command -v docmgr)"
+#
+# To run against the repo code (recommended), build a binary and set DOCMGR_PATH:
+#   go build -o /tmp/docmgr-local ./cmd/docmgr
+#   DOCMGR_PATH=/tmp/docmgr-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
+if [[ -z "${DOCMGR_PATH}" ]]; then
+  echo "[fail] DOCMGR_PATH is not set. Refusing to run with ambiguous system docmgr from PATH." >&2
+  echo "       Set DOCMGR_PATH to a pinned binary (recommended: repo build)." >&2
+  exit 2
+fi
+
+echo "[info] Using DOCMGR_PATH=${DOCMGR_PATH}" >&2
 
 cd "$(dirname "$0")"
 

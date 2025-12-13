@@ -20,6 +20,7 @@ import (
 type ExecStepSpec struct {
 	RunID      string
 	RootDir    string // used for making artifact paths portable (store root-rel when possible)
+	WorkDir    string // optional working directory for the executed command (defaults to current working dir)
 	LogDir     string // relative to RootDir unless absolute
 	StepNum    int
 	StepName   string
@@ -98,8 +99,8 @@ func ExecStep(ctx context.Context, db *sql.DB, spec ExecStepSpec) (*ExecStepResu
 	defer func() { _ = stderrFile.Close() }()
 
 	cmd := exec.CommandContext(ctx, spec.Command[0], spec.Command[1:]...)
-	if spec.RootDir != "" {
-		cmd.Dir = spec.RootDir
+	if spec.WorkDir != "" {
+		cmd.Dir = spec.WorkDir
 	}
 
 	stdoutPipe, err := cmd.StdoutPipe()

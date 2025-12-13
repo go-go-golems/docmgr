@@ -180,6 +180,7 @@ func newExecCmd() *cobra.Command {
 	var dbPath string
 	var runID string
 	var rootDir string
+	var workDir string
 	var logDir string
 	var stepNum int
 	var stepName string
@@ -224,6 +225,7 @@ func newExecCmd() *cobra.Command {
 			res, err := scenariolog.ExecStep(ctx, db, scenariolog.ExecStepSpec{
 				RunID:      runID,
 				RootDir:    rootDir,
+				WorkDir:    workDir,
 				LogDir:     logDir,
 				StepNum:    stepNum,
 				StepName:   stepName,
@@ -251,6 +253,7 @@ func newExecCmd() *cobra.Command {
 	cmd.Flags().StringVar(&dbPath, "db", "", "Path to sqlite database file")
 	cmd.Flags().StringVar(&runID, "run-id", "", "Run id to attach this step to")
 	cmd.Flags().StringVar(&rootDir, "root-dir", "", "Root directory for this scenario run (used for cwd + path normalization)")
+	cmd.Flags().StringVar(&workDir, "work-dir", "", "Working directory for the executed command (defaults to current directory)")
 	cmd.Flags().StringVar(&logDir, "log-dir", "", "Log directory (relative to root-dir unless absolute; must already exist)")
 	cmd.Flags().IntVar(&stepNum, "step-num", 0, "Step number (used for ordering + filenames)")
 	cmd.Flags().StringVar(&stepName, "name", "", "Step name")

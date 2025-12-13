@@ -327,3 +327,24 @@ Enhanced the end-to-end talent show playbook with detailed guidance on scouting,
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/03-playbook-how-to-run-a-code-talent-show-end-to-end.md — Comprehensive talent show operating guide
 
+
+## 2025-12-12
+
+Ran contestant #2 (Ingrid / Workspace.InitIndex) unit + scenario integration stages, then produced jury deliberation and formal code review artifacts with evidence excerpts and follow-up recommendations.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/05-code-review-contestant-2-ingrid-the-indexer-index-builder-initindex.md — Code review artifact
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/20-jury-deliberation-contestant-2-ingrid-the-indexer-workspace-initindex.md — Deliberation artifact
+
+
+## 2025-12-12
+
+Ran contestant #3 (Norma / path normalization) show via scenario harness (includes 14-path-normalization) and ingestion sanity test; produced how-to-judge rubric, jury deliberation transcript, and formal code review with evidence and follow-ups (document anchor order + match tiers; consider constraining substring fallback).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/06-code-review-contestant-3-norma-the-navigator-path-normalization.md — Code review
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/21-how-to-judge-contestant-3-norma-the-navigator-path-normalization.md — Rubric
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/22-jury-deliberation-contestant-3-norma-the-navigator-path-normalization.md — Deliberation
+

@@ -11,6 +11,10 @@ Owners: []
 RelatedFiles:
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/04-code-review-contestant-1-dj-skippy-skip-policy.md
       Note: 'Code review writeup for contestant #1'
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/05-code-review-contestant-2-ingrid-the-indexer-index-builder-initindex.md
+      Note: 'Formal code review writeup for contestant #2 (InitIndex)'
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/06-code-review-contestant-3-norma-the-navigator-path-normalization.md
+      Note: 'Formal code review writeup for contestant #3'
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/01-test-playbook-contestant-1-dj-skippy-skip-policy.md
       Note: 'Playbook for testing contestant #1'
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/02-test-playbook-contestant-2-ingrid-the-indexer-index-builder-initindex.md
@@ -21,10 +25,18 @@ RelatedFiles:
       Note: Judge panel definitions for code review talent show
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/19-jury-deliberation-contestant-1-dj-skippy-skip-policy.md
       Note: 'Jury deliberation and scoring for contestant #1'
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/20-jury-deliberation-contestant-2-ingrid-the-indexer-workspace-initindex.md
+      Note: 'Jury deliberation transcript for contestant #2 (InitIndex)'
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/21-how-to-judge-contestant-3-norma-the-navigator-path-normalization.md
+      Note: 'How-to-judge rubric for contestant #3 (path normalization)'
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/22-jury-deliberation-contestant-3-norma-the-navigator-path-normalization.md
+      Note: 'Jury deliberation transcript for contestant #3'
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T14:31:14.113503479-05:00
 ---
+
+
 
 
 

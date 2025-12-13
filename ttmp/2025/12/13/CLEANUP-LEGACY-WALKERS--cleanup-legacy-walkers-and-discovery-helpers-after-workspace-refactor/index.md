@@ -26,6 +26,8 @@ RelatedFiles:
       Note: Phase 2.2 migrated to Workspace.QueryDocs
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migrated to Workspace.QueryDocs
+    - Path: pkg/commands/tasks.go
+      Note: Phase 2.3 migrated to Workspace.QueryDocs
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/09-cleanup-inventory-report-task-18.md
       Note: Detailed inventory of all cleanup targets
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
@@ -38,6 +40,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

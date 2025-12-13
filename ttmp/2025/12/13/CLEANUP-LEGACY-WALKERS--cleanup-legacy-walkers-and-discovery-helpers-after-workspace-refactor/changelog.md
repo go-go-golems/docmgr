@@ -95,3 +95,12 @@ Created intern code review verification questionnaire playbook with YAML DSL (22
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/playbook/01-intern-code-review-verification-questionnaire.md — Verification playbook for onboarding/review
 
+
+## 2025-12-13
+
+Step 2.3: Migrated tasks.go ticket discovery to Workspace.QueryDocs (commit 234f42c)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/tasks.go — Replaced substring dir scan + findTicketDirectory fallback with QueryDocs
+

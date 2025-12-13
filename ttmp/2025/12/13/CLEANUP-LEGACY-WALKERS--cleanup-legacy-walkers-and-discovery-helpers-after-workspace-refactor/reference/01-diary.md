@@ -16,10 +16,13 @@ RelatedFiles:
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
+    - Path: pkg/commands/tasks.go
+      Note: Phase 2.3 migrated tasks ticket discovery to Workspace.QueryDocs (commit 234f42c)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 
@@ -301,3 +304,38 @@ This step removes `meta update`’s dependency on legacy ticket discovery and ma
 
 ### Code review instructions
 - Start in `pkg/commands/meta_update.go` and review `applyMetaUpdate`.
+
+## Step 7: Migrate `tasks` ticket discovery to Workspace+QueryDocs (Phase 2.3)
+
+This step removes `tasks`’ remaining legacy ticket directory heuristics (substring directory scan + `findTicketDirectory` fallback). When `--tasks-file` is not provided, the command now resolves the ticket’s `tasks.md` by querying the Workspace index and selecting the `tasks.md` control doc within the ticket scope.
+
+**Commit (code):** `234f42c` — "Cleanup: migrate tasks ticket discovery to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/tasks.go` so `loadTasksFile` is Workspace-backed when `--tasks-file` is not set:
+  - `DiscoverWorkspace` + `InitIndex`
+  - `QueryDocs(ScopeTicket, IncludeControlDocs=true)` and pick the `tasks.md` doc by basename
+- Threaded `context.Context` through `loadTasksFile` and `editTaskLine` callsites so we can reuse the caller’s context.
+
+### Why
+- Remove the last Phase 2 usage of `findTicketDirectory` (and the ad-hoc substring heuristics) so we can delete the helper later.
+- Make “control doc resolution” consistent with the canonical index semantics.
+
+### What worked
+- Tests and lint stayed green.
+- `tasks` commands now resolve `tasks.md` without any filesystem directory scanning.
+
+### What was tricky to build
+- **Doc selection**: QueryDocs doesn’t have a “basename filter”, so we query the ticket scope and then select `tasks.md` in-memory.
+- **Visibility**: `tasks.md` is a control doc, so the query must opt into `IncludeControlDocs=true`.
+
+### What warrants a second pair of eyes
+- **Control-doc contract**: confirm that resolving `tasks.md` via “control doc within ScopeTicket” is the intended long-term API contract for these commands (and not, e.g., “derive from index.md’s directory”).
+- **Error behavior**: confirm the “tasks.md not found for ticket” error is appropriate when the file is missing or skipped.
+
+### What should be done in the future
+- If we later add more control docs, consider adding a small QueryDocs filter option for “basename/path” to avoid querying-and-filtering in multiple commands.
+- After Phase 4 deletes `findTicketDirectory`, ensure no other commands resurrect name-based directory guessing.
+
+### Code review instructions
+- Start in `pkg/commands/tasks.go` and review `loadTasksFile` and `findTasksFileViaWorkspace`.

@@ -368,3 +368,22 @@ Checked off implementation tasks: QueryDocs+SQL compiler (Task 7) and QueryDocs 
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/tasks.md — Task list updated to mark Tasks 7 and 8 completed.
 
+
+## 2025-12-13
+
+Port list docs command to Workspace.QueryDocs: replace filepath.Walk + per-file frontmatter parsing with index-backed query; keep glaze/human output shape and continue skipping index.md.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/list_docs.go — Now uses workspace.DiscoverWorkspace+InitIndex+QueryDocs instead of ad-hoc filesystem walking.
+
+
+## 2025-12-13
+
+Verification: built local refactor binary and ran full test-scenarios suite; confirmed list docs works on scenario workspace (human + glaze modes).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/list_docs.go — Ported list docs validated against scenario workspace.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Integration regression suite used to validate the refactor binary.
+

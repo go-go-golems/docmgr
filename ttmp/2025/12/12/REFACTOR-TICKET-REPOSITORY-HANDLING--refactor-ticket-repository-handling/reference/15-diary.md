@@ -55,6 +55,8 @@ RelatedFiles:
       Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
       Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2, Spec §5.1).
+    - Path: pkg/commands/list_docs.go
+      Note: Ported list docs to Workspace.QueryDocs (Task 9).
     - Path: pkg/commands/workspace_export_sqlite.go
       Note: Implements  as a classic Run() command.
     - Path: pkg/diagnostics/docmgrctx/query_docs.go
@@ -67,6 +69,7 @@ RelatedFiles:
       Note: |-
         Used to validate both system and local refactor binaries.
         Runs the scenario suite; now includes export-sqlite smoke.
+        Scenario suite run to validate list docs + refactor wiring.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
       Note: Decision record for when/how we add integration tests during the refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
@@ -77,6 +80,8 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
+
 
 
 
@@ -601,3 +606,81 @@ go test ./... -count=1
 
 ### What I’d do differently next time
 - Add a focused unit test that asserts the Diagnostics payload shape (stage/symptom/severity/path) for a parse-error doc when `IncludeDiagnostics=true`.
+
+## Step 13: Port `list docs` to `Workspace.QueryDocs`
+
+This step moved the `list docs` command off of ad-hoc filesystem walking and onto the new Workspace+SQLite index. The key goal is consistency: “what counts as a doc” and “how filters behave” should be defined in one place (`Workspace.InitIndex` + `Workspace.QueryDocs`), not re-implemented in every command. This is also the first real proof that the Workspace API is usable from command code without leaking indexing or normalization details everywhere.
+
+We kept the user-facing output shape intact for both human mode and glaze mode, and we preserved the key behavioral quirk that `list docs` skips any `index.md` file (tickets are listed via `list tickets`).
+
+### What I did
+- Rewrote `pkg/commands/list_docs.go` to:
+  - call `workspace.DiscoverWorkspace(...)`
+  - build the in-memory index via `ws.InitIndex(...)`
+  - query via `ws.QueryDocs(...)` using `Ticket/Status/DocType/TopicsAny` filters
+- Implemented output mapping from `DocHandle` back into:
+  - glaze rows (`ticket,doc_type,title,status,topics,path,last_updated`)
+  - human grouped Markdown output (per-ticket grouping + sorting)
+- Preserved `index.md` skipping as a post-filter on the query results.
+- In glaze mode, rendered `QueryDocs` diagnostics (to keep “skipped because parse” visibility).
+- Checked off Task 9 in the ticket task list.
+
+### Why
+- Remove duplicated walkers and filter semantics, and make command behavior consistent across the tool.
+- Leverage the new diagnostics channel so glaze users still see what got skipped and why (instead of silent drops).
+
+### What worked
+- The command no longer does its own recursive walk or per-file parsing; it is now a thin translation layer from flags → `DocQuery` → output formatting.
+- The repo continues to build and tests stay green.
+
+### What didn’t work
+- Nothing notable in this port; it was largely mechanical once QueryDocs stabilized.
+
+### What I learned
+- The “skip index.md” requirement is easiest to preserve as a post-filter until we add an explicit `IsIndex` filter to `DocFilters` (or a dedicated option).
+
+### Technical details
+- Files:
+  - `pkg/commands/list_docs.go`
+- Test command:
+
+```bash
+go test ./... -count=1
+```
+
+## Step 14: Verify list-docs port via scenario suite + direct command runs
+
+This step was a “trust but verify” pass after wiring `list docs` to `Workspace.QueryDocs`. The goal was to validate the refactor in the same way users experience it: run the full scenario suite against a locally built binary, then exercise `docmgr list docs` directly on the generated workspace in both human output and glaze output modes. The important outcome is confidence that the port behaves correctly in a real(istic) repo layout, not just in unit tests.
+
+One small operational gotcha came up: piping long command output into `head` can produce `SIGPIPE` (exit code 141) even when the underlying command succeeds. That’s not a test failure; it’s just the shell pipeline closing early. The scenario run itself still reported success.
+
+### What I did
+- Built a local refactor binary.
+- Ran the full integration scenario suite with `DOCMGR_PATH` pointing at that binary.
+- Ran `docmgr list docs` against the scenario workspace’s `ttmp/` root:
+  - human output (grouped markdown)
+  - glaze JSON output (paths only) for a quick “scriptability” check
+
+### Why
+- Scenario tests catch wiring/defaults/flag interactions that unit tests miss.
+- `list docs` is a high-touch command; validating both output modes is important for regressions.
+
+### What worked
+- Scenario suite completed successfully (`[ok] Scenario completed ...`).
+- `list docs` produced sensible grouped output and glaze JSON rows on the scenario workspace.
+
+### What didn’t work
+- The combined command chain ended with exit code 141 due to `head` closing the pipe early (SIGPIPE). This was not a functional failure, but it did make the shell exit non-zero.
+
+### What I learned
+- When capturing “just a preview” of output in automation, prefer patterns that avoid SIGPIPE (e.g., redirect to a file and show a slice, or explicitly tolerate SIGPIPE) so success doesn’t look like failure.
+
+### Technical details
+- Commands run:
+
+```bash
+go build -o /tmp/docmgr-refactor-local-2025-12-13 ./cmd/docmgr
+DOCMGR_PATH=/tmp/docmgr-refactor-local-2025-12-13 bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-local-2025-12-13
+/tmp/docmgr-refactor-local-2025-12-13 list docs --root /tmp/docmgr-scenario-local-2025-12-13/acme-chat-app/ttmp
+/tmp/docmgr-refactor-local-2025-12-13 list docs --root /tmp/docmgr-scenario-local-2025-12-13/acme-chat-app/ttmp --with-glaze-output --output json --select path
+```

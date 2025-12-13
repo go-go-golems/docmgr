@@ -186,3 +186,13 @@ Step 3: Migrated import_file.go to Workspace.QueryDocs (commit d2b357a)
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/import_file.go — Use QueryDocs to resolve ticket directory
 
+
+## 2025-12-13
+
+Phase 4.1: Deleted legacy findTicketDirectory helper (commit 3751433)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/changelog.go — Removed remaining callsites
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/import_file.go — Removed findTicketDirectory
+

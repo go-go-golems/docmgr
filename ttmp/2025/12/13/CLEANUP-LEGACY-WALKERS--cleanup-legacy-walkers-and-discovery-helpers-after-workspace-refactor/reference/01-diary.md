@@ -11,11 +11,13 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - Path: pkg/commands/changelog.go
-      Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
+      Note: |-
+        Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
+        Phase 4.1 removed remaining findTicketDirectory callsites (commit 3751433)
     - Path: pkg/commands/doc_move.go
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
     - Path: pkg/commands/import_file.go
-      Note: Phase 3 migrated import file ticket discovery to Workspace.QueryDocs (commit d2b357a)
+      Note: Phase 4.1 deleted findTicketDirectory helper (commit 3751433)
     - Path: pkg/commands/layout_fix.go
       Note: Phase 3.3 migrated layout-fix discovery to Workspace.QueryDocs (commit c72e0db)
     - Path: pkg/commands/meta_update.go
@@ -628,3 +630,37 @@ This step migrates `import file` off the legacy `findTicketDirectory` helper (wh
 
 ### Code review instructions
 - Start in `pkg/commands/import_file.go` and review `importFile` ticketDir resolution and the subsequent writes.
+
+## Step 16: Delete legacy `findTicketDirectory` helper (Phase 4.1)
+
+This step deletes the legacy `findTicketDirectory` helper that lived in `pkg/commands/import_file.go` and depended on `CollectTicketWorkspaces`. Before deleting it, we removed the last remaining callsites (notably in `changelog.go`), so there are no compatibility shims left and ticket resolution is now consistently Workspace+QueryDocs-backed.
+
+**Commit (code):** `3751433` — "Cleanup: delete findTicketDirectory helper"
+
+### What I did
+- Updated `pkg/commands/changelog.go` to remove the remaining `findTicketDirectory` callsites and instead resolve:
+  - `changelog.md` path from the ticket directory via Workspace+QueryDocs, and
+  - ticket `searchRoot` for heuristics via the QueryDocs-backed ticket-dir resolver.
+- Deleted the `findTicketDirectory(...)` function from `pkg/commands/import_file.go`.
+
+### Why
+- This is the prerequisite cleanup that makes it possible to delete the legacy ticket discovery stack (Phase 4).
+- Remove the last hidden dependency on `CollectTicketWorkspaces` from the commands layer.
+
+### What worked
+- Tests and lint stayed green after deletion.
+- No CLI flags or outputs changed; this is a pure internal refactor.
+
+### What was tricky to build
+- **Changelog edge paths**: `changelog update` has multiple modes (`--changelog-file`, `--suggest`, human vs glaze). Removing the helper required touching all those resolution points without changing behavior.
+
+### What warrants a second pair of eyes
+- **Changelog heuristics searchRoot**: confirm ticket-scoped heuristics still run in the ticket directory (not the repo root) and that failures remain best-effort for suggestions.
+- **Deletion safety**: confirm there are no remaining production callsites (only historical docs mention it, which is fine).
+
+### What should be done in the future
+- If we see repeated “discover workspace + init index + resolve ticketDir” boilerplate, consider extracting a small shared helper for commands (still QueryDocs-backed) to keep callsites consistent.
+
+### Code review instructions
+- Start in `pkg/commands/changelog.go` and verify there are no references to `findTicketDirectory`.
+- Start in `pkg/commands/import_file.go` and confirm the helper is deleted and ticketDir is derived via QueryDocs.

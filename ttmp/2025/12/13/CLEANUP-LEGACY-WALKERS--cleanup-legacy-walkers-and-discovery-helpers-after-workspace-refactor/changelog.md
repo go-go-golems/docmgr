@@ -123,3 +123,12 @@ Step 3.1: Migrated search.go suggestion mode to Workspace.QueryDocs (commit eadd
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/search.go — Replaced filepath.Walk/readDocumentFrontmatter in suggestion mode with QueryDocs
 
+
+## 2025-12-13
+
+Step 3.2: Migrated doc_move.go ticket discovery to Workspace.QueryDocs (commit 770e33f)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/doc_move.go — Replaced findTicketDirectory with QueryDocs
+

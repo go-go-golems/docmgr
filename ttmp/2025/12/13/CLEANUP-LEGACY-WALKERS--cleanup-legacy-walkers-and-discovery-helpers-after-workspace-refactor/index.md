@@ -16,6 +16,8 @@ RelatedFiles:
       Note: Phase 2.1 migrated add ticket discovery to Workspace.QueryDocs
     - Path: pkg/commands/changelog.go
       Note: Phase 1.4 migrated suggestion mode to Workspace.QueryDocs
+    - Path: pkg/commands/doc_move.go
+      Note: Phase 3.2 migrated doc move ticket discovery to Workspace.QueryDocs (commit 770e33f)
     - Path: pkg/commands/import_file.go
       Note: Contains findTicketDirectory definition (prime target)
     - Path: pkg/commands/list.go
@@ -44,6 +46,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

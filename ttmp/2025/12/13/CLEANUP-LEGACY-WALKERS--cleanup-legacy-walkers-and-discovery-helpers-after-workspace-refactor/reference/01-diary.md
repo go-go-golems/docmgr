@@ -12,10 +12,10 @@ Owners: []
 RelatedFiles:
     - Path: pkg/commands/changelog.go
       Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
+    - Path: pkg/commands/doc_move.go
+      Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
-    - Path: pkg/commands/search.go
-      Note: Phase 3.1 migrated search suggestion doc-scan to Workspace.QueryDocs (commit eadda8d)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
 ExternalSources: []
@@ -379,3 +379,38 @@ This step removes the last `search`-side manual filesystem scan in suggestion mo
 - Start in `pkg/commands/search.go` and review both suggestion paths:
   - `suggestFiles(...)` (glaze mode)
   - `if settings.Files { ... }` (human mode)
+
+## Step 9: Migrate `doc move` ticket discovery to Workspace+QueryDocs (Phase 3.2)
+
+This step removes `doc move`’s remaining legacy ticket directory resolution (`findTicketDirectory`) for both the source ticket (derived from the document’s frontmatter) and the destination ticket. The command now discovers the Workspace once, builds the index once, and resolves each ticket directory by querying the ticket’s `index.md` via `QueryDocs`.
+
+**Commit (code):** `770e33f` — "Cleanup: migrate doc move to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/doc_move.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve `srcTicketDir` and `destTicketDir` via `QueryDocs(ScopeTicket, DocType=index)` instead of `findTicketDirectory`.
+- Threaded `context.Context` into `applyMove` so the migration uses the caller’s context (consistent with the rest of the QueryDocs ports).
+
+### Why
+- Remove legacy ticket discovery from write-path commands so we can delete `findTicketDirectory` later.
+- Ensure “ticket directory resolution” follows the same canonical semantics as other migrated commands.
+
+### What worked
+- Tests and lint stayed green.
+- The command still preserves relative subpaths under the ticket and enforces “stay within ticket” constraints.
+
+### What was tricky to build
+- **Single Workspace lifecycle**: this command needs to resolve two tickets; we avoid doing two separate discoveries/index builds by reusing a single Workspace/index instance.
+- **Path conversions**: QueryDocs returns slash-cleaned paths; write-path uses filesystem paths. The implementation normalizes with `filepath.FromSlash` before `filepath.Dir`.
+
+### What warrants a second pair of eyes
+- **Index uniqueness assumption**: confirm it’s correct to treat “more than one index doc for a ticket” as a hard error in this write-path command.
+- **Root contracts**: confirm that resolving `settings.Root` to `ws.Context().Root` doesn’t break any callers relying on relative-root behavior.
+
+### What should be done in the future
+- If more commands need “ticket directory resolution”, consider extracting the QueryDocs-based pattern into a shared helper so we don’t duplicate this logic (without reintroducing legacy heuristics).
+- Once Phase 4 removes `findTicketDirectory`, add a regression guard (test or lint pattern) to prevent reintroducing it.
+
+### Code review instructions
+- Start in `pkg/commands/doc_move.go` and review `applyMove` and `resolveTicketDirViaWorkspace`.

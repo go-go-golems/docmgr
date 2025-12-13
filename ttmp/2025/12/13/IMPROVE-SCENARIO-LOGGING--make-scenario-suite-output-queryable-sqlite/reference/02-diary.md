@@ -16,16 +16,18 @@ RelatedFiles:
       Note: Cobra entrypoint (currently `init`; will grow)
     - Path: scenariolog/go.mod
       Note: Self-contained tool module (dependencies + toolchain)
+    - Path: scenariolog/internal/scenariolog/artifacts.go
+      Note: Artifact rows
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
-    - Path: scenariolog/internal/scenariolog/ids.go
-      Note: Run id generation
+    - Path: scenariolog/internal/scenariolog/exec_step.go
+      Note: Exec step implementation
+    - Path: scenariolog/internal/scenariolog/fts.go
+      Note: FTS indexing helper
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
-    - Path: scenariolog/internal/scenariolog/run.go
-      Note: StartRun/EndRun implementation
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
@@ -183,6 +185,63 @@ rm -f /tmp/scenario-run-test.db
 ### Technical details
 - Inserts into `scenario_runs` on start.
 - Updates `scenario_runs.completed_at`, `exit_code`, and `duration_ms` on end.
+
+## Step 3: Exec step wrapper (capture stdout/stderr + artifacts + best-effort FTS indexing)
+
+This step implemented the first “real” value of the tool: wrapping a step command so it gets recorded in sqlite and produces portable log artifacts. We write a `steps` row, capture stdout/stderr into files, insert `artifacts` rows with sha256/size, and (when available) index the artifacts into the FTS table for future search.
+
+**Commit (code):** 9ac50c1f4f7314d6afbc24814f0e2144b4c056c8 — "scenariolog: exec step capture + artifacts"
+
+### What I did
+- Implemented `ExecStep` in `scenariolog/internal/scenariolog/exec_step.go`:
+  - inserts step start row
+  - runs the command with `exec.CommandContext`
+  - concurrently copies stdout/stderr into files via `errgroup`
+  - finalizes the step row with exit code + duration
+  - hashes artifacts and inserts `artifacts` rows
+  - best-effort indexes lines into `log_lines_fts` (no-op if missing)
+- Added artifact insertion helper: `scenariolog/internal/scenariolog/artifacts.go`
+- Added FTS indexing helper: `scenariolog/internal/scenariolog/fts.go`
+- Added Cobra `exec` command:
+  - `scenariolog exec --db ... --run-id ... --root-dir ... --log-dir ... --step-num ... --name ... -- <cmd...>`
+  - propagates the wrapped command’s exit code
+- Added unit tests for `ExecStep` that avoid shell init file noise.
+
+### Why
+- This is the core mechanism the scenario harness will use: each step script becomes one `scenariolog exec ... bash ./NN-step.sh "$ROOT_DIR"` call.
+
+### What worked
+- `scenariolog exec` produces files `step-NN-stdout.txt` / `step-NN-stderr.txt` and inserts corresponding rows into sqlite.
+- Non-zero exit codes are preserved and returned by the CLI process.
+
+### What didn't work
+- N/A (for this step).
+
+### What I learned
+- `bash -lc` can leak user shell init into stderr; tests should use `bash --noprofile --norc -c` for determinism.
+
+### What was tricky to build
+- Ensuring we still finalize the step row even when file creation or command startup fails (we best-effort write an exit code of 127).
+
+### What warrants a second pair of eyes
+- Signal/process-group handling is not implemented yet (CTRL-C may leave child processes running). We need to harden this before using it heavily in CI.
+
+### What should be done in the future
+- Add explicit process-group handling and more robust cancellation semantics (tracked in remaining Phase 2 hardening tasks).
+
+### Code review instructions
+- Start at `scenariolog/internal/scenariolog/exec_step.go` and `scenariolog/cmd/scenariolog/main.go` (`exec`).
+- Run:
+
+```bash
+go -C scenariolog test ./...
+go -C scenariolog build -o /tmp/scenariolog-local ./cmd/scenariolog
+DB=/tmp/scenario-run-test.db
+RUN_ID=$(/tmp/scenariolog-local run start --db \"$DB\" --root-dir /tmp --suite test-suite)
+/tmp/scenariolog-local exec --db \"$DB\" --run-id \"$RUN_ID\" --root-dir /tmp --log-dir . --step-num 1 --name demo -- bash --noprofile --norc -c 'echo out; echo err 1>&2; exit 3'
+/tmp/scenariolog-local run end --db \"$DB\" --run-id \"$RUN_ID\" --exit-code 0
+rm -f \"$DB\"
+```
 
 ## Related
 

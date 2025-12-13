@@ -30,11 +30,11 @@ This task list is the actionable checklist that implements:
 
 ### Phase 2 — Exec wrapper + artifact capture
 
-- [ ] Implement process execution wrapper with:
-  - [ ] stdout/stderr capture to files
-  - [ ] timing + exit code capture
+- [x] Implement process execution wrapper with:
+- [x] stdout/stderr capture to files
+- [x] timing + exit code capture
   - [ ] signal/ctx cancellation best-effort finalization
-- [ ] Insert stdout/stderr into `artifacts` (kind, path, sha256, size_bytes, is_text)
+- [x] Insert stdout/stderr into `artifacts` (kind, path, sha256, size_bytes, is_text)
 - [ ] Optional: also keep `steps.stdout_path`/`steps.stderr_path` columns in sync (if we keep those columns)
 - [ ] Add KV tags (provenance):
   - [ ] suite name/version
@@ -63,7 +63,7 @@ This task list is the actionable checklist that implements:
 - [x] `scenariolog init --db`
 - [x] `scenariolog run start --db --root-dir --suite` (returns run_id)
 - [x] `scenariolog run end --db --run-id --exit-code`
-  - [ ] `scenariolog exec --db --run-id --kind step --step-num --name --log-dir -- <cmd...>`
+- [x] `scenariolog exec --db --run-id --kind step --step-num --name --log-dir -- <cmd...>`
   - [ ] `scenariolog search --db --query ...` (Glazed structured output)
   - [ ] `scenariolog summary --db [--run-id]` (Glazed structured output)
   - [ ] `scenariolog failures --db [--run-id]` (Glazed structured output)

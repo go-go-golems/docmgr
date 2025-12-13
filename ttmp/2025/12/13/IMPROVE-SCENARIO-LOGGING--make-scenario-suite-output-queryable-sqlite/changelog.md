@@ -55,3 +55,16 @@ Step 2: Add scenariolog run start/end lifecycle (commit 1ecfe225f95076b8b8df77fc
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/run.go — Run start/end DB helpers
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 2
 
+
+## 2025-12-13
+
+Step 3: Implement scenariolog exec step capture (steps row + artifacts + best-effort FTS indexing) (commit 9ac50c1f4f7314d6afbc24814f0e2144b4c056c8).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/cmd/scenariolog/main.go — Cobra exec command + exit code propagation
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/artifacts.go — Artifacts insertion
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/exec_step.go — ExecStep wrapper (capture + step rows)
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/fts.go — Best-effort FTS line indexing
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 3
+

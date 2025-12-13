@@ -15,4 +15,4 @@
 - [x] Port command: search -> Workspace.QueryDocs for metadata + reverse lookup; keep content search as post-filter (FTS deferred) — Spec §11.2.2, §13 (FTS deferred)
 - [x] Port command: doctor -> QueryDocs(IncludeErrors/IncludeDiagnostics) + unify RelatedFiles existence checks with Workspace normalization — Spec §11.2.3, §7.3
 - [x] Port command: relate -> use Workspace resolver + doc lookup (ScopeDoc/ScopeTicket) so normalization matches index — Spec §11.2.4, §5.1
-- [ ] Cleanup: remove/retire duplicated walkers and helpers (findTicketDirectory, ad-hoc Walk loops); enforce single canonical traversal via Workspace — Spec §11.3
+- [x] Cleanup: remove/retire duplicated walkers and helpers (findTicketDirectory, ad-hoc Walk loops); enforce single canonical traversal via Workspace — Spec §11.3

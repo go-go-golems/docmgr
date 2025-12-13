@@ -453,3 +453,17 @@ Clarified Task 18 inspectors brief: inspectors are report-only and must not modi
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/08-cleanup-inspectors-brief-task-18.md — Added explicit no-code-changes rule for inspectors
 
+
+## 2025-12-13
+
+Created cleanup inventory report for Task 18: inventoried 23 cleanup targets across 12 command files, organized into 5 categories (discovery, traversal, filtering, parsing, normalization). Report includes inventory table, cleanup guidelines, PR plan (4 phases), and risk notes. Ready for implementation PRs.
+
+
+## 2025-12-13
+
+Task 18 complete: Created CLEANUP-LEGACY-WALKERS ticket with validated inventory (23 targets), phased PR plan, and migration guide. Cleanup work continues in the new ticket.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/index.md — New cleanup ticket derived from Task 18
+

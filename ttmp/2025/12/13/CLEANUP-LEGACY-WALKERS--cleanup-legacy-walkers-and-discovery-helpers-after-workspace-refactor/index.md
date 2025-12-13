@@ -32,6 +32,8 @@ RelatedFiles:
       Note: Detailed inventory of all cleanup targets
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
       Note: Design spec for the Workspace API
+    - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/analysis/02-phase-2-integration-suite-failure-analysis-docmgr-path-nonexistent.md
+      Note: Phase 2 validation runner failure analysis (DOCMGR_PATH pointed to missing binary)
     - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md
       Note: Defines no-backwards-compat policy
     - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/playbook/01-intern-code-review-verification-questionnaire.md
@@ -40,6 +42,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

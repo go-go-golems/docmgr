@@ -109,6 +109,18 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	existingNotes := map[string]map[string]bool{}
 
 	if s.Suggest {
+		// Build workspace index once and use QueryDocs instead of walking markdown files manually.
+		// QueryDocs semantics win (per cleanup spec); do not reintroduce per-command walking/parsing.
+		resolvedRoot := workspace.ResolveRoot(s.Root)
+		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: resolvedRoot})
+		if err != nil {
+			return fmt.Errorf("failed to discover workspace: %w", err)
+		}
+		s.Root = ws.Context().Root
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return fmt.Errorf("failed to initialize workspace index: %w", err)
+		}
+
 		// Determine search root
 		searchRoot := s.Root
 		if s.ChangelogFile == "" && s.Ticket != "" {
@@ -119,45 +131,45 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 
 		// From existing docs' RelatedFiles within the search root
 		existing := map[string]bool{}
-		_ = filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-				return nil
+		q := workspace.DocQuery{
+			Filters: workspace.DocFilters{
+				TopicsAny: s.Topics,
+			},
+			Options: workspace.DocQueryOptions{
+				IncludeErrors:       false,
+				IncludeArchivedPath: true,
+				IncludeScriptsPath:  true,
+				IncludeControlDocs:  true,
+				OrderBy:             workspace.OrderByPath,
+			},
+		}
+		// Use ticket-scoped query when we have a ticket; otherwise scan repo (previous behavior).
+		if s.ChangelogFile == "" && strings.TrimSpace(s.Ticket) != "" {
+			q.Scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(s.Ticket)}
+		} else {
+			q.Scope = workspace.Scope{Kind: workspace.ScopeRepo}
+		}
+		res, err := ws.QueryDocs(ctx, q)
+		if err != nil {
+			return fmt.Errorf("failed to query docs for suggestions: %w", err)
+		}
+		for _, h := range res.Docs {
+			if h.Doc == nil {
+				continue
 			}
-			doc, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			// Filter by topics if provided
-			if len(s.Topics) > 0 {
-				match := false
-				for _, ft := range s.Topics {
-					for _, dt := range doc.Topics {
-						if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
-							match = true
-							break
-						}
-					}
-					if match {
-						break
-					}
+			for _, rf := range h.Doc.RelatedFiles {
+				if strings.TrimSpace(rf.Path) == "" {
+					continue
 				}
-				if !match {
-					return nil
-				}
-			}
-			for _, rf := range doc.RelatedFiles {
-				if rf.Path != "" {
-					existing[rf.Path] = true
-					if rf.Note != "" {
-						if _, ok := existingNotes[rf.Path]; !ok {
-							existingNotes[rf.Path] = map[string]bool{}
-						}
-						existingNotes[rf.Path][rf.Note] = true
+				existing[rf.Path] = true
+				if strings.TrimSpace(rf.Note) != "" {
+					if _, ok := existingNotes[rf.Path]; !ok {
+						existingNotes[rf.Path] = map[string]bool{}
 					}
+					existingNotes[rf.Path][rf.Note] = true
 				}
 			}
-			return nil
-		})
+		}
 		for f := range existing {
 			if _, ok := suggestions[f]; !ok {
 				suggestions[f] = reasonSet{}

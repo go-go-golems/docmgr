@@ -112,19 +112,6 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 	return nil
 }
 
-func findTicketDirectory(root, ticket string) (string, error) {
-	workspaces, err := workspace.CollectTicketWorkspaces(root, nil)
-	if err != nil {
-		return "", err
-	}
-	for _, ws := range workspaces {
-		if ws.Doc != nil && ws.Doc.Ticket == ticket {
-			return ws.Path, nil
-		}
-	}
-	return "", fmt.Errorf("ticket not found: %s", ticket)
-}
-
 func appendSourceMetadata(path string, source *models.ExternalSource) error {
 	var sources []models.ExternalSource
 

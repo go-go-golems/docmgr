@@ -96,7 +96,15 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		if s.Ticket == "" {
 			return fmt.Errorf("must specify --ticket or --changelog-file")
 		}
-		td, err := findTicketDirectory(s.Root, s.Ticket)
+		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: s.Root})
+		if err != nil {
+			return fmt.Errorf("failed to discover workspace: %w", err)
+		}
+		s.Root = ws.Context().Root
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return fmt.Errorf("failed to initialize workspace index: %w", err)
+		}
+		td, err := resolveTicketDirViaWorkspace(ctx, ws, s.Ticket)
 		if err != nil {
 			return fmt.Errorf("failed to find ticket directory: %w", err)
 		}
@@ -124,7 +132,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		// Determine search root
 		searchRoot := s.Root
 		if s.ChangelogFile == "" && s.Ticket != "" {
-			if td, err := findTicketDirectory(s.Root, s.Ticket); err == nil && td != "" {
+			if td, err := resolveTicketDirViaWorkspace(ctx, ws, s.Ticket); err == nil && td != "" {
 				searchRoot = td
 			}
 		}
@@ -395,7 +403,15 @@ func (c *ChangelogUpdateCommand) Run(
 		if s.Ticket == "" {
 			return fmt.Errorf("must specify --ticket or --changelog-file")
 		}
-		td, err := findTicketDirectory(s.Root, s.Ticket)
+		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: s.Root})
+		if err != nil {
+			return fmt.Errorf("failed to discover workspace: %w", err)
+		}
+		s.Root = ws.Context().Root
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return fmt.Errorf("failed to initialize workspace index: %w", err)
+		}
+		td, err := resolveTicketDirViaWorkspace(ctx, ws, s.Ticket)
 		if err != nil {
 			return fmt.Errorf("failed to find ticket directory: %w", err)
 		}
@@ -408,8 +424,14 @@ func (c *ChangelogUpdateCommand) Run(
 	if s.Suggest && !s.ApplySuggestions && len(s.Files) == 0 && len(s.FileNotes) == 0 {
 		searchRoot := s.Root
 		if s.ChangelogFile == "" && s.Ticket != "" {
-			if td, err := findTicketDirectory(s.Root, s.Ticket); err == nil && td != "" {
-				searchRoot = td
+			ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: s.Root})
+			if err == nil {
+				s.Root = ws.Context().Root
+				if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err == nil {
+					if td, err := resolveTicketDirViaWorkspace(ctx, ws, s.Ticket); err == nil && td != "" {
+						searchRoot = td
+					}
+				}
 			}
 		}
 		// Minimal suggestion pass: from git status only to keep output concise

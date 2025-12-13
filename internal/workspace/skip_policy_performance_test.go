@@ -47,10 +47,10 @@ func TestSkipPolicy_Act1_TheClassicSkip(t *testing.T) {
 	fmt.Println()
 
 	testCases := []struct {
-		dirName      string
-		expectSkip   bool
-		reason       string
-		difficulty   string
+		dirName    string
+		expectSkip bool
+		reason     string
+		difficulty string
 	}{
 		{
 			dirName:    ".meta",
@@ -184,22 +184,22 @@ func TestSkipPolicy_Act2_TheSegmentBoundaryChallenge(t *testing.T) {
 			explanation:      "True positive: /archive/ nested deeply",
 		},
 		{
-			relPath:          "scripts/build.md",
-			expectedScripts:  true,
-			difficulty:       "⭐⭐ Intermediate",
-			explanation:      "True positive: /scripts/ segment match",
+			relPath:         "scripts/build.md",
+			expectedScripts: true,
+			difficulty:      "⭐⭐ Intermediate",
+			explanation:     "True positive: /scripts/ segment match",
 		},
 		{
-			relPath:          "myscripts/doc.md",
-			expectedScripts:  false,
-			difficulty:       "⭐⭐⭐ Advanced",
-			explanation:      "False positive avoidance: 'myscripts' is not '/scripts/'",
+			relPath:         "myscripts/doc.md",
+			expectedScripts: false,
+			difficulty:      "⭐⭐⭐ Advanced",
+			explanation:     "False positive avoidance: 'myscripts' is not '/scripts/'",
 		},
 		{
-			relPath:          "sources/README.md",
-			expectedSources:  true,
-			difficulty:       "⭐⭐ Intermediate",
-			explanation:      "True positive: /sources/ segment match",
+			relPath:         "sources/README.md",
+			expectedSources: true,
+			difficulty:      "⭐⭐ Intermediate",
+			explanation:     "True positive: /sources/ segment match",
 		},
 	}
 
@@ -421,31 +421,31 @@ func TestSkipPolicy_GrandFinale_TheFullDirectoryTree(t *testing.T) {
 	// Build a realistic workspace structure
 	structure := map[string]string{
 		// Should be SKIPPED
-		".meta/implementation.md":           "SKIP - .meta directory",
-		"_templates/ticket.md":              "SKIP - underscore prefix",
-		"_guidelines/style.md":              "SKIP - underscore prefix",
+		".meta/implementation.md": "SKIP - .meta directory",
+		"_templates/ticket.md":    "SKIP - underscore prefix",
+		"_guidelines/style.md":    "SKIP - underscore prefix",
 
 		// Ticket root with control docs
-		"TICKET-A/index.md":                 "INDEX - ticket index (is_index=true)",
-		"TICKET-A/tasks.md":                 "INDEX - control doc (is_control_doc=true)",
-		"TICKET-A/README.md":                "INDEX - control doc (is_control_doc=true)",
-		"TICKET-A/changelog.md":             "INDEX - control doc (is_control_doc=true)",
+		"TICKET-A/index.md":     "INDEX - ticket index (is_index=true)",
+		"TICKET-A/tasks.md":     "INDEX - control doc (is_control_doc=true)",
+		"TICKET-A/README.md":    "INDEX - control doc (is_control_doc=true)",
+		"TICKET-A/changelog.md": "INDEX - control doc (is_control_doc=true)",
 
 		// Regular docs
-		"TICKET-A/design/api.md":            "INDEX - regular doc",
-		"TICKET-A/reference/spec.md":        "INDEX - regular doc",
+		"TICKET-A/design/api.md":     "INDEX - regular doc",
+		"TICKET-A/reference/spec.md": "INDEX - regular doc",
 
 		// Tagged categories
-		"TICKET-A/archive/old-design.md":    "INDEX - archived (is_archived_path=true)",
-		"TICKET-A/scripts/build.md":         "INDEX - script (is_scripts_path=true)",
-		"TICKET-A/sources/paper.md":         "INDEX - source (is_sources_path=true)",
+		"TICKET-A/archive/old-design.md": "INDEX - archived (is_archived_path=true)",
+		"TICKET-A/scripts/build.md":      "INDEX - script (is_scripts_path=true)",
+		"TICKET-A/sources/paper.md":      "INDEX - source (is_sources_path=true)",
 
 		// Nested README (NOT a control doc)
-		"TICKET-A/design/README.md":         "INDEX - regular doc (no sibling index.md)",
+		"TICKET-A/design/README.md": "INDEX - regular doc (no sibling index.md)",
 
 		// Edge cases (false positive avoidance)
-		"TICKET-A/myarchive/doc.md":         "INDEX - regular doc (not /archive/)",
-		"TICKET-A/scripts-old/legacy.md":    "INDEX - regular doc (not /scripts/)",
+		"TICKET-A/myarchive/doc.md":      "INDEX - regular doc (not /archive/)",
+		"TICKET-A/scripts-old/legacy.md": "INDEX - regular doc (not /scripts/)",
 	}
 
 	decisions := make([]SkipDecision, 0)
@@ -564,4 +564,3 @@ func emojiForCorrectness(correct bool) string {
 	}
 	return "❌"
 }
-

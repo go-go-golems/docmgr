@@ -195,5 +195,3 @@ func writeFile(t *testing.T, path string, contents string) {
 		t.Fatalf("write %s: %v", path, err)
 	}
 }
-
-

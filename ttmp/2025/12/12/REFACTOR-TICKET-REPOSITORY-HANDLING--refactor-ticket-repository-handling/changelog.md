@@ -397,3 +397,22 @@ Port doc search to Workspace.QueryDocs (Task 10): metadata+reverse lookup now us
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs_sql.go — Added basename suffix LIKE fallback for RelatedFile matching to preserve 'register.go' query UX.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/search.go — doc search now discovers workspace
 
+
+## 2025-12-13
+
+Created diary-driven code review walkthrough to guide reviewers step-by-step through the refactor (what was built, where, how to test, what needs scrutiny, what was tricky).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/07-code-review-walkthrough-diary-driven.md — Step-by-step code review guide anchored to the implementation diary.
+
+
+## 2025-12-13
+
+Ported doctor to Workspace.QueryDocs and aligned RelatedFiles existence checks with doc-anchored paths.Resolver; fixed --ticket scoping for missing-index detection.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs.go — Parse-error docs keep ticket id for grouping
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/doctor.go — Doctor now builds a workspace index once
+

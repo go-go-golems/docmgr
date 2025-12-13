@@ -70,5 +70,3 @@ body
 		t.Fatalf("expected __about__.md content to be non-empty")
 	}
 }
-
-

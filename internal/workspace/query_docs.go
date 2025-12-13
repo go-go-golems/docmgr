@@ -146,6 +146,11 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			} else {
 				handle.ReadErr = errors.New("document parse failed")
 			}
+			// Best-effort: keep ticket_id available even for parse-error docs so callers
+			// (notably `doctor`) can group findings by ticket without needing a separate lookup.
+			if strings.TrimSpace(ticketID.String) != "" {
+				handle.Doc = &models.Document{Ticket: ticketID.String}
+			}
 			pending = append(pending, pendingRow{docID: docID, parseOK: false, handle: handle})
 			continue
 		}

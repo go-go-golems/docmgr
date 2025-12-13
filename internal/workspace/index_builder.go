@@ -225,7 +225,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 // inferTicketIDFromPath best-effort extracts a ticket ID from a document path under the docs root.
 //
 // Expected docs layout:
-//   <docsRoot>/<YYYY>/<MM>/<DD>/<TICKET--slug>/...
+//
+//	<docsRoot>/<YYYY>/<MM>/<DD>/<TICKET--slug>/...
 //
 // It returns "" if it cannot infer a ticket ID.
 func inferTicketIDFromPath(docsRoot string, absDocPath string) string {
@@ -282,5 +283,3 @@ func normalizeCleanPath(raw string) string {
 	cleaned := filepath.ToSlash(filepath.Clean(raw))
 	return cleaned
 }
-
-

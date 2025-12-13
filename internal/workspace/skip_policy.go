@@ -92,5 +92,3 @@ func containsPathSegment(slashPath string, seg string) bool {
 	}
 	return false
 }
-
-

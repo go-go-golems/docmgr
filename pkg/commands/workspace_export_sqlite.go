@@ -107,5 +107,3 @@ func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedLayers *layers.Pars
 }
 
 var _ cmds.BareCommand = &ExportSQLiteCommand{}
-
-

@@ -14,7 +14,9 @@ RelatedFiles:
     - Path: internal/documents/walk.go
       Note: Current document walking contract (path, doc, body, readErr) → future DocHandle contract.
     - Path: internal/paths/resolver.go
-      Note: Path normalization engine to be used by Workspace index + reverse lookup.
+      Note: |-
+        Path normalization engine to be used by Workspace index + reverse lookup.
+        Resolver anchors (repo/doc/config/docs-root/docs-parent) used for RelatedFiles existence checks
     - Path: internal/workspace/config.go
       Note: Existing root/config/vocab discovery helpers (basis for WorkspaceContext).
     - Path: internal/workspace/discovery.go
@@ -34,12 +36,15 @@ RelatedFiles:
       Note: |-
         Nested hydration (topics/related_files) during rows iteration explains why MaxOpenConns(1) caused a hang.
         No-N+1 refactor: QueryDocs now does 1 base query + 2 batched hydration queries (topics/related_files) instead of nested per-row queries.
+        Parse-error docs now keep ticket ID so doctor can group findings by ticket
     - Path: internal/workspace/query_docs_sql.go
       Note: |-
         Supports compiling parse_ok=0 query variant to surface skipped docs as diagnostics.
         Implements basename suffix fallback matching for QueryDocs RelatedFile filter (needed for scenario wonky path queries).
     - Path: internal/workspace/query_docs_test.go
-      Note: Repro/guardrail tests for QueryDocs defaults + IncludeErrors behavior.
+      Note: |-
+        Repro/guardrail tests for QueryDocs defaults + IncludeErrors behavior.
+        Updated expectations for parse-error docs now carrying ticket id
     - Path: internal/workspace/skip_policy.go
       Note: Canonical ingest-time skip policy + path tagging helpers (Task 4, Spec §6).
     - Path: internal/workspace/skip_policy_test.go
@@ -57,6 +62,8 @@ RelatedFiles:
       Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
       Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2, Spec §5.1).
+    - Path: pkg/commands/doctor.go
+      Note: Ported doctor to Workspace.QueryDocs and switched RelatedFiles existence checks to doc-anchored paths.Resolver
     - Path: pkg/commands/list_docs.go
       Note: Ported list docs to Workspace.QueryDocs (Task 9).
     - Path: pkg/commands/search.go
@@ -76,6 +83,8 @@ RelatedFiles:
         Scenario suite run to validate list docs + refactor wiring.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
       Note: Decision record for when/how we add integration tests during the refactor.
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/07-code-review-walkthrough-diary-driven.md
+      Note: Diary-driven code review walkthrough that uses the diary as its narrative structure.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
       Note: Spec driving this refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/tasks.md
@@ -84,6 +93,8 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
+
 
 
 
@@ -730,4 +741,63 @@ go build -o /tmp/docmgr-refactor-local-2025-12-13 ./cmd/docmgr
 DOCMGR_PATH=/tmp/docmgr-refactor-local-2025-12-13 bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-local-2025-12-13
 /tmp/docmgr-refactor-local-2025-12-13 list docs --root /tmp/docmgr-scenario-local-2025-12-13/acme-chat-app/ttmp
 /tmp/docmgr-refactor-local-2025-12-13 list docs --root /tmp/docmgr-scenario-local-2025-12-13/acme-chat-app/ttmp --with-glaze-output --output json --select path
+```
+
+## Step 15: Port `doctor` to `Workspace.QueryDocs` + align RelatedFiles checks with Workspace normalization
+
+This step refactors `docmgr doctor` to use the new Workspace+SQLite index as its primary source of truth for “what docs exist”, instead of running its own ticket discovery and ad-hoc filesystem walkers. The intent is consistency: once `list docs`, `doc search`, and `doctor` all sit on the same `QueryDocs` foundation, we stop having three subtly different interpretations of “workspace” and “document”, and diagnostics become much easier to reason about.
+
+The second focus was the `RelatedFiles` existence checks. Historically, `doctor` tried a handful of heuristics (repo root, config dir, cwd, etc.) to decide whether a referenced file exists. That logic was drifting away from the actual normalization logic used by the index. In this port, file existence validation now uses a **doc-anchored** `paths.Resolver`, meaning it checks the same base anchors (repo, doc dir, config, docs root, docs parent) that we rely on for reverse lookup.
+
+### What I did
+- Rewrote `pkg/commands/doctor.go` to:
+  - discover the workspace via `workspace.DiscoverWorkspace`
+  - build the in-memory index once via `ws.InitIndex`
+  - query the doc set via `ws.QueryDocs` (with `IncludeErrors=true`, `IncludeDiagnostics=true`, and “include special paths” toggles enabled)
+  - apply `--ignore-dir` / `--ignore-glob` as a post-filter on the query results (to preserve the legacy CLI behavior)
+- Switched `RelatedFiles` validation to use `paths.NewResolver(ResolverOptions{DocPath: <current-doc>})` and `Normalize(...).Exists` instead of a manual candidate list.
+- Tightened `--ticket` behavior so “missing index” scaffolds are only reported for the requested ticket (previously this could leak unrelated tickets into the output).
+- Updated `QueryDocs` to keep a best-effort `Doc.Ticket` even for parse-error docs so `doctor` can group findings correctly without extra lookups.
+- Updated `QueryDocs` unit tests to match the new parse-error behavior.
+
+### Why
+- `doctor` is one of the key “consistency” commands: if it doesn’t use the central index, then the refactor’s “single source of truth” promise is incomplete.
+- Aligning `RelatedFiles` existence checks with the same resolver used by ingestion/query reduces “doctor says missing, search says found” contradictions.
+
+### What worked
+- A local `go run ./cmd/docmgr doctor --ticket ...` smoke-test succeeded and produced expected findings for the ticket being scanned.
+- `go test ./...` remained green after the changes.
+
+### What didn’t work
+- In the first cut, `--ticket <ID>` could still emit “missing index” findings for other tickets, because the missing-index scaffold detection was repo-wide. This is now filtered by ticket dir prefix when `--ticket` is provided.
+
+### What I learned
+- If a command has “two discovery mechanisms” (filesystem scan + index query), it’s very easy for them to disagree in edge cases. Using QueryDocs as the baseline and layering only truly filesystem-specific checks on top is the safest route.
+
+### What was tricky to build
+- **Doc-relative file checks**: the Workspace-level resolver is constructed without a `DocPath`, so it can’t do doc-relative resolution correctly. The fix was creating a resolver per document using `ResolverOptions{DocPath: <doc>}` for `RelatedFiles` validation.
+- **Ticket scoping vs repo-wide scaffolds**: “missing index” detection doesn’t naturally belong to QueryDocs (because the index is built from docs), so the ticket filter has to be applied explicitly when users scope the command.
+
+### What warrants a second pair of eyes
+- **Ticket grouping logic**: `doctor` groups docs by inferring ticket root from the `<docsRoot>/YYYY/MM/DD/<ticketDir>/...` layout. This is pragmatic, but it’s worth a careful review for off-by-one assumptions and weird path edge cases.
+- **Ignore semantics**: we preserve `--ignore-glob` by post-filtering QueryDocs results. Review that we apply the globs consistently (basename + absolute path + docs-root-relative path) and don’t accidentally hide important diagnostics.
+
+### Code review instructions (for a reviewer)
+- Start with `pkg/commands/doctor.go` and look for:
+  - `workspace.DiscoverWorkspace` / `ws.InitIndex` / `ws.QueryDocs` (the new “single discovery” spine)
+  - `paths.NewResolver(...DocPath: indexPath...)` and `Normalize(...).Exists` (the new existence check)
+  - `matchesTicketDir(...)` and the missing-index filtering under `--ticket`
+- Then check `internal/workspace/query_docs.go` and confirm the parse-error behavior is still aligned with the design contract: parse-error docs still carry `ReadErr`, but now also carry a minimal `Ticket` for grouping.
+
+### Technical details
+- Files:
+  - `pkg/commands/doctor.go`
+  - `internal/workspace/query_docs.go`
+  - `internal/workspace/query_docs_test.go`
+- Commands:
+
+```bash
+gofmt -w internal/workspace/query_docs.go internal/workspace/query_docs_test.go pkg/commands/doctor.go
+go test ./... -count=1
+go run ./cmd/docmgr doctor --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --fail-on none
 ```

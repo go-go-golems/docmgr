@@ -43,5 +43,3 @@ func ReadEmbeddedMarkdownDocs() ([]EmbeddedDoc, error) {
 	}
 	return out, nil
 }
-
-

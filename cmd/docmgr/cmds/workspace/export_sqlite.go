@@ -23,5 +23,3 @@ func newExportSQLiteCommand() (*cobra.Command, error) {
 	})
 	return cobraCmd, nil
 }
-
-

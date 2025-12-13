@@ -93,7 +93,7 @@ broken
 		t.Fatalf("expected 2 docs with IncludeControlDocs=true, got %d", len(res.Docs))
 	}
 
-	// Include errors => now includes broken doc with ReadErr and Doc=nil.
+	// Include errors => now includes broken doc with ReadErr and best-effort Ticket populated.
 	res, err = ws.QueryDocs(ctx, DocQuery{
 		Scope: Scope{Kind: ScopeTicket, TicketID: "MEN-1"},
 		Options: DocQueryOptions{
@@ -111,8 +111,11 @@ broken
 	for _, h := range res.Docs {
 		if filepath.Base(h.Path) == "zz-broken.md" {
 			foundBroken = true
-			if h.Doc != nil {
-				t.Fatalf("expected broken doc to have Doc=nil")
+			if h.Doc == nil {
+				t.Fatalf("expected broken doc to have Doc!=nil (ticket-only best-effort)")
+			}
+			if h.Doc != nil && h.Doc.Ticket != "MEN-1" {
+				t.Fatalf("expected broken doc to have Ticket=MEN-1, got %q", h.Doc.Ticket)
 			}
 			if h.ReadErr == nil {
 				t.Fatalf("expected broken doc to have ReadErr")
@@ -196,6 +199,3 @@ DocType: index
 		t.Fatalf("expected contradictory query to error")
 	}
 }
-
-
-

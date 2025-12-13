@@ -39,6 +39,3 @@ func normalizeRelatedFile(resolver *paths.Resolver, raw string) RelatedFileNorma
 		Anchor:       strings.TrimSpace(string(n.Anchor)),
 	}
 }
-
-
-

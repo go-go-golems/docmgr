@@ -401,9 +401,9 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		// for most usage (dir points at code), but we keep it for compatibility.
 		if dirQueryRawSlash != "" {
 			relDocPath := relPath
-			if !strings.HasPrefix(relDocPath, dirQueryRawSlash) && dirQueryRaw != "" {
-				// no-op: already filtered by QueryDocs related_files
-			}
+			// We don't currently use relDocPath here because QueryDocs performs the dir filtering
+			// against related_files. Keep the computation to document intent (legacy behavior).
+			_ = relDocPath
 		}
 
 		row := types.NewRow(

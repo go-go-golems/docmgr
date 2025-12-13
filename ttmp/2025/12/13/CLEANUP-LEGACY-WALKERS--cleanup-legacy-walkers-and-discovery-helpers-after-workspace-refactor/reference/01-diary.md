@@ -10,17 +10,12 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: pkg/commands/list_tickets.go
-      Note: Phase 1.2 migration to Workspace.QueryDocs (commits 024993a
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
-    - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md
-      Note: 'Spec: no backwards compatibility; QueryDocs semantics win'
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
-
 
 
 # Diary
@@ -98,6 +93,14 @@ This step removes the last major “status-style” legacy traversal: enumeratin
 ### What I learned
 - `QueryDocs` is sufficient to compute status aggregates without any filesystem walking, but preserving behavior requires explicitly including “special path” categories where the legacy code would have counted them (control docs, scripts, archive).
 
+### What was tricky to build
+- **Replicating ticket discovery correctly** without `CollectTicketWorkspaces`: we now infer the ticket directory by locating the `index.md` row for each ticket. This relies on `DocType=index` and/or basename `index.md`, which is correct for docmgr tickets but worth keeping in mind for any “non-standard” docs layouts.
+- **Visibility defaults**: `QueryDocs` hides certain tagged categories unless explicitly enabled via options. For status, we had to decide which categories should contribute to counts and set the include options accordingly.
+
+### What warrants a second pair of eyes
+- **Counting semantics**: confirm we’re still counting the same set of files the old `filepath.Walk(ticketDir)` would have seen (especially around tagged paths like `archive/`, `scripts/`, control docs, and anything skipped by canonical ingestion rules).
+- **Index doc identification**: confirm the `index.md`/`DocType=index` detection is the right invariant for status aggregation (and doesn’t accidentally “promote” a non-ticket index doc).
+
 ### Code review instructions
 - Start in `pkg/commands/status.go` and review `computeStatusTickets`.
 - Smoke:
@@ -124,8 +127,16 @@ This step migrates `list tickets` off the legacy `CollectTicketWorkspaces` walke
 - Tests and lint stayed green.
 - No changes required to the human-facing Markdown rendering or template schema behavior.
 
+### What was tricky to build
+- **Path handling across output modes**: `QueryDocs` returns absolute paths; the legacy code used `TicketWorkspace.Path` (ticket dir) directly. We now compute a root-relative path for display, which needs careful handling when `--root` is passed or when root is resolved via config.
+- **Ordering**: old behavior was “newest first” based on `index.md` frontmatter `LastUpdated`; this is now driven by `OrderByLastUpdated` and verified in code.
+
 ### Behavior notes
 - **Ticket filter semantics** are now **exact match** (via `ticket_id = ?`) rather than substring matching. This was an intentional cleanup per the migration guide.
+
+### What warrants a second pair of eyes
+- **Filter semantics**: confirm that switching from substring match to exact match is acceptable across both human and glaze output, and that it’s documented clearly enough for users.
+- **Tasks counting**: we now derive the ticket dir from the `index.md` path; verify that `countTasksInTicket(ticketDir)` still points at the correct `tasks.md` for all ticket layouts.
 
 ### Code review instructions
 - Start in `pkg/commands/list_tickets.go` and review `queryTicketIndexDocs`.

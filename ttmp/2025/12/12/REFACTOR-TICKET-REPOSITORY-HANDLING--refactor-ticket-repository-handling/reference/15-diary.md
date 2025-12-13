@@ -84,7 +84,9 @@ RelatedFiles:
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
       Note: Decision record for when/how we add integration tests during the refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/07-code-review-walkthrough-diary-driven.md
-      Note: Diary-driven code review walkthrough that uses the diary as its narrative structure.
+      Note: |-
+        Diary-driven code review walkthrough that uses the diary as its narrative structure.
+        Diary-driven code review walkthrough document (Step 15 reviewer instructions)
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
       Note: Spec driving this refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/tasks.md
@@ -93,6 +95,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 

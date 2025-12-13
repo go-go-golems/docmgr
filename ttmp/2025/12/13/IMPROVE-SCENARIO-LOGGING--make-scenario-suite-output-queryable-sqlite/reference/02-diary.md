@@ -16,18 +16,16 @@ RelatedFiles:
       Note: Cobra entrypoint (currently `init`; will grow)
     - Path: scenariolog/go.mod
       Note: Self-contained tool module (dependencies + toolchain)
-    - Path: scenariolog/internal/scenariolog/artifacts.go
-      Note: Artifact rows
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
-    - Path: scenariolog/internal/scenariolog/exec_step.go
-      Note: Exec step implementation
-    - Path: scenariolog/internal/scenariolog/fts.go
-      Note: FTS indexing helper
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
+    - Path: scenariolog/internal/scenariolog/search.go
+      Note: FTS search implementation
+    - Path: scenariolog/internal/scenariolog/search_fts5_test.go
+      Note: FTS5 test
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
@@ -242,6 +240,32 @@ RUN_ID=$(/tmp/scenariolog-local run start --db \"$DB\" --root-dir /tmp --suite t
 /tmp/scenariolog-local run end --db \"$DB\" --run-id \"$RUN_ID\" --exit-code 0
 rm -f \"$DB\"
 ```
+
+## Step 4: Add FTS-backed search command (library + CLI)
+
+This step made the indexed log lines actually queryable from the CLI by adding an FTS search API and a `scenariolog search` command. Importantly, it respects degraded mode: if the `log_lines_fts` table doesn’t exist (FTS5 unavailable), search returns a clear error instead of silently lying.
+
+**Commit (code):** 791ffd30c5083a3e7ca3d8e0595e73de241fffd6 — "scenariolog: add FTS search command"
+
+### What I did
+- Added `SearchFTS` in `scenariolog/internal/scenariolog/search.go`
+- Added Cobra `search` command in `scenariolog/cmd/scenariolog/main.go`
+- Added an FTS5-tagged test that indexes a file and queries for a keyword (`scenariolog/internal/scenariolog/search_fts5_test.go`)
+
+### Why
+- The whole point of indexing into sqlite is to make “find warnings/errors” a fast query instead of manual grep.
+
+### What worked
+- `go -C scenariolog test -tags sqlite_fts5 ./...` validates search end-to-end.
+
+### What didn't work
+- N/A (for this step).
+
+### What warrants a second pair of eyes
+- SQL query semantics: confirm `MATCH` + `run_id` filtering is correct and performant for our expected data sizes.
+
+### Code review instructions
+- Start at `scenariolog/internal/scenariolog/search.go` and the `search` command wiring in `scenariolog/cmd/scenariolog/main.go`.
 
 ## Related
 

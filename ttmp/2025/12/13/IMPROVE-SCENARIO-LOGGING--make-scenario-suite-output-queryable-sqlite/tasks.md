@@ -45,14 +45,14 @@ This task list is the actionable checklist that implements:
 
 ### Phase 3 — FTS ingestion + search
 
-- [ ] Implement FTS ingestion for text artifacts (line-by-line, store line_num)
-- [ ] Add bounded ingestion guardrails (max line length, max bytes per artifact; skip `is_text=0`)
+- [x] Implement FTS ingestion for text artifacts (line-by-line, store line_num)
+- [x] Add bounded ingestion guardrails (max line length, max bytes per artifact; skip `is_text=0`)
 - [ ] Decide indexing mode:
-  - [ ] Default: auto-index stdout/stderr artifacts on `exec` completion
+- [x] Default: auto-index stdout/stderr artifacts on `exec` completion
   - [ ] Optional: explicit `index fts` command (for re-indexing / toggling)
-- [ ] Implement `search` query (`MATCH`) returning run_id, artifact_id, line_num, text/snippet
+- [x] Implement `search` query (`MATCH`) returning run_id, artifact_id, line_num, text/snippet
 - [x] Ensure graceful fallback if FTS5 is unavailable (clear error or explicit no-op; core features still work)
-- [ ] Unit test: index an artifact and query for a keyword; assert expected hits
+- [x] Unit test: index an artifact and query for a keyword; assert expected hits
 
 ### Phase 4 — CLI (Cobra + Glazed)
 

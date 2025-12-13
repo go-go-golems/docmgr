@@ -2,6 +2,7 @@ package scenariolog
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"time"
 )
@@ -31,6 +32,15 @@ func TestRunLifecycleStartEnd(t *testing.T) {
 		t.Fatalf("EndRun: %v", err)
 	}
 
+	// Best-effort: confirm a known kv tag exists (suite).
+	ok, err := kvExists(ctx, db, runID, "suite")
+	if err != nil {
+		t.Fatalf("kvExists: %v", err)
+	}
+	if !ok {
+		t.Fatalf("expected kv tag 'suite' to exist for run")
+	}
+
 	var exitCode int
 	var durationMs int64
 	err = db.QueryRowContext(ctx, "SELECT exit_code, duration_ms FROM scenario_runs WHERE run_id = ?;", runID).Scan(&exitCode, &durationMs)
@@ -43,6 +53,19 @@ func TestRunLifecycleStartEnd(t *testing.T) {
 	if durationMs != 1500 {
 		t.Fatalf("duration_ms=%d, want 1500", durationMs)
 	}
+}
+
+func kvExists(ctx context.Context, db *sql.DB, runID string, k string) (bool, error) {
+	var c int
+	err := db.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM kv WHERE run_id = ? AND step_id IS NULL AND command_id IS NULL AND k = ?;",
+		runID,
+		k,
+	).Scan(&c)
+	if err != nil {
+		return false, err
+	}
+	return c > 0, nil
 }
 
 

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -65,6 +66,15 @@ func ExecStep(ctx context.Context, db *sql.DB, spec ExecStepSpec) (*ExecStepResu
 		startedAt.UTC().Format(time.RFC3339Nano),
 	); err != nil {
 		return nil, errors.Wrap(err, "insert steps")
+	}
+
+	// Best-effort metadata for debugging/repro.
+	_ = SetKV(ctx, db, spec.RunID, stepID, "", "step.name", spec.StepName)
+	_ = SetKV(ctx, db, spec.RunID, stepID, "", "step.num", fmt.Sprintf("%d", spec.StepNum))
+	_ = SetKV(ctx, db, spec.RunID, stepID, "", "step.script_path", spec.ScriptPath)
+	_ = SetKV(ctx, db, spec.RunID, stepID, "", "cmd.argv0", spec.Command[0])
+	if b, err := json.Marshal(spec.Command[1:]); err == nil {
+		_ = SetKV(ctx, db, spec.RunID, stepID, "", "cmd.args_json", string(b))
 	}
 
 	stdoutAbs, stderrAbs, err := stepLogPaths(spec)

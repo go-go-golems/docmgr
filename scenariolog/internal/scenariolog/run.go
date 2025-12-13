@@ -3,6 +3,7 @@ package scenariolog
 import (
 	"context"
 	"database/sql"
+	"os/user"
 	"time"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,13 @@ func StartRun(ctx context.Context, db *sql.DB, runID string, rootDir string, sui
 	)
 	if err != nil {
 		return errors.Wrap(err, "insert scenario_runs")
+	}
+
+	// Best-effort provenance tags (do not fail the run if these can't be discovered).
+	_ = SetKV(ctx, db, runID, "", "", "root_dir", rootDir)
+	_ = SetKV(ctx, db, runID, "", "", "suite", suite)
+	if u, err := user.Current(); err == nil {
+		_ = SetKV(ctx, db, runID, "", "", "user.name", u.Username)
 	}
 	return nil
 }

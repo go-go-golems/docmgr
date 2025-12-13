@@ -16,8 +16,8 @@ RelatedFiles:
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
-    - Path: pkg/commands/rename_ticket.go
-      Note: Phase 3.3 migrated rename-ticket discovery to Workspace.QueryDocs (commit 5ddd75c)
+    - Path: pkg/commands/renumber.go
+      Note: Phase 3.3 migrated renumber discovery to Workspace.QueryDocs (commit 9fd2c8a)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
 ExternalSources: []
@@ -521,3 +521,37 @@ This step removes `rename-ticket`’s remaining dependency on legacy ticket dire
 
 ### Code review instructions
 - Start in `pkg/commands/rename_ticket.go` and review `RunIntoGlazeProcessor` + `Run` ticketDir resolution and the `updateTicketFrontmatter` walk.
+
+## Step 13: Migrate `renumber` discovery to Workspace+QueryDocs (Phase 3.3)
+
+This step removes `renumber`’s remaining dependency on legacy ticket directory discovery (`findTicketDirectory`). The command continues to use `filepath.WalkDir` for the write-path (renaming files and updating intra-ticket references), but the initial ticket workspace resolution is now derived from the Workspace index via `QueryDocs`.
+
+**Commit (code):** `9fd2c8a` — "Cleanup: migrate renumber discovery to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/renumber.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve `ticketDir` via `resolveTicketDirViaWorkspace(...)` (QueryDocs-based) instead of `findTicketDirectory`.
+- Threaded `context.Context` into `applyRenumber` so it uses the caller’s context.
+
+### Why
+- Continue removing legacy discovery helpers across Phase 3 so Phase 4 can delete them.
+- Keep discovery semantics consistent with the canonical Workspace index.
+
+### What worked
+- Tests and lint stayed green.
+- Renumber behavior (prefix resequencing + reference rewriting) is unchanged; only discovery moved.
+
+### What was tricky to build
+- **Context threading**: `applyRenumber` is called from both glaze and bare paths; both needed to pass through `ctx`.
+- **Write-path separation**: discovery migrates to QueryDocs while the file rename/reference rewrite stays as the existing filesystem walk (intentional per spec).
+
+### What warrants a second pair of eyes
+- **TicketDir correctness**: confirm that deriving ticketDir from the indexed `index.md` path is correct for all layouts this command supports.
+- **Reference rewrite safety**: confirm the link rewrite still only affects intra-ticket paths and doesn’t accidentally rewrite external links (pre-existing risk, but worth reviewing while touching this code).
+
+### What should be done in the future
+- Consider adding a targeted test fixture for renumber (paths + rewritten links) so future refactors don’t regress link rewrite behavior.
+
+### Code review instructions
+- Start in `pkg/commands/renumber.go` and review `applyRenumber` (ticketDir resolution) and `updateTicketReferences`.

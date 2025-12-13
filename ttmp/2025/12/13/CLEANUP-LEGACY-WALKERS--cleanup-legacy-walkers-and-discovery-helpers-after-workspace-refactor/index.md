@@ -26,6 +26,8 @@ RelatedFiles:
       Note: Phase 1.2 migrated to Workspace.QueryDocs
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated to Workspace.QueryDocs
+    - Path: pkg/commands/rename_ticket.go
+      Note: Phase 3.3 migrated rename-ticket discovery to Workspace.QueryDocs (commit 5ddd75c)
     - Path: pkg/commands/search.go
       Note: Phase 3.1 migrated search --files suggestion path to Workspace.QueryDocs (commit eadda8d)
     - Path: pkg/commands/status.go
@@ -50,6 +52,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

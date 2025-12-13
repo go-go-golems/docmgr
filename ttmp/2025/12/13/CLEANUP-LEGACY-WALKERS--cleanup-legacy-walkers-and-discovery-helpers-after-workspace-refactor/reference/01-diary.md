@@ -16,10 +16,10 @@ RelatedFiles:
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
+    - Path: pkg/commands/rename_ticket.go
+      Note: Phase 3.3 migrated rename-ticket discovery to Workspace.QueryDocs (commit 5ddd75c)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
-    - Path: pkg/commands/ticket_close.go
-      Note: Phase 3.2 migrated ticket close to Workspace.QueryDocs (commit 35de822)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
@@ -485,3 +485,39 @@ This step removes `ticket close`’s remaining dependency on legacy ticket direc
 
 ### Code review instructions
 - Start in `pkg/commands/ticket_close.go` and review both `RunIntoGlazeProcessor` and `Run` ticket resolution blocks.
+
+## Step 12: Migrate `rename-ticket` discovery to Workspace+QueryDocs (Phase 3.3)
+
+This step removes `rename-ticket`’s remaining dependency on legacy ticket directory discovery (`findTicketDirectory`). The command already uses `documents.WalkDocuments` for the write-path (updating frontmatter across the ticket), so the migration here is purely about resolving the current ticket directory via `Workspace.QueryDocs`.
+
+**Commit (code):** `5ddd75c` — "Cleanup: migrate rename ticket discovery to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/rename_ticket.go` (both glaze + human paths) to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve `oldDir` via `resolveTicketDirViaWorkspace(...)` (QueryDocs-based) instead of `findTicketDirectory`.
+- Kept the write-path behavior unchanged:
+  - `documents.WalkDocuments(oldDir, ...)` updates frontmatter Ticket fields, then
+  - `os.Rename(oldDir, newDir)` moves the directory.
+
+### Why
+- Continue eliminating `findTicketDirectory` callers to unblock Phase 4 deletion.
+- Ensure rename-ticket uses canonical Workspace semantics for “what is the ticket directory?”.
+
+### What worked
+- Tests and lint stayed green.
+- `--dry-run` remains a pure planning mode (no filesystem changes).
+
+### What was tricky to build
+- **Two output modes**: both Glaze and bare modes had their own `findTicketDirectory` call sites that needed migration.
+- **Root resolution**: pinning `settings.Root` to `ws.Context().Root` ensures consistent behavior when invoked from nested directories.
+
+### What warrants a second pair of eyes
+- **Directory naming invariants**: confirm the “preserve remainder suffix after `<ticket>`” logic still matches all real-world ticket directory names (especially older layouts).
+- **Discovery assumptions**: confirm that basing discovery on the ticket’s `index.md` is acceptable for rename operations (and that tickets without index.md are considered invalid for rename).
+
+### What should be done in the future
+- If rename flows need to handle partially scaffolded tickets, address it via an explicit contract + tests (not via reintroducing directory heuristics).
+
+### Code review instructions
+- Start in `pkg/commands/rename_ticket.go` and review `RunIntoGlazeProcessor` + `Run` ticketDir resolution and the `updateTicketFrontmatter` walk.

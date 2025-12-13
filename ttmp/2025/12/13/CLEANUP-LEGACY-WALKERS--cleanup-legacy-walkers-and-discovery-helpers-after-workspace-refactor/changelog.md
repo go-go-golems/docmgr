@@ -150,3 +150,12 @@ Step 3.2: Migrated ticket_close.go ticket discovery to Workspace.QueryDocs (comm
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/ticket_close.go — Replaced findTicketDirectory with QueryDocs
 
+
+## 2025-12-13
+
+Step 3.3: Migrated rename_ticket.go discovery to Workspace.QueryDocs (commit 5ddd75c)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/rename_ticket.go — Replaced findTicketDirectory with QueryDocs
+

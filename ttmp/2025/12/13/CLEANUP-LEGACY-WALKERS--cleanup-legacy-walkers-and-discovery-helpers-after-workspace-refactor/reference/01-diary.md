@@ -10,10 +10,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: pkg/commands/add.go
-      Note: Phase 2.1 migrated add ticket discovery to Workspace.QueryDocs (commit a512739)
     - Path: pkg/commands/changelog.go
       Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
+    - Path: pkg/commands/meta_update.go
+      Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
 ExternalSources: []
@@ -264,3 +264,40 @@ This step removes `add`’s dependency on the legacy `findTicketDirectory` helpe
 
 ### Code review instructions
 - Start in `pkg/commands/add.go` and review ticket resolution in `createDocument`.
+
+## Step 6: Migrate `meta update` to Workspace+QueryDocs (Phase 2.2)
+
+This step removes `meta update`’s dependency on legacy ticket discovery and manual doc enumeration (`findTicketDirectory` + `findMarkdownFiles`). Ticket resolution and “which docs to update” are now derived from the Workspace index via `QueryDocs`.
+
+**Commit (code):** `3458a46` — "Cleanup: migrate meta update to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/meta_update.go` so that when `--ticket` is used:
+  - it discovers the Workspace and builds the index once, then
+  - uses `QueryDocs` to select either:
+    - the ticket’s `index.md` (default), or
+    - all docs of `--doc-type` within the ticket.
+- Deleted the legacy `findMarkdownFiles` walker/parsing helper from this command.
+
+### Why
+- Centralize “what docs exist” and “how we filter them” behind QueryDocs.
+- Remove duplicated traversal/parsing and unblock deleting `findTicketDirectory` later.
+
+### What worked
+- Tests and lint stayed green.
+- The command still performs the same write-path operation (read frontmatter → update field → write back).
+
+### What was tricky to build
+- **Path normalization**: `QueryDocs` returns slash-cleaned absolute paths; write-path functions expect filesystem paths. The implementation normalizes via `filepath.FromSlash`.
+- **DocType scoping**: enumeration is now driven by the index’s parsed `doc_type` field, not by “walk everything and parse on the fly”.
+
+### What warrants a second pair of eyes
+- **Enumeration semantics**: confirm that using `ScopeTicket + DocType filter` is the intended contract for “update all docs of this type”.
+- **Index doc selection**: confirm the “default when only --ticket is specified is index.md” rule is still correct and robust.
+
+### What should be done in the future
+- Once Phase 4 removes `findTicketDirectory`, verify no other commands reintroduce manual enumeration helpers like `findMarkdownFiles`.
+- If someone reports “meta update skipped a doc”, treat it as a QueryDocs ingestion/visibility semantics issue first, not a reason to resurrect walkers.
+
+### Code review instructions
+- Start in `pkg/commands/meta_update.go` and review `applyMetaUpdate`.

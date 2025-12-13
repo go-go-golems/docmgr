@@ -77,3 +77,12 @@ Step 2.1: Migrated add.go ticket discovery to Workspace.QueryDocs (commit a51273
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/add.go — Replaced findTicketDirectory with QueryDocs
 
+
+## 2025-12-13
+
+Step 2.2: Migrated meta_update.go to Workspace.QueryDocs (commit 3458a46)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/meta_update.go — Replaced findTicketDirectory + findMarkdownFiles with QueryDocs
+

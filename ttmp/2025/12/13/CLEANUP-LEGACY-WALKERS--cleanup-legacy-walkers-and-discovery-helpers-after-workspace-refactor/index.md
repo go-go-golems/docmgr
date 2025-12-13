@@ -22,6 +22,8 @@ RelatedFiles:
       Note: Phase 1.3 migrated to Workspace.QueryDocs
     - Path: pkg/commands/list_tickets.go
       Note: Phase 1.2 migrated to Workspace.QueryDocs
+    - Path: pkg/commands/meta_update.go
+      Note: Phase 2.2 migrated to Workspace.QueryDocs
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migrated to Workspace.QueryDocs
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/09-cleanup-inventory-report-task-18.md
@@ -34,6 +36,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

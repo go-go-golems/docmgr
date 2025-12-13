@@ -34,6 +34,7 @@ Turn the `test-scenarios/testing-doc-manager` harness output into a **queryable 
 - **External Sources**: See frontmatter ExternalSources field
 - **Design-doc #1 (suite-specific)**: [Scenario suite structured logging (sqlite)](./design-doc/01-scenario-suite-structured-logging-sqlite.md)
 - **Design-doc #2 (reusable tool)**: [Generic sqlite scenario logger (Go tool)](./design-doc/02-generic-sqlite-scenario-logger-go-tool.md)
+- **Implementation plan**: [Implementation plan: scenariolog MVP (KV + artifacts + FTS + Glazed CLI)](./design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md)
 - **Brainstorm / idea bank**: [Brainstorm: scenario logging ideas (wild + useful)](./reference/01-brainstorm-scenario-logging-ideas-wild-useful.md)
 
 ## Status

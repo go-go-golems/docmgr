@@ -10,16 +10,12 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: internal/workspace/discovery.go
-      Note: Removed CollectTicketWorkspaces; renamed missing-index scan API
     - Path: pkg/commands/changelog.go
       Note: |-
         Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
         Phase 4.1 removed remaining findTicketDirectory callsites (commit 3751433)
     - Path: pkg/commands/doc_move.go
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
-    - Path: pkg/commands/doctor.go
-      Note: Doctor uses FindTicketScaffoldsMissingIndex for missing index.md reporting
     - Path: pkg/commands/import_file.go
       Note: Phase 4.1 deleted findTicketDirectory helper (commit 3751433)
     - Path: pkg/commands/layout_fix.go
@@ -28,13 +24,10 @@ RelatedFiles:
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
-    - Path: pkg/completion/actions.go
-      Note: Completion now QueryDocs-backed; removed legacy ticket walker
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
-
 
 
 
@@ -676,7 +669,7 @@ This step deletes the legacy `findTicketDirectory` helper that lived in `pkg/com
 
 This step completes the last remaining cleanup for legacy ticket discovery helpers. We migrated shell completion off the filesystem-walking `CollectTicketWorkspaces`, deleted the helper implementation from `internal/workspace/discovery.go`, and renamed the remaining “missing index” scan to a clearer, context-aware API used by `doctor`. The result is that **all ticket enumeration for normal flows is Workspace+QueryDocs-backed**, while `doctor` retains a small targeted filesystem scan for the one state QueryDocs cannot represent (a ticket-like scaffold that lacks `index.md`).
 
-**Commit (code):** (fill after commit)
+**Commit (code):** `37d68a4` — "Cleanup Phase 4.2: remove CollectTicketWorkspaces; rename missing-index scan"
 
 ### What I did
 - Updated `pkg/completion/actions.go` to discover tickets via:

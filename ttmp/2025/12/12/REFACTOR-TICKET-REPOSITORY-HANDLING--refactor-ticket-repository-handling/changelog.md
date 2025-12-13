@@ -387,3 +387,13 @@ Verification: built local refactor binary and ran full test-scenarios suite; con
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/list_docs.go — Ported list docs validated against scenario workspace.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Integration regression suite used to validate the refactor binary.
 
+
+## 2025-12-13
+
+Port doc search to Workspace.QueryDocs (Task 10): metadata+reverse lookup now use index-backed filters; keep content search + external-source/date checks as post-filters; add basename (suffix) fallback matching for --file 'register.go' style queries.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs_sql.go — Added basename suffix LIKE fallback for RelatedFile matching to preserve 'register.go' query UX.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/search.go — doc search now discovers workspace
+

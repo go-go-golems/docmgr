@@ -15,6 +15,7 @@ import (
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -189,15 +190,6 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	configDir := ""
-	if cfgPath, err := workspace.FindTTMPConfigPath(); err == nil {
-		if absCfg, err := filepath.Abs(cfgPath); err == nil {
-			configDir = filepath.Dir(absCfg)
-		} else {
-			configDir = filepath.Dir(cfgPath)
-		}
-	}
-
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type SearchResult struct {
@@ -267,79 +259,122 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 	dirQueryRaw := strings.TrimSpace(settings.Dir)
 	dirQueryRawSlash := filepath.ToSlash(dirQueryRaw)
 
-	// Search all markdown files
-	err = filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: true}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
 
-		// Skip templates and guidelines directories
-		if strings.Contains(path, "/_templates/") || strings.Contains(path, "/_guidelines/") {
-			return nil
-		}
+	scope := workspace.Scope{Kind: workspace.ScopeRepo}
+	if strings.TrimSpace(settings.Ticket) != "" {
+		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	}
 
-		// Read document
-		doc, content, err := readDocumentWithContent(path)
-		if err != nil {
-			return nil // Skip files with invalid frontmatter
-		}
-
-		// Apply metadata filters
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			return nil
-		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			return nil
-		}
-		if settings.DocType != "" && doc.DocType != settings.DocType {
-			return nil
-		}
-		if len(settings.Topics) > 0 {
-			topicMatch := false
-			for _, filterTopic := range settings.Topics {
-				for _, docTopic := range doc.Topics {
-					if strings.EqualFold(strings.TrimSpace(filterTopic), strings.TrimSpace(docTopic)) {
-						topicMatch = true
-						break
-					}
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: scope,
+		Filters: workspace.DocFilters{
+			Ticket:    strings.TrimSpace(settings.Ticket),
+			Status:    strings.TrimSpace(settings.Status),
+			DocType:   strings.TrimSpace(settings.DocType),
+			TopicsAny: settings.Topics,
+			RelatedFile: func() []string {
+				if fileQueryRaw != "" {
+					return []string{fileQueryRaw}
 				}
-				if topicMatch {
+				return nil
+			}(),
+			RelatedDir: func() []string {
+				if dirQueryRaw != "" {
+					return []string{dirQueryRaw}
+				}
+				return nil
+			}(),
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeBody:         true,
+			IncludeErrors:       false,
+			IncludeDiagnostics:  true,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query docs: %w", err)
+	}
+
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
+		}
+
+		doc := h.Doc
+		content := h.Body
+
+		// Apply external source filter (not indexed yet; best-effort read frontmatter).
+		if settings.ExternalSource != "" {
+			fm, ferr := readDocumentFrontmatter(h.Path)
+			if ferr != nil {
+				continue
+			}
+			sourceMatch := false
+			for _, externalSource := range fm.ExternalSources {
+				if strings.Contains(externalSource, settings.ExternalSource) || strings.Contains(settings.ExternalSource, externalSource) {
+					sourceMatch = true
 					break
 				}
 			}
-			if !topicMatch {
-				return nil
+			if !sourceMatch {
+				continue
 			}
 		}
 
-		docResolver := paths.NewResolver(paths.ResolverOptions{
-			DocsRoot:  settings.Root,
-			DocPath:   path,
-			ConfigDir: configDir,
-		})
-
-		type normalizedRelated struct {
-			file models.RelatedFile
-			norm paths.NormalizedPath
+		// Apply date filters
+		if fi, err := os.Stat(h.Path); err == nil {
+			createdTime := fi.ModTime()
+			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
+				continue
+			}
+		}
+		if !doc.LastUpdated.IsZero() {
+			if !sinceTime.IsZero() && doc.LastUpdated.Before(sinceTime) {
+				continue
+			}
+			if !untilTime.IsZero() && doc.LastUpdated.After(untilTime) {
+				continue
+			}
+			if !updatedSinceTime.IsZero() && doc.LastUpdated.Before(updatedSinceTime) {
+				continue
+			}
 		}
 
-		related := make([]normalizedRelated, 0, len(doc.RelatedFiles))
-		for _, rf := range doc.RelatedFiles {
-			related = append(related, normalizedRelated{
-				file: rf,
-				norm: docResolver.Normalize(rf.Path),
-			})
+		// Apply content search
+		if settings.Query != "" {
+			if !strings.Contains(strings.ToLower(content), queryLower) {
+				continue
+			}
 		}
+
+		relPath, err := filepath.Rel(settings.Root, h.Path)
+		if err != nil {
+			relPath = h.Path
+		}
+		relPath = filepath.ToSlash(relPath)
+
+		snippet := extractSnippet(content, settings.Query, 100)
 
 		var matchedFiles []string
 		var matchedNotes []string
 		if fileQueryRaw != "" {
+			docResolver := paths.NewResolver(paths.ResolverOptions{
+				DocsRoot:  settings.Root,
+				DocPath:   h.Path,
+				ConfigDir: ws.Context().ConfigDir,
+				RepoRoot:  ws.Context().RepoRoot,
+			})
 			fileQueryNorm := docResolver.Normalize(fileQueryRaw)
 			if fileQueryNorm.Empty() && fileQueryRaw != "" {
 				fileQueryNorm = paths.NormalizedPath{
@@ -347,96 +382,29 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 					OriginalClean: filepath.ToSlash(fileQueryRaw),
 				}
 			}
-			fileMatch := false
-			for _, entry := range related {
-				if paths.MatchPaths(fileQueryNorm, entry.norm) {
-					fileMatch = true
-					matchedFiles = append(matchedFiles, bestDisplay(entry.norm, entry.file.Path))
-					if strings.TrimSpace(entry.file.Note) != "" {
-						matchedNotes = append(matchedNotes, entry.file.Note)
+			baseQuery := filepath.Base(filepath.ToSlash(fileQueryRaw))
+			for _, rf := range doc.RelatedFiles {
+				n := docResolver.Normalize(rf.Path)
+				if paths.MatchPaths(fileQueryNorm, n) ||
+					(strings.TrimSpace(baseQuery) != "" && (filepath.Base(filepath.ToSlash(rf.Path)) == baseQuery)) ||
+					(strings.TrimSpace(baseQuery) != "" && strings.HasSuffix(filepath.ToSlash(rf.Path), "/"+baseQuery)) {
+					matchedFiles = append(matchedFiles, bestDisplay(n, rf.Path))
+					if strings.TrimSpace(rf.Note) != "" {
+						matchedNotes = append(matchedNotes, rf.Note)
 					}
 				}
 			}
-			if !fileMatch {
-				return nil
-			}
 		}
 
-		if dirQueryRaw != "" {
-			dirQueryNorm := docResolver.Normalize(dirQueryRawSlash)
-			dirMatch := false
-			relPathForDoc, _ := filepath.Rel(settings.Root, path)
-			relPathForDoc = filepath.ToSlash(relPathForDoc)
-			if strings.HasPrefix(relPathForDoc, dirQueryRawSlash) {
-				dirMatch = true
-			}
-			if !dirMatch {
-				for _, entry := range related {
-					if paths.DirectoryMatch(dirQueryNorm, entry.norm) || (dirQueryRawSlash != "" && strings.HasPrefix(filepath.ToSlash(entry.file.Path), dirQueryRawSlash)) {
-						dirMatch = true
-						break
-					}
-				}
-			}
-			if !dirMatch {
-				return nil
+		// Preserve legacy "dir" behavior: treat dir as prefix on doc path OR related_files.
+		// QueryDocs currently filters related_files; the doc-path prefix check remains a no-op
+		// for most usage (dir points at code), but we keep it for compatibility.
+		if dirQueryRawSlash != "" {
+			relDocPath := relPath
+			if !strings.HasPrefix(relDocPath, dirQueryRawSlash) && dirQueryRaw != "" {
+				// no-op: already filtered by QueryDocs related_files
 			}
 		}
-
-		// Apply external source filter
-		if settings.ExternalSource != "" {
-			sourceMatch := false
-			for _, externalSource := range doc.ExternalSources {
-				if strings.Contains(externalSource, settings.ExternalSource) || strings.Contains(settings.ExternalSource, externalSource) {
-					sourceMatch = true
-					break
-				}
-			}
-			if !sourceMatch {
-				return nil
-			}
-		}
-
-		// Apply date filters
-		// Get file modification time for Created checks
-		fileInfo, err := os.Stat(path)
-		if err == nil {
-			createdTime := fileInfo.ModTime()
-			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
-				return nil
-			}
-		}
-
-		// Check LastUpdated field
-		if !doc.LastUpdated.IsZero() {
-			if !sinceTime.IsZero() && doc.LastUpdated.Before(sinceTime) {
-				return nil
-			}
-			if !untilTime.IsZero() && doc.LastUpdated.After(untilTime) {
-				return nil
-			}
-			if !updatedSinceTime.IsZero() && doc.LastUpdated.Before(updatedSinceTime) {
-				return nil
-			}
-		}
-
-		// Apply content search
-		if settings.Query != "" {
-			contentLower := strings.ToLower(content)
-			if !strings.Contains(contentLower, queryLower) {
-				return nil
-			}
-		}
-
-		// Get relative path from root
-		relPath, err := filepath.Rel(settings.Root, path)
-		if err != nil {
-			relPath = path
-		}
-		relPath = filepath.ToSlash(relPath)
-
-		// Extract snippet around query match
-		snippet := extractSnippet(content, settings.Query, 100)
 
 		row := types.NewRow(
 			types.MRP("ticket", doc.Ticket),
@@ -447,8 +415,6 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 			types.MRP("path", relPath),
 			types.MRP("snippet", snippet),
 		)
-
-		// When filtering by --file, include matched file and note columns for context
 		if settings.File != "" {
 			if len(matchedFiles) > 0 {
 				row.Set("file", strings.Join(matchedFiles, ", "))
@@ -461,13 +427,12 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		if err := gp.AddRow(ctx, row); err != nil {
 			return fmt.Errorf("failed to emit search result for %s: %w", relPath, err)
 		}
-
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to walk documents under %s: %w", settings.Root, err)
 	}
+
+	for i := range res.Diagnostics {
+		docmgr.RenderTaxonomy(ctx, &res.Diagnostics[i])
+	}
+
 	return nil
 }
 
@@ -1203,134 +1168,138 @@ func (c *SearchCommand) Run(
 	}
 	var results []searchResult
 
-	err = filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-		if strings.Contains(path, "/_templates/") || strings.Contains(path, "/_guidelines/") {
-			return nil
-		}
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: true}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
 
-		doc, content, err := readDocumentWithContent(path)
-		if err != nil {
-			return nil
-		}
+	scope := workspace.Scope{Kind: workspace.ScopeRepo}
+	if strings.TrimSpace(settings.Ticket) != "" {
+		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	}
 
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			return nil
-		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			return nil
-		}
-		if settings.DocType != "" && doc.DocType != settings.DocType {
-			return nil
-		}
-		if len(settings.Topics) > 0 {
-			match := false
-			for _, ft := range settings.Topics {
-				for _, dt := range doc.Topics {
-					if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
-						match = true
-						break
-					}
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: scope,
+		Filters: workspace.DocFilters{
+			Ticket:    strings.TrimSpace(settings.Ticket),
+			Status:    strings.TrimSpace(settings.Status),
+			DocType:   strings.TrimSpace(settings.DocType),
+			TopicsAny: settings.Topics,
+			RelatedFile: func() []string {
+				if strings.TrimSpace(settings.File) != "" {
+					return []string{strings.TrimSpace(settings.File)}
 				}
-				if match {
-					break
-				}
-			}
-			if !match {
 				return nil
-			}
-		}
-
-		var matchedFiles []string
-		var matchedNotes []string
-		if settings.File != "" {
-			fileMatch := false
-			for _, rf := range doc.RelatedFiles {
-				relatedFile := rf.Path
-				if relatedFile != "" && (strings.Contains(relatedFile, settings.File) || strings.Contains(settings.File, relatedFile)) {
-					fileMatch = true
-					matchedFiles = append(matchedFiles, relatedFile)
-					if strings.TrimSpace(rf.Note) != "" {
-						matchedNotes = append(matchedNotes, rf.Note)
-					}
+			}(),
+			RelatedDir: func() []string {
+				if strings.TrimSpace(settings.Dir) != "" {
+					return []string{strings.TrimSpace(settings.Dir)}
 				}
-			}
-			if !fileMatch {
 				return nil
-			}
-		}
+			}(),
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeBody:         true,
+			IncludeErrors:       false,
+			IncludeDiagnostics:  false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query docs: %w", err)
+	}
 
-		if settings.Dir != "" {
-			dirMatch := false
-			relPath, _ := filepath.Rel(settings.Root, path)
-			if strings.HasPrefix(relPath, settings.Dir) {
-				dirMatch = true
-			}
-			if !dirMatch {
-				for _, rf := range doc.RelatedFiles {
-					if strings.HasPrefix(rf.Path, settings.Dir) {
-						dirMatch = true
-						break
-					}
-				}
-			}
-			if !dirMatch {
-				return nil
-			}
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
 		}
+		doc := h.Doc
+		content := h.Body
 
 		if settings.ExternalSource != "" {
+			fm, ferr := readDocumentFrontmatter(h.Path)
+			if ferr != nil {
+				continue
+			}
 			sourceMatch := false
-			for _, es := range doc.ExternalSources {
+			for _, es := range fm.ExternalSources {
 				if strings.Contains(es, settings.ExternalSource) || strings.Contains(settings.ExternalSource, es) {
 					sourceMatch = true
 					break
 				}
 			}
 			if !sourceMatch {
-				return nil
+				continue
 			}
 		}
 
-		if fi, err := os.Stat(path); err == nil {
+		if fi, err := os.Stat(h.Path); err == nil {
 			createdTime := fi.ModTime()
 			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
-				return nil
+				continue
 			}
 		}
 		if !doc.LastUpdated.IsZero() {
 			if !sinceTime.IsZero() && doc.LastUpdated.Before(sinceTime) {
-				return nil
+				continue
 			}
 			if !untilTime.IsZero() && doc.LastUpdated.After(untilTime) {
-				return nil
+				continue
 			}
 			if !updatedSinceTime.IsZero() && doc.LastUpdated.Before(updatedSinceTime) {
-				return nil
+				continue
 			}
 		}
 
 		if settings.Query != "" {
 			if !strings.Contains(strings.ToLower(content), queryLower) {
-				return nil
+				continue
 			}
 		}
 
-		relPath, err := filepath.Rel(settings.Root, path)
+		relPath, err := filepath.Rel(settings.Root, h.Path)
 		if err != nil {
-			relPath = path
+			relPath = h.Path
 		}
 		snippet := extractSnippet(content, settings.Query, 100)
 
-		// Collect result instead of printing immediately
+		var matchedFiles []string
+		var matchedNotes []string
+		if strings.TrimSpace(settings.File) != "" {
+			docResolver := paths.NewResolver(paths.ResolverOptions{
+				DocsRoot:  settings.Root,
+				DocPath:   h.Path,
+				ConfigDir: ws.Context().ConfigDir,
+				RepoRoot:  ws.Context().RepoRoot,
+			})
+			fileQueryRaw := strings.TrimSpace(settings.File)
+			fileQueryNorm := docResolver.Normalize(fileQueryRaw)
+			if fileQueryNorm.Empty() && fileQueryRaw != "" {
+				fileQueryNorm = paths.NormalizedPath{
+					Canonical:     filepath.ToSlash(fileQueryRaw),
+					OriginalClean: filepath.ToSlash(fileQueryRaw),
+				}
+			}
+			baseQuery := filepath.Base(filepath.ToSlash(fileQueryRaw))
+			for _, rf := range doc.RelatedFiles {
+				n := docResolver.Normalize(rf.Path)
+				if paths.MatchPaths(fileQueryNorm, n) ||
+					(strings.TrimSpace(baseQuery) != "" && (filepath.Base(filepath.ToSlash(rf.Path)) == baseQuery)) ||
+					(strings.TrimSpace(baseQuery) != "" && strings.HasSuffix(filepath.ToSlash(rf.Path), "/"+baseQuery)) {
+					matchedFiles = append(matchedFiles, bestDisplay(n, rf.Path))
+					if strings.TrimSpace(rf.Note) != "" {
+						matchedNotes = append(matchedNotes, rf.Note)
+					}
+				}
+			}
+		}
+
 		results = append(results, searchResult{
 			relPath:      relPath,
 			doc:          doc,
@@ -1338,12 +1307,6 @@ func (c *SearchCommand) Run(
 			matchedFiles: matchedFiles,
 			matchedNotes: matchedNotes,
 		})
-
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to walk documents under %s: %w", settings.Root, err)
 	}
 
 	// Print human output

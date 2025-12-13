@@ -35,7 +35,9 @@ RelatedFiles:
         Nested hydration (topics/related_files) during rows iteration explains why MaxOpenConns(1) caused a hang.
         No-N+1 refactor: QueryDocs now does 1 base query + 2 batched hydration queries (topics/related_files) instead of nested per-row queries.
     - Path: internal/workspace/query_docs_sql.go
-      Note: Supports compiling parse_ok=0 query variant to surface skipped docs as diagnostics.
+      Note: |-
+        Supports compiling parse_ok=0 query variant to surface skipped docs as diagnostics.
+        Implements basename suffix fallback matching for QueryDocs RelatedFile filter (needed for scenario wonky path queries).
     - Path: internal/workspace/query_docs_test.go
       Note: Repro/guardrail tests for QueryDocs defaults + IncludeErrors behavior.
     - Path: internal/workspace/skip_policy.go
@@ -57,6 +59,8 @@ RelatedFiles:
       Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2, Spec §5.1).
     - Path: pkg/commands/list_docs.go
       Note: Ported list docs to Workspace.QueryDocs (Task 9).
+    - Path: pkg/commands/search.go
+      Note: Ported doc search to Workspace.QueryDocs (Task 10).
     - Path: pkg/commands/workspace_export_sqlite.go
       Note: Implements  as a classic Run() command.
     - Path: pkg/diagnostics/docmgrctx/query_docs.go
@@ -80,6 +84,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -646,6 +651,48 @@ We kept the user-facing output shape intact for both human mode and glaze mode, 
 
 ```bash
 go test ./... -count=1
+```
+
+## Step 14: Port `doc search` to `Workspace.QueryDocs` + preserve wonky path UX
+
+This step ports the `doc search` command to the Workspace+SQLite backend, which is the big “real world” consumer of the new QueryDocs API. The goal is to centralize *all* metadata filtering and reverse lookup behind QueryDocs, while keeping content search as a post-filter (FTS remains deferred). This makes `doc search` both faster (no full filesystem walk for reverse lookup) and more consistent with other commands (same skip policy, same normalization strategy, same diagnostics model when enabled).
+
+The most important compatibility requirement here was the “wonky path” behavior: users often search by odd path forms (deep `../../..`), absolute paths, or just a basename like `register.go`. The index-backed reverse lookup already handles many normalized forms, but basename-only queries required an explicit suffix fallback to preserve the existing scenario expectations.
+
+### What I did
+- Rewrote `pkg/commands/search.go` (both glaze and human modes) to:
+  - discover workspace via `workspace.DiscoverWorkspace`
+  - build the in-memory index with `IncludeBody=true` (so we can generate snippets)
+  - call `ws.QueryDocs` for metadata filters + reverse lookup (`--file`, `--dir`)
+  - keep content search, external-source filtering, and date filtering as post-filters
+- Added basename/suffix fallback matching for `RelatedFile` queries in the SQL compiler so `--file register.go` still matches paths like `backend/chat/api/register.go`.
+- Ran `go test ./...` and the scenario suite to confirm behavior:
+  - `test-scenarios/testing-doc-manager/05-search-scenarios.sh` (wonky path regression included)
+
+### Why
+- `doc search` was the highest-risk port because it combined: content search, metadata filters, reverse lookup, and normalization edge cases.
+- Moving reverse lookup into QueryDocs is the main architectural promise of the refactor (joins, not nested loops).
+
+### What worked
+- Scenario suite passes against the local binary, including the “wonky path regression” cases.
+- `doc search --file ...` and `--dir ...` now rely on the same normalization/indexing rules as the rest of the tool.
+
+### What didn’t work
+- Nothing notable during the port; the main complexity was preserving basename-only matching without making reverse lookup too fuzzy.
+
+### What I learned
+- Basename-only reverse lookup is a pragmatic UX feature. Implementing it explicitly as a suffix `LIKE '%/name.go'` fallback keeps the behavior explainable (and can be paired with diagnostics) while still leveraging the index.
+
+### Technical details
+- Files:
+  - `pkg/commands/search.go`
+  - `internal/workspace/query_docs_sql.go`
+- Commands:
+
+```bash
+go test ./... -count=1
+go build -o /tmp/docmgr-refactor-local-2025-12-13 ./cmd/docmgr
+DOCMGR_PATH=/tmp/docmgr-refactor-local-2025-12-13 bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-local-2025-12-13
 ```
 
 ## Step 14: Verify list-docs port via scenario suite + direct command runs

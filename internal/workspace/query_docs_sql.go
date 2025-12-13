@@ -90,8 +90,9 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 	// RelatedFile: OR semantics (any file matches).
 	if len(q.Filters.RelatedFile) > 0 {
 		keys := buildQueryPathKeySet(w, q.Filters.RelatedFile)
+		suffixes := buildQueryFileSuffixPatterns(q.Filters.RelatedFile)
 		if len(keys) > 0 {
-			sub, subArgs := relatedFileExistsClause(keys)
+			sub, subArgs := relatedFileExistsClause(keys, suffixes)
 			where = append(where, sub)
 			args = append(args, subArgs...)
 		}
@@ -236,7 +237,34 @@ func buildQueryDirPrefixes(w *Workspace, rawDirs []string) []string {
 	return out
 }
 
-func relatedFileExistsClause(keys []string) (string, []any) {
+func buildQueryFileSuffixPatterns(rawPaths []string) []string {
+	seen := map[string]struct{}{}
+	var out []string
+	for _, raw := range rawPaths {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		// Only enable suffix matching for basename-like queries. This intentionally trades
+		// precision for UX in "I only know the filename" scenarios (see scenario tests).
+		if strings.Contains(raw, "/") || strings.Contains(raw, "\\") {
+			continue
+		}
+		base := filepath.ToSlash(filepath.Clean(raw))
+		if base == "" || base == "." || base == "/" {
+			continue
+		}
+		p := "%/" + base
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+	return out
+}
+
+func relatedFileExistsClause(keys []string, suffixPatterns []string) (string, []any) {
 	// We match against multiple persisted representations.
 	cols := []string{
 		"rf.norm_canonical",
@@ -251,9 +279,17 @@ func relatedFileExistsClause(keys []string) (string, []any) {
 	var parts []string
 	var args []any
 	for _, col := range cols {
-		parts = append(parts, col+" IN ("+in+")")
+		var ors []string
+		ors = append(ors, col+" IN ("+in+")")
+		for range suffixPatterns {
+			ors = append(ors, col+" LIKE ?")
+		}
+		parts = append(parts, "("+strings.Join(ors, " OR ")+")")
 		for _, k := range keys {
 			args = append(args, k)
+		}
+		for _, p := range suffixPatterns {
+			args = append(args, p)
 		}
 	}
 	return "EXISTS (SELECT 1 FROM related_files rf WHERE rf.doc_id = d.doc_id AND (" + strings.Join(parts, " OR ") + "))", args

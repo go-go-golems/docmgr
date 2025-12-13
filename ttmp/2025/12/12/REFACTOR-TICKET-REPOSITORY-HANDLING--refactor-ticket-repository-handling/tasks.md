@@ -12,7 +12,7 @@
 - [x] Implement QueryDocs API + SQL compiler (scope + filters + options), including OR semantics for RelatedFile[]/RelatedDir[] — Spec §5.2, §10.1–§10.4
 - [x] Implement diagnostics contract in QueryDocs (emit core.Taxonomy for skips/parse errors/normalization issues) — Spec §7, §8, §10.6
 - [x] Port command: list docs -> Workspace.QueryDocs (match existing semantics; remove ad-hoc filepath.Walk) — Spec §11.2.1
-- [ ] Port command: search -> Workspace.QueryDocs for metadata + reverse lookup; keep content search as post-filter (FTS deferred) — Spec §11.2.2, §13 (FTS deferred)
+- [x] Port command: search -> Workspace.QueryDocs for metadata + reverse lookup; keep content search as post-filter (FTS deferred) — Spec §11.2.2, §13 (FTS deferred)
 - [ ] Port command: doctor -> QueryDocs(IncludeErrors/IncludeDiagnostics) + unify RelatedFiles existence checks with Workspace normalization — Spec §11.2.3, §7.3
 - [ ] Port command: relate -> use Workspace resolver + doc lookup (ScopeDoc/ScopeTicket) so normalization matches index — Spec §11.2.4, §5.1
 - [ ] Cleanup: remove/retire duplicated walkers and helpers (findTicketDirectory, ad-hoc Walk loops); enforce single canonical traversal via Workspace — Spec §11.3

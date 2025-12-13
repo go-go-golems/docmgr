@@ -295,7 +295,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	missingIndexDirs, err := workspace.CollectTicketScaffoldsWithoutIndex(settings.Root, skipFn)
+	missingIndexDirs, err := workspace.FindTicketScaffoldsMissingIndex(ctx, settings.Root, skipFn)
 	if err != nil {
 		return fmt.Errorf("failed to detect missing index.md files: %w", err)
 	}

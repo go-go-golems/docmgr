@@ -10,12 +10,16 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: internal/workspace/discovery.go
+      Note: Removed CollectTicketWorkspaces; renamed missing-index scan API
     - Path: pkg/commands/changelog.go
       Note: |-
         Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
         Phase 4.1 removed remaining findTicketDirectory callsites (commit 3751433)
     - Path: pkg/commands/doc_move.go
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
+    - Path: pkg/commands/doctor.go
+      Note: Doctor uses FindTicketScaffoldsMissingIndex for missing index.md reporting
     - Path: pkg/commands/import_file.go
       Note: Phase 4.1 deleted findTicketDirectory helper (commit 3751433)
     - Path: pkg/commands/layout_fix.go
@@ -24,10 +28,13 @@ RelatedFiles:
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
+    - Path: pkg/completion/actions.go
+      Note: Completion now QueryDocs-backed; removed legacy ticket walker
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 
@@ -664,3 +671,50 @@ This step deletes the legacy `findTicketDirectory` helper that lived in `pkg/com
 ### Code review instructions
 - Start in `pkg/commands/changelog.go` and verify there are no references to `findTicketDirectory`.
 - Start in `pkg/commands/import_file.go` and confirm the helper is deleted and ticketDir is derived via QueryDocs.
+
+## Step 17: Phase 4.2 — Remove `CollectTicketWorkspaces` and retire the missing-index legacy helper name
+
+This step completes the last remaining cleanup for legacy ticket discovery helpers. We migrated shell completion off the filesystem-walking `CollectTicketWorkspaces`, deleted the helper implementation from `internal/workspace/discovery.go`, and renamed the remaining “missing index” scan to a clearer, context-aware API used by `doctor`. The result is that **all ticket enumeration for normal flows is Workspace+QueryDocs-backed**, while `doctor` retains a small targeted filesystem scan for the one state QueryDocs cannot represent (a ticket-like scaffold that lacks `index.md`).
+
+**Commit (code):** (fill after commit)
+
+### What I did
+- Updated `pkg/completion/actions.go` to discover tickets via:
+  - `workspace.DiscoverWorkspace(...)`
+  - `ws.InitIndex(...)`
+  - `ws.QueryDocs(ScopeRepo, Filters{DocType=index})`
+  instead of `workspace.CollectTicketWorkspaces`.
+- Deleted `CollectTicketWorkspaces` (and its `TicketWorkspace` struct) from `internal/workspace/discovery.go`.
+- Renamed `CollectTicketScaffoldsWithoutIndex` to `workspace.FindTicketScaffoldsMissingIndex(ctx, ...)` and updated `pkg/commands/doctor.go` to call the new API.
+
+### Why
+- `CollectTicketWorkspaces` was a legacy walker with its own skip rules and metadata hydration behavior; keeping it around (even “just for completion”) reintroduces the inconsistency this ticket exists to remove.
+- The “missing index.md” detection is a special-case invariant check: **missing index means no doc exists to index**, so QueryDocs cannot surface it. `doctor` still needs this check, but it shouldn’t be framed as a general-purpose ticket discovery helper.
+
+### What worked
+- `go test ./...` passed after the completion migration + helper deletion/rename.
+- The codebase has **zero** remaining references to `CollectTicketWorkspaces` and `CollectTicketScaffoldsWithoutIndex` (the legacy names).
+
+### What didn't work
+- None (straightforward refactor; no behavioral diffs intentionally introduced).
+
+### What I learned
+- Shell completion is a surprisingly “sticky” caller of legacy discovery helpers; it’s worth grepping completion paths explicitly during cleanup work.
+- “Missing index” is a distinct category from “parse errors” — you need a filesystem-level scan (or an index-builder side-channel) to report it.
+
+### What was tricky to build
+- **Completion fallback semantics**: we preserved a best-effort fallback by inferring ticket IDs from the index doc path’s directory name when frontmatter is missing/invalid.
+- **Naming/ownership boundary**: the missing-index scan is still a walk, but it’s a *diagnostic* scan, not “ticket discovery for normal commands”. The API name now reflects that.
+
+### What warrants a second pair of eyes
+- **Completion behavior**: confirm `ActionTickets()` still produces sensible completions in partial/broken states and that performance remains acceptable (it builds the index).
+- **Doctor missing-index scope**: confirm `FindTicketScaffoldsMissingIndex` honors the same ignore rules and doesn’t emit false positives in nested scaffolds.
+
+### What should be done in the future
+- Consider folding missing-index detection into the workspace index build as an explicit diagnostic channel, so `doctor` doesn’t need a second filesystem pass.
+- If completion performance becomes an issue, consider caching ticket completions or offering a “fast path” that only reads index docs (without indexing bodies, which we already avoid).
+
+### Code review instructions
+- Start in `pkg/completion/actions.go` and review `ActionTickets` ticket enumeration and fallback behavior.
+- Start in `internal/workspace/discovery.go` and confirm the legacy helper deletion and new missing-index API are correct.
+- Start in `pkg/commands/doctor.go` around the missing-index scan and confirm the error rows emitted are unchanged.

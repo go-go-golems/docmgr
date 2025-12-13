@@ -205,3 +205,14 @@ Validation: integration scenario suite passed after Phase 3 (DOCMGR_PATH=/tmp/do
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Scenario suite run (Phase 3)
 
+
+## 2025-12-13
+
+Phase 4.2: removed CollectTicketWorkspaces (completion now QueryDocs-backed) and renamed missing-index scan API used by doctor
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/discovery.go — Deleted legacy helper; added FindTicketScaffoldsMissingIndex
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/doctor.go — Updated to use FindTicketScaffoldsMissingIndex
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/completion/actions.go — Removed CollectTicketWorkspaces usage
+

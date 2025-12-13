@@ -27,8 +27,8 @@
 ## Phase 4: Delete Legacy Helpers
 
 - [x] [16] Delete `findTicketDirectory` function — After all callers migrated, remove from `pkg/commands/import_file.go:112`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 4.1
-- [ ] [17] Deprecate/delete `CollectTicketWorkspaces` — Verify no external callers, then deprecate or remove from `internal/workspace/discovery.go`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 4.2
-- [ ] [18] Deprecate/delete `CollectTicketScaffoldsWithoutIndex` — After `doctor.go` migration, assess if still needed. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 4.2
+- [x] [17] Deprecate/delete `CollectTicketWorkspaces` — Verify no external callers, then deprecate or remove from `internal/workspace/discovery.go`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 4.2
+- [x] [18] Deprecate/delete `CollectTicketScaffoldsWithoutIndex` — After `doctor.go` migration, assess if still needed. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 4.2
 
 ## Validation
 

@@ -179,8 +179,7 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 			types.MRP(ColTopics, strings.Join(t.Topics, ", ")),
 			types.MRP(ColTasksOpen, t.TasksOpen),
 			types.MRP(ColTasksDone, t.TasksDone),
-			// Preserve legacy glaze behavior: emit the ticket directory path, not the root-relative path.
-			types.MRP(ColPath, t.TicketDir),
+			types.MRP(ColPath, t.Path),
 			types.MRP(ColLastUpdated, t.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
@@ -439,7 +438,7 @@ func queryTicketIndexDocs(ctx context.Context, rootOverride string, ticketFilter
 		})
 	}
 
-	// Preserve legacy ordering behavior (newest first).
+	// Order by LastUpdated (newest first).
 	sort.Slice(out, func(i, j int) bool {
 		return out[i].LastUpdated.After(out[j].LastUpdated)
 	})

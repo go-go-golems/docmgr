@@ -117,6 +117,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
 		if readErr != nil || doc == nil {
 			parseOK = 0
+			// Fallback: infer ticket ID from directory structure so broken docs can still be
+			// discovered by ticket-scoped queries (useful for diagnostics/repair flows).
+			//
+			// Example: <docsRoot>/YYYY/MM/DD/<TICKET--slug>/... -> ticket_id = <TICKET>
+			ticketID = nullString(inferTicketIDFromPath(wctx.Root, absPath))
 			if readErr != nil {
 				parseErr = readErr.Error()
 			} else {
@@ -215,6 +220,42 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		return errors.Wrap(err, "commit ingest tx")
 	}
 	return nil
+}
+
+// inferTicketIDFromPath best-effort extracts a ticket ID from a document path under the docs root.
+//
+// Expected docs layout:
+//   <docsRoot>/<YYYY>/<MM>/<DD>/<TICKET--slug>/...
+//
+// It returns "" if it cannot infer a ticket ID.
+func inferTicketIDFromPath(docsRoot string, absDocPath string) string {
+	docsRoot = filepath.Clean(strings.TrimSpace(docsRoot))
+	absDocPath = filepath.Clean(strings.TrimSpace(absDocPath))
+	if docsRoot == "" || absDocPath == "" {
+		return ""
+	}
+	rel, err := filepath.Rel(docsRoot, absDocPath)
+	if err != nil {
+		return ""
+	}
+	rel = filepath.Clean(rel)
+	if rel == "." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || rel == ".." {
+		return ""
+	}
+	parts := strings.Split(rel, string(filepath.Separator))
+	// Need at least YYYY/MM/DD/<ticketDir>/<file>
+	if len(parts) < 4 {
+		return ""
+	}
+	ticketDir := strings.TrimSpace(parts[3])
+	if ticketDir == "" {
+		return ""
+	}
+	// ticket dir is typically "<TICKET>--<slug>"
+	if i := strings.Index(ticketDir, "--"); i > 0 {
+		return strings.TrimSpace(ticketDir[:i])
+	}
+	return ""
 }
 
 func boolToInt(b bool) int {

@@ -1,25 +1,25 @@
 ---
-Title: Refactor ticket repository handling
-Ticket: REFACTOR-TICKET-REPOSITORY-HANDLING
+Title: Jury-driven AST instrumentation via YAML DSL + Go build overlay
+Ticket: JURY-AST-INSTRUMENTATION
 Status: active
 Topics:
     - refactor
-    - tickets
+    - tooling
+    - ast
+    - observability
 DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/01-test-playbook-contestant-1-dj-skippy-skip-policy.md
-      Note: 'Playbook for testing contestant #1'
-    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/02-test-playbook-contestant-2-ingrid-the-indexer-index-builder-initindex.md
-      Note: 'Playbook for testing contestant #2'
+    - Path: ttmp/2025/12/12/JURY-AST-INSTRUMENTATION--jury-driven-ast-instrumentation-via-yaml-dsl-go-build-overlay/design/01-design-jury-ast-instrumentation-dsl-tier-1-overlay-build-tool.md
+      Note: Design spec for YAML DSL + overlay-based jury build pipeline
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-12T14:31:14.113503479-05:00
+LastUpdated: 2025-12-12T19:53:57.068641257-05:00
 ---
 
 
-# Refactor ticket repository handling
+# Jury-driven AST instrumentation via YAML DSL + Go build overlay
 
 ## Overview
 
@@ -37,7 +37,9 @@ Current status: **active**
 ## Topics
 
 - refactor
-- tickets
+- tooling
+- ast
+- observability
 
 ## Tasks
 

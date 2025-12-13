@@ -3,24 +3,40 @@ package workspace
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
+	"sync/atomic"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
+
+var workspaceSQLiteCounter uint64
 
 // openInMemorySQLite opens an in-memory SQLite database connection.
 //
 // Note: This uses the sqlite3 driver. The DSN uses a shared cache so multiple
 // connections (if we ever use them) can still see the same in-memory DB.
 func openInMemorySQLite(ctx context.Context) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "file:docmgr_workspace?mode=memory&cache=shared")
+	// IMPORTANT: Use a unique named in-memory DB per Workspace instance.
+	//
+	// If we reuse a fixed name with cache=shared, independent Workspace instances
+	// (including different unit tests in the same package) can unintentionally share
+	// state inside the same process, leading to confusing, flaky results.
+	name := atomic.AddUint64(&workspaceSQLiteCounter, 1)
+	dsn := fmt.Sprintf("file:docmgr_workspace_%d?mode=memory&cache=shared", name)
+	db, err := sql.Open("sqlite3", dsn)
 	if err != nil {
 		return nil, errors.Wrap(err, "open sqlite in-memory")
 	}
-	// Keep a single connection for now; it simplifies mental model and keeps the DB alive.
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
+	// Allow multiple connections because query code may issue nested statements while
+	// iterating result sets (e.g., best-effort hydration of topics/related_files).
+	// With SetMaxOpenConns(1), such patterns can deadlock/hang.
+	//
+	// NOTE: DSN uses a named shared in-memory DB (cache=shared) so multiple connections
+	// see the same schema/data.
+	db.SetMaxOpenConns(4)
+	db.SetMaxIdleConns(4)
 
 	if err := applySQLitePragmas(ctx, db); err != nil {
 		_ = db.Close()

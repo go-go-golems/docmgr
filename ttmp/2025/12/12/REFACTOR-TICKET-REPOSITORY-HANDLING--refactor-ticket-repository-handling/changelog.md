@@ -246,3 +246,43 @@ Expanded RelatedFiles normalization: persist canonical + repo/docs/doc/abs + cle
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/normalization.go — Normalization helper.
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema.go — Schema columns + indexes.
 
+
+## 2025-12-12
+
+Fix QueryDocs test hang + flaky in-memory SQLite state: allow >1 DB conn for nested hydration queries; infer ticket_id for parse-error docs so IncludeErrors works under ScopeTicket; use unique per-Workspace in-memory SQLite name to avoid cross-test state bleed.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/index_builder.go — Ingest now infers ticket_id from ticket directory structure for parse-error docs so ScopeTicket can still surface broken docs when IncludeErrors=true.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs.go — QueryDocs iterates base rows and hydrates topics/related_files per row; this nested querying deadlocked when SQLite was limited to one open connection.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs_test.go — Unit test that reproduced the hang (short timeout) and asserted IncludeErrors behavior.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/sqlite_schema.go — SQLite open policy updated: allow multiple connections + use unique shared in-memory DB name per Workspace to avoid deadlocks and test cross-contamination.
+
+
+## 2025-12-12
+
+Refactor QueryDocs hydration to avoid nested queries / N+1: scan base docs first, then batch-load topics and related_files via IN(doc_id) and hydrate in-memory.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs.go — Reworked QueryDocs hydration: no per-row DB calls; batch-load topics/related_files and hydrate via maps.
+
+
+## 2025-12-12
+
+Created talent show reference document personifying major refactor components as contestants, with detailed performance tests for each subsystem and a grand finale integration test
+
+### Related Files
+
+- ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/16-talent-show-candidates-code-performance-review.md — Creative code review framework using talent show metaphor
+
+
+## 2025-12-12
+
+Added playbook docs describing how to test Contestant #1 (skip policy) and Contestant #2 (InitIndex ingestion) with the current codebase.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/01-test-playbook-contestant-1-dj-skippy-skip-policy.md — Test procedure for skip policy
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/playbook/02-test-playbook-contestant-2-ingrid-the-indexer-index-builder-initindex.md — Test procedure for index ingestion
+

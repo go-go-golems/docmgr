@@ -41,22 +41,22 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 	if err != nil {
 		return DocQueryResult{}, errors.Wrap(err, "query docs")
 	}
-	defer func() { _ = rows.Close() }()
+	// NOTE: We intentionally avoid nested queries while iterating `rows` to prevent
+	// N+1 behavior and connection-pool deadlocks (especially if MaxOpenConns is low).
+	// We scan all rows first, then batch-hydrate topics and related_files in 1 query each.
 
-	var handles []DocHandle
+	type pendingRow struct {
+		docID   int64
+		parseOK bool
+		handle  DocHandle
+	}
 
-	// Hydration helpers (best-effort; if they fail we still return base rows).
-	topicStmt, _ := w.db.PrepareContext(ctx, `SELECT COALESCE(topic_original,'') FROM doc_topics WHERE doc_id=? ORDER BY topic_lower;`)
-	rfStmt, _ := w.db.PrepareContext(ctx, `SELECT COALESCE(raw_path,''), COALESCE(note,'') FROM related_files WHERE doc_id=? ORDER BY rf_id;`)
-	if topicStmt != nil {
-		defer func() { _ = topicStmt.Close() }()
-	}
-	if rfStmt != nil {
-		defer func() { _ = rfStmt.Close() }()
-	}
+	var pending []pendingRow
+	var okDocIDs []int64
 
 	for rows.Next() {
 		if err := ctx.Err(); err != nil {
+			_ = rows.Close()
 			return DocQueryResult{}, err
 		}
 
@@ -87,6 +87,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			&parseErr,
 			&body,
 		); err != nil {
+			_ = rows.Close()
 			return DocQueryResult{}, errors.Wrap(err, "scan docs row")
 		}
 
@@ -104,7 +105,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			} else {
 				handle.ReadErr = errors.New("document parse failed")
 			}
-			handles = append(handles, handle)
+			pending = append(pending, pendingRow{docID: docID, parseOK: false, handle: handle})
 			continue
 		}
 
@@ -122,25 +123,40 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			}
 		}
 
-		// Best-effort hydrate topics.
-		if topicStmt != nil {
-			if topics, err := fetchTopics(ctx, topicStmt, docID); err == nil {
-				doc.Topics = topics
-			}
-		}
-
-		// Best-effort hydrate related files (raw path + note for display/UX).
-		if rfStmt != nil {
-			if rfs, err := fetchRelatedFiles(ctx, rfStmt, docID); err == nil {
-				doc.RelatedFiles = rfs
-			}
-		}
-
 		handle.Doc = doc
-		handles = append(handles, handle)
+		pending = append(pending, pendingRow{docID: docID, parseOK: true, handle: handle})
+		okDocIDs = append(okDocIDs, docID)
 	}
 	if err := rows.Err(); err != nil {
+		_ = rows.Close()
 		return DocQueryResult{}, errors.Wrap(err, "iterate docs rows")
+	}
+	_ = rows.Close()
+
+	// Batch hydrate topics + related_files for parse_ok docs.
+	topicsByDocID := map[int64][]string{}
+	rfsByDocID := map[int64]models.RelatedFiles{}
+
+	if len(okDocIDs) > 0 {
+		if topics, err := fetchTopicsByDocIDs(ctx, w.db, okDocIDs); err == nil {
+			topicsByDocID = topics
+		}
+		if rfs, err := fetchRelatedFilesByDocIDs(ctx, w.db, okDocIDs); err == nil {
+			rfsByDocID = rfs
+		}
+	}
+
+	handles := make([]DocHandle, 0, len(pending))
+	for _, p := range pending {
+		if p.parseOK && p.handle.Doc != nil {
+			if topics, ok := topicsByDocID[p.docID]; ok {
+				p.handle.Doc.Topics = topics
+			}
+			if rfs, ok := rfsByDocID[p.docID]; ok {
+				p.handle.Doc.RelatedFiles = rfs
+			}
+		}
+		handles = append(handles, p.handle)
 	}
 
 	return DocQueryResult{
@@ -237,38 +253,61 @@ func validateDocQuery(q DocQuery) error {
 	return nil
 }
 
-func fetchTopics(ctx context.Context, stmt *sql.Stmt, docID int64) ([]string, error) {
-	rows, err := stmt.QueryContext(ctx, docID)
+func fetchTopicsByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) (map[int64][]string, error) {
+	docIDs = uniqueInt64(docIDs...)
+	if len(docIDs) == 0 || db == nil {
+		return map[int64][]string{}, nil
+	}
+	placeholders := makePlaceholders(len(docIDs))
+	sqlQ := `SELECT doc_id, COALESCE(topic_original,'') FROM doc_topics WHERE doc_id IN (` + placeholders + `) ORDER BY doc_id, topic_lower;`
+	args := make([]any, 0, len(docIDs))
+	for _, id := range docIDs {
+		args = append(args, id)
+	}
+	rows, err := db.QueryContext(ctx, sqlQ, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var out []string
+	out := map[int64][]string{}
 	for rows.Next() {
+		var docID int64
 		var t string
-		if err := rows.Scan(&t); err != nil {
+		if err := rows.Scan(&docID, &t); err != nil {
 			return nil, err
 		}
 		t = strings.TrimSpace(t)
-		if t != "" {
-			out = append(out, t)
+		if t == "" {
+			continue
 		}
+		out[docID] = append(out[docID], t)
 	}
 	return out, rows.Err()
 }
 
-func fetchRelatedFiles(ctx context.Context, stmt *sql.Stmt, docID int64) (models.RelatedFiles, error) {
-	rows, err := stmt.QueryContext(ctx, docID)
+func fetchRelatedFilesByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) (map[int64]models.RelatedFiles, error) {
+	docIDs = uniqueInt64(docIDs...)
+	if len(docIDs) == 0 || db == nil {
+		return map[int64]models.RelatedFiles{}, nil
+	}
+	placeholders := makePlaceholders(len(docIDs))
+	sqlQ := `SELECT doc_id, COALESCE(raw_path,''), COALESCE(note,'') FROM related_files WHERE doc_id IN (` + placeholders + `) ORDER BY doc_id, rf_id;`
+	args := make([]any, 0, len(docIDs))
+	for _, id := range docIDs {
+		args = append(args, id)
+	}
+	rows, err := db.QueryContext(ctx, sqlQ, args...)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var out models.RelatedFiles
+	out := map[int64]models.RelatedFiles{}
 	for rows.Next() {
+		var docID int64
 		var raw, note string
-		if err := rows.Scan(&raw, &note); err != nil {
+		if err := rows.Scan(&docID, &raw, &note); err != nil {
 			return nil, err
 		}
 		raw = strings.TrimSpace(raw)
@@ -276,9 +315,22 @@ func fetchRelatedFiles(ctx context.Context, stmt *sql.Stmt, docID int64) (models
 		if raw == "" {
 			continue
 		}
-		out = append(out, models.RelatedFile{Path: raw, Note: note})
+		out[docID] = append(out[docID], models.RelatedFile{Path: raw, Note: note})
 	}
 	return out, rows.Err()
+}
+
+func uniqueInt64(values ...int64) []int64 {
+	seen := map[int64]struct{}{}
+	out := make([]int64, 0, len(values))
+	for _, v := range values {
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	return out
 }
 
 // queryPathKeys returns comparable strings for matching query inputs against persisted norm_* columns.
@@ -317,5 +369,3 @@ func uniqueNonEmptyStrings(values ...string) []string {
 	}
 	return out
 }
-
-

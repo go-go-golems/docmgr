@@ -23,12 +23,19 @@ RelatedFiles:
       Note: |-
         Workspace.InitIndex + ingestion walker (Task 5).
         populate related_files norm_* columns (Task 6).
+        Parse-error ingestion now infers ticket_id from ticket dir to make IncludeErrors usable under ScopeTicket.
     - Path: internal/workspace/index_builder_test.go
       Note: |-
         Index ingestion unit test (Task 5).
         assert related_files normalization keys (Task 6).
     - Path: internal/workspace/normalization.go
       Note: RelatedFiles normalization pipeline + persisted key strategy (Task 6).
+    - Path: internal/workspace/query_docs.go
+      Note: |-
+        Nested hydration (topics/related_files) during rows iteration explains why MaxOpenConns(1) caused a hang.
+        No-N+1 refactor: QueryDocs now does 1 base query + 2 batched hydration queries (topics/related_files) instead of nested per-row queries.
+    - Path: internal/workspace/query_docs_test.go
+      Note: Repro/guardrail tests for QueryDocs defaults + IncludeErrors behavior.
     - Path: internal/workspace/skip_policy.go
       Note: Canonical ingest-time skip policy + path tagging helpers (Task 4, Spec §6).
     - Path: internal/workspace/skip_policy_test.go
@@ -41,6 +48,7 @@ RelatedFiles:
       Note: |-
         In-memory SQLite open + schema DDL (Task 3, Spec §9.1–§9.2).
         related_files columns expanded for canonical+fallback keys (Task 6).
+        Fix deadlock+flakiness: allow multiple connections for nested hydration; unique shared in-memory DB name per Workspace to prevent cross-test leakage.
     - Path: internal/workspace/sqlite_schema_test.go
       Note: Unit smoke test for schema creation.
     - Path: internal/workspace/workspace.go
@@ -65,6 +73,8 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
+
 
 
 
@@ -441,3 +451,102 @@ This step turns the in-memory index into a shareable artifact. The goal is to ma
   - `test-scenarios/testing-doc-manager/19-export-sqlite.sh`
   - `test-scenarios/testing-doc-manager/run-all.sh` (wired in)
 - Commit: (pending — waiting for the task checkpoint commit hash)
+
+## Step 10: Debug QueryDocs test hang + stabilize in-memory SQLite behavior
+
+This step was about turning a “something fishy” test hang into a concrete, explainable failure mode, and then adjusting the SQLite setup so `QueryDocs` can safely do what it currently does (best-effort hydration) without deadlocking. The main impact is that unit tests are now deterministic again, and the query/indexing behavior around broken docs is more consistent with the spec’s intent (broken docs should be indexable and discoverable for repair workflows when explicitly requested).
+
+The debugging also highlighted a useful implementation constraint: if we keep “nested hydration queries” inside the `rows.Next()` loop, we must not force SQLite to a single connection. In the longer term, we may still want to move to batched hydration (or a single joined query) to reduce round-trips, but correctness and debuggability come first.
+
+### What I did
+- Reproduced the hang quickly by running the specific `QueryDocs` unit test with a short timeout.
+- Identified the deadlock mechanism: a main `SELECT ... FROM docs` result set was being iterated while `QueryDocs` attempted to prepare/execute additional statements on the same `*sql.DB`.
+- Updated SQLite connection policy to allow multiple connections (so nested queries can progress).
+- Fixed a separate “flaky semantics” failure caused by using a constant shared in-memory DB name across tests in the same process.
+- Fixed a `ScopeTicket + IncludeErrors=true` mismatch by inferring `ticket_id` for parse-error docs from the ticket directory layout at ingest time.
+- Re-ran `go test ./...` to confirm the suite is stable.
+
+### Why
+- A hanging test is worse than a failing test: it blocks progress and obscures root cause.
+- The SQLite deadlock was a structural interaction between:
+  - `database/sql` connection pooling,
+  - SQLite’s connection-level serialization of work, and
+  - our current `QueryDocs` design (nested hydration while iterating the main cursor).
+- The “shared in-memory DB name” issue was subtle: using `cache=shared` with a fixed DSN can leak schema/data between independent `Workspace` instances in the same test process.
+- For broken docs, we need ticket scoping to still work when the doc lives under a ticket directory but frontmatter parsing fails, otherwise `IncludeErrors=true` is hard to use in practice.
+
+### What worked
+- The timeout repro immediately surfaced the blocking point in a stack trace (stuck in `database/sql.(*DB).PrepareContext` from inside `QueryDocs`).
+- Allowing multiple connections removed the hang and made the original test complete quickly.
+- Switching to a unique in-memory DB name per `Workspace` instance eliminated cross-test contamination.
+- Inferring `ticket_id` for parse-error docs brought the behavior back in line with the unit test expectations and the spec’s “repair-friendly” intent.
+
+### What didn’t work
+- After fixing the deadlock, a full `go test ./...` run started failing with “expected 1 doc with defaults, got 2”. This turned out to be shared in-memory DB state leaking between tests, not a `QueryDocs` semantic bug.
+
+### What I learned
+- `database/sql` + SQLite can deadlock surprisingly easily if you:
+  - iterate a `rows` cursor, and
+  - run another query on the same `*sql.DB`, and
+  - cap `MaxOpenConns` at 1.
+- Named shared in-memory SQLite (`file:<name>?mode=memory&cache=shared`) is convenient, but the `<name>` must be unique per workspace/test instance unless you *want* cross-connection sharing.
+- “Broken doc” handling is not just about `parse_ok=0`; you often still need enough metadata (at least inferred ticket) to make the broken doc discoverable via scoped queries.
+
+### Technical details
+- **Nested hydration point**: `internal/workspace/query_docs.go` prepares `topicStmt`/`rfStmt` and calls `fetchTopics`/`fetchRelatedFiles` inside the `for rows.Next()` loop.
+- **Deadlock trigger**: `internal/workspace/sqlite_schema.go` previously used `db.SetMaxOpenConns(1)` while using nested queries.
+- **Fix 1 (deadlock)**: allow multiple connections (`SetMaxOpenConns(4)` / `SetMaxIdleConns(4)`).
+- **Fix 2 (test flake)**: use a unique named in-memory DB per `Workspace` instance (still with `cache=shared` so multiple connections in that workspace see the same DB).
+- **Fix 3 (IncludeErrors under ticket scope)**: in `internal/workspace/index_builder.go`, if parsing fails we now infer ticket ID from the `ttmp/YYYY/MM/DD/TICKET--slug/...` layout (best-effort) so `ScopeTicket` filtering can include broken docs when explicitly requested.
+- **Commands run**:
+
+```bash
+go test ./internal/workspace -run TestWorkspaceQueryDocs_BasicFiltersAndReverseLookup -count=1 -timeout 5s
+go test ./... -count=1
+```
+
+### What I’d do differently next time
+- Add a small comment near the nested hydration logic in `QueryDocs` explaining the connection-pool requirement (or switch hydration to a single joined query early).
+- In unit tests that exercise in-memory DB behavior, prefer verifying isolation assumptions explicitly (e.g., “workspace A doesn’t see workspace B docs”) so this kind of leak is caught earlier.
+
+## Step 11: Remove nested queries / N+1 from `Workspace.QueryDocs`
+
+This step refactored `QueryDocs` to eliminate the “query while iterating rows” pattern and the resulting N+1 behavior. The main outcome is that `QueryDocs` now executes a fixed number of queries regardless of result size (one base docs query, then at most one topics query and one related-files query), and hydration happens in-memory. This makes the implementation easier to reason about, avoids subtle connection-pool interactions, and sets us up for later diagnostics work without worrying about deadlocks or per-row overhead.
+
+We kept the external behavior stable: ordering is still driven by the compiled SQL, parse-error docs still return as `DocHandle{Doc:nil, ReadErr:...}` when included, and topics/related files are still hydrated for parse-ok docs—just via batched lookups.
+
+### What I did
+- Reworked `internal/workspace/query_docs.go` so the main docs query is fully scanned first (capturing `doc_id` for parse-ok docs).
+- Added two batch hydration helpers:
+  - `fetchTopicsByDocIDs(ctx, db, docIDs)` using `WHERE doc_id IN (...)`
+  - `fetchRelatedFilesByDocIDs(ctx, db, docIDs)` using `WHERE doc_id IN (...)`
+- Hydrated `doc.Topics` and `doc.RelatedFiles` from `map[doc_id]...` after scanning.
+- Removed the old per-doc hydration helpers (`fetchTopics` / `fetchRelatedFiles`) that enabled the nested-query pattern.
+- Ran `go test ./...` to confirm behavior stayed green.
+
+### Why
+- Avoid N+1 (performance + simplicity).
+- Avoid nested cursor/query interactions that can deadlock if connection limits are changed (or if future code introduces transactions/locks).
+- Make it easier to add diagnostics later (Task 8) without sprinkling extra queries inside the hot loop.
+
+### What worked
+- Unit tests for `QueryDocs` still pass without changes, which suggests the refactor preserved semantics.
+- The implementation became more predictable: 1 + 2 queries instead of 1 + (2 * number_of_docs).
+
+### What didn’t work
+- Nothing notable in this refactor (it was a mechanical change with good test coverage).
+
+### What I learned
+- Even on an in-memory DB, N+1 is easy to introduce accidentally when doing “hydration”. Batch hydration is often the cleanest compromise before moving to a single big join query.
+
+### Technical details
+- Files:
+  - `internal/workspace/query_docs.go`
+- Test command:
+
+```bash
+go test ./... -count=1
+```
+
+### What I’d do differently next time
+- Consider making hydration strategy explicit (e.g., “no hydration”, “batch hydration”, “single join”) if we find commands with different needs.

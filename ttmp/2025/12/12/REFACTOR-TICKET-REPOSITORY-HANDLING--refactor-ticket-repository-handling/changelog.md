@@ -444,3 +444,12 @@ Added a cleanup-inspectors brief for Task 18 to inventory duplicated walkers/hel
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/08-cleanup-inspectors-brief-task-18.md — New brief + starting map for Task 18 cleanup work
 
+
+## 2025-12-13
+
+Clarified Task 18 inspectors brief: inspectors are report-only and must not modify code or run docmgr workflow updates.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/08-cleanup-inspectors-brief-task-18.md — Added explicit no-code-changes rule for inspectors
+

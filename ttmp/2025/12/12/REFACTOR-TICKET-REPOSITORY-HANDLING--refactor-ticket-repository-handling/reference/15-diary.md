@@ -887,6 +887,7 @@ The deliverable is intentionally procedural: it describes what to search for, ho
 - Added a new ticket doc: `analysis/08-cleanup-inspectors-brief-task-18.md`
 - Filled it with:
   - mission + scope + constraints
+  - a hard rule that inspectors must not modify code (report-only work)
   - inventory table template (required fields)
   - search patterns + starting file map (known hotspots)
   - cleanup guidelines (“when you see X, replace with Y”)

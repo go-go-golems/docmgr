@@ -33,6 +33,16 @@ You are a “cleaning inspectors” crew. Your job is **not** to implement the c
 
 The report should make it hard to miss anything, and easy to execute in small, safe PRs.
 
+## Hard rule: do not modify code
+
+You must **not** modify any code or documentation outside this report. Specifically:
+- **No code edits** (no refactors, no renames, no deletions, no gofmt, no “quick fixes”)
+- **No behavior changes**
+- **No commits**
+- **No docmgr updates** (diary/changelog/relate/etc.) as part of the inspectors’ work
+
+Your only output is a **detailed written report** (this document), suitable for handing off to an implementer who will then do the actual cleanup work.
+
 ## Scope (what you’re responsible for)
 
 You are looking for:

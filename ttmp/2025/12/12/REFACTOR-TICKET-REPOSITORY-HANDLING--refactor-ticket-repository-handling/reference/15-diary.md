@@ -801,3 +801,5 @@ gofmt -w internal/workspace/query_docs.go internal/workspace/query_docs_test.go 
 go test ./... -count=1
 go run ./cmd/docmgr doctor --ticket REFACTOR-TICKET-REPOSITORY-HANDLING --fail-on none
 ```
+
+**Commit**: `a5af7454d006e6d80989f5cb5a82b190562f42ea`

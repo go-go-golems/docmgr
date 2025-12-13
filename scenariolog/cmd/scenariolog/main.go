@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/go-go-golems/docmgr/scenariolog/internal/scenariolog"
@@ -51,6 +52,10 @@ func newInitCmd() *cobra.Command {
 			if ctx == nil {
 				ctx = context.Background()
 			}
+			// On CTRL-C, cancel the context so ExecStep can terminate the full process group
+			// and still finalize the sqlite rows.
+			ctx, stop := signal.NotifyContext(ctx, os.Interrupt)
+			defer stop()
 
 			db, err := scenariolog.Open(ctx, dbPath)
 			if err != nil {

@@ -81,37 +81,14 @@ func findTasksFileViaWorkspace(ctx context.Context, rootOverride string, ticketI
 		return "", resolvedRoot, fmt.Errorf("init workspace index: %w", err)
 	}
 
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
-		Filters: workspace.DocFilters{},
-		Options: workspace.DocQueryOptions{
-			IncludeErrors:       false,
-			IncludeArchivedPath: true,
-			IncludeScriptsPath:  true,
-			IncludeControlDocs:  true,
-			OrderBy:             workspace.OrderByPath,
-		},
-	})
+	// NOTE: tasks.md does not have frontmatter by default, so it may not be indexed by QueryDocs.
+	// We therefore derive the ticket directory from the canonical index.md (DocType=index) and
+	// then join tasks.md directly.
+	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, ticketID)
 	if err != nil {
-		return "", resolvedRoot, fmt.Errorf("query ticket docs: %w", err)
+		return "", resolvedRoot, err
 	}
-
-	var hit string
-	for _, h := range res.Docs {
-		p := strings.TrimSpace(h.Path)
-		if p == "" {
-			continue
-		}
-		if strings.EqualFold(filepath.Base(filepath.FromSlash(p)), "tasks.md") {
-			hit = p
-			break
-		}
-	}
-	if hit == "" {
-		return "", resolvedRoot, fmt.Errorf("tasks.md not found for ticket: %s", ticketID)
-	}
-
-	return filepath.FromSlash(hit), resolvedRoot, nil
+	return filepath.Join(ticketDir, "tasks.md"), resolvedRoot, nil
 }
 
 func parseTasksFromLines(lines []string) []parsedTask {

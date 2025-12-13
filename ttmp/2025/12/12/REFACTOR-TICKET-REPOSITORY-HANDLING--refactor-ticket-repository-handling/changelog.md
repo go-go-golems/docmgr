@@ -435,3 +435,12 @@ Ported doc relate to Workspace.QueryDocs for resolving target docs and to Worksp
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/relate.go — Relate now uses DiscoverWorkspace+InitIndex+QueryDocs for doc selection and normalization
 
+
+## 2025-12-13
+
+Added a cleanup-inspectors brief for Task 18 to inventory duplicated walkers/helpers and define replacement guidelines.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/08-cleanup-inspectors-brief-task-18.md — New brief + starting map for Task 18 cleanup work
+

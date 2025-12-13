@@ -89,6 +89,8 @@ RelatedFiles:
       Note: |-
         Diary-driven code review walkthrough that uses the diary as its narrative structure.
         Diary-driven code review walkthrough document (Step 15 reviewer instructions)
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/08-cleanup-inspectors-brief-task-18.md
+      Note: Brief for cleanup inspectors to inventory duplicated walkers/helpers (Task 18)
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
       Note: Spec driving this refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/tasks.md
@@ -97,6 +99,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -873,3 +876,48 @@ go test ./... -count=1
 ```
 
 **Commit**: `859f86d128f0acf6b8fda37976c86589e7f15861`
+
+## Step 17: Create a “cleaning inspectors” brief for Task 18
+
+This step sets up the next phase of the refactor (Task 18) in a way that stays tedious-but-conscientious without getting chaotic. Instead of jumping straight into deleting helpers and rewiring commands, we created a structured brief for a “crew of cleaning inspectors” to inventory all duplicated walkers/helpers and to define crisp cleanup guidelines. The goal is to turn cleanup into a checklist-driven sequence of small PRs rather than a messy, high-risk refactor blob.
+
+The deliverable is intentionally procedural: it describes what to search for, how to classify each finding, what the canonical replacements are (Workspace discovery + QueryDocs + resolver), and how to validate each cleanup step. This should make it easy to delegate the reporting work and keep implementation decisions consistent.
+
+### What I did
+- Added a new ticket doc: `analysis/08-cleanup-inspectors-brief-task-18.md`
+- Filled it with:
+  - mission + scope + constraints
+  - inventory table template (required fields)
+  - search patterns + starting file map (known hotspots)
+  - cleanup guidelines (“when you see X, replace with Y”)
+  - validation guidance (tests + scenario suite)
+- Related key starting-point files to the brief doc (so inspectors can jump directly).
+
+### Why
+- Task 18 touches many commands and helper paths; without a structured inventory it’s easy to miss edge cases or regress behavior.
+- A written guideline set keeps “cleanup” consistent: fewer one-off choices, fewer accidental semantic changes.
+
+### What worked
+- We now have a single place that enumerates what to look for and how to report it, so implementation can proceed in small, low-risk chunks.
+
+### What didn’t work
+- Nothing yet; this is intentionally a planning/reporting step.
+
+### What I learned
+- A cleanup phase is much safer when the *reporting burden* is separated from the *implementation burden*.
+
+### What was tricky to build
+- **Balancing strictness vs flexibility**: we want strong “replace with Workspace” guidance without forbidding filesystem-level operations where they’re actually required (e.g., true file moves).
+
+### What warrants a second pair of eyes
+- **Starting map completeness**: verify we didn’t miss obvious command hotspots (especially anything still calling `findTicketDirectory` or doing `filepath.Walk*` over docs).
+
+### Code review instructions (for a reviewer)
+- Read `analysis/08-cleanup-inspectors-brief-task-18.md` and confirm:
+  - the inventory template is actionable
+  - the replacement guidance matches current Workspace/QueryDocs semantics
+  - the “where to look first” list corresponds to actual code usage
+
+### Technical details
+- New doc:
+  - `ttmp/.../analysis/08-cleanup-inspectors-brief-task-18.md`

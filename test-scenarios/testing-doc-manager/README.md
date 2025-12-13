@@ -5,6 +5,7 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 ## Prerequisites
 
 - **Required**: pin the binary under test via `DOCMGR_PATH` (do not rely on `docmgr` from `PATH`).
+- Optional (recommended): `scenariolog` (scenario logging flight recorder). If unset, `run-all.sh` will build it from the repo into `/tmp/scenariolog-local`.
 - `git` installed
 - `bash` (POSIX shell compatible)
 - Optional for better file suggestions: `rg` (ripgrep) or `grep`
@@ -41,6 +42,10 @@ chmod +x 00-reset.sh 01-create-mock-codebase.sh 02-init-ticket.sh 03-create-docs
 # Build repo binary and pin it (recommended)
 go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
 export DOCMGR_PATH=/tmp/docmgr-scenario-local
+
+# Optional: pin scenariolog explicitly (otherwise run-all.sh will build it)
+# go -C scenariolog build -tags sqlite_fts5 -o /tmp/scenariolog-local ./cmd/scenariolog
+# export SCENARIOLOG_PATH=/tmp/scenariolog-local
 
 # Run the full scenario (uses /tmp/docmgr-scenario by default)
 ./run-all.sh /tmp/docmgr-scenario

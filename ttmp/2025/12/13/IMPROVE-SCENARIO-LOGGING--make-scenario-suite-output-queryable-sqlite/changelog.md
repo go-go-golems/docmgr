@@ -44,3 +44,14 @@ Step 1: Scaffold scenariolog module + migrations; add graceful FTS5 fallback (co
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/migrate.go — Migrations + FTS5 best-effort
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 1
 
+
+## 2025-12-13
+
+Step 2: Add scenariolog run start/end lifecycle (commit 1ecfe225f95076b8b8df77fcd7821b62ca65566f).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/cmd/scenariolog/main.go — Cobra run start/end commands
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/run.go — Run start/end DB helpers
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 2
+

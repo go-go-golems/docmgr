@@ -10,26 +10,31 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: scenariolog/go.mod
-      Note: Self-contained tool module (dependencies + toolchain)
     - Path: scenariolog/README.md
       Note: Build instructions + FTS5 enablement/fallback notes
     - Path: scenariolog/cmd/scenariolog/main.go
       Note: Cobra entrypoint (currently `init`; will grow)
+    - Path: scenariolog/go.mod
+      Note: Self-contained tool module (dependencies + toolchain)
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
+    - Path: scenariolog/internal/scenariolog/ids.go
+      Note: Run id generation
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
-    - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
-      Note: Ticket checklist; keep in sync with implementation progress
+    - Path: scenariolog/internal/scenariolog/run.go
+      Note: StartRun/EndRun implementation
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
+    - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
+      Note: Ticket checklist; keep in sync with implementation progress
 ExternalSources: []
-Summary: "Implementation diary for building scenariolog (sqlite runs/steps + KV + artifacts + FTS fallback) and integrating it into the scenario suite."
+Summary: Implementation diary for building scenariolog (sqlite runs/steps + KV + artifacts + FTS fallback) and integrating it into the scenario suite.
 LastUpdated: 2025-12-13T17:57:59.478120178-05:00
 ---
+
 
 # Diary
 
@@ -127,6 +132,57 @@ This step turned the design into a real, buildable codebase by creating a standa
 
 ### What I'd do differently next time
 - Add a small explicit “capabilities” query (e.g., `scenariolog capabilities`) early, so it’s obvious when FTS is enabled.
+
+## Step 2: Add run lifecycle (run start/end)
+
+This step added the minimal “run lifecycle” layer: the CLI can now start a run, print a generated `run_id`, and later finalize the run with an exit code and computed duration. This unlocks the next steps (steps/scripts and artifacts) because we now have a stable parent row to attach everything to.
+
+**Commit (code):** 1ecfe225f95076b8b8df77fcd7821b62ca65566f — "scenariolog: add run start/end lifecycle"
+
+### What I did
+- Added run ID generation (`scenariolog/internal/scenariolog/ids.go`)
+- Added `StartRun` / `EndRun` helpers and a unit test (`scenariolog/internal/scenariolog/run.go`, `run_test.go`)
+- Extended the Cobra CLI with:
+  - `scenariolog run start --db ... --root-dir ... [--suite ...] [--run-id ...]`
+  - `scenariolog run end --db ... --run-id ... --exit-code ...`
+
+### Why
+- The schema is run-scoped; without a real run lifecycle, the harness can’t reliably attach step/command rows.
+
+### What worked
+- `go -C scenariolog test ./...` passes.
+- `scenariolog run start` prints a run id and writes a row to `scenario_runs`.
+- `scenariolog run end` finalizes the run and stores `exit_code` + `duration_ms`.
+
+### What didn't work
+- N/A (for this step).
+
+### What I learned
+- Keeping timestamps in RFC3339Nano makes duration computation straightforward, but parsing needs a small amount of tolerance for legacy/alternate formats.
+
+### What was tricky to build
+- Ensuring we can compute duration robustly even if timestamps are malformed or clocks jump (we clamp negative durations to 0 instead of failing).
+
+### What warrants a second pair of eyes
+- The `NewRunID` format: confirm it’s acceptable for downstream usage (sorting, readability, file naming).
+
+### What should be done in the future
+- N/A (for this step).
+
+### Code review instructions
+- Start at `scenariolog/internal/scenariolog/run.go` and `scenariolog/cmd/scenariolog/main.go` (run commands).
+- Validate end-to-end:
+
+```bash
+go -C scenariolog build -o /tmp/scenariolog-local ./cmd/scenariolog
+RUN_ID=$(/tmp/scenariolog-local run start --db /tmp/scenario-run-test.db --root-dir /tmp/scenario --suite test-suite)
+/tmp/scenariolog-local run end --db /tmp/scenario-run-test.db --run-id \"$RUN_ID\" --exit-code 0
+rm -f /tmp/scenario-run-test.db
+```
+
+### Technical details
+- Inserts into `scenario_runs` on start.
+- Updates `scenario_runs.completed_at`, `exit_code`, and `duration_ms` on end.
 
 ## Related
 

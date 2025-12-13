@@ -61,8 +61,8 @@ This task list is the actionable checklist that implements:
 - [ ] Implement command settings parsing via `parsedLayers.InitializeStruct(...)` (don’t read Cobra flags directly)
 - [ ] Implement commands:
 - [x] `scenariolog init --db`
-  - [ ] `scenariolog run start --db --root-dir --suite` (returns run_id)
-  - [ ] `scenariolog run end --db --run-id --exit-code`
+- [x] `scenariolog run start --db --root-dir --suite` (returns run_id)
+- [x] `scenariolog run end --db --run-id --exit-code`
   - [ ] `scenariolog exec --db --run-id --kind step --step-num --name --log-dir -- <cmd...>`
   - [ ] `scenariolog search --db --query ...` (Glazed structured output)
   - [ ] `scenariolog summary --db [--run-id]` (Glazed structured output)

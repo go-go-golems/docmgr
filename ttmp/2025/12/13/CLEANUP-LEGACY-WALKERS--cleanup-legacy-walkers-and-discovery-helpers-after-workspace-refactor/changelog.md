@@ -13,3 +13,21 @@ Created cleanup ticket derived from REFACTOR-TICKET-REPOSITORY-HANDLING Task 18.
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md — Cleanup overview and migration guide
 
+
+## 2025-12-13
+
+Step 1: Migrated status.go to QueryDocs. Replaced CollectTicketWorkspaces + filepath.Walk with Workspace.QueryDocs for ticket discovery and doc enumeration. Preserved output format and behavior. Tests pass.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/status.go — Migrated to QueryDocs
+
+
+## 2025-12-13
+
+Step 1.1: Migrated status.go to Workspace.QueryDocs (commit f61606c)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/status.go — Migrated to QueryDocs; removed CollectTicketWorkspaces + filepath.Walk
+

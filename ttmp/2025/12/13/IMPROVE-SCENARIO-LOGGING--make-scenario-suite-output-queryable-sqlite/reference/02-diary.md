@@ -13,19 +13,21 @@ RelatedFiles:
     - Path: scenariolog/README.md
       Note: Build instructions + FTS5 enablement/fallback notes
     - Path: scenariolog/cmd/scenariolog/main.go
-      Note: Cobra entrypoint (currently `init`; will grow)
+      Note: |-
+        Cobra entrypoint (currently `init`; will grow)
+        SIGINT notify context
     - Path: scenariolog/go.mod
       Note: Self-contained tool module (dependencies + toolchain)
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
+    - Path: scenariolog/internal/scenariolog/exec_step_cancel_linux_test.go
+      Note: Linux cancellation test
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
-    - Path: test-scenarios/testing-doc-manager/README.md
-      Note: Harness docs
-    - Path: test-scenarios/testing-doc-manager/run-all.sh
-      Note: Harness integration
+    - Path: scenariolog/internal/scenariolog/procgroup_unix.go
+      Note: Process group kill
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
@@ -324,6 +326,29 @@ go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
 DOCMGR_PATH=/tmp/docmgr-scenario-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
 sqlite3 /tmp/docmgr-scenario/.scenario-run.db "SELECT step_num, step_name, exit_code FROM steps ORDER BY step_num;"
 ```
+
+## Step 7: Kill full process group on cancellation (no child leaks)
+
+This step hardened `ExecStep` so canceling the context kills the **entire child process group** (not just the direct child). This prevents background processes spawned by a step from leaking after timeouts/cancellation.
+
+**Commit (code):** 194b2d9428f508ff7365baf16c2d94d7b1b032f4 — "scenariolog: kill process group on cancel"
+
+### What I did
+- Run commands in their own process group on Unix (`Setpgid=true`)
+- On context cancellation, send `SIGTERM` then `SIGKILL` to the process group (best-effort)
+- Added a Linux integration-style test that spawns a child `sleep`, cancels, and asserts the child pid disappears from `/proc`
+
+### What warrants a second pair of eyes
+- Process-group semantics and signal choices (`TERM` then `KILL`) for our scenario workloads.
+
+## Step 8: Treat CTRL-C as cancellation for `scenariolog exec`
+
+This step made `scenariolog exec` behave nicely on interactive CTRL-C: we convert SIGINT to context cancellation so the exec wrapper can kill the child process group and still finalize sqlite rows (rather than being abruptly terminated mid-flight).
+
+**Commit (code):** 99b1439266e7900c9dabd6ca2bf69dd27f97898e — "scenariolog: cancel exec on SIGINT"
+
+### What I did
+- Wrapped the `exec` command context with `signal.NotifyContext(ctx, os.Interrupt)` and passed that context down to DB ops + `ExecStep`.
 
 ## Related
 

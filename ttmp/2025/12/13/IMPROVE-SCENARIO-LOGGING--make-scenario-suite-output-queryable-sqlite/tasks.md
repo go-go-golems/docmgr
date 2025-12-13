@@ -33,7 +33,7 @@ This task list is the actionable checklist that implements:
 - [x] Implement process execution wrapper with:
 - [x] stdout/stderr capture to files
 - [x] timing + exit code capture
-  - [ ] signal/ctx cancellation best-effort finalization
+- [x] signal/ctx cancellation best-effort finalization
 - [x] Insert stdout/stderr into `artifacts` (kind, path, sha256, size_bytes, is_text)
 - [ ] Optional: also keep `steps.stdout_path`/`steps.stderr_path` columns in sync (if we keep those columns)
 - [ ] Add KV tags (provenance):
@@ -56,7 +56,7 @@ This task list is the actionable checklist that implements:
 
 ### Phase 4 — CLI (Cobra + Glazed)
 
-- [ ] Create `scenariolog/cmd/scenariolog` Cobra root command
+- [x] Create `scenariolog/cmd/scenariolog` Cobra root command
 - [ ] Add Glazed help system wiring (help system + richer help)
 - [ ] Implement command settings parsing via `parsedLayers.InitializeStruct(...)` (don’t read Cobra flags directly)
 - [ ] Implement commands:
@@ -86,6 +86,6 @@ This task list is the actionable checklist that implements:
 
 ### Phase 6 — Hardening / polish
 
-- [ ] Ensure ctrl-c produces a usable DB (run row + partial steps)
-- [ ] Ensure sqlite locking is handled (busy timeout, single writer patterns)
+- [x] Ensure ctrl-c produces a usable DB (run row + partial steps)
+- [x] Ensure sqlite locking is handled (busy timeout, single writer patterns)
 - [ ] Add a “prune” or “cleanup” helper (optional)

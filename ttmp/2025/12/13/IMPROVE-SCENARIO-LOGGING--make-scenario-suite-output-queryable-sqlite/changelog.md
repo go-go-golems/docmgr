@@ -103,3 +103,15 @@ Step 6: Integrate scenariolog into scenario harness (run-all.sh) (commit b2a11b6
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Wrap steps with scenariolog run/exec/end + EXIT trap
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 6
 
+
+## 2025-12-13
+
+Step 7-8: Hardening exec cancellation (kill process group) + handle SIGINT as cancellation (commits 194b2d9428f508ff7365baf16c2d94d7b1b032f4, 99b1439266e7900c9dabd6ca2bf69dd27f97898e).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/cmd/scenariolog/main.go — SIGINT cancels exec
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/exec_step.go — Cancel => terminate process group
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/procgroup_unix.go — Unix process group management
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary steps 7-8
+

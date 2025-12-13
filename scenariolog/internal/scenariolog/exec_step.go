@@ -102,6 +102,7 @@ func ExecStep(ctx context.Context, db *sql.DB, spec ExecStepSpec) (*ExecStepResu
 	if spec.WorkDir != "" {
 		cmd.Dir = spec.WorkDir
 	}
+	setProcessGroup(cmd)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -119,6 +120,20 @@ func ExecStep(ctx context.Context, db *sql.DB, spec ExecStepSpec) (*ExecStepResu
 		return nil, errors.Wrap(err, "start command")
 	}
 
+	// If our context is canceled, kill the whole process group so children don't leak.
+	// exec.CommandContext will only kill the direct process; we want the full subtree.
+	stopCh := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			if cmd.Process != nil {
+				terminateProcessGroupBestEffort(cmd.Process.Pid)
+			}
+		case <-stopCh:
+			return
+		}
+	}()
+
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		_, err := io.Copy(stdoutFile, stdoutPipe)
@@ -130,6 +145,7 @@ func ExecStep(ctx context.Context, db *sql.DB, spec ExecStepSpec) (*ExecStepResu
 	})
 	waitErr := cmd.Wait()
 	copyErr := eg.Wait()
+	close(stopCh)
 
 	completedAt := time.Now()
 	exitCode := exitCodeFromWaitErr(waitErr)

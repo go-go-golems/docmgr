@@ -177,3 +177,12 @@ Step 3.3: Migrated layout_fix.go discovery to Workspace.QueryDocs (commit c72e0d
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/layout_fix.go — Replaced legacy root scan/findTicketDirectory with QueryDocs
 
+
+## 2025-12-13
+
+Step 3: Migrated import_file.go to Workspace.QueryDocs (commit d2b357a)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/import_file.go — Use QueryDocs to resolve ticket directory
+

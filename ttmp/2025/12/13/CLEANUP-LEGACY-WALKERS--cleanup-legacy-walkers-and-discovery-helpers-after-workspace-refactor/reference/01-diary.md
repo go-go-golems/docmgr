@@ -14,6 +14,8 @@ RelatedFiles:
       Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
     - Path: pkg/commands/doc_move.go
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
+    - Path: pkg/commands/import_file.go
+      Note: Phase 3 migrated import file ticket discovery to Workspace.QueryDocs (commit d2b357a)
     - Path: pkg/commands/layout_fix.go
       Note: Phase 3.3 migrated layout-fix discovery to Workspace.QueryDocs (commit c72e0db)
     - Path: pkg/commands/meta_update.go
@@ -24,6 +26,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 
@@ -591,3 +594,37 @@ This step removes `layout-fix`’s remaining legacy discovery logic: a mix of `f
 
 ### Code review instructions
 - Start in `pkg/commands/layout_fix.go` and review the new ticket directory enumeration logic in `applyLayoutFix`.
+
+## Step 15: Migrate `import file` ticket discovery to Workspace+QueryDocs (Phase 3)
+
+This step migrates `import file` off the legacy `findTicketDirectory` helper (which internally depended on `CollectTicketWorkspaces`). The command now discovers the Workspace, builds the index, and resolves the ticket directory via `QueryDocs` (ticket `index.md`) before writing into `sources/local/` and updating `.meta/sources.yaml` and the ticket `index.md`.
+
+**Commit (code):** `d2b357a` — "Cleanup: migrate import file to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/import_file.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve `ticketDir` via `resolveTicketDirViaWorkspace(...)` (QueryDocs-based) instead of `findTicketDirectory`.
+- Threaded `context.Context` into `importFile` and updated both glaze + bare callsites.
+
+### Why
+- Eliminate another `findTicketDirectory` callsite and remove reliance on legacy workspace collection.
+- Keep ticket directory resolution consistent with the canonical Workspace index.
+
+### What worked
+- Tests and lint stayed green.
+- Behavior of the import itself is unchanged (copy file into `sources/local/`, append `.meta/sources.yaml`, and add `local:<name>` to `index.md` ExternalSources).
+
+### What was tricky to build
+- **Context threading**: both Glaze and bare modes now call `importFile(ctx, ...)` so the Workspace lifecycle is consistent with other QueryDocs migrations.
+- **TicketDir contract**: importing relies on writing into the ticket directory; this must be derived from the canonical index doc path, not directory heuristics.
+
+### What warrants a second pair of eyes
+- **Index update semantics**: confirm adding `local:<destName>` to `ExternalSources` remains the intended contract and doesn’t conflict with the new source metadata stored in `.meta/sources.yaml`.
+- **Legacy helper cleanup**: confirm there are no remaining `findTicketDirectory` callsites besides the ones we intend to migrate/delete in Phase 4.
+
+### What should be done in the future
+- Once Phase 4 deletes `findTicketDirectory`, consider moving the QueryDocs-based “ticket dir resolver” into an explicit shared helper file to avoid it living incidentally in another command’s file.
+
+### Code review instructions
+- Start in `pkg/commands/import_file.go` and review `importFile` ticketDir resolution and the subsequent writes.

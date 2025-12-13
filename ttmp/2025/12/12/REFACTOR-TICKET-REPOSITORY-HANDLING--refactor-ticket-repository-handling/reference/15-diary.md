@@ -981,4 +981,4 @@ The new ticket (CLEANUP-LEGACY-WALKERS) includes a comprehensive design document
   - `ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/tasks.md` (23 tasks)
 
 ### Git commit
-- (pending)
+- `407705722ad68456c924c50a6b9b92bec92687dc`

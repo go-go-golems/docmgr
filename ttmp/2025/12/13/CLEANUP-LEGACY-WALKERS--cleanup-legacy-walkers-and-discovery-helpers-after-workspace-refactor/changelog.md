@@ -50,3 +50,12 @@ Step 1.3: Migrated list.go to Workspace.QueryDocs (commit 0ec09da)
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/list.go — Replaced CollectTicketWorkspaces
 
+
+## 2025-12-13
+
+Diary: add 'what should be done in the future' sections for Steps 1–3
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/reference/01-diary.md — Added future-work guidance sections for reviewer triage
+

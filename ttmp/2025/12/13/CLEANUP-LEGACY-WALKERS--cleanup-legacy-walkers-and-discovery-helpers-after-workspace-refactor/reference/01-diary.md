@@ -101,6 +101,10 @@ This step removes the last major “status-style” legacy traversal: enumeratin
 - **Counting semantics**: confirm we’re still counting the same set of files the old `filepath.Walk(ticketDir)` would have seen (especially around tagged paths like `archive/`, `scripts/`, control docs, and anything skipped by canonical ingestion rules).
 - **Index doc identification**: confirm the `index.md`/`DocType=index` detection is the right invariant for status aggregation (and doesn’t accidentally “promote” a non-ticket index doc).
 
+### What should be done in the future
+- If reviewers/users report “missing docs” in counts, treat it as a **QueryDocs visibility/tagging semantics** question (not a reason to reintroduce walking). Decide whether the status command should include/exclude additional tagged categories by adjusting QueryDocs options, and document the chosen semantics.
+- If the `index.md`/`DocType=index` assumption ever becomes invalid for some workspace layouts, that’s an **architecture constraint**: either enforce it harder (doctor/scaffold) or introduce a single canonical way to identify ticket roots—do not reintroduce per-command heuristics.
+
 ### Code review instructions
 - Start in `pkg/commands/status.go` and review `computeStatusTickets`.
 - Smoke:
@@ -138,6 +142,10 @@ This step migrates `list tickets` off the legacy `CollectTicketWorkspaces` walke
 - **Filter semantics**: confirm that switching from substring match to exact match is acceptable across both human and glaze output, and that it’s documented clearly enough for users.
 - **Tasks counting**: we now derive the ticket dir from the `index.md` path; verify that `countTasksInTicket(ticketDir)` still points at the correct `tasks.md` for all ticket layouts.
 
+### What should be done in the future
+- If any scripts/docs were relying on substring semantics for `--ticket`, **update those call sites** to pass the exact ticket ID (or move them to a different selection mechanism). Per the spec, we should not add compatibility flags like `--ticket-contains`.
+- If users get confused by the behavior change, the right follow-up is **documentation** (help text / docs) and **tests** that codify exact-match semantics—not a compatibility layer.
+
 ### Code review instructions
 - Start in `pkg/commands/list_tickets.go` and review `queryTicketIndexDocs`.
 - Smoke:
@@ -170,6 +178,10 @@ This step migrates the legacy `docmgr list` command (workspaces listing) off `Co
 ### What warrants a second pair of eyes
 - **Column semantics**: confirm `path` should be ticket-dir-root-relative (not the `index.md` file path, and not absolute) now that we’ve removed compatibility constraints.
 - **Filter semantics**: confirm ticket filtering is exact-match (QueryDocs semantics) and that’s acceptable for this legacy alias command.
+
+### What should be done in the future
+- If `docmgr list` and `docmgr list tickets` diverge again, treat it as a **regression**: they should be thin wrappers over the same QueryDocs semantics, not independent walkers.
+- If the `path` column becomes contentious (absolute vs root-relative vs “ticket dir”), resolve it by **declaring a single contract** and updating downstream scripts/tests accordingly (no shims).
 
 ### Code review instructions
 - Start in `pkg/commands/list.go`.

@@ -442,16 +442,37 @@ func (c *SearchCommand) suggestFiles(
 	settings *SearchSettings,
 	gp middlewares.Processor,
 ) error {
-	// Find ticket directory if specified
-	var ticketDir string
-	var err error
-	if settings.Ticket != "" {
-		ticketDir, err = findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	// Find ticket directory if specified (for git/ripgrep heuristics).
+	ticketDir := settings.Root
+	if strings.TrimSpace(settings.Ticket) != "" {
+		idxRes, err := ws.QueryDocs(ctx, workspace.DocQuery{
+			Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
+			Filters: workspace.DocFilters{DocType: "index"},
+			Options: workspace.DocQueryOptions{
+				IncludeErrors:       false,
+				IncludeDiagnostics:  false,
+				IncludeArchivedPath: true,
+				IncludeScriptsPath:  true,
+				IncludeControlDocs:  true,
+				OrderBy:             workspace.OrderByPath,
+			},
+		})
 		if err != nil {
-			return fmt.Errorf("failed to find ticket directory: %w", err)
+			return fmt.Errorf("failed to resolve ticket directory: %w", err)
 		}
-	} else {
-		ticketDir = settings.Root
+		if len(idxRes.Docs) != 1 || strings.TrimSpace(idxRes.Docs[0].Path) == "" {
+			return fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(settings.Ticket))
+		}
+		ticketDir = filepath.Dir(filepath.FromSlash(idxRes.Docs[0].Path))
 	}
 
 	// Collect search terms from query and topics
@@ -470,55 +491,38 @@ func (c *SearchCommand) suggestFiles(
 	suggestedFiles := make(map[string]bool)
 
 	// Search documents for RelatedFiles
-	err = filepath.Walk(ticketDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
-		// Apply topic filter if specified
-		if len(settings.Topics) > 0 {
-			doc, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			topicMatch := false
-			for _, filterTopic := range settings.Topics {
-				for _, docTopic := range doc.Topics {
-					if strings.EqualFold(strings.TrimSpace(filterTopic), strings.TrimSpace(docTopic)) {
-						topicMatch = true
-						break
-					}
-				}
-				if topicMatch {
-					break
-				}
-			}
-			if !topicMatch {
-				return nil
-			}
-		}
-
-		// Collect RelatedFiles from documents
-		doc, err := readDocumentFrontmatter(path)
-		if err != nil {
-			return nil
-		}
-		for _, rf := range doc.RelatedFiles {
-			if rf.Path != "" {
-				suggestedFiles[rf.Path] = true
-			}
-		}
-		return nil
+	scope := workspace.Scope{Kind: workspace.ScopeRepo}
+	if strings.TrimSpace(settings.Ticket) != "" {
+		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	}
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: scope,
+		Filters: workspace.DocFilters{
+			TopicsAny: settings.Topics,
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeBody:         false,
+			IncludeErrors:       false,
+			IncludeDiagnostics:  false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByPath,
+		},
 	})
-
 	if err != nil {
-		return fmt.Errorf("error walking directory %s: %w", ticketDir, err)
+		return fmt.Errorf("failed to query docs for related_files suggestions: %w", err)
+	}
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
+		}
+		for _, rf := range h.Doc.RelatedFiles {
+			if strings.TrimSpace(rf.Path) == "" {
+				continue
+			}
+			suggestedFiles[rf.Path] = true
+		}
 	}
 
 	// Output suggested files from RelatedFiles
@@ -1032,12 +1036,37 @@ func (c *SearchCommand) Run(
 
 	// Suggest files mode
 	if settings.Files {
-		// derive ticketDir
+		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+		if err != nil {
+			return fmt.Errorf("failed to discover workspace: %w", err)
+		}
+		settings.Root = ws.Context().Root
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return fmt.Errorf("failed to initialize workspace index: %w", err)
+		}
+
+		// derive ticketDir (for git/ripgrep heuristics)
 		ticketDir := settings.Root
-		if settings.Ticket != "" {
-			if td, err := findTicketDirectory(settings.Root, settings.Ticket); err == nil {
-				ticketDir = td
+		if strings.TrimSpace(settings.Ticket) != "" {
+			idxRes, err := ws.QueryDocs(ctx, workspace.DocQuery{
+				Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
+				Filters: workspace.DocFilters{DocType: "index"},
+				Options: workspace.DocQueryOptions{
+					IncludeErrors:       false,
+					IncludeDiagnostics:  false,
+					IncludeArchivedPath: true,
+					IncludeScriptsPath:  true,
+					IncludeControlDocs:  true,
+					OrderBy:             workspace.OrderByPath,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to resolve ticket directory: %w", err)
 			}
+			if len(idxRes.Docs) != 1 || strings.TrimSpace(idxRes.Docs[0].Path) == "" {
+				return fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(settings.Ticket))
+			}
+			ticketDir = filepath.Dir(filepath.FromSlash(idxRes.Docs[0].Path))
 		}
 		// collect search terms
 		terms := []string{}
@@ -1046,47 +1075,48 @@ func (c *SearchCommand) Run(
 		}
 		terms = append(terms, settings.Topics...)
 
-		// existing docs' RelatedFiles
+		// existing docs' RelatedFiles (QueryDocs-backed)
 		existing := map[string]bool{}
 		existingNotes := map[string]map[string]bool{}
-		_ = filepath.Walk(ticketDir, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-				return nil
-			}
-			doc, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			if len(settings.Topics) > 0 {
-				match := false
-				for _, ft := range settings.Topics {
-					for _, dt := range doc.Topics {
-						if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
-							match = true
-							break
-						}
-					}
-					if match {
-						break
-					}
-				}
-				if !match {
-					return nil
-				}
-			}
-			for _, rf := range doc.RelatedFiles {
-				if rf.Path != "" {
-					existing[rf.Path] = true
-					if rf.Note != "" {
-						if _, ok := existingNotes[rf.Path]; !ok {
-							existingNotes[rf.Path] = map[string]bool{}
-						}
-						existingNotes[rf.Path][rf.Note] = true
-					}
-				}
-			}
-			return nil
+		scope := workspace.Scope{Kind: workspace.ScopeRepo}
+		if strings.TrimSpace(settings.Ticket) != "" {
+			scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+		}
+		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+			Scope: scope,
+			Filters: workspace.DocFilters{
+				TopicsAny: settings.Topics,
+			},
+			Options: workspace.DocQueryOptions{
+				IncludeBody:         false,
+				IncludeErrors:       false,
+				IncludeDiagnostics:  false,
+				IncludeArchivedPath: true,
+				IncludeScriptsPath:  true,
+				IncludeControlDocs:  true,
+				OrderBy:             workspace.OrderByPath,
+			},
 		})
+		if err != nil {
+			return fmt.Errorf("failed to query docs for related_files suggestions: %w", err)
+		}
+		for _, h := range res.Docs {
+			if h.Doc == nil {
+				continue
+			}
+			for _, rf := range h.Doc.RelatedFiles {
+				if strings.TrimSpace(rf.Path) == "" {
+					continue
+				}
+				existing[rf.Path] = true
+				if strings.TrimSpace(rf.Note) != "" {
+					if _, ok := existingNotes[rf.Path]; !ok {
+						existingNotes[rf.Path] = map[string]bool{}
+					}
+					existingNotes[rf.Path][rf.Note] = true
+				}
+			}
+		}
 		for f := range existing {
 			if f == "" {
 				continue

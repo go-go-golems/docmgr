@@ -12,6 +12,8 @@ Owners: []
 RelatedFiles:
     - Path: internal/workspace/query_docs.go
       Note: Canonical QueryDocs implementation
+    - Path: pkg/commands/changelog.go
+      Note: Phase 1.4 migrated suggestion mode to Workspace.QueryDocs
     - Path: pkg/commands/import_file.go
       Note: Contains findTicketDirectory definition (prime target)
     - Path: pkg/commands/list.go
@@ -30,6 +32,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

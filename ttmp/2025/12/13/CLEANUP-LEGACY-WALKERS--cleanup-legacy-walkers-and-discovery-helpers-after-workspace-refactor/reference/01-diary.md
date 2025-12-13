@@ -10,12 +10,15 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/commands/changelog.go
+      Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 # Diary
@@ -188,3 +191,40 @@ This step migrates the legacy `docmgr list` command (workspaces listing) off `Co
 - Smoke:
   - `docmgr list`
   - `docmgr list --ticket CLEANUP-LEGACY-WALKERS`
+
+## Step 4: Migrate `changelog update --suggest` doc-scan to QueryDocs (Phase 1.4)
+
+This step removes the last place in Phase 1 where we were still doing a manual `filepath.Walk` over markdown files and parsing frontmatter ad-hoc to seed suggestions. The suggestions pipeline now sources “referenced by documents” from the Workspace index (`QueryDocs`), which keeps semantics centralized and removes duplicated skip/parsing logic.
+
+**Commit (code):** `09e1e6f` — "Cleanup: migrate changelog suggest to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/changelog.go` suggestion mode to build a Workspace index and use `QueryDocs` to collect `RelatedFiles` from existing docs, instead of:
+  - `filepath.Walk(searchRoot)` and
+  - `readDocumentFrontmatter(path)`.
+- Kept the other suggestion sources unchanged (git history, ripgrep, git status).
+
+### Why
+- Eliminate the last Phase 1 manual doc traversal/parsing and consolidate semantics in QueryDocs.
+- Reduce duplicated skip rules and parsing behavior across commands.
+
+### What worked
+- Unit tests remained green.
+- Suggestion output is still explainable by “sources” (documents/git/ripgrep/status), but document-derived suggestions now come from a single canonical index.
+
+### What was tricky to build
+- **Scope selection**: ticket-scoped suggestions should query `ScopeTicket` when we have `--ticket`, otherwise `ScopeRepo` (equivalent to scanning the whole root).
+- **Visibility semantics**: deciding which tagged categories of docs should contribute to “referenced by documents” suggestions is now expressed via QueryDocs options (not via walker heuristics).
+
+### What warrants a second pair of eyes
+- **Suggestion semantics shift**: confirm it’s acceptable that the doc-derived suggestion source now reflects QueryDocs’ ingestion/visibility behavior rather than “whatever `filepath.Walk` happened to see”.
+- **ChangelogFile mode**: if users call `--changelog-file` without `--ticket`, confirm the repo-scope query is the right contract for doc-derived suggestions.
+
+### What should be done in the future
+- If reviewers observe missing/extra “referenced by documents” suggestions, treat it as a **QueryDocs visibility/options contract** issue (adjust QueryDocs options or documentation), not a reason to reintroduce walking/parsing.
+- Once Phase 2 removes `findTicketDirectory`, consider whether `--changelog-file` should infer ticket scope from the provided file path (architecture choice), but keep it centralized (no per-command heuristics).
+
+### Code review instructions
+- Start in `pkg/commands/changelog.go` and review the `s.Suggest` block inside `RunIntoGlazeProcessor`.
+- Smoke:
+  - `docmgr changelog update --ticket CLEANUP-LEGACY-WALKERS --suggest --query QueryDocs`

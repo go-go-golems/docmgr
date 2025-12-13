@@ -21,7 +21,7 @@
 - [x] [11] Migrate `ticket_close.go` ticket discovery to QueryDocs — Replace both `findTicketDirectory` calls. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.2
 - [x] [12] Migrate `rename_ticket.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `WalkDocuments` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3
 - [x] [13] Migrate `renumber.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `filepath.WalkDir` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3
-- [ ] [14] Migrate `layout_fix.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `filepath.WalkDir` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3
+- [x] [14] Migrate `layout_fix.go` discovery to QueryDocs — Replace `findTicketDirectory` (keep `filepath.WalkDir` for write-path). See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3.3
 - [ ] [15] Migrate `import_file.go` caller to QueryDocs — This file defines `findTicketDirectory` and also uses it. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 3
 
 ## Phase 4: Delete Legacy Helpers

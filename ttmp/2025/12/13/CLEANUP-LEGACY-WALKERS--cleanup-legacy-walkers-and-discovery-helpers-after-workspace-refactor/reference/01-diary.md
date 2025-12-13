@@ -14,10 +14,10 @@ RelatedFiles:
       Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
     - Path: pkg/commands/doc_move.go
       Note: Phase 3.2 migrated doc move to Workspace.QueryDocs (commit 770e33f)
+    - Path: pkg/commands/layout_fix.go
+      Note: Phase 3.3 migrated layout-fix discovery to Workspace.QueryDocs (commit c72e0db)
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
-    - Path: pkg/commands/renumber.go
-      Note: Phase 3.3 migrated renumber discovery to Workspace.QueryDocs (commit 9fd2c8a)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
 ExternalSources: []
@@ -555,3 +555,39 @@ This step removes `renumber`’s remaining dependency on legacy ticket directory
 
 ### Code review instructions
 - Start in `pkg/commands/renumber.go` and review `applyRenumber` (ticketDir resolution) and `updateTicketReferences`.
+
+## Step 14: Migrate `layout-fix` discovery to Workspace+QueryDocs (Phase 3.3)
+
+This step removes `layout-fix`’s remaining legacy discovery logic: a mix of `findTicketDirectory` for `--ticket` and an ad-hoc `os.ReadDir(root)` scan that only worked for flat ticket layouts. Ticket discovery is now driven by the Workspace index via `QueryDocs`, which correctly finds tickets under the date-based path template.
+
+**Commit (code):** `c72e0db` — "Cleanup: migrate layout-fix discovery to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/layout_fix.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve ticket directories via QueryDocs:
+    - `--ticket`: `resolveTicketDirViaWorkspace(...)`
+    - no `--ticket`: `QueryDocs(ScopeRepo, DocType=index)` and derive ticketDir from each `index.md`.
+- Threaded `context.Context` into `applyLayoutFix` and updated both glaze + bare callsites.
+
+### Why
+- Remove legacy discovery helpers to unblock Phase 4 deletion.
+- Fix the “scan all tickets” behavior for modern date-based layouts (QueryDocs is the canonical discovery).
+
+### What worked
+- Tests and lint stayed green.
+- The write-path behavior (WalkDir + move docs + update intra-ticket references) is unchanged.
+
+### What was tricky to build
+- **Ticket enumeration**: the old root scan was layout-sensitive; QueryDocs enumeration now needs deduplication and stable ordering of ticketDirs.
+- **Scope/visibility**: we intentionally keep enumeration limited (no archive/scripts) unless explicitly targeted by `--ticket`.
+
+### What warrants a second pair of eyes
+- **Enumeration semantics change**: confirm it’s acceptable that `layout-fix` now finds tickets under date-based templates (previously it effectively didn’t).
+- **Skip rules**: confirm that excluding archive/scripts in the index query matches the intended contract for this maintenance command.
+
+### What should be done in the future
+- If we want to support fixing archived tickets, add an explicit flag/option and document it (rather than broadening defaults silently).
+
+### Code review instructions
+- Start in `pkg/commands/layout_fix.go` and review the new ticket directory enumeration logic in `applyLayoutFix`.

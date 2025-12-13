@@ -168,3 +168,12 @@ Step 3.3: Migrated renumber.go discovery to Workspace.QueryDocs (commit 9fd2c8a)
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/renumber.go — Replaced findTicketDirectory with QueryDocs
 
+
+## 2025-12-13
+
+Step 3.3: Migrated layout_fix.go discovery to Workspace.QueryDocs (commit c72e0db)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/layout_fix.go — Replaced legacy root scan/findTicketDirectory with QueryDocs
+

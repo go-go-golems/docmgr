@@ -20,6 +20,8 @@ RelatedFiles:
       Note: Phase 3.2 migrated doc move ticket discovery to Workspace.QueryDocs (commit 770e33f)
     - Path: pkg/commands/import_file.go
       Note: Contains findTicketDirectory definition (prime target)
+    - Path: pkg/commands/layout_fix.go
+      Note: Phase 3.3 migrated layout-fix discovery to Workspace.QueryDocs (commit c72e0db)
     - Path: pkg/commands/list.go
       Note: Phase 1.3 migrated to Workspace.QueryDocs
     - Path: pkg/commands/list_tickets.go
@@ -54,6 +56,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

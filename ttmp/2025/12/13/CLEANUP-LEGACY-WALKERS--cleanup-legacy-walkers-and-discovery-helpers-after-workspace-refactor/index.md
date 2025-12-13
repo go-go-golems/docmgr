@@ -14,6 +14,8 @@ RelatedFiles:
       Note: Canonical QueryDocs implementation
     - Path: pkg/commands/import_file.go
       Note: Contains findTicketDirectory definition (prime target)
+    - Path: pkg/commands/list.go
+      Note: Phase 1.3 migrated to Workspace.QueryDocs
     - Path: pkg/commands/list_tickets.go
       Note: Phase 1.2 migrated to Workspace.QueryDocs
     - Path: pkg/commands/status.go
@@ -28,6 +30,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

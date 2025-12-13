@@ -4,7 +4,7 @@
 
 - [x] [1] Migrate `status.go` to QueryDocs — Replace `CollectTicketWorkspaces` + `filepath.Walk` with `ws.QueryDocs`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 1.1
 - [x] [2] Migrate `list_tickets.go` to QueryDocs — Replace `CollectTicketWorkspaces`. Note: ticket filter changes from substring to exact match. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 1.2
-- [ ] [3] Migrate `list.go` to QueryDocs — Replace `CollectTicketWorkspaces`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 1.3
+- [x] [3] Migrate `list.go` to QueryDocs — Replace `CollectTicketWorkspaces`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 1.3
 - [ ] [4] Migrate `changelog.go` suggestion mode to QueryDocs — Replace `filepath.Walk` + manual parsing. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 1.4
 
 ## Phase 2: Write-Path Discovery

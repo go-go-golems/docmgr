@@ -41,3 +41,12 @@ Step 1.2: Migrated list_tickets.go to Workspace.QueryDocs (commits 024993a, f23a
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/list_tickets.go — Replaced CollectTicketWorkspaces; exact-match ticket filter
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md — No backwards compatibility policy
 
+
+## 2025-12-13
+
+Step 1.3: Migrated list.go to Workspace.QueryDocs (commit 0ec09da)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/list.go — Replaced CollectTicketWorkspaces
+

@@ -143,3 +143,36 @@ This step migrates `list tickets` off the legacy `CollectTicketWorkspaces` walke
 - Smoke:
   - `docmgr list tickets`
   - `docmgr list tickets --ticket CLEANUP-LEGACY-WALKERS`
+
+## Step 3: Migrate `list` to Workspace+QueryDocs (Phase 1.3)
+
+This step migrates the legacy `docmgr list` command (workspaces listing) off `CollectTicketWorkspaces` and onto `Workspace.QueryDocs` with a `DocType=index` filter. The output is still the same conceptual table (ticket/title/status/topics/path/last_updated), but it is now derived from the canonical in-memory index.
+
+**Commit (code):** `0ec09da` — "Cleanup: migrate list to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/list.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - `QueryDocs(ScopeRepo, Filters{DocType=index, Ticket, Status})` instead of `CollectTicketWorkspaces`.
+- Ran `gofmt` and `go test ./... -count=1`.
+
+### Why
+- Remove the last remaining direct `CollectTicketWorkspaces` usage in Phase 1 commands.
+- Consolidate ticket/workspace enumeration behind QueryDocs (single semantics).
+
+### What worked
+- Tests and lint stayed green.
+
+### What was tricky to build
+- **Path output**: QueryDocs gives an `index.md` file path; we derive the ticket directory and emit a root-relative path for consistency.
+- **Ordering semantics**: Query order is now explicit (`OrderByLastUpdated DESC`) instead of relying on walker ordering.
+
+### What warrants a second pair of eyes
+- **Column semantics**: confirm `path` should be ticket-dir-root-relative (not the `index.md` file path, and not absolute) now that we’ve removed compatibility constraints.
+- **Filter semantics**: confirm ticket filtering is exact-match (QueryDocs semantics) and that’s acceptable for this legacy alias command.
+
+### Code review instructions
+- Start in `pkg/commands/list.go`.
+- Smoke:
+  - `docmgr list`
+  - `docmgr list --ticket CLEANUP-LEGACY-WALKERS`

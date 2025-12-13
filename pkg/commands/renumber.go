@@ -71,7 +71,7 @@ func (c *RenumberCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.applyRenumber(settings)
+	result, err := c.applyRenumber(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -120,10 +120,22 @@ func updateTicketReferences(ticketDir string, renameMap map[string]string) error
 var _ cmds.GlazeCommand = &RenumberCommand{}
 var _ cmds.BareCommand = &RenumberCommand{}
 
-func (c *RenumberCommand) applyRenumber(settings *RenumberSettings) (*RenumberResult, error) {
+func (c *RenumberCommand) applyRenumber(ctx context.Context, settings *RenumberSettings) (*RenumberResult, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 	}
@@ -214,7 +226,7 @@ func (c *RenumberCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.applyRenumber(settings)
+	result, err := c.applyRenumber(ctx, settings)
 	if err != nil {
 		return err
 	}

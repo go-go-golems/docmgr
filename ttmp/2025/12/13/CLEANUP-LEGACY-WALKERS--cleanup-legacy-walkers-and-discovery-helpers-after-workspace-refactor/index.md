@@ -24,6 +24,8 @@ RelatedFiles:
       Note: Phase 1.2 migrated to Workspace.QueryDocs
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated to Workspace.QueryDocs
+    - Path: pkg/commands/search.go
+      Note: Phase 3.1 migrated search --files suggestion path to Workspace.QueryDocs (commit eadda8d)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migrated to Workspace.QueryDocs
     - Path: pkg/commands/tasks.go
@@ -42,6 +44,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

@@ -14,10 +14,10 @@ RelatedFiles:
       Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
     - Path: pkg/commands/meta_update.go
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
+    - Path: pkg/commands/search.go
+      Note: Phase 3.1 migrated search suggestion doc-scan to Workspace.QueryDocs (commit eadda8d)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
-    - Path: pkg/commands/tasks.go
-      Note: Phase 2.3 migrated tasks ticket discovery to Workspace.QueryDocs (commit 234f42c)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
@@ -339,3 +339,43 @@ This step removes `tasks`’ remaining legacy ticket directory heuristics (subst
 
 ### Code review instructions
 - Start in `pkg/commands/tasks.go` and review `loadTasksFile` and `findTasksFileViaWorkspace`.
+
+## Step 8: Migrate `search --files` suggestion doc-scan to Workspace+QueryDocs (Phase 3.1)
+
+This step removes the last `search`-side manual filesystem scan in suggestion mode. Both code paths that emit “referenced by documents” file suggestions (`--with-glaze-output` and human output) now source RelatedFiles via `Workspace.QueryDocs` instead of `filepath.Walk` + `readDocumentFrontmatter`.
+
+**Commit (code):** `eadda8d` — "Cleanup: migrate search suggest to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/search.go` suggestion mode to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - `QueryDocs(ScopeTicket|ScopeRepo, TopicsAny, IncludeControlDocs=true)` and collect `RelatedFiles` from the indexed docs.
+- Removed use of:
+  - `filepath.Walk(...)` over markdown files, and
+  - ad-hoc `readDocumentFrontmatter(...)` parsing in suggestion mode.
+- Preserved the external heuristics (git history, git status, ripgrep/grep).
+
+### Why
+- Consolidate doc discovery + metadata parsing behind QueryDocs for consistent semantics and skip rules.
+- Reduce duplicated frontmatter parsing and ad-hoc directory traversal patterns.
+
+### What worked
+- Tests and lint stayed green.
+- Suggestion output continues to include sources (`related_files`, `git_*`, `ripgrep`) with the doc-derived portion now coming from the canonical index.
+
+### What was tricky to build
+- **TicketDir for heuristics**: git/ripgrep heuristics still need a working directory; for ticket-scoped suggestions we derive it from the ticket’s `index.md` path (QueryDocs) instead of `findTicketDirectory`.
+- **Topic filtering**: topic filtering is now expressed as `DocFilters.TopicsAny` (index-backed), not “parse frontmatter during walk”.
+
+### What warrants a second pair of eyes
+- **Scope semantics**: confirm that `--ticket` correctly limits doc-derived suggestions to `ScopeTicket`, while non-ticket uses `ScopeRepo`.
+- **Visibility options**: confirm `IncludeControlDocs=true` is correct so suggestions include `RelatedFiles` from ticket root docs (index/tasks/changelog) as legacy walk did.
+
+### What should be done in the future
+- If more commands need “derive ticket directory”, consider centralizing the QueryDocs-based derivation into a shared helper (avoid reintroducing `findTicketDirectory`).
+- If suggestion semantics drift, treat it as an index/QueryDocs contract issue (options + docs), not a reason to re-add walking/parsing.
+
+### Code review instructions
+- Start in `pkg/commands/search.go` and review both suggestion paths:
+  - `suggestFiles(...)` (glaze mode)
+  - `if settings.Files { ... }` (human mode)

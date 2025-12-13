@@ -114,3 +114,12 @@ Validation: integration scenario suite passed after Phase 2 (DOCMGR_PATH=/tmp/do
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/README.md — How to build/pin DOCMGR_PATH
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Scenario suite run (Phase 2)
 
+
+## 2025-12-13
+
+Step 3.1: Migrated search.go suggestion mode to Workspace.QueryDocs (commit eadda8d)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/search.go — Replaced filepath.Walk/readDocumentFrontmatter in suggestion mode with QueryDocs
+

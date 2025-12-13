@@ -11,6 +11,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type ExitError struct {
+	Code int
+	Err  error
+}
+
+func (e *ExitError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return fmt.Sprintf("exited with code %d", e.Code)
+}
+
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "scenariolog",
@@ -19,6 +31,7 @@ func newRootCmd() *cobra.Command {
 
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newRunCmd())
+	rootCmd.AddCommand(newExecCmd())
 	return rootCmd
 }
 
@@ -162,9 +175,97 @@ func newRunEndCmd() *cobra.Command {
 	return cmd
 }
 
+func newExecCmd() *cobra.Command {
+	var dbPath string
+	var runID string
+	var rootDir string
+	var logDir string
+	var stepNum int
+	var stepName string
+	var scriptPath string
+
+	cmd := &cobra.Command{
+		Use:   "exec -- <command> [args...]",
+		Short: "Execute a step command, capture stdout/stderr, and log results to sqlite",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if dbPath == "" {
+				return errors.New("--db is required")
+			}
+			if runID == "" {
+				return errors.New("--run-id is required")
+			}
+			if rootDir == "" {
+				return errors.New("--root-dir is required")
+			}
+			if logDir == "" {
+				return errors.New("--log-dir is required")
+			}
+			if stepName == "" {
+				return errors.New("--name is required")
+			}
+
+			ctx := cmd.Context()
+			if ctx == nil {
+				ctx = context.Background()
+			}
+
+			db, err := scenariolog.Open(ctx, dbPath)
+			if err != nil {
+				return err
+			}
+			defer func() { _ = db.Close() }()
+
+			if err := scenariolog.Migrate(ctx, db); err != nil {
+				return err
+			}
+
+			res, err := scenariolog.ExecStep(ctx, db, scenariolog.ExecStepSpec{
+				RunID:      runID,
+				RootDir:    rootDir,
+				LogDir:     logDir,
+				StepNum:    stepNum,
+				StepName:   stepName,
+				ScriptPath: scriptPath,
+				Command:    args,
+			})
+			if err != nil {
+				return err
+			}
+
+			// Human-friendly summary.
+			fmt.Fprintf(os.Stderr, "[scenariolog] step=%s exit=%d duration_ms=%d stdout=%s stderr=%s\n",
+				res.StepID, res.ExitCode, res.DurationMs, res.StdoutPath, res.StderrPath)
+
+			if res.ExitCode != 0 {
+				return &ExitError{
+					Code: res.ExitCode,
+					Err:  fmt.Errorf("step %s exited with code %d", res.StepID, res.ExitCode),
+				}
+			}
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&dbPath, "db", "", "Path to sqlite database file")
+	cmd.Flags().StringVar(&runID, "run-id", "", "Run id to attach this step to")
+	cmd.Flags().StringVar(&rootDir, "root-dir", "", "Root directory for this scenario run (used for cwd + path normalization)")
+	cmd.Flags().StringVar(&logDir, "log-dir", "", "Log directory (relative to root-dir unless absolute; must already exist)")
+	cmd.Flags().IntVar(&stepNum, "step-num", 0, "Step number (used for ordering + filenames)")
+	cmd.Flags().StringVar(&stepName, "name", "", "Step name")
+	cmd.Flags().StringVar(&scriptPath, "script-path", "", "Script path (optional)")
+
+	return cmd
+}
+
 func main() {
 	cmd := newRootCmd()
 	if err := cmd.Execute(); err != nil {
+		var ee *ExitError
+		if errors.As(err, &ee) {
+			_, _ = fmt.Fprintf(os.Stderr, "error: %s\n", ee.Error())
+			os.Exit(ee.Code)
+		}
 		_, _ = fmt.Fprintf(os.Stderr, "error: %+v\n", err)
 		os.Exit(1)
 	}

@@ -68,3 +68,12 @@ Step 1.4: Migrated changelog.go suggestion doc-scan to Workspace.QueryDocs (comm
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/changelog.go — Replaced filepath.Walk + readDocumentFrontmatter with QueryDocs
 
+
+## 2025-12-13
+
+Step 2.1: Migrated add.go ticket discovery to Workspace.QueryDocs (commit a512739)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/add.go — Replaced findTicketDirectory with QueryDocs
+

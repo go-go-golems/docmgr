@@ -9,7 +9,7 @@
 
 ## Phase 2: Write-Path Discovery
 
-- [ ] [5] Migrate `add.go` ticket discovery to QueryDocs — Replace `findTicketDirectory`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 2.1
+- [x] [5] Migrate `add.go` ticket discovery to QueryDocs — Replace `findTicketDirectory`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 2.1
 - [ ] [6] Migrate `meta_update.go` to QueryDocs — Replace `findTicketDirectory` + `findMarkdownFiles`. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 2.2
 - [ ] [7] Migrate `tasks.go` ticket discovery to QueryDocs — Replace `findTicketDirectory` fallback. See: design/01-cleanup-overview-and-migration-guide.md §5 Phase 2.3
 

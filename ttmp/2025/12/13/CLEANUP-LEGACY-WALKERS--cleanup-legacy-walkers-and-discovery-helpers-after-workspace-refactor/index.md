@@ -12,6 +12,8 @@ Owners: []
 RelatedFiles:
     - Path: internal/workspace/query_docs.go
       Note: Canonical QueryDocs implementation
+    - Path: pkg/commands/add.go
+      Note: Phase 2.1 migrated add ticket discovery to Workspace.QueryDocs
     - Path: pkg/commands/changelog.go
       Note: Phase 1.4 migrated suggestion mode to Workspace.QueryDocs
     - Path: pkg/commands/import_file.go
@@ -32,6 +34,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

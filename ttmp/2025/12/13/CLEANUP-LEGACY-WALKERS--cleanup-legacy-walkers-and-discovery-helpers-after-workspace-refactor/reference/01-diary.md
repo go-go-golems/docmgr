@@ -10,6 +10,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/commands/add.go
+      Note: Phase 2.1 migrated add ticket discovery to Workspace.QueryDocs (commit a512739)
     - Path: pkg/commands/changelog.go
       Note: Phase 1.4 migrated suggestion doc-scan to Workspace.QueryDocs (commit 09e1e6f)
     - Path: pkg/commands/status.go
@@ -18,6 +20,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 
@@ -228,3 +231,36 @@ This step removes the last place in Phase 1 where we were still doing a manual `
 - Start in `pkg/commands/changelog.go` and review the `s.Suggest` block inside `RunIntoGlazeProcessor`.
 - Smoke:
   - `docmgr changelog update --ticket CLEANUP-LEGACY-WALKERS --suggest --query QueryDocs`
+
+## Step 5: Migrate `add` ticket discovery to Workspace+QueryDocs (Phase 2.1)
+
+This step removes `add`’s dependency on the legacy `findTicketDirectory` helper. Instead of rediscovering ticket directories by walking/collecting workspaces, `docmgr add` now resolves the ticket workspace by querying the Workspace index for the ticket’s `index.md` and deriving the ticket directory from that canonical result.
+
+**Commit (code):** `a512739` — "Cleanup: migrate add ticket discovery to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/add.go` to resolve the ticket directory via `workspace.DiscoverWorkspace` + `ws.InitIndex` + `ws.QueryDocs(ScopeTicket, DocType=index)` instead of `findTicketDirectory`.
+- Kept the write-path behavior the same (create a new doc under `<doc-type>/` and seed metadata from the ticket index doc).
+
+### Why
+- Remove legacy ticket discovery from write-path commands so we can delete `findTicketDirectory` later.
+- Make ticket resolution consistent across commands by using the same canonical index and normalization rules.
+
+### What worked
+- Tests and lint stayed green.
+- `docmgr add` no longer depends on legacy discovery helpers.
+
+### What was tricky to build
+- **Root resolution**: Workspace discovery may resolve `--root` differently than a naive relative path. The command now pins its root to the Workspace-resolved root to keep template/guideline loading consistent.
+- **Index uniqueness**: `QueryDocs(ScopeTicket, DocType=index)` is assumed to return exactly one result; ambiguity is treated as an error.
+
+### What warrants a second pair of eyes
+- **Ticket workspace selection**: confirm that using the ticket’s `DocType=index` doc as the canonical anchor is the correct invariant for all supported layouts.
+- **Error messaging**: confirm the “ticket not found / ambiguous” errors are actionable for users (especially during partial/scaffolded tickets).
+
+### What should be done in the future
+- When Phase 4 deletes `findTicketDirectory`, ensure all remaining write-path commands use this same QueryDocs-based contract (no fallback walkers).
+- If multiple index-doc edge cases show up in real repos, treat it as an **architecture constraint** (enforce uniqueness / improve doctor findings), not a reason to reintroduce ad-hoc search.
+
+### Code review instructions
+- Start in `pkg/commands/add.go` and review ticket resolution in `createDocument`.

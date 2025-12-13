@@ -14,6 +14,14 @@ type compiledSQL struct {
 }
 
 func compileDocQuery(ctx context.Context, w *Workspace, q DocQuery) (compiledSQL, error) {
+	if q.Options.IncludeErrors {
+		return compileDocQueryWithParseFilter(ctx, w, q, nil)
+	}
+	one := 1
+	return compileDocQueryWithParseFilter(ctx, w, q, &one)
+}
+
+func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuery, parseOKFilter *int) (compiledSQL, error) {
 	_ = ctx // reserved for future compilation-time diagnostics
 
 	var where []string
@@ -30,9 +38,10 @@ func compileDocQuery(ctx context.Context, w *Workspace, q DocQuery) (compiledSQL
 		where = append(where, "d.is_control_doc = 0")
 	}
 
-	// Parse error policy.
-	if !q.Options.IncludeErrors {
-		where = append(where, "d.parse_ok = 1")
+	// Parse state filter (optional).
+	if parseOKFilter != nil {
+		where = append(where, "d.parse_ok = ?")
+		args = append(args, *parseOKFilter)
 	}
 
 	// Scope.
@@ -277,6 +286,3 @@ func relatedDirExistsClause(prefixes []string) (string, []any) {
 	}
 	return "EXISTS (SELECT 1 FROM related_files rf WHERE rf.doc_id = d.doc_id AND (" + strings.Join(parts, " OR ") + "))", args
 }
-
-
-

@@ -348,3 +348,23 @@ Ran contestant #3 (Norma / path normalization) show via scenario harness (includ
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/21-how-to-judge-contestant-3-norma-the-navigator-path-normalization.md — Rubric
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/22-jury-deliberation-contestant-3-norma-the-navigator-path-normalization.md — Deliberation
 
+
+## 2025-12-13
+
+Implement QueryDocs diagnostics contract: emit Taxonomy entries for parse-error docs when IncludeDiagnostics=true (while still excluding them from default results), and warn on reverse-lookup normalization fallback; refactor SQL compiler to support explicit parse_ok filters.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs.go — QueryDocs now collects Diagnostics (parse skips + normalization fallback) and returns them in DocQueryResult.
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/internal/workspace/query_docs_sql.go — SQL compiler now supports explicit parse_ok filtering via compileDocQueryWithParseFilter (used for diagnostics queries).
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/diagnostics/docmgrctx/query_docs.go — New taxonomy constructors for QueryDocs parse-skip and normalization-fallback diagnostics.
+
+
+## 2025-12-13
+
+Checked off implementation tasks: QueryDocs+SQL compiler (Task 7) and QueryDocs diagnostics contract (Task 8).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/tasks.md — Task list updated to mark Tasks 7 and 8 completed.
+

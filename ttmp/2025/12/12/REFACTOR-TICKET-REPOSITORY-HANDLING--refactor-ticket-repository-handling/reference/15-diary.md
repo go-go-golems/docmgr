@@ -34,6 +34,8 @@ RelatedFiles:
       Note: |-
         Nested hydration (topics/related_files) during rows iteration explains why MaxOpenConns(1) caused a hang.
         No-N+1 refactor: QueryDocs now does 1 base query + 2 batched hydration queries (topics/related_files) instead of nested per-row queries.
+    - Path: internal/workspace/query_docs_sql.go
+      Note: Supports compiling parse_ok=0 query variant to surface skipped docs as diagnostics.
     - Path: internal/workspace/query_docs_test.go
       Note: Repro/guardrail tests for QueryDocs defaults + IncludeErrors behavior.
     - Path: internal/workspace/skip_policy.go
@@ -55,6 +57,8 @@ RelatedFiles:
       Note: New Workspace/WorkspaceContext/DiscoverWorkspace skeleton (Task 2, Spec §5.1).
     - Path: pkg/commands/workspace_export_sqlite.go
       Note: Implements  as a classic Run() command.
+    - Path: pkg/diagnostics/docmgrctx/query_docs.go
+      Note: Defines QueryDocs-specific taxonomy types for diagnostics payload (parse skip + normalization fallback).
     - Path: pkg/doc/embedded_docs.go
       Note: Exports embedded pkg/doc/*.md (go:embed) for README table population.
     - Path: test-scenarios/testing-doc-manager/19-export-sqlite.sh
@@ -73,6 +77,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
 
 
 
@@ -550,3 +555,49 @@ go test ./... -count=1
 
 ### What I’d do differently next time
 - Consider making hydration strategy explicit (e.g., “no hydration”, “batch hydration”, “single join”) if we find commands with different needs.
+
+## Step 12: Implement QueryDocs diagnostics (parse skips + normalization fallback)
+
+This step made `QueryDocs` explain itself. The spec’s core UX requirement is that “broken” docs (invalid frontmatter) should not silently disappear: they should be excluded from default results, but still show up as structured diagnostics so users can repair their workspace. In practice, this means `QueryDocs` now has a dual output channel: **Docs** (the normal results) and **Diagnostics** (a list of `core.Taxonomy` entries explaining what was skipped or why matching had to fall back).
+
+The second part of this step improves reverse lookup debuggability: when path normalization can’t derive strong keys (canonical/repo-relative/absolute) and must rely on weaker cleaned/raw matching, `QueryDocs` emits a warning diagnostic. Matching still proceeds (fallback strategy), but results become explainable instead of “mysterious”.
+
+### What I did
+- Added `pkg/diagnostics/docmgrctx/query_docs.go` with QueryDocs-specific taxonomy constructors:
+  - parse-skip (`query_skipped_due_to_parse`)
+  - normalization fallback (`query_normalization_fallback`)
+- Refactored SQL compilation so we can explicitly compile “parse_ok=1”, “parse_ok=0”, or “no parse filter” variants:
+  - `compileDocQueryWithParseFilter(..., parseOKFilter *int)`
+- Updated `Workspace.QueryDocs` to:
+  - emit normalization fallback diagnostics when reverse lookup inputs only yield weak keys
+  - when `IncludeDiagnostics=true` and `IncludeErrors=false`, run a second compiled query with `parse_ok=0` to collect skipped docs and return them as taxonomy entries (without polluting normal results)
+- Checked off Tasks 7 and 8 in the ticket task list once the behavior was implemented and tests were green.
+- Ran `go test ./...` to confirm stability.
+
+### Why
+- Default behavior must hide invalid-frontmatter docs (clean output), but we still need a repair/debug path that explains what got skipped (Spec §10.6 / Decision D1=B).
+- Reverse lookup failures are often “normalization ambiguity” problems; diagnostics make those cases debuggable instead of guesswork (Decision D3=B).
+
+### What worked
+- The implementation is low-risk: the main query behavior stays unchanged; diagnostics are additive.
+- Tests stayed green.
+
+### What didn’t work
+- Nothing significant yet; this is the first “minimum viable” diagnostics pass and will likely evolve as we port commands.
+
+### What I learned
+- It’s much easier to build diagnostics when the query compiler can be parameterized (here: parse state) instead of doing brittle SQL-string rewrites.
+
+### Technical details
+- Files:
+  - `internal/workspace/query_docs.go`
+  - `internal/workspace/query_docs_sql.go`
+  - `pkg/diagnostics/docmgrctx/query_docs.go`
+- Test command:
+
+```bash
+go test ./... -count=1
+```
+
+### What I’d do differently next time
+- Add a focused unit test that asserts the Diagnostics payload shape (stage/symptom/severity/path) for a parse-error doc when `IncludeDiagnostics=true`.

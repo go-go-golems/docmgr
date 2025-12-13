@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
+	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/pkg/errors"
 )
@@ -30,6 +31,46 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 
 	if err := validateDocQuery(q); err != nil {
 		return DocQueryResult{}, err
+	}
+
+	var diags []core.Taxonomy
+	if q.Options.IncludeDiagnostics {
+		// Reverse-lookup normalization diagnostics (best-effort).
+		// We emit a warning when we can't derive strong keys (canonical/repo-rel/abs) and must rely
+		// on weaker fallbacks (clean/raw). Matching still proceeds (fallback strategy), but we want
+		// to explain why results may be surprising.
+		for _, raw := range q.Filters.RelatedFile {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
+				continue
+			}
+			n := w.resolver.Normalize(raw)
+			canon := strings.TrimSpace(n.Canonical)
+			repoRel := strings.TrimSpace(n.RepoRelative)
+			abs := strings.TrimSpace(n.Abs)
+			clean := strings.TrimSpace(normalizeCleanPath(raw))
+			if canon == "" && repoRel == "" && abs == "" && clean != "" {
+				if t := docmgrctx.NewWorkspaceQueryNormalizationFallbackTaxonomy("file", raw, "no canonical/repo/abs key; falling back to cleaned/raw matching"); t != nil {
+					diags = append(diags, *t)
+				}
+			}
+		}
+		for _, raw := range q.Filters.RelatedDir {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
+				continue
+			}
+			n := w.resolver.Normalize(raw)
+			canon := strings.TrimSpace(n.Canonical)
+			repoRel := strings.TrimSpace(n.RepoRelative)
+			abs := strings.TrimSpace(n.Abs)
+			clean := strings.TrimSpace(normalizeCleanPath(raw))
+			if canon == "" && repoRel == "" && abs == "" && clean != "" {
+				if t := docmgrctx.NewWorkspaceQueryNormalizationFallbackTaxonomy("dir", raw, "no canonical/repo/abs key; falling back to cleaned/raw prefix matching"); t != nil {
+					diags = append(diags, *t)
+				}
+			}
+		}
 	}
 
 	sqlQ, err := compileDocQuery(ctx, w, q)
@@ -159,9 +200,59 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 		handles = append(handles, p.handle)
 	}
 
+	// Diagnostics: include parse-error docs as taxonomy entries (but do not include them in Docs)
+	// when IncludeErrors=false and IncludeDiagnostics=true.
+	if q.Options.IncludeDiagnostics && !q.Options.IncludeErrors {
+		zero := 0
+		diagQ, err := compileDocQueryWithParseFilter(ctx, w, q, &zero)
+		if err == nil {
+			diagRows, qerr := w.db.QueryContext(ctx, diagQ.SQL, diagQ.Args...)
+			if qerr == nil {
+				defer func() { _ = diagRows.Close() }()
+				for diagRows.Next() {
+					var (
+						_docID    int64
+						_path     string
+						_ticketID sql.NullString
+						_docType  sql.NullString
+						_status   sql.NullString
+						_intent   sql.NullString
+						_title    sql.NullString
+						_lastUpd  sql.NullString
+						_parseOK  int
+						_parseErr sql.NullString
+						_body     sql.NullString
+					)
+					if err := diagRows.Scan(
+						&_docID,
+						&_path,
+						&_ticketID,
+						&_docType,
+						&_status,
+						&_intent,
+						&_title,
+						&_lastUpd,
+						&_parseOK,
+						&_parseErr,
+						&_body,
+					); err != nil {
+						continue
+					}
+					reason := strings.TrimSpace(_parseErr.String)
+					if reason == "" {
+						reason = "invalid frontmatter / parse failed"
+					}
+					if t := docmgrctx.NewWorkspaceQuerySkippedParseTaxonomy(filepath.ToSlash(filepath.Clean(_path)), reason, errors.New(reason)); t != nil {
+						diags = append(diags, *t)
+					}
+				}
+			}
+		}
+	}
+
 	return DocQueryResult{
 		Docs:        handles,
-		Diagnostics: nil, // Task 8: fill this when IncludeDiagnostics=true
+		Diagnostics: diags,
 	}, nil
 }
 

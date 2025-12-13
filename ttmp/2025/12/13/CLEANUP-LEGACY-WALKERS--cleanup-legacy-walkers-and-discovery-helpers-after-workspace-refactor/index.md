@@ -32,10 +32,13 @@ RelatedFiles:
       Note: Design spec for the Workspace API
     - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md
       Note: Defines no-backwards-compat policy
+    - Path: ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/playbook/01-intern-code-review-verification-questionnaire.md
+      Note: Intern/reviewer verification questionnaire with experiments
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:29:17.671599467-05:00
 ---
+
 
 
 

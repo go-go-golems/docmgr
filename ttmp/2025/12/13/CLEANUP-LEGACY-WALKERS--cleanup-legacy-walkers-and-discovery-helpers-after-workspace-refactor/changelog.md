@@ -86,3 +86,12 @@ Step 2.2: Migrated meta_update.go to Workspace.QueryDocs (commit 3458a46)
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/meta_update.go — Replaced findTicketDirectory + findMarkdownFiles with QueryDocs
 
+
+## 2025-12-13
+
+Created intern code review verification questionnaire playbook with YAML DSL (22 questions + experiments)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/playbook/01-intern-code-review-verification-questionnaire.md — Verification playbook for onboarding/review
+

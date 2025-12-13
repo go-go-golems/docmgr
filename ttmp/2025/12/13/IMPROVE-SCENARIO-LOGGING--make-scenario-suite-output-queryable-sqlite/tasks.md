@@ -72,17 +72,17 @@ This task list is the actionable checklist that implements:
 
 ### Phase 5 — Integrate into `test-scenarios/testing-doc-manager`
 
-- [ ] Build `scenariolog` binary as part of the scenario run:
-  - [ ] `go -C scenariolog build -o /tmp/scenariolog-local ./cmd/scenariolog`
-  - [ ] pass the resulting path to the harness (e.g., `SCENARIOLOG_PATH=/tmp/scenariolog-local`)
-- [ ] Update `run-all.sh` to:
-  - [ ] create a run (`run start`)
-  - [ ] wrap each step script invocation via `exec --kind step ...`
-  - [ ] finalize run (`run end`)
-- [ ] Update scenario README with:
-  - [ ] how to run
-  - [ ] where DB + artifacts live
-  - [ ] how to query with `scenariolog search/failures/timings` and/or `sqlite3`
+- [x] Build `scenariolog` binary as part of the scenario run:
+- [x] `go -C scenariolog build -o /tmp/scenariolog-local ./cmd/scenariolog`
+- [x] pass the resulting path to the harness (e.g., `SCENARIOLOG_PATH=/tmp/scenariolog-local`)
+- [x] Update `run-all.sh` to:
+- [x] create a run (`run start`)
+- [x] wrap each step script invocation via `exec --kind step ...`
+- [x] finalize run (`run end`)
+- [x] Update scenario README with:
+- [x] how to run
+- [x] where DB + artifacts live
+- [x] how to query with `scenariolog search/failures/timings` and/or `sqlite3`
 
 ### Phase 6 — Hardening / polish
 

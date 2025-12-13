@@ -92,3 +92,14 @@ Step 5: Start emitting KV tags for provenance and step metadata (commit 6f32b75a
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/run.go — Run-level KV tags
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 5
 
+
+## 2025-12-13
+
+Step 6: Integrate scenariolog into scenario harness (run-all.sh) (commit b2a11b6495d38c0bdd53662af363135760d59fbc).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/README.md — Document SCENARIOLOG_PATH + auto-build behavior
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Wrap steps with scenariolog run/exec/end + EXIT trap
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 6
+

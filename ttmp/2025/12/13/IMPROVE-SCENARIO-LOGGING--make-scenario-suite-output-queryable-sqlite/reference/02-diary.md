@@ -18,12 +18,14 @@ RelatedFiles:
       Note: Self-contained tool module (dependencies + toolchain)
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
-    - Path: scenariolog/internal/scenariolog/kv.go
-      Note: KV tags
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
+    - Path: test-scenarios/testing-doc-manager/README.md
+      Note: Harness docs
+    - Path: test-scenarios/testing-doc-manager/run-all.sh
+      Note: Harness integration
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
@@ -286,6 +288,42 @@ This step began using the `kv` table as intended: attach lightweight metadata to
 
 ### What warrants a second pair of eyes
 - Confirm we want KV writes to be best-effort (ignored errors) rather than strict, and that key naming is acceptable.
+
+## Step 6: Integrate scenariolog into the scenario harness (run-all.sh)
+
+This step integrated `scenariolog` into `test-scenarios/testing-doc-manager/run-all.sh` so every scenario run produces a sqlite DB (`.scenario-run.db`) and per-step log artifacts (`.logs/step-NN-stdout.txt` / `stderr.txt`). The harness builds `scenariolog` automatically if `SCENARIOLOG_PATH` isn’t set, starts a run, wraps each step script via `scenariolog exec`, and finalizes the run via an `EXIT` trap so the DB is complete even on failure.
+
+**Commit (code):** b2a11b6495d38c0bdd53662af363135760d59fbc — "scenario: instrument run-all.sh via scenariolog"
+
+### What I did
+- Updated `test-scenarios/testing-doc-manager/run-all.sh` to:
+  - build `scenariolog` from `scenariolog/` into `/tmp/scenariolog-local` (FTS-enabled build tag)
+  - run `scenariolog run start` and capture `RUN_ID`
+  - wrap each step script with `scenariolog exec ... -- bash ./NN-step.sh "$ROOT_DIR"`
+  - finalize via `scenariolog run end` in an `EXIT` trap
+- Updated `test-scenarios/testing-doc-manager/README.md` to document `SCENARIOLOG_PATH` (optional; auto-build if unset)
+
+### What worked
+- Running the scenario produces:
+  - `/tmp/docmgr-scenario/.scenario-run.db`
+  - `/tmp/docmgr-scenario/.logs/step-*.txt`
+  - step rows in sqlite (`steps` table) with exit codes and durations
+
+### What was tricky to build
+- Step 00 (`00-reset.sh`) deletes the root directory, so the harness must run it *before* creating the sqlite DB under `$ROOT_DIR`.
+
+### What warrants a second pair of eyes
+- Validate the `EXIT` trap behavior (especially on failures) and confirm it doesn’t hide original exit codes.
+
+### Code review instructions
+- Start at `test-scenarios/testing-doc-manager/run-all.sh`.
+- Validate end-to-end:
+
+```bash
+go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
+DOCMGR_PATH=/tmp/docmgr-scenario-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
+sqlite3 /tmp/docmgr-scenario/.scenario-run.db "SELECT step_num, step_name, exit_code FROM steps ORDER BY step_num;"
+```
 
 ## Related
 

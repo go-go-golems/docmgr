@@ -18,10 +18,13 @@ RelatedFiles:
       Note: Phase 2.2 migrated ticket discovery + enumeration to Workspace.QueryDocs (commit 3458a46)
     - Path: pkg/commands/status.go
       Note: Phase 1.1 migration to Workspace.QueryDocs (commit f61606c)
+    - Path: pkg/commands/ticket_move.go
+      Note: Phase 3.2 migrated ticket move to Workspace.QueryDocs (commit 5ce1a88)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-13T10:38:05.321452661-05:00
 ---
+
 
 
 
@@ -414,3 +417,37 @@ This step removes `doc move`’s remaining legacy ticket directory resolution (`
 
 ### Code review instructions
 - Start in `pkg/commands/doc_move.go` and review `applyMove` and `resolveTicketDirViaWorkspace`.
+
+## Step 10: Migrate `ticket move` ticket discovery to Workspace+QueryDocs (Phase 3.2)
+
+This step migrates `ticket move` off the legacy `findTicketDirectory` helper. The command now discovers the Workspace and builds the index once, then resolves the source ticket directory by querying the ticket’s `index.md` via `QueryDocs` and deriving the directory from that canonical path.
+
+**Commit (code):** `5ce1a88` — "Cleanup: migrate ticket move to QueryDocs"
+
+### What I did
+- Updated `pkg/commands/ticket_move.go` to:
+  - `DiscoverWorkspace` + `InitIndex`, then
+  - resolve `srcDir` via `QueryDocs(ScopeTicket, DocType=index)` instead of `findTicketDirectory`.
+- Threaded `context.Context` into `applyMove` to align with the rest of the QueryDocs migrations.
+
+### Why
+- Remove remaining `findTicketDirectory` usage in ticket move so we can delete the helper later.
+- Make ticket directory resolution consistent with the canonical Workspace index semantics.
+
+### What worked
+- Tests and lint stayed green.
+- The rename/move semantics and “touch LastUpdated in index.md” behavior are unchanged.
+
+### What was tricky to build
+- **Helper duplication**: avoid duplicating helper symbols in the `commands` package by reusing the existing QueryDocs-based ticket-dir resolver.
+- **Root resolution**: the command now pins `settings.Root` to `ws.Context().Root` (Workspace resolution) before rendering destination paths.
+
+### What warrants a second pair of eyes
+- **Path template rendering**: confirm that using Workspace-resolved root doesn’t subtly change destination paths for callers who pass relative roots.
+- **Error behavior**: confirm “ticket not found / ambiguous” is acceptable for this command (write-path).
+
+### What should be done in the future
+- Consider centralizing the QueryDocs-based “ticket dir from index doc” pattern into an explicit shared helper file (not buried in another command) once more commands migrate.
+
+### Code review instructions
+- Start in `pkg/commands/ticket_move.go` and review `applyMove`.

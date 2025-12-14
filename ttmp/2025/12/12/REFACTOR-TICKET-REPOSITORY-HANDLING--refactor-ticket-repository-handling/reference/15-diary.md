@@ -993,7 +993,9 @@ The new ticket (CLEANUP-LEGACY-WALKERS) includes a comprehensive design document
 
 ## Step 19: Create comparison scripts for system vs local docmgr validation
 
-This step creates a pair of bash scripts that enable systematic comparison between the system docmgr (old version) and a locally built docmgr (refactored version) using scenariolog. The main script (`compare-docmgr-versions.sh`) runs the full scenario suite twice—once with each version—and records all outputs in separate scenariolog SQLite databases. A helper script (`compare-results.sh`) provides convenient SQL queries to compare exit codes, durations, and identify differences between the runs. This tooling makes it practical to validate that the refactor produces equivalent behavior and to catch regressions early.
+This step creates a pair of bash scripts that enable systematic comparison between the system docmgr (old version) and a locally built docmgr (refactored version) using scenariolog.
+
+**Commit (code + docs):** `0f82040` — "Add comparison scripts and final cleanup inspection report" The main script (`compare-docmgr-versions.sh`) runs the full scenario suite twice—once with each version—and records all outputs in separate scenariolog SQLite databases. A helper script (`compare-results.sh`) provides convenient SQL queries to compare exit codes, durations, and identify differences between the runs. This tooling makes it practical to validate that the refactor produces equivalent behavior and to catch regressions early.
 
 The scripts leverage the existing `test-scenarios/testing-doc-manager/run-all.sh` infrastructure, which already supports scenariolog integration. By running the same scenario suite with both binaries and recording results in queryable databases, we can systematically compare behavior, performance, and failure modes without manually diffing output files.
 

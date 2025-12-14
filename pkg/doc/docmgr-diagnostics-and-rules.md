@@ -82,6 +82,17 @@ Diagnostics are emitted from verbs and helpers so users see consistent guidance:
 - **meta update / relate / rename-ticket** (`pkg/commands/meta_update.go`, `relate.go`, `rename_ticket.go`): Wrap frontmatter parse errors into taxonomies for actionable output.
 - **workspace discovery** (`internal/workspace/discovery.go`) and **frontmatter parsing** (`internal/documents/frontmatter.go`): Wrap parse errors so callers (doctor, listing) receive taxonomies in error chains.
 
+### QueryDocs-driven diagnostics (unified index-backed commands)
+
+Several core commands are backed by the workspace index + `QueryDocs` (search/list/doctor). In those flows, diagnostics can be produced directly by `QueryDocs` in addition to the “classic” command-level checks:
+
+- **Parse-error visibility (diagnostics)**: invalid-frontmatter docs are excluded from normal results by default, but can be surfaced as structured diagnostics (so users can repair documents without silently losing them).
+- **Normalization fallback warnings**: when reverse lookup must use weaker matching (for example, basename/suffix fallback), `QueryDocs` can emit a warning diagnostic to explain why the match happened.
+
+The taxonomy constructors for these live in:
+
+- `pkg/diagnostics/docmgrctx/query_docs.go`
+
 ### Example: doctor with JSON output
 
 ```bash

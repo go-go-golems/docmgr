@@ -133,6 +133,25 @@ Each document starts with YAML frontmatter. This lightweight contract makes docs
 
 The workspace vocabulary lives at `ttmp/vocabulary.yaml` by default (overridable via `.ttmp.yaml:vocabulary`). It defines the allowed `Topics`, `DocType`, and `Intent`. This prevents one-off spellings (“Web sockets” vs “websocket”) and keeps lists predictable for filters and automation. `doctor` warns on unknown values.
 
+### 3.5 Unified index-backed behavior (Workspace index)
+
+Several docmgr commands share a single “unified” backend behavior: they build a temporary in-memory workspace index and run queries against it. This makes “what counts as a doc”, filtering, and reverse lookup consistent across commands.
+
+In practice, these commands do the same high-level steps internally:
+
+- Discover workspace configuration and roots (docs root, repo root, config dir)
+- Build an ephemeral in-memory index of markdown docs under the docs root
+- Query the index for docs, topics, and related files (including reverse lookup)
+
+Commands that use this unified behavior include:
+
+- `docmgr doc search` (metadata filters + reverse lookup; content search is still best-effort post-filtering)
+- `docmgr doc list`
+- `docmgr doctor`
+- `docmgr doc relate` (doc selection + normalization uses the same resolver logic as the index)
+
+**Reverse lookup note:** `docmgr doc search --file/--dir` matches using a path normalization pipeline (repo/doc/root-aware) with small compatibility fallbacks (for example, basename/suffix matching like `register.go`) so common workflows keep working.
+
 ## 4. Commands
 
 ### 4.1 Vocabulary
@@ -386,6 +405,29 @@ Doctor checks:
 **Ignore configuration:**
 - The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`)
 - Common patterns: `.git/`, `_templates/`, `_guidelines/`, `archive/`, date-based tickets like `2023-*/`
+
+### 4.13 Export workspace index (SQLite)
+
+Export the in-memory workspace index to a SQLite file for debugging, sharing, and offline analysis:
+
+```bash
+# Export (requires --out)
+docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite
+
+# Overwrite if it already exists
+docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite --force
+
+# Include markdown bodies (larger sqlite file)
+docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite --include-body
+
+# Point at a non-default docs root
+docmgr workspace export-sqlite --root ttmp --out /tmp/docmgr-index.sqlite
+```
+
+What the exported DB contains:
+
+- Workspace index tables (docs, doc_topics, related_files, ...)
+- A `README` table populated from docmgr’s embedded documentation (`pkg/doc/*.md`) so the DB is self-describing
 
 ## 5. Testing the CLI (Dual Mode)
 

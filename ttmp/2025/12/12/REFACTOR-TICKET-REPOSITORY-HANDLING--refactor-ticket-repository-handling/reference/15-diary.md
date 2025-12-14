@@ -94,6 +94,10 @@ RelatedFiles:
       Note: Brief for cleanup inspectors to inventory duplicated walkers/helpers (Task 18)
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/11-comparison-suite-report-system-vs-local.md
       Note: Full report of system vs local docmgr comparison using scenariolog
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/12-docs-update-guide-pkg-doc.md
+      Note: Short guide mapping refactor behavior changes to pkg/doc documentation updates
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/index.md
+      Note: Ticket entry point; now links the docs update guide in RelatedFiles
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
       Note: Spec driving this refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-docmgr-versions.sh
@@ -1096,3 +1100,57 @@ The scripts leverage the existing `test-scenarios/testing-doc-manager/run-all.sh
 - Consider extracting the SQL queries into a separate file or function to make them easier to test and modify
 - Add a `--dry-run` flag to show what would be executed without actually running the scenarios
 - Consider adding JSON output option for the comparison results to enable programmatic analysis
+
+## Step 20: Prepare embedded documentation updates (`pkg/doc/*`) for the refactor
+
+With the implementation complete and scenario-level parity confirmed, the next risk is documentation drift: the embedded docs under `pkg/doc/` must match the refactored behavior (Workspace + index-backed `QueryDocs`) and must describe new CLI surface area (notably `workspace export-sqlite`). This step is about collecting the “what changed” facts from code + ticket artifacts and turning them into a concrete checklist of documentation edits, before we start editing large markdown files.
+
+The key deliverable here is a short, targeted guide that points at the exact `pkg/doc/*.md` files to update and the specific sections that are now stale.
+
+### What I did
+- Read the ticket artifacts that summarize the refactor (task list, changelog, comparison report).
+- Identified the user-visible behavior changes that affect docs:
+  - commands now run `DiscoverWorkspace → InitIndex → QueryDocs` (index-backed semantics),
+  - reverse lookup uses normalization + compatibility fallbacks,
+  - new command: `docmgr workspace export-sqlite`.
+- Created a short update guide document:
+  - `analysis/12-docs-update-guide-pkg-doc.md`
+- Linked that guide from the ticket index `RelatedFiles` for discoverability.
+
+### Why
+- The embedded docs are shipped inside the binary and also exported into the sqlite “README table” during `workspace export-sqlite`, so stale docs are doubly harmful: users read them *and* debugging artifacts embed them.
+- Updating documentation after a refactor is easiest when we first write down a crisp mapping: “behavior change → doc file → section → exact edit”.
+
+### What worked
+- We could reliably map behavior changes to concrete code “sources of truth” (ported commands + workspace internals) and then to the highest-impact `pkg/doc/*.md` pages.
+
+### What didn’t work
+- Nothing; this was a documentation planning step (no risky edits to large docs yet).
+
+### What I learned
+- `pkg/doc` currently documents `docmgr doc search` well, but does **not** mention `docmgr workspace export-sqlite` yet. That’s a clear missing piece.
+- The algorithmic doc `pkg/doc/docmgr-doctor-validation-workflow.md` is likely stale because it still describes pre-refactor discovery flow; it should be updated to describe index-backed doctor behavior plus the “post-filter ignore globs” compatibility layer.
+
+### What was tricky to build
+- Keeping the guide short while still being actionable: the doc set is large, and it’s easy to write a vague “update docs” note that doesn’t help the next person make the edits.
+
+### What warrants a second pair of eyes
+- Confirm that the proposed documentation changes describe the *actual* compatibility semantics we kept (basename/suffix fallback, post-filter ignore globs) and do not accidentally promise stronger guarantees than we implement.
+
+### What should be done in the future
+- Apply the guide by updating:
+  - `pkg/doc/docmgr-cli-guide.md` (document `workspace export-sqlite`)
+  - `pkg/doc/docmgr-how-to-use.md` (reverse lookup normalization note)
+  - `pkg/doc/docmgr-doctor-validation-workflow.md` (update discovery algorithm to index-backed flow)
+  - optionally `pkg/doc/docmgr-diagnostics-and-rules.md` and `pkg/doc/docmgr-ci-automation.md`
+
+### Code review instructions
+- Read `analysis/12-docs-update-guide-pkg-doc.md` and sanity-check:
+  - does each suggested doc update map to a real code path?
+  - are we missing any high-impact docs (CLI guide, how-to-use, doctor workflow)?
+
+### Technical details
+- Ticket doc added:
+  - `ttmp/.../analysis/12-docs-update-guide-pkg-doc.md`
+- Ticket index updated:
+  - `ttmp/.../index.md` (new RelatedFiles entry pointing at the guide)

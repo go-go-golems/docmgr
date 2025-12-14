@@ -330,7 +330,25 @@ docmgr doc search --dir backend/api/
 - **Code review:** "What's the design for this file I'm reviewing?"
 - **Refactoring:** "Which docs mention this directory I'm changing?"
 
-Search is fast (< 100ms even with 200+ docs) and case-insensitive.
+Search is designed to be fast and is case-insensitive.
+
+### Unified index-backed behavior (what makes results consistent)
+
+`docmgr doc search` is powered by the same unified backend used by other core commands: docmgr discovers the workspace, builds a temporary in-memory index of docs, and queries it. This is why reverse lookup and metadata filters behave consistently across:
+
+- `docmgr doc search`
+- `docmgr doc list`
+- `docmgr doctor`
+- `docmgr doc relate`
+
+### Reverse lookup matching rules (`--file` / `--dir`)
+
+Reverse lookup matches are primarily driven by a path normalization pipeline (repo/doc/root-aware). In addition to strict normalized matching, docmgr keeps small compatibility fallbacks so common UX patterns keep working:
+
+- **Basename/suffix fallback**: queries like `--file register.go` can match `backend/chat/api/register.go`
+- **Mixed path forms**: repo-relative, doc-relative, and absolute-like inputs can match as long as normalization can derive comparable keys
+
+If a match required a weaker fallback, docmgr may emit a warning diagnostic (when diagnostics are enabled) to make the behavior explainable rather than “magic”.
 
 ### Interpreting Results
 
@@ -450,6 +468,8 @@ docmgr doc add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
 > **Why this matters:** Relating files creates a breadcrumb trail between the prose (design/reference/playbook) and the code you just touched. Reviewers can jump from a file path to the design doc in one command, and future you can answer "Where is the spec for this file?" without spelunking.
 
 Bidirectional linking between documentation and code is one of docmgr's most powerful features. By relating code files to docs with explanatory notes, you create a navigation map that answers two critical questions: "What's the design for this code file?" (code review context) and "Which code implements this design?" (implementation reference). The `docmgr doc relate` command manages these relationships in frontmatter, while `docmgr doc search --file` provides instant reverse lookup from any code file to its related documentation.
+
+Under the hood, `docmgr doc relate` uses the same workspace discovery and path normalization logic as the unified index-backed commands (search/list/doctor). That means the paths you relate are normalized in a way that keeps reverse lookup consistent and explainable.
 
 > **Important:** Always use `docmgr doc relate` (not `docmgr relate`). The `doc relate` command does not support a `--doc-type` flag; use `--ticket` to target the ticket index or `--doc PATH` to target a specific document.
 
@@ -849,8 +869,6 @@ docmgr changelog update --ticket <TICKET-ID> \
   --entry "What changed and why" \
   --file-note "/ABS/PATH/TO/FILE:Reason"
 ```
-
-> **Important:** Always use `docmgr doc relate` (not `docmgr relate`). The `doc relate` command does not support `--doc-type` flag; use `--ticket` or `--doc PATH` instead.
 
 Use absolute paths for clarity, and group related changes into a single changelog entry with multiple `--file-note` values if needed.
 

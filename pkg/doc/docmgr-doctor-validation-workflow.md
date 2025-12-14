@@ -41,13 +41,16 @@ The validation pipeline follows a consistent pattern across both `doctor` and `v
 Input discovery determines which files to validate. The strategy differs by command:
 
 **Doctor workspace scan (`--all` or `--ticket`):**
-- Calls `workspace.CollectTicketWorkspaces` (`internal/workspace/discovery.go`)
-- Walks the docs root directory (`ttmp/` by default)
-- Finds directories containing `index.md` files
-- Skips directories whose base name starts with `_` (e.g., `_templates/`, `_guidelines/`)
-- Respects `.docmgrignore` patterns (repository-level and docs-root level)
-- For each workspace, attempts to parse `index.md` frontmatter
-- Returns `TicketWorkspace` structs with parsed `Document` or `FrontmatterErr`
+- Discovers the workspace (docs root + config + repo root) via `workspace.DiscoverWorkspace` (see `internal/workspace/workspace.go`)
+- Builds a temporary in-memory workspace index via `Workspace.InitIndex` (see `internal/workspace/index_builder.go`)
+  - Ingestion applies the canonical skip policy (for example `.meta/` and `_*/` like `_templates/` / `_guidelines/`) — see `internal/workspace/skip_policy.go`
+- Queries the indexed doc set via `Workspace.QueryDocs` (see `internal/workspace/query_docs.go`)
+  - `doctor` requests `IncludeErrors=true` so parse-error docs are available as `DocHandle{ReadErr: ...}` for repair workflows
+  - `doctor` requests `IncludeDiagnostics=true` so QueryDocs can emit structured diagnostics (for example parse-skip and normalization fallback)
+- Detects “ticket scaffolds missing index.md” separately via `workspace.FindTicketScaffoldsMissingIndex` (see `internal/workspace/discovery.go`)
+- Respects `.docmgrignore` and `--ignore-glob` as a compatibility layer:
+  - the index uses the canonical ingestion policy, and
+  - `doctor` applies ignore globs/dirs as a **post-filter** over QueryDocs results so behavior matches legacy expectations (see `pkg/commands/doctor.go`)
 
 **Doctor single-file mode (`--doc`):**
 - Validates exactly one file specified by `--doc` path
@@ -331,19 +334,18 @@ return severityOK, nil
 **Command:** `docmgr doctor --all` or `docmgr doctor --ticket <TICKET>`
 
 **Behavior:**
-1. Discovers ticket workspaces via `workspace.CollectTicketWorkspaces`
-2. Checks for missing `index.md` files (`workspace.CollectTicketScaffoldsWithoutIndex`)
-3. For each workspace:
-   - Parses `index.md` frontmatter (renders taxonomy on parse failure)
-   - Validates required fields (Title, Ticket, DocType)
-   - Checks optional fields (Status, Topics)
-   - Validates vocabulary (Topics, DocType, Intent, Status)
-   - Validates related files (checks that files in `RelatedFiles` exist)
-   - Checks for stale docs (LastUpdated older than `--stale-after` days)
-4. Collects all findings into rows
-5. Renders taxonomies via rule system
-6. Optionally writes diagnostics JSON (`--diagnostics-json`)
-7. Exits with error code if `--fail-on` threshold is met
+1. Discovers the workspace (`workspace.DiscoverWorkspace`) and resolves the effective docs root/config/repo anchors.
+2. Builds the in-memory workspace index once (`Workspace.InitIndex`), applying the canonical skip policy during ingestion.
+3. Checks for ticket scaffolds missing `index.md` (`workspace.FindTicketScaffoldsMissingIndex`) and emits `missing_index` findings (scoped to `--ticket` when provided).
+4. Queries the indexed doc set via `Workspace.QueryDocs` (typically with `IncludeErrors=true` and `IncludeDiagnostics=true`) and groups findings by ticket.
+5. Applies validation and checks:
+   - frontmatter parse/schema issues (as taxonomies)
+   - optional field and vocabulary warnings
+   - `RelatedFiles` existence checks (doc-anchored path normalization)
+   - stale docs (`LastUpdated` older than `--stale-after` days)
+6. Applies `.docmgrignore`/`--ignore-glob`/`--ignore-dir` as a post-filter over QueryDocs results (compatibility behavior).
+7. Optionally writes diagnostics JSON (`--diagnostics-json`)
+8. Exits with error code if `--fail-on` threshold is met
 
 **Output:**
 - Human-readable: Grouped by ticket, shows issue type, severity, message, path
@@ -432,7 +434,8 @@ Frontmatter validation errors flow through docmgr's diagnostics taxonomy system.
 
 **Helper functions:**
 - `internal/documents/frontmatter.go`: `ReadDocumentWithFrontmatter` wraps parse errors
-- `internal/workspace/discovery.go`: `CollectTicketWorkspaces` captures `FrontmatterErr` in workspace structs
+- `internal/workspace/index_builder.go`: ingestion stores `parse_ok` / `parse_err` so parse failures can be surfaced consistently via diagnostics and `IncludeErrors`
+- `internal/workspace/discovery.go`: missing-index scaffold detection (`FindTicketScaffoldsMissingIndex`)
 
 ## 5. Files and Symbols Reference
 
@@ -451,7 +454,8 @@ Frontmatter validation errors flow through docmgr's diagnostics taxonomy system.
 
 **Doctor:**
 - `pkg/commands/doctor.go`: `DoctorCommand`, `validateSingleDoc`, workspace scan logic
-- `internal/workspace/discovery.go`: `CollectTicketWorkspaces`, `CollectTicketScaffoldsWithoutIndex`, `TicketWorkspace`
+- `internal/workspace/workspace.go`: `DiscoverWorkspace`, `Workspace`, `InitIndex`, `QueryDocs`
+- `internal/workspace/discovery.go`: `FindTicketScaffoldsMissingIndex`
 
 **Models:**
 - `pkg/models/document.go`: `Document`, `Validate()`, `RelatedFiles`

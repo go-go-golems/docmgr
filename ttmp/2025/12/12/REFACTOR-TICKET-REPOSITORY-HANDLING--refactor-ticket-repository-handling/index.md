@@ -31,6 +31,8 @@ RelatedFiles:
       Note: 'How-to-judge rubric for contestant #3 (path normalization)'
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/reference/22-jury-deliberation-contestant-3-norma-the-navigator-path-normalization.md
       Note: 'Jury deliberation transcript for contestant #3'
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/12-docs-update-guide-pkg-doc.md
+      Note: "Short guide: which pkg/doc docs to update after the refactor (QueryDocs, doctor flow, export-sqlite)"
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T14:31:14.113503479-05:00

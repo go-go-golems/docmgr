@@ -57,7 +57,7 @@ This task list is the actionable checklist that implements:
 ### Phase 4 — CLI (Cobra + Glazed)
 
 - [x] Create `scenariolog/cmd/scenariolog` Cobra root command
-- [ ] Add Glazed help system wiring (help system + richer help)
+- [x] Add Glazed help system wiring (help system + richer help)
 - [x] Implement command settings parsing via `parsedLayers.InitializeStruct(...)` (don’t read Cobra flags directly)
 - [ ] Implement commands:
 - [x] `scenariolog init --db`

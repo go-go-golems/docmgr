@@ -137,3 +137,16 @@ Added reference doc: how to use scenariolog-local (with Glazed output) and captu
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/sources/local/glaze-help-how-to-write-good-documentation-pages-2025-12-14.txt — Glaze doc style guide
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/sources/local/glaze-help-writing-help-entries-2025-12-14.txt — Glaze help-entry authoring guide
 
+
+## 2025-12-13
+
+Wired Glazed help system into scenariolog (embedded docs + `scenariolog help how-to-use-scenariolog-local`) (commit 592f511b625b066ccc00dae84d51ff915136e732).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/cmd/scenariolog/main.go — Help system wiring
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/pkg/doc/doc.go — Embed and load help sections
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/pkg/doc/docs/how-to-use-scenariolog-local.md — Help section content
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/03-how-to-use-scenariolog-local.md — Pointer to embedded help
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/sources/local/glaze-help-help-system-2025-12-14.txt — Glazed help-system guide
+

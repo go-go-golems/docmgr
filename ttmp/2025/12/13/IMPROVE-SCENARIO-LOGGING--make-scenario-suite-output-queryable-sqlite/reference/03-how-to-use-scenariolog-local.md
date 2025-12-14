@@ -11,28 +11,21 @@ Intent: long-term
 Owners: []
 RelatedFiles:
     - Path: scenariolog/README.md
-      Note: |-
-        Build instructions + FTS5 enablement/fallback notes
-        Build + FTS notes
-    - Path: scenariolog/cmd/scenariolog/glazed_cmds.go
-      Note: |-
-        Glazed query/report commands (search/summary/failures/timings)
-        Glazed output commands
+      Note: Build instructions + FTS5 enablement/fallback notes
     - Path: scenariolog/cmd/scenariolog/main.go
       Note: Cobra entrypoint + exec/run commands
+    - Path: scenariolog/cmd/scenariolog/glazed_cmds.go
+      Note: Glazed query/report commands (search/summary/failures/timings)
+    - Path: test-scenarios/testing-doc-manager/run-all.sh
+      Note: Scenario harness integration (builds scenariolog + wraps steps)
     - Path: test-scenarios/testing-doc-manager/README.md
       Note: Scenario suite docs (mentions scenariolog usage)
-    - Path: test-scenarios/testing-doc-manager/run-all.sh
-      Note: |-
-        Scenario harness integration (builds scenariolog + wraps steps)
-        Harness integration
 ExternalSources:
     - local:glaze-help-how-to-write-good-documentation-pages-2025-12-14.txt
     - local:glaze-help-writing-help-entries-2025-12-14.txt
-Summary: 'Copy/paste guide for building and using /tmp/scenariolog-local: run lifecycle, step wrapping, Glazed query output, and FTS5/degraded-mode behavior.'
+Summary: "Copy/paste guide for building and using /tmp/scenariolog-local: run lifecycle, step wrapping, Glazed query output, and FTS5/degraded-mode behavior."
 LastUpdated: 2025-12-13T19:08:22.030701209-05:00
 ---
-
 
 # How to use scenariolog-local
 
@@ -41,6 +34,12 @@ LastUpdated: 2025-12-13T19:08:22.030701209-05:00
 Give a copy/paste-ready workflow for using `scenariolog` as a local “scenario flight recorder” binary (`/tmp/scenariolog-local`): build it, run scenarios, and query the resulting sqlite DB quickly.
 
 ## Context
+
+This content is now also available from the `scenariolog` binary itself via the Glazed help system:
+
+```bash
+scenariolog help how-to-use-scenariolog-local
+```
 
 `scenariolog` turns “a big mixed stdout/stderr dump” into a sqlite database you can query. It records:
 

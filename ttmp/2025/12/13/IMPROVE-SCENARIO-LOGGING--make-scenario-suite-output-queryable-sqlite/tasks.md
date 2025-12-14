@@ -12,7 +12,7 @@ This task list is the actionable checklist that implements:
 - [x] Create self-contained tool directory `scenariolog/`
 - [x] Add `scenariolog/go.mod` + `scenariolog/go.sum` (module-local deps)
 - [x] Add `scenariolog/README.md` (how to build/run; how to integrate)
-- [ ] Create `scenariolog/internal/scenariolog/` package skeleton (`db.go`, `migrate.go`, `logger.go`, `artifacts.go`, `fts.go`)
+- [x] Create `scenariolog/internal/scenariolog/` package skeleton (`db.go`, `migrate.go`, `logger.go`, `artifacts.go`, `fts.go`)
 - [x] Create `scenariolog/cmd/scenariolog` Cobra root command (standalone first; docmgr wrapper can come later)
 
 ### Phase 1 — SQLite schema + migrations (KV + artifacts + FTS)
@@ -24,7 +24,7 @@ This task list is the actionable checklist that implements:
 - [x] `steps`
 - [x] `kv` (run/step/command-scoped tags)
 - [x] `artifacts` (stdout/stderr + arbitrary outputs, with size/hash)
-  - [ ] `log_lines_fts` (FTS5 virtual table for search; best-effort / degrade if missing)
+  - [x] `log_lines_fts` (FTS5 virtual table for search; best-effort / degrade if missing)
 - [x] Add indexes and constraints (unique scope keys, artifact uniqueness, etc.)
 - [x] Unit test: migrate empty DB and assert tables exist (`sqlite_master`)
 

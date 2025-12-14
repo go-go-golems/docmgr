@@ -388,6 +388,45 @@ This step refactored the “runtime” commands (`init`, `run start/end`, `exec`
 ### Notes
 - Glazed `ParameterTypeKeyValue` expects `key:value` pairs (repeatable) and supports `--kv @file.json` / `--kv @file.yaml` for map input.
 
+## Step 11: Add local Makefile + install workflow
+
+This step made `scenariolog` easier to use as a “real tool” during day-to-day work: add a `Makefile` in `scenariolog/` and support `make -C scenariolog install` to install a pinned binary into `~/.local/bin/scenariolog`.
+
+**Commit (code):** e47d119ee65ef3542b5e1633836b47f189573554 — "scenariolog: add Makefile (build/install) + document --kv"
+
+### What I did
+- Added `scenariolog/Makefile` with targets: `build`, `test`, `install`, `uninstall`, `clean`
+- Added `scenariolog/.gitignore` to keep `scenariolog/build/` out of git
+- Documented `--kv` usage in the embedded help doc
+
+### Quick usage
+
+```bash
+make -C scenariolog install
+~/.local/bin/scenariolog --help
+```
+
+## Step 12: Validate run-all.sh recording + independent verification
+
+This step validated that the scenario harness (`run-all.sh`) produces correct results and that those results are independently verifiable without trusting `scenariolog`’s reporting.
+
+### What I verified
+- Success path: `run-all.sh` exits 0, and the sqlite DB shows `scenario_runs.exit_code=0` and 0 failing steps.
+- Failure path: with `DOCMGR_PATH` pointing to a non-existent binary, `run-all.sh` exits non-zero, sqlite shows a failing step with the wrapped command exit code (127), and `scenariolog summary/failures` matches sqlite.
+
+### Notes
+- For failure runs, the overall run exit code stored by the harness is the harness’ exit code (often 1), while the failing step row preserves the wrapped command’s exit code (e.g. 127).
+
+## Wrap-up / current status
+
+At this point, `scenariolog` is usable as a scenario-flight-recorder tool:
+
+- run/step lifecycle and artifacts
+- KV tags (auto provenance + user-provided `--kv`)
+- FTS search (when built with `-tags sqlite_fts5`, otherwise degraded mode)
+- Glazed query/report commands (`summary`, `failures`, `timings`, `search`)
+- embedded Glazed help system docs (`scenariolog help how-to-use-scenariolog-local`)
+
 ## Related
 
 - `design-doc/02-generic-sqlite-scenario-logger-go-tool.md`

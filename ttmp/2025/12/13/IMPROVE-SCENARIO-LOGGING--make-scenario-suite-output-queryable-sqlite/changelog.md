@@ -162,3 +162,13 @@ Step 10: Glazed runtime commands + --kv (KeyValue) and updated docs/examples; ca
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/sources/local/glaze-help-commands-reference-2025-12-14.txt — Glaze commands reference
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md — Add query recipes
 
+
+## 2025-12-13
+
+Wrap-up: Makefile install workflow, run-all.sh validation (success+failure), and task checklist reconciliation.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary steps 11-12 wrap-up
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md — Mark skeleton + log_lines_fts tasks complete
+

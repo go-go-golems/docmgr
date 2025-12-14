@@ -126,3 +126,14 @@ Step 9: Switch scenariolog query/report commands to Glazed structured output (co
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/go.mod — Added glazed dependency
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 9
 
+
+## 2025-12-13
+
+Added reference doc: how to use scenariolog-local (with Glazed output) and captured Glaze doc-writing guidance.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/03-how-to-use-scenariolog-local.md — Usage guide
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/sources/local/glaze-help-how-to-write-good-documentation-pages-2025-12-14.txt — Glaze doc style guide
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/sources/local/glaze-help-writing-help-entries-2025-12-14.txt — Glaze help-entry authoring guide
+

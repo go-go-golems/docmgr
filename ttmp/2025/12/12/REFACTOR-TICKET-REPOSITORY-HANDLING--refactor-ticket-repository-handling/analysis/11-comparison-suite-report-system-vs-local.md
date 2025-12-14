@@ -99,6 +99,46 @@ The local binary was faster on most steps in this run; one step (`14-path-normal
 - System: **8.94s**
 - Local: **7.46s**
 
+## Output comparison (stdout/stderr artifacts)
+
+### What we compared
+
+In addition to exit codes and timing, we compared the **captured step stdout/stderr artifacts** under:
+- System: `/tmp/docmgr-system/.logs/step-XX-{stdout,stderr}.txt`
+- Local: `/tmp/docmgr-local/.logs/step-XX-{stdout,stderr}.txt`
+
+We did **two passes**:
+- **Byte size** (`wc -c`) per step/stdout/stderr
+- **Normalized content hash** comparison (SHA256), where we normalize the run roots:
+  - `/tmp/docmgr-system` and `/tmp/docmgr-local` → `/tmp/docmgr-ROOT`
+
+### Results summary
+
+- **stderr**: no substantive diffs detected after normalization (only the intentional doctor warnings surface similarly in both runs).
+- **stdout**: we observed substantive diffs (after root-path normalization) in:
+  - step **02** (`02-init-ticket`)
+  - step **03** (`03-create-docs-and-meta`)
+  - step **05** (`05-search-scenarios`)
+  - step **12** (`12-vocab-add-output`)
+  - step **14** (`14-path-normalization`)
+
+### Categories of stdout differences observed
+
+- **Non-deterministic timestamps**: several outputs include “Updated: …” fields reflecting the run’s timestamp, so system vs local differ.
+- **Ordering differences**: topic lists appear reordered in some outputs (e.g., `chat, backend` vs `backend, chat`).
+- **Path display/normalization differences**: some lines showing “wonky path” fixtures differ in how they render related-file paths (doc-relative deep traversal vs more canonical-ish forms).
+- **Intentional randomness in scenario data**: `vocab add` uses a time-based slug (`test-auto-<epoch>`), which differs across runs. Additionally, local output contained an extra success line in step 12:
+  - `[ok] vocab add included vocabulary_path in output`
+
+### Interpretation
+
+These diffs mean: **the runs are not byte-for-byte identical in output**, even though they are behaviorally “equivalent enough” to pass the common scenario subset.
+
+If we want to treat the comparison suite as a strict regression test on output text, we should either:
+- make scenario outputs deterministic (fixed timestamps, fixed slugs), or
+- normalize known-non-deterministic lines before diffing, or
+- compare structured outputs (JSON) rather than human output where possible.
+
 ## Diagnostics / Warning Parity
 
 Both runs surface the same expected warning patterns in the logs during the doctor-advanced step (`06-doctor-advanced`), notably warnings about:
@@ -301,6 +341,66 @@ sqlite3 /tmp/docmgr-local/.scenario-run.db \
 
 ```bash
 cat /tmp/docmgr-compare-run.log | tail -20
+```
+
+### 9) Artifact output size + content comparisons (stdout/stderr)
+
+**Byte size (stdout/stderr) per step**:
+
+```bash
+cd /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr
+SYS=/tmp/docmgr-system
+LOC=/tmp/docmgr-local
+for i in $(seq -w 1 14); do
+  for k in stdout stderr; do
+    a="$SYS/.logs/step-$i-$k.txt"
+    b="$LOC/.logs/step-$i-$k.txt"
+    if [ ! -f "$a" ] || [ ! -f "$b" ]; then
+      echo "step-$i-$k MISSING"
+      continue
+    fi
+    sa=$(wc -c <"$a" | tr -d ' ')
+    sb=$(wc -c <"$b" | tr -d ' ')
+    echo "step-$i-$k bytes system=$sa local=$sb"
+  done
+done | tee /tmp/docmgr-compare-artifact-sizes.txt
+```
+
+**Normalized-content hash diffs** (normalize `/tmp/docmgr-system` + `/tmp/docmgr-local` to `/tmp/docmgr-ROOT`):
+
+```bash
+cd /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr
+SYS=/tmp/docmgr-system
+LOC=/tmp/docmgr-local
+norm(){ sed -E "s#${SYS}#/tmp/docmgr-ROOT#g; s#${LOC}#/tmp/docmgr-ROOT#g"; }
+for i in $(seq -w 1 14); do
+  for k in stdout stderr; do
+    a="$SYS/.logs/step-$i-$k.txt"
+    b="$LOC/.logs/step-$i-$k.txt"
+    if [ ! -f "$a" ] || [ ! -f "$b" ]; then
+      continue
+    fi
+    ha=$(norm <"$a" | sha256sum | awk '{print $1}')
+    hb=$(norm <"$b" | sha256sum | awk '{print $1}')
+    if [ "$ha" != "$hb" ]; then
+      echo "DIFF step-$i-$k sha system=$ha local=$hb"
+    fi
+  done
+done | tee /tmp/docmgr-compare-artifact-hash-diffs.txt
+```
+
+**Truncated normalized unified diffs** for the steps whose stdout differed:
+
+```bash
+cd /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr
+SYS=/tmp/docmgr-system
+LOC=/tmp/docmgr-local
+norm(){ sed -E "s#${SYS}#/tmp/docmgr-ROOT#g; s#${LOC}#/tmp/docmgr-ROOT#g"; }
+for i in 02 03 05 12 14; do
+  echo "===== DIFF step-$i-stdout (normalized)"
+  diff -u <(norm <"$SYS/.logs/step-$i-stdout.txt") <(norm <"$LOC/.logs/step-$i-stdout.txt") | head -120 || true
+  echo
+done | tee /tmp/docmgr-compare-artifact-content-diffs.txt
 ```
 
 ## Conclusions

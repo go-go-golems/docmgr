@@ -54,15 +54,15 @@ sqlite3 -header -column "${SYSTEM_DB}" <<SQL
 ATTACH DATABASE '${LOCAL_DB}' AS local_db;
 SELECT 
   s1.step_num,
-  s1.name,
+  s1.step_name,
   s1.exit_code as system_exit,
   s2.exit_code as local_exit,
   CASE 
     WHEN s1.exit_code = s2.exit_code THEN 'match'
     ELSE 'DIFFERENT'
   END as status
-FROM scenario_steps s1
-JOIN local_db.scenario_steps s2 ON s1.step_num = s2.step_num AND s1.name = s2.name
+FROM steps s1
+JOIN local_db.steps s2 ON s1.step_num = s2.step_num AND s1.step_name = s2.step_name
 WHERE s1.run_id = '${SYSTEM_RUN_ID}' AND s2.run_id = '${LOCAL_RUN_ID}'
 ORDER BY s1.step_num;
 DETACH DATABASE local_db;
@@ -76,19 +76,19 @@ sqlite3 -header -column "${SYSTEM_DB}" <<SQL
 ATTACH DATABASE '${LOCAL_DB}' AS local_db;
 SELECT 
   s1.step_num,
-  s1.name,
-  ROUND((julianday(s1.finished_at) - julianday(s1.started_at)) * 86400, 2) as system_sec,
-  ROUND((julianday(s2.finished_at) - julianday(s2.started_at)) * 86400, 2) as local_sec,
+  s1.step_name,
+  ROUND((julianday(s1.completed_at) - julianday(s1.started_at)) * 86400, 2) as system_sec,
+  ROUND((julianday(s2.completed_at) - julianday(s2.started_at)) * 86400, 2) as local_sec,
   ROUND(
-    ((julianday(s2.finished_at) - julianday(s2.started_at)) - 
-     (julianday(s1.finished_at) - julianday(s1.started_at))) * 86400, 2
+    ((julianday(s2.completed_at) - julianday(s2.started_at)) - 
+     (julianday(s1.completed_at) - julianday(s1.started_at))) * 86400, 2
   ) as diff_sec
-FROM scenario_steps s1
-JOIN local_db.scenario_steps s2 ON s1.step_num = s2.step_num AND s1.name = s2.name
+FROM steps s1
+JOIN local_db.steps s2 ON s1.step_num = s2.step_num AND s1.step_name = s2.step_name
 WHERE s1.run_id = '${SYSTEM_RUN_ID}' AND s2.run_id = '${LOCAL_RUN_ID}'
 ORDER BY ABS(
-  (julianday(s2.finished_at) - julianday(s2.started_at)) - 
-  (julianday(s1.finished_at) - julianday(s1.started_at))
+  (julianday(s2.completed_at) - julianday(s2.started_at)) - 
+  (julianday(s1.completed_at) - julianday(s1.started_at))
 ) DESC;
 DETACH DATABASE local_db;
 SQL
@@ -101,11 +101,11 @@ sqlite3 -header -column "${SYSTEM_DB}" <<SQL
 ATTACH DATABASE '${LOCAL_DB}' AS local_db;
 SELECT 
   s1.step_num,
-  s1.name,
+  s1.step_name,
   s1.exit_code as system_exit,
   s2.exit_code as local_exit
-FROM scenario_steps s1
-JOIN local_db.scenario_steps s2 ON s1.step_num = s2.step_num AND s1.name = s2.name
+FROM steps s1
+JOIN local_db.steps s2 ON s1.step_num = s2.step_num AND s1.step_name = s2.step_name
 WHERE s1.run_id = '${SYSTEM_RUN_ID}' 
   AND s2.run_id = '${LOCAL_RUN_ID}'
   AND s1.exit_code != s2.exit_code
@@ -121,13 +121,13 @@ sqlite3 -header -column "${SYSTEM_DB}" <<SQL
 ATTACH DATABASE '${LOCAL_DB}' AS local_db;
 SELECT 
   'system' as version,
-  ROUND((julianday(finished_at) - julianday(started_at)) * 86400, 2) as duration_sec
+  ROUND((julianday(completed_at) - julianday(started_at)) * 86400, 2) as duration_sec
 FROM scenario_runs
 WHERE run_id = '${SYSTEM_RUN_ID}'
 UNION ALL
 SELECT 
   'local' as version,
-  ROUND((julianday(finished_at) - julianday(started_at)) * 86400, 2) as duration_sec
+  ROUND((julianday(completed_at) - julianday(started_at)) * 86400, 2) as duration_sec
 FROM local_db.scenario_runs
 WHERE run_id = '${LOCAL_RUN_ID}';
 DETACH DATABASE local_db;

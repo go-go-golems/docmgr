@@ -58,6 +58,28 @@ The goal here is to make command behavior consistent by **removing duplicated di
 gofmt -w pkg/commands/status.go
 go test ./... -count=1
 
+# Optional: capture a whole “cleanup work session” into a queryable sqlite log
+# (useful when command output is long or you need to diff/grep after the fact).
+#
+# Requires: ~/.local/bin/scenariolog (see IMPROVE-SCENARIO-LOGGING / scenariolog docs).
+SCLOG_ROOT=/tmp/docmgr-cleanup-logs
+SCLOG_DB=/tmp/docmgr-cleanup-logs/.scenario-run.db
+mkdir -p "$SCLOG_ROOT/.logs"
+
+scenariolog init --db "$SCLOG_DB"
+RUN_ID=$(scenariolog run start --db "$SCLOG_DB" --root-dir "$SCLOG_ROOT" --suite docmgr-cleanup --kv ticket:CLEANUP-LEGACY-WALKERS)
+
+scenariolog exec --db "$SCLOG_DB" --run-id "$RUN_ID" --root-dir "$SCLOG_ROOT" --log-dir .logs --step-num 1 --name gofmt -- gofmt -w pkg/commands/status.go
+scenariolog exec --db "$SCLOG_DB" --run-id "$RUN_ID" --root-dir "$SCLOG_ROOT" --log-dir .logs --step-num 2 --name tests -- go test ./... -count=1
+
+scenariolog run end --db "$SCLOG_DB" --run-id "$RUN_ID" --exit-code $?
+
+# Query after the fact
+scenariolog summary  --db "$SCLOG_DB" --output table
+scenariolog failures --db "$SCLOG_DB" --output table
+scenariolog timings  --db "$SCLOG_DB" --top 10 --output table
+scenariolog search   --db "$SCLOG_DB" --run-id "$RUN_ID" --query "panic OR ERROR OR FAIL" --limit 50 --output table
+
 # Ticket workflow
 docmgr task check --ticket CLEANUP-LEGACY-WALKERS --id 1
 docmgr doc relate --doc ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/reference/01-diary.md \

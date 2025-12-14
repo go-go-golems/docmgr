@@ -216,3 +216,12 @@ Phase 4.2: removed CollectTicketWorkspaces (completion now QueryDocs-backed) and
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/commands/doctor.go — Updated to use FindTicketScaffoldsMissingIndex
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/pkg/completion/actions.go — Removed CollectTicketWorkspaces usage
 
+
+## 2025-12-13
+
+Update verification workflow to use scenariolog (queryable logs) instead of waiting for a better logging tool.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/reference/01-diary.md — Added scenariolog capture/query snippet
+

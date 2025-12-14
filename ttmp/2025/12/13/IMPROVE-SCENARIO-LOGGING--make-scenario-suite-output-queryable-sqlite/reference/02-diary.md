@@ -372,6 +372,22 @@ DB=/tmp/docmgr-scenario/.scenario-run.db
 ### What warrants a second pair of eyes
 - Confirm we want to add the enhanced Glazed help system wiring later (separate from “just using Glazed for output”).
 
+## Step 10: Convert runtime commands to Glazed (BareCommand) + add `--kv` (KeyValue)
+
+This step refactored the “runtime” commands (`init`, `run start/end`, `exec`) to be implemented as Glazed commands (using the `BareCommand` interface). It also added a typed `--kv` flag using Glazed `ParameterTypeKeyValue`, decoded directly into `map[string]string` settings structs and stored into the `kv` table at run/step scope.
+
+**Commit (code):** 86e8afe42e8180010757959b9e616bee0a14e817 — "scenariolog: refactor run/exec/init to glazed barecommands + keyvalue kv"
+
+### What I did
+- Replaced hand-rolled Cobra parsing for `init`, `run start/end`, and `exec` with Glazed `BareCommand` implementations and `cli.BuildCobraCommand`.
+- Added `--kv` to:
+  - `scenariolog run start` (run-level kv tags)
+  - `scenariolog exec` (step-level kv tags)
+- Removed the manual KV parsing helper in favor of Glazed decoding into struct fields (`map[string]string`).
+
+### Notes
+- Glazed `ParameterTypeKeyValue` expects `key:value` pairs (repeatable) and supports `--kv @file.json` / `--kv @file.yaml` for map input.
+
 ## Related
 
 - `design-doc/02-generic-sqlite-scenario-logger-go-tool.md`

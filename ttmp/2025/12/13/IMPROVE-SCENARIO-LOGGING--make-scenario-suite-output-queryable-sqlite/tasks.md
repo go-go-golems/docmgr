@@ -41,6 +41,7 @@ This task list is the actionable checklist that implements:
   - [ ] hostname/user
   - [ ] `docmgr_path`/`docmgr_version` (where applicable)
   - [ ] best-effort git SHA + dirty flag (guarded)
+- [x] Allow user-provided KV tags via `--kv key:value` on `run start` and `exec` (Glazed `ParameterTypeKeyValue`)
 - [ ] Unit test: run a command that writes to stdout+stderr and exits nonzero; verify DB rows + artifacts + hash/size
 
 ### Phase 3 — FTS ingestion + search
@@ -83,6 +84,20 @@ This task list is the actionable checklist that implements:
 - [x] how to run
 - [x] where DB + artifacts live
 - [x] how to query with `scenariolog search/failures/timings` and/or `sqlite3`
+
+#### Query recipes (copy/paste)
+
+After running the scenario suite, you can query the results via `scenariolog`:
+
+```bash
+DB=/tmp/docmgr-scenario/.scenario-run.db
+RUN_ID=$(sqlite3 "$DB" "SELECT run_id FROM scenario_runs ORDER BY started_at DESC LIMIT 1;")
+
+scenariolog summary  --db "$DB" --output table
+scenariolog timings  --db "$DB" --top 10 --output table
+scenariolog failures --db "$DB" --output table
+scenariolog search   --db "$DB" --run-id "$RUN_ID" --query "warning OR error" --limit 50 --output table
+```
 
 ### Phase 6 — Hardening / polish
 

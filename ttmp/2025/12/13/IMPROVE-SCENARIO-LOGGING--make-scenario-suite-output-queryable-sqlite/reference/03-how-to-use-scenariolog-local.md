@@ -77,7 +77,7 @@ ROOT=/tmp/scenario
 mkdir -p "$ROOT" "$ROOT/.logs"
 
 /tmp/scenariolog-local init --db "$DB"
-RUN_ID=$(/tmp/scenariolog-local run start --db "$DB" --root-dir "$ROOT" --suite demo)
+RUN_ID=$(/tmp/scenariolog-local run start --db "$DB" --root-dir "$ROOT" --suite demo --kv env:local --kv build_id:123)
 
 # Wrap a step
 /tmp/scenariolog-local exec \
@@ -89,6 +89,7 @@ RUN_ID=$(/tmp/scenariolog-local run start --db "$DB" --root-dir "$ROOT" --suite 
   --step-num 1 \
   --name "demo-step" \
   --script-path "./some-script.sh" \
+  --kv step_kind:demo \
   -- bash --noprofile --norc -c 'echo out; echo err 1>&2; exit 0'
 
 /tmp/scenariolog-local run end --db "$DB" --run-id "$RUN_ID" --exit-code 0

@@ -115,3 +115,14 @@ Step 7-8: Hardening exec cancellation (kill process group) + handle SIGINT as ca
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/internal/scenariolog/procgroup_unix.go — Unix process group management
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary steps 7-8
 
+
+## 2025-12-13
+
+Step 9: Switch scenariolog query/report commands to Glazed structured output (commit ba9fef989995b2a7340664e9ba18c9fa64906f0d).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/cmd/scenariolog/glazed_cmds.go — Glazed commands (search/summary/failures/timings)
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/scenariolog/go.mod — Added glazed dependency
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary step 9
+

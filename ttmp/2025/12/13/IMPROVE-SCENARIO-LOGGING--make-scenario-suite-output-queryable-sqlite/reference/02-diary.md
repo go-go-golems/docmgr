@@ -12,22 +12,18 @@ Owners: []
 RelatedFiles:
     - Path: scenariolog/README.md
       Note: Build instructions + FTS5 enablement/fallback notes
+    - Path: scenariolog/cmd/scenariolog/glazed_cmds.go
+      Note: Glazed query/report commands
     - Path: scenariolog/cmd/scenariolog/main.go
-      Note: |-
-        Cobra entrypoint (currently `init`; will grow)
-        SIGINT notify context
+      Note: Cobra entrypoint (currently `init`; will grow)
     - Path: scenariolog/go.mod
       Note: Self-contained tool module (dependencies + toolchain)
     - Path: scenariolog/internal/scenariolog/db.go
       Note: SQLite open + pragmas (file-backed DB)
-    - Path: scenariolog/internal/scenariolog/exec_step_cancel_linux_test.go
-      Note: Linux cancellation test
     - Path: scenariolog/internal/scenariolog/migrate.go
       Note: Schema migrations + FTS5 graceful fallback behavior
     - Path: scenariolog/internal/scenariolog/migrate_test.go
       Note: Migration tests (including degraded mode expectations)
-    - Path: scenariolog/internal/scenariolog/procgroup_unix.go
-      Note: Process group kill
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/design-doc/03-implementation-plan-scenariolog-mvp-kv-artifacts-fts-glazed-cli.md
       Note: Step-by-step implementation plan
     - Path: ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md
@@ -349,6 +345,32 @@ This step made `scenariolog exec` behave nicely on interactive CTRL-C: we conver
 
 ### What I did
 - Wrapped the `exec` command context with `signal.NotifyContext(ctx, os.Interrupt)` and passed that context down to DB ops + `ExecStep`.
+
+## Step 9: Switch query/report commands to Glazed (structured output)
+
+This step migrated the “query/report” surface of `scenariolog` to **Glazed**, so these commands now support consistent structured output flags (`--output json|yaml|csv|table`, `--fields`, `--sort-columns`) without hand-rolling formatters.
+
+**Commit (code):** ba9fef989995b2a7340664e9ba18c9fa64906f0d — "scenariolog: add glazed query commands"
+
+### What I did
+- Added Glazed-backed commands:
+  - `scenariolog search`
+  - `scenariolog summary`
+  - `scenariolog failures`
+  - `scenariolog timings`
+- Each command parses settings via `parsedLayers.InitializeStruct(...)` and emits rows via `types.Row`.
+
+### What worked
+- Example:
+
+```bash
+DB=/tmp/docmgr-scenario/.scenario-run.db
+/tmp/scenariolog-local summary --db "$DB" --output json
+/tmp/scenariolog-local timings --db "$DB" --top 5 --output table
+```
+
+### What warrants a second pair of eyes
+- Confirm we want to add the enhanced Glazed help system wiring later (separate from “just using Glazed for output”).
 
 ## Related
 

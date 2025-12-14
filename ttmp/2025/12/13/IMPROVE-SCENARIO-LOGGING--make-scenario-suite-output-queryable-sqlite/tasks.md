@@ -58,16 +58,16 @@ This task list is the actionable checklist that implements:
 
 - [x] Create `scenariolog/cmd/scenariolog` Cobra root command
 - [ ] Add Glazed help system wiring (help system + richer help)
-- [ ] Implement command settings parsing via `parsedLayers.InitializeStruct(...)` (don’t read Cobra flags directly)
+- [x] Implement command settings parsing via `parsedLayers.InitializeStruct(...)` (don’t read Cobra flags directly)
 - [ ] Implement commands:
 - [x] `scenariolog init --db`
 - [x] `scenariolog run start --db --root-dir --suite` (returns run_id)
 - [x] `scenariolog run end --db --run-id --exit-code`
 - [x] `scenariolog exec --db --run-id --kind step --step-num --name --log-dir -- <cmd...>`
-  - [ ] `scenariolog search --db --query ...` (Glazed structured output)
-  - [ ] `scenariolog summary --db [--run-id]` (Glazed structured output)
-  - [ ] `scenariolog failures --db [--run-id]` (Glazed structured output)
-  - [ ] `scenariolog timings --db [--run-id]` (Glazed structured output)
+- [x] `scenariolog search --db --query ...` (Glazed structured output)
+- [x] `scenariolog summary --db [--run-id]` (Glazed structured output)
+- [x] `scenariolog failures --db [--run-id]` (Glazed structured output)
+- [x] `scenariolog timings --db [--run-id]` (Glazed structured output)
 - [ ] Optional: dual-mode for `exec` (`--with-glaze-output`) so humans get nice text by default
 
 ### Phase 5 — Integrate into `test-scenarios/testing-doc-manager`

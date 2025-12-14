@@ -24,7 +24,7 @@ func (e *ExitError) Error() string {
 	return fmt.Sprintf("exited with code %d", e.Code)
 }
 
-func newRootCmd() *cobra.Command {
+func newRootCmd() (*cobra.Command, error) {
 	rootCmd := &cobra.Command{
 		Use:   "scenariolog",
 		Short: "Scenario logging flight recorder (sqlite + artifacts + FTS)",
@@ -33,8 +33,10 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newRunCmd())
 	rootCmd.AddCommand(newExecCmd())
-	rootCmd.AddCommand(newSearchCmd())
-	return rootCmd
+	if err := addGlazedCommands(rootCmd); err != nil {
+		return nil, err
+	}
+	return rootCmd, nil
 }
 
 func newInitCmd() *cobra.Command {
@@ -267,63 +269,12 @@ func newExecCmd() *cobra.Command {
 	return cmd
 }
 
-func newSearchCmd() *cobra.Command {
-	var dbPath string
-	var runID string
-	var query string
-	var limit int
-
-	cmd := &cobra.Command{
-		Use:   "search",
-		Short: "Search indexed log lines (FTS5)",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if dbPath == "" {
-				return errors.New("--db is required")
-			}
-			if runID == "" {
-				return errors.New("--run-id is required")
-			}
-			if query == "" {
-				return errors.New("--query is required")
-			}
-
-			ctx := cmd.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-
-			db, err := scenariolog.Open(ctx, dbPath)
-			if err != nil {
-				return err
-			}
-			defer func() { _ = db.Close() }()
-
-			if err := scenariolog.Migrate(ctx, db); err != nil {
-				return err
-			}
-
-			hits, err := scenariolog.SearchFTS(ctx, db, runID, query, limit)
-			if err != nil {
-				return err
-			}
-
-			// Simple tabular output for now; we can switch to Glazed output later.
-			for _, h := range hits {
-				fmt.Printf("%d\t%d\t%s\n", h.ArtifactID, h.LineNum, h.Text)
-			}
-			return nil
-		},
-	}
-
-	cmd.Flags().StringVar(&dbPath, "db", "", "Path to sqlite database file")
-	cmd.Flags().StringVar(&runID, "run-id", "", "Run id to search within")
-	cmd.Flags().StringVar(&query, "query", "", "FTS query string")
-	cmd.Flags().IntVar(&limit, "limit", 100, "Max number of hits to return")
-	return cmd
-}
-
 func main() {
-	cmd := newRootCmd()
+	cmd, err := newRootCmd()
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "error: %+v\n", err)
+		os.Exit(1)
+	}
 	if err := cmd.Execute(); err != nil {
 		var ee *ExitError
 		if errors.As(err, &ee) {

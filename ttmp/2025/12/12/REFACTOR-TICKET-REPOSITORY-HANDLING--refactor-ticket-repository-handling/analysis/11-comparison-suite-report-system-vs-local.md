@@ -148,6 +148,161 @@ Inspect details with scenariolog:
 /tmp/scenariolog-local failures --db /tmp/docmgr-local/.scenario-run.db --output table
 ```
 
+## Full command + SQL transcript (exactly what we ran)
+
+This section captures the **exact CLI commands and SQL** used while producing this report, so we can reproduce it later.
+
+### 1) Verify scenariolog DB schema (so our SQL targets the right tables/columns)
+
+```bash
+cd /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr
+sqlite3 /tmp/docmgr-system/.scenario-run.db "PRAGMA table_info(steps);"
+sqlite3 /tmp/docmgr-system/.scenario-run.db "PRAGMA table_info(scenario_runs);"
+sqlite3 /tmp/docmgr-system/.scenario-run.db ".tables"
+```
+
+### 2) Run the comparison suite (fresh run for both binaries)
+
+We ran the harness to create fresh run DBs:
+
+```bash
+cd /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr
+rm -rf /tmp/docmgr-system /tmp/docmgr-local
+timeout 900 bash ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-docmgr-versions.sh /tmp/docmgr-system /tmp/docmgr-local 2>&1 | tee /tmp/docmgr-compare-run.log
+```
+
+The harness automatically:
+- builds `scenariolog` (default: `/tmp/scenariolog-local`) if missing
+- builds the local docmgr binary at `/tmp/docmgr-compare-local/docmgr-local`
+- runs a common subset of scenario steps (1–14) for system and local docmgr
+
+### 3) Summaries and failures (scenariolog commands)
+
+```bash
+/tmp/scenariolog-local summary --db /tmp/docmgr-system/.scenario-run.db --output table
+/tmp/scenariolog-local summary --db /tmp/docmgr-local/.scenario-run.db --output table
+
+/tmp/scenariolog-local failures --db /tmp/docmgr-system/.scenario-run.db --output table
+/tmp/scenariolog-local failures --db /tmp/docmgr-local/.scenario-run.db --output table
+```
+
+### 4) Search for warnings/errors (scenariolog search)
+
+System run:
+
+```bash
+/tmp/scenariolog-local search \
+  --db /tmp/docmgr-system/.scenario-run.db \
+  --run-id 2025-12-14T01:36:45.053745795Z-pid-2592017-439dc61eaf955b6a \
+  --query "error OR warning OR fail" \
+  --limit 50 \
+  --output table
+```
+
+Local run:
+
+```bash
+/tmp/scenariolog-local search \
+  --db /tmp/docmgr-local/.scenario-run.db \
+  --run-id 2025-12-14T01:36:54.054533601Z-pid-2593497-9bd89fe76d3f1190 \
+  --query "error OR warning OR fail" \
+  --limit 50 \
+  --output table
+```
+
+### 5) Step-by-step diff across runs (our helper script)
+
+```bash
+cd /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr
+bash ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-results.sh \
+  /tmp/docmgr-system/.scenario-run.db \
+  /tmp/docmgr-local/.scenario-run.db
+```
+
+### 6) Raw SQL used for cross-run comparison (from `compare-results.sh`)
+
+**Exit-code comparison** (SQLite cross-file join via `ATTACH DATABASE`):
+
+```sql
+ATTACH DATABASE '/tmp/docmgr-local/.scenario-run.db' AS local_db;
+SELECT
+  s1.step_num,
+  s1.step_name,
+  s1.exit_code AS system_exit,
+  s2.exit_code AS local_exit,
+  CASE
+    WHEN s1.exit_code = s2.exit_code THEN 'match'
+    ELSE 'DIFFERENT'
+  END AS status
+FROM steps s1
+JOIN local_db.steps s2 ON s1.step_num = s2.step_num AND s1.step_name = s2.step_name
+WHERE s1.run_id = '2025-12-14T01:36:45.053745795Z-pid-2592017-439dc61eaf955b6a'
+  AND s2.run_id = '2025-12-14T01:36:54.054533601Z-pid-2593497-9bd89fe76d3f1190'
+ORDER BY s1.step_num;
+DETACH DATABASE local_db;
+```
+
+**Duration comparison**:
+
+```sql
+ATTACH DATABASE '/tmp/docmgr-local/.scenario-run.db' AS local_db;
+SELECT
+  s1.step_num,
+  s1.step_name,
+  ROUND((julianday(s1.completed_at) - julianday(s1.started_at)) * 86400, 2) AS system_sec,
+  ROUND((julianday(s2.completed_at) - julianday(s2.started_at)) * 86400, 2) AS local_sec,
+  ROUND(
+    ((julianday(s2.completed_at) - julianday(s2.started_at)) -
+     (julianday(s1.completed_at) - julianday(s1.started_at))) * 86400, 2
+  ) AS diff_sec
+FROM steps s1
+JOIN local_db.steps s2 ON s1.step_num = s2.step_num AND s1.step_name = s2.step_name
+WHERE s1.run_id = '2025-12-14T01:36:45.053745795Z-pid-2592017-439dc61eaf955b6a'
+  AND s2.run_id = '2025-12-14T01:36:54.054533601Z-pid-2593497-9bd89fe76d3f1190'
+ORDER BY ABS(diff_sec) DESC;
+DETACH DATABASE local_db;
+```
+
+**Total run duration**:
+
+```sql
+ATTACH DATABASE '/tmp/docmgr-local/.scenario-run.db' AS local_db;
+SELECT
+  'system' AS version,
+  ROUND((julianday(completed_at) - julianday(started_at)) * 86400, 2) AS duration_sec
+FROM scenario_runs
+WHERE run_id = '2025-12-14T01:36:45.053745795Z-pid-2592017-439dc61eaf955b6a'
+UNION ALL
+SELECT
+  'local' AS version,
+  ROUND((julianday(completed_at) - julianday(started_at)) * 86400, 2) AS duration_sec
+FROM local_db.scenario_runs
+WHERE run_id = '2025-12-14T01:36:54.054533601Z-pid-2593497-9bd89fe76d3f1190';
+DETACH DATABASE local_db;
+```
+
+### 7) Raw SQL we ran to print step rows (per-run)
+
+System:
+
+```bash
+sqlite3 /tmp/docmgr-system/.scenario-run.db \
+  "SELECT step_num, step_name, exit_code, duration_ms FROM steps WHERE run_id='2025-12-14T01:36:45.053745795Z-pid-2592017-439dc61eaf955b6a' ORDER BY step_num;"
+```
+
+Local:
+
+```bash
+sqlite3 /tmp/docmgr-local/.scenario-run.db \
+  "SELECT step_num, step_name, exit_code, duration_ms FROM steps WHERE run_id='2025-12-14T01:36:54.054533601Z-pid-2593497-9bd89fe76d3f1190' ORDER BY step_num;"
+```
+
+### 8) Capturing the run log snippet
+
+```bash
+cat /tmp/docmgr-compare-run.log | tail -20
+```
+
 ## Conclusions
 
 - **Behavioral parity** (for shared feature set) is confirmed by scenario pass/fail: **14/14 steps match**.

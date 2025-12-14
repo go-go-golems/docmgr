@@ -93,7 +93,7 @@ func (c *TicketMoveCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.applyMove(settings)
+	result, err := c.applyMove(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -108,10 +108,22 @@ func (c *TicketMoveCommand) RunIntoGlazeProcessor(
 	return gp.AddRow(ctx, row)
 }
 
-func (c *TicketMoveCommand) applyMove(settings *TicketMoveSettings) (*TicketMoveResult, error) {
+func (c *TicketMoveCommand) applyMove(ctx context.Context, settings *TicketMoveSettings) (*TicketMoveResult, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	srcDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	srcDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find source ticket: %w", err)
 	}

@@ -2,6 +2,7 @@ package completion
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,36 +18,72 @@ import (
 func ActionTickets() carapace.Action {
 	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
 		root := workspace.ResolveRoot("ttmp")
-		workspaces, err := workspace.CollectTicketWorkspaces(root, nil)
+
+		// Completion should follow the same discovery + filtering rules as the main commands layer.
+		// Use Workspace+QueryDocs rather than legacy filesystem walkers.
+		ctx := context.Background()
+		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: root})
 		if err != nil {
-			return carapace.ActionMessage(fmt.Sprintf("failed to collect tickets: %v", err))
+			return carapace.ActionMessage(fmt.Sprintf("failed to discover workspace: %v", err))
 		}
-		vals := []string{}
-		for _, tw := range workspaces {
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return carapace.ActionMessage(fmt.Sprintf("failed to initialize workspace index: %v", err))
+		}
+
+		qr, err := ws.QueryDocs(ctx, workspace.DocQuery{
+			Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+			Filters: workspace.DocFilters{
+				DocType: "index",
+			},
+			Options: workspace.DocQueryOptions{
+				IncludeErrors: true,
+				OrderBy:       workspace.OrderByPath,
+			},
+		})
+		if err != nil {
+			return carapace.ActionMessage(fmt.Sprintf("failed to query tickets: %v", err))
+		}
+
+		// ticket -> description
+		byTicket := map[string]string{}
+		for _, h := range qr.Docs {
 			ticket := ""
 			title := ""
-			if tw.Doc != nil {
-				ticket = strings.TrimSpace(tw.Doc.Ticket)
-				title = strings.TrimSpace(tw.Doc.Title)
+			if h.Doc != nil {
+				ticket = strings.TrimSpace(h.Doc.Ticket)
+				title = strings.TrimSpace(h.Doc.Title)
 			}
 			if ticket == "" {
-				// Fall back to directory name if frontmatter missing
-				base := filepath.Base(tw.Path)
-				// Try to extract ticket slug from path segment
-				parts := strings.SplitN(base, "-", 2)
+				// Fallback: infer from ticket directory name (useful for partial/broken states).
+				dir := filepath.Base(filepath.Dir(h.Path))
+				parts := strings.SplitN(dir, "-", 2)
 				if len(parts) > 0 {
-					ticket = parts[0]
+					ticket = strings.TrimSpace(parts[0])
 				} else {
-					ticket = base
+					ticket = strings.TrimSpace(dir)
 				}
 			}
-			if title == "" && tw.Doc != nil {
-				title = tw.Doc.Summary
+			if ticket == "" {
+				continue
+			}
+			if title == "" && h.Doc != nil {
+				title = strings.TrimSpace(h.Doc.Summary)
 			}
 			if title == "" {
-				title = tw.Path
+				title = h.Path
 			}
-			vals = append(vals, ticket, title)
+			byTicket[ticket] = title
+		}
+
+		tickets := make([]string, 0, len(byTicket))
+		for t := range byTicket {
+			tickets = append(tickets, t)
+		}
+		sort.Strings(tickets)
+
+		vals := make([]string, 0, len(tickets)*2)
+		for _, t := range tickets {
+			vals = append(vals, t, byTicket[t])
 		}
 		return carapace.ActionValuesDescribed(vals...)
 	})

@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -168,42 +167,84 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	configDir := ""
-	if cfgPath, err := workspace.FindTTMPConfigPath(); err == nil {
-		if absCfg, err := filepath.Abs(cfgPath); err == nil {
-			configDir = filepath.Dir(absCfg)
-		} else {
-			configDir = filepath.Dir(cfgPath)
-		}
+	// Discover workspace + build ephemeral index so we can resolve target docs via QueryDocs
+	// (Spec §11.2.4 / §5.1).
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
 	// Resolve target document path
 	var targetDocPath string
 	var ticketDir string
-	var err error
 
 	if settings.Doc != "" {
-		targetDocPath = settings.Doc
+		// ScopeDoc: normalize and verify doc exists in workspace index.
+		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+			Scope:   workspace.Scope{Kind: workspace.ScopeDoc, DocPath: strings.TrimSpace(settings.Doc)},
+			Options: workspace.DocQueryOptions{IncludeErrors: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to resolve --doc via workspace index: %w", err)
+		}
+		if len(res.Docs) != 1 {
+			return fmt.Errorf("expected exactly 1 doc for --doc %q, got %d", settings.Doc, len(res.Docs))
+		}
+		if res.Docs[0].ReadErr != nil {
+			return fmt.Errorf("document has invalid frontmatter (fix before relating files): %s: %v", res.Docs[0].Path, res.Docs[0].ReadErr)
+		}
+		targetDocPath = res.Docs[0].Path
 	} else {
 		if settings.Ticket == "" {
 			return fmt.Errorf("must specify either --doc or --ticket")
 		}
-		ticketDir, err = findTicketDirectory(settings.Root, settings.Ticket)
+		// ScopeTicket: resolve ticket index doc via QueryDocs (DocType=index and basename index.md).
+		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
+			Filters: workspace.DocFilters{
+				DocType: "index",
+			},
+			Options: workspace.DocQueryOptions{IncludeErrors: true},
+		})
 		if err != nil {
-			return fmt.Errorf("failed to find ticket directory: %w", err)
+			return fmt.Errorf("failed to resolve ticket index via workspace index: %w", err)
 		}
-		targetDocPath = filepath.Join(ticketDir, "index.md")
+		var candidates []workspace.DocHandle
+		for _, h := range res.Docs {
+			if filepath.Base(filepath.FromSlash(h.Path)) == "index.md" {
+				candidates = append(candidates, h)
+			}
+		}
+		if len(candidates) == 0 {
+			return fmt.Errorf("could not find index.md for ticket %q", settings.Ticket)
+		}
+		if len(candidates) > 1 {
+			paths := make([]string, 0, len(candidates))
+			for _, c := range candidates {
+				paths = append(paths, c.Path)
+			}
+			sort.Strings(paths)
+			return fmt.Errorf("found multiple index.md docs for ticket %q: %s", settings.Ticket, strings.Join(paths, ", "))
+		}
+		if candidates[0].ReadErr != nil {
+			return fmt.Errorf("ticket index has invalid frontmatter (fix before relating files): %s: %v", candidates[0].Path, candidates[0].ReadErr)
+		}
+		targetDocPath = candidates[0].Path
 	}
 
-	targetDocPath, err = filepath.Abs(targetDocPath)
-	if err != nil {
-		return fmt.Errorf("failed to resolve document path: %w", err)
+	targetDocPath = filepath.Clean(strings.TrimSpace(targetDocPath))
+	if targetDocPath == "" {
+		return fmt.Errorf("failed to resolve target document path")
 	}
 
 	resolver := paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  settings.Root,
+		DocsRoot:  ws.Context().Root,
 		DocPath:   targetDocPath,
-		ConfigDir: configDir,
+		ConfigDir: ws.Context().ConfigDir,
+		RepoRoot:  ws.Context().RepoRoot,
 	})
 
 	// Optional: collect suggestions
@@ -211,10 +252,16 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// Optional notes from existing documents for the same file
 	existingNotes := map[string]map[string]bool{}
 	if settings.Suggest {
-		// Determine search root: ticket dir if available else repo root
-		searchRoot := settings.Root
+		// Determine search root: ticket dir if inferable else repo root/docs root.
+		// This is used for git/ripgrep heuristics (not for doc scanning).
+		searchRoot := ws.Context().RepoRoot
+		if searchRoot == "" {
+			searchRoot = ws.Context().Root
+		}
 		if ticketDir == "" && settings.Ticket != "" {
-			ticketDir, _ = findTicketDirectory(settings.Root, settings.Ticket)
+			if inferred := inferTicketDirFromDocPath(ws.Context().Root, targetDocPath); inferred != "" {
+				ticketDir = inferred
+			}
 		}
 		if ticketDir != "" {
 			searchRoot = ticketDir
@@ -235,55 +282,70 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			}
 		} else {
 			// Default heuristic blend: existing docs, git history, ripgrep, git status
-			_ = filepath.Walk(searchRoot, func(path string, info os.FileInfo, err error) error {
-				if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-					return nil
-				}
-				doc, err := readDocumentFrontmatter(path)
-				if err != nil {
-					return nil
-				}
-				// If topics provided, filter
-				if len(settings.Topics) > 0 {
-					match := false
-					for _, ft := range settings.Topics {
-						for _, dt := range doc.Topics {
-							if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
-								match = true
+			// Use QueryDocs instead of ad-hoc filesystem walking so we share the same skip rules
+			// and parsing behavior as the rest of the tool.
+			docScope := workspace.Scope{Kind: workspace.ScopeRepo}
+			if strings.TrimSpace(settings.Ticket) != "" {
+				docScope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+			}
+			docRes, err := ws.QueryDocs(ctx, workspace.DocQuery{
+				Scope: docScope,
+				Options: workspace.DocQueryOptions{
+					IncludeErrors:       false,
+					IncludeArchivedPath: true,
+					IncludeScriptsPath:  true,
+					IncludeControlDocs:  true,
+					IncludeDiagnostics:  false,
+					OrderBy:             workspace.OrderByPath,
+				},
+			})
+			if err == nil {
+				for _, h := range docRes.Docs {
+					if h.Doc == nil || h.ReadErr != nil {
+						continue
+					}
+					// Topic filter (same behavior as before).
+					if len(settings.Topics) > 0 {
+						match := false
+						for _, ft := range settings.Topics {
+							for _, dt := range h.Doc.Topics {
+								if strings.EqualFold(strings.TrimSpace(ft), strings.TrimSpace(dt)) {
+									match = true
+									break
+								}
+							}
+							if match {
 								break
 							}
 						}
-						if match {
-							break
+						if !match {
+							continue
 						}
 					}
-					if !match {
-						return nil
-					}
-				}
-				docResolver := paths.NewResolver(paths.ResolverOptions{
-					DocsRoot:  settings.Root,
-					DocPath:   path,
-					ConfigDir: configDir,
-				})
-				for _, rf := range doc.RelatedFiles {
-					if rf.Path == "" {
-						continue
-					}
-					canonical := canonicalizeWithResolver(docResolver, rf.Path)
-					if canonical == "" {
-						continue
-					}
-					addSuggestion(suggestions, resolver, canonical, "referenced by documents")
-					if rf.Note != "" {
-						if _, ok := existingNotes[canonical]; !ok {
-							existingNotes[canonical] = map[string]bool{}
+					docResolver := paths.NewResolver(paths.ResolverOptions{
+						DocsRoot:  ws.Context().Root,
+						DocPath:   h.Path,
+						ConfigDir: ws.Context().ConfigDir,
+						RepoRoot:  ws.Context().RepoRoot,
+					})
+					for _, rf := range h.Doc.RelatedFiles {
+						if strings.TrimSpace(rf.Path) == "" {
+							continue
 						}
-						existingNotes[canonical][rf.Note] = true
+						canonical := canonicalizeWithResolver(docResolver, rf.Path)
+						if canonical == "" {
+							continue
+						}
+						addSuggestion(suggestions, resolver, canonical, "referenced by documents")
+						if strings.TrimSpace(rf.Note) != "" {
+							if _, ok := existingNotes[canonical]; !ok {
+								existingNotes[canonical] = map[string]bool{}
+							}
+							existingNotes[canonical][rf.Note] = true
+						}
 					}
 				}
-				return nil
-			})
+			}
 
 			terms := []string{}
 			if settings.Query != "" {
@@ -620,6 +682,33 @@ func addSuggestion(out map[string]reasonSet, resolver *paths.Resolver, rawPath, 
 		out[canonical][reason] = true
 	}
 	return canonical
+}
+
+// inferTicketDirFromDocPath best-effort returns the ticket directory for a doc under docsRoot.
+//
+// Expected docs layout:
+//
+//	<docsRoot>/<YYYY>/<MM>/<DD>/<TICKET--slug>/...
+func inferTicketDirFromDocPath(docsRoot string, absDocPath string) string {
+	docsRoot = filepath.Clean(strings.TrimSpace(docsRoot))
+	absDocPath = filepath.Clean(strings.TrimSpace(absDocPath))
+	if docsRoot == "" || absDocPath == "" {
+		return ""
+	}
+	rel, err := filepath.Rel(docsRoot, absDocPath)
+	if err != nil {
+		return ""
+	}
+	rel = filepath.Clean(rel)
+	if rel == "." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || rel == ".." {
+		return ""
+	}
+	parts := strings.Split(rel, string(filepath.Separator))
+	if len(parts) < 4 {
+		return ""
+	}
+	ticketDir := filepath.Join(docsRoot, parts[0], parts[1], parts[2], parts[3])
+	return ticketDir
 }
 
 var _ cmds.GlazeCommand = &RelateCommand{}

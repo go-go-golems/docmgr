@@ -37,6 +37,25 @@ Optional manual steps:
 
 ## Commands Summary
 
+## How to run (important)
+
+This suite must run against an explicitly pinned `docmgr` binary via `DOCMGR_PATH`.
+
+- **Recommended (run repo code)**:
+
+```bash
+go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
+DOCMGR_PATH=/tmp/docmgr-scenario-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
+```
+
+- **If you intentionally want system docmgr**:
+
+```bash
+DOCMGR_PATH="$(command -v docmgr)" bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
+```
+
+If you don’t pin `DOCMGR_PATH`, you can silently run an older system `docmgr` and get misleading failures (e.g. “unknown flag” for flags supported by this repo).
+
 ### Vocabulary (seed)
 - `docmgr vocab add --category topics --slug chat`
 - `docmgr vocab add --category topics --slug backend`

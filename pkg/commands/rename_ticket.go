@@ -77,6 +77,9 @@ func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &RenameTicketSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
@@ -84,13 +87,21 @@ func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 
 	// Resolve workspace root from config/ENV/git
 	settings.Root = workspace.ResolveRoot(settings.Root)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
 
 	if settings.Ticket == settings.NewTicket {
 		return fmt.Errorf("new ticket is identical to current ticket")
 	}
 
 	// Locate current ticket directory
-	oldDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	oldDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
@@ -170,18 +181,29 @@ func (c *RenameTicketCommand) Run(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &RenameTicketSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
 	settings.Root = workspace.ResolveRoot(settings.Root)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
 
 	if settings.Ticket == settings.NewTicket {
 		return fmt.Errorf("new ticket is identical to current ticket")
 	}
 
-	oldDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	oldDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}

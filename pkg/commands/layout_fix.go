@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
@@ -71,12 +72,15 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &LayoutFixSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	moves, err := c.applyLayoutFix(settings)
+	moves, err := c.applyLayoutFix(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -96,28 +100,61 @@ func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 	return nil
 }
 
-func (c *LayoutFixCommand) applyLayoutFix(settings *LayoutFixSettings) ([]LayoutFixMove, error) {
+func (c *LayoutFixCommand) applyLayoutFix(ctx context.Context, settings *LayoutFixSettings) ([]LayoutFixMove, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 	var ticketDirs []string
-	if settings.Ticket != "" {
-		td, err := findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	if strings.TrimSpace(settings.Ticket) != "" {
+		td, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 		}
 		ticketDirs = append(ticketDirs, td)
 	} else {
-		entries, err := os.ReadDir(settings.Root)
+		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+			Scope:   workspace.Scope{Kind: workspace.ScopeRepo},
+			Filters: workspace.DocFilters{DocType: "index"},
+			Options: workspace.DocQueryOptions{
+				IncludeBody:         false,
+				IncludeErrors:       false,
+				IncludeDiagnostics:  false,
+				IncludeArchivedPath: false,
+				IncludeScriptsPath:  false,
+				IncludeControlDocs:  true,
+				OrderBy:             workspace.OrderByPath,
+			},
+		})
 		if err != nil {
-			return nil, fmt.Errorf("failed to read root: %w", err)
+			return nil, fmt.Errorf("failed to query ticket index docs: %w", err)
 		}
-		for _, e := range entries {
-			if e.IsDir() {
-				idx := filepath.Join(settings.Root, e.Name(), "index.md")
-				if _, err := os.Stat(idx); err == nil {
-					ticketDirs = append(ticketDirs, filepath.Join(settings.Root, e.Name()))
-				}
+		seen := map[string]bool{}
+		for _, h := range res.Docs {
+			p := strings.TrimSpace(h.Path)
+			if p == "" {
+				continue
 			}
+			td := filepath.Dir(filepath.FromSlash(p))
+			if td == "" || td == "." {
+				continue
+			}
+			if seen[td] {
+				continue
+			}
+			seen[td] = true
+			ticketDirs = append(ticketDirs, td)
 		}
+		sort.Strings(ticketDirs)
 	}
 
 	moves := []LayoutFixMove{}
@@ -210,12 +247,15 @@ func (c *LayoutFixCommand) Run(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &LayoutFixSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	moves, err := c.applyLayoutFix(settings)
+	moves, err := c.applyLayoutFix(ctx, settings)
 	if err != nil {
 		return err
 	}

@@ -4,10 +4,15 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 
 ## Prerequisites
 
-- `docmgr` binary available in PATH or export `DOCMGR_PATH=/absolute/path/to/docmgr`
+- **Required**: pin the binary under test via `DOCMGR_PATH` (do not rely on `docmgr` from `PATH`).
+- Optional (recommended): `scenariolog` (scenario logging flight recorder). If unset, `run-all.sh` will build it from the repo into `/tmp/scenariolog-local`.
 - `git` installed
 - `bash` (POSIX shell compatible)
 - Optional for better file suggestions: `rg` (ripgrep) or `grep`
+
+### Why DOCMGR_PATH is required
+
+If `DOCMGR_PATH` is not set, the suite can accidentally run an older system `docmgr`, causing false failures (for example: “unknown flag” when the repo supports the flag).
 
 ## Contents
 
@@ -31,11 +36,16 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 ## Quick Start
 
 ```bash
-cd vibes/ttmp/YYYY-MM-DD/testing-doc-manager/
+cd test-scenarios/testing-doc-manager/
 chmod +x 00-reset.sh 01-create-mock-codebase.sh 02-init-ticket.sh 03-create-docs-and-meta.sh 04-relate-and-doctor.sh 05-search-scenarios.sh 06-doctor-advanced.sh run-all.sh
 
-# Optionally set the docmgr path if not in PATH
-export DOCMGR_PATH=/absolute/path/to/docmgr
+# Build repo binary and pin it (recommended)
+go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
+export DOCMGR_PATH=/tmp/docmgr-scenario-local
+
+# Optional: pin scenariolog explicitly (otherwise run-all.sh will build it)
+# go -C scenariolog build -tags sqlite_fts5 -o /tmp/scenariolog-local ./cmd/scenariolog
+# export SCENARIOLOG_PATH=/tmp/scenariolog-local
 
 # Run the full scenario (uses /tmp/docmgr-scenario by default)
 ./run-all.sh /tmp/docmgr-scenario

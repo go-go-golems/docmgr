@@ -85,12 +85,15 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &ImportFileSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.importFile(settings)
+	result, err := c.importFile(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -107,19 +110,6 @@ func (c *ImportFileCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to add import row for %s: %w", result.SourceFile, err)
 	}
 	return nil
-}
-
-func findTicketDirectory(root, ticket string) (string, error) {
-	workspaces, err := workspace.CollectTicketWorkspaces(root, nil)
-	if err != nil {
-		return "", err
-	}
-	for _, ws := range workspaces {
-		if ws.Doc != nil && ws.Doc.Ticket == ticket {
-			return ws.Path, nil
-		}
-	}
-	return "", fmt.Errorf("ticket not found: %s", ticket)
 }
 
 func appendSourceMetadata(path string, source *models.ExternalSource) error {
@@ -160,10 +150,22 @@ func contains(slice []string, item string) bool {
 
 var _ cmds.GlazeCommand = &ImportFileCommand{}
 
-func (c *ImportFileCommand) importFile(settings *ImportFileSettings) (*ImportFileResult, error) {
+func (c *ImportFileCommand) importFile(ctx context.Context, settings *ImportFileSettings) (*ImportFileResult, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 	}
@@ -233,12 +235,15 @@ func (c *ImportFileCommand) Run(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &ImportFileSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.importFile(settings)
+	result, err := c.importFile(ctx, settings)
 	if err != nil {
 		return err
 	}

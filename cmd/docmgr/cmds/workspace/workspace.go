@@ -15,6 +15,7 @@ func Attach(root *cobra.Command) error {
 		newConfigureCommand,
 		newStatusCommand,
 		newDoctorCommand,
+		newExportSQLiteCommand,
 	}
 
 	for _, builder := range builders {

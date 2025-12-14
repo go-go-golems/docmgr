@@ -83,6 +83,7 @@ RelatedFiles:
         Used to validate both system and local refactor binaries.
         Runs the scenario suite; now includes export-sqlite smoke.
         Scenario suite run to validate list docs + refactor wiring.
+        Existing scenario suite infrastructure used by comparison scripts
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/02-testing-strategy-integration-first.md
       Note: Decision record for when/how we add integration tests during the refactor.
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/07-code-review-walkthrough-diary-driven.md
@@ -93,12 +94,19 @@ RelatedFiles:
       Note: Brief for cleanup inspectors to inventory duplicated walkers/helpers (Task 18)
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/design/01-workspace-sqlite-repository-api-design-spec.md
       Note: Spec driving this refactor.
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-docmgr-versions.sh
+      Note: Main comparison script that runs scenario suite with both system and local docmgr versions
+    - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-results.sh
+      Note: Helper script for comparing scenariolog results using SQLite ATTACH DATABASE queries
     - Path: ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/tasks.md
       Note: Task breakdown for implementation.
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-12T17:35:05.756386407-05:00
 ---
+
+
+
 
 
 
@@ -982,3 +990,104 @@ The new ticket (CLEANUP-LEGACY-WALKERS) includes a comprehensive design document
 
 ### Git commit
 - `407705722ad68456c924c50a6b9b92bec92687dc`
+
+## Step 19: Create comparison scripts for system vs local docmgr validation
+
+This step creates a pair of bash scripts that enable systematic comparison between the system docmgr (old version) and a locally built docmgr (refactored version) using scenariolog. The main script (`compare-docmgr-versions.sh`) runs the full scenario suite twice—once with each version—and records all outputs in separate scenariolog SQLite databases. A helper script (`compare-results.sh`) provides convenient SQL queries to compare exit codes, durations, and identify differences between the runs. This tooling makes it practical to validate that the refactor produces equivalent behavior and to catch regressions early.
+
+The scripts leverage the existing `test-scenarios/testing-doc-manager/run-all.sh` infrastructure, which already supports scenariolog integration. By running the same scenario suite with both binaries and recording results in queryable databases, we can systematically compare behavior, performance, and failure modes without manually diffing output files.
+
+### What I did
+- Created `scripts/compare-docmgr-versions.sh`:
+  - Builds scenariolog binary (with FTS5 support if available)
+  - Builds local docmgr from repo (`go build ./cmd/docmgr`)
+  - Finds system docmgr from PATH (`command -v docmgr`)
+  - Runs scenario suite with system docmgr (records in `${SYSTEM_ROOT}/.scenario-run.db`)
+  - Runs scenario suite with local docmgr (records in `${LOCAL_ROOT}/.scenario-run.db`)
+  - Prints comparison commands and instructions
+- Created `scripts/compare-results.sh`:
+  - Helper script that uses SQLite ATTACH to join data from both databases
+  - Compares step exit codes side-by-side
+  - Compares step durations (sorted by difference)
+  - Lists steps with different exit codes
+  - Shows total run duration for both versions
+- Created `scripts/README.md`:
+  - Comprehensive documentation for both scripts
+  - Usage examples and query commands
+  - Troubleshooting section
+- Made both scripts executable (`chmod +x`)
+
+### Why
+- After completing the cleanup work (CLEANUP-LEGACY-WALKERS), we need a way to validate that the refactored docmgr produces equivalent behavior to the system version
+- scenariolog provides structured logging and querying capabilities that make comparison systematic rather than ad-hoc
+- The existing scenario suite already exercises the key behaviors we care about (discovery, search, doctor, etc.)
+- Running both versions against the same test repository enables apples-to-apples comparison
+
+### What worked
+- Scripts use the existing `run-all.sh` infrastructure, so they benefit from all the scenario coverage already in place
+- scenariolog's SQLite backend makes it straightforward to compare runs using SQL queries
+- The ATTACH DATABASE pattern in SQLite allows joining data from both databases without manual export/import
+- Both scripts validate inputs and provide helpful error messages
+
+### What didn't work
+- Initial version of `compare-results.sh` tried to join tables from different databases without ATTACH, which SQLite doesn't support. Fixed by using `ATTACH DATABASE` and qualifying table names with database aliases.
+
+### What I learned
+- SQLite's ATTACH DATABASE feature is essential for cross-database queries; you can't join tables from different database files without it
+- scenariolog's schema (scenario_runs, scenario_steps, artifacts) is designed to support this kind of comparison workflow
+- The scenario suite's use of `DOCMGR_PATH` makes it easy to swap binaries without modifying scripts
+- FTS5 support in scenariolog is optional but useful for log searching; the script gracefully falls back to building without it
+
+### What was tricky to build
+- **Cross-database SQL queries**: SQLite requires explicit ATTACH DATABASE to join tables from different database files. The helper script uses this pattern correctly, but it took a moment to realize why the initial JOIN queries failed.
+- **Path handling**: Ensuring both scripts work with absolute and relative paths, and that they correctly resolve the repo root and scenario directory locations.
+- **Error handling**: Making sure both scripts fail gracefully with helpful messages when prerequisites are missing (scenariolog not buildable, system docmgr not in PATH, databases not found).
+
+### What warrants a second pair of eyes
+- **SQL query correctness**: Review the ATTACH DATABASE queries in `compare-results.sh` to ensure they correctly join and compare data from both databases. Verify the duration calculations and exit code comparisons are accurate.
+- **Path resolution**: Confirm that the scripts correctly resolve paths when run from different directories (they use `cd` and `$(dirname "${BASH_SOURCE[0]}")` patterns).
+- **Error messages**: Review error messages for clarity and actionability—do they tell users what to fix?
+
+### What should be done in the future
+- **Automated comparison**: Consider adding a CI job that runs this comparison automatically and fails if differences are detected (with exceptions for known/intentional changes).
+- **Output diffing**: The scripts currently focus on exit codes and durations; consider adding functionality to diff captured stdout/stderr artifacts between runs.
+- **Performance regression detection**: Add thresholds for duration differences (e.g., warn if local version is >20% slower than system version).
+- **Documentation**: If this becomes a standard validation workflow, consider adding it to the main repo documentation or CI setup guide.
+
+### Code review instructions
+- Start with `scripts/compare-docmgr-versions.sh`:
+  - Review the scenariolog and docmgr build logic
+  - Verify path resolution and error handling
+  - Check that both runs use the same scenario suite
+- Then review `scripts/compare-results.sh`:
+  - Verify SQL queries use ATTACH DATABASE correctly
+  - Check that duration calculations are accurate (julianday conversions)
+  - Confirm exit code comparison logic is correct
+- Test both scripts:
+  ```bash
+  # Test comparison script
+  cd ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts
+  ./compare-docmgr-versions.sh /tmp/test-system /tmp/test-local
+  
+  # Test results helper (after comparison completes)
+  ./compare-results.sh /tmp/test-system/.scenario-run.db /tmp/test-local/.scenario-run.db
+  ```
+
+### Technical details
+- Files created:
+  - `ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-docmgr-versions.sh` (236 lines)
+  - `ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/compare-results.sh` (136 lines)
+  - `ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/scripts/README.md` (documentation)
+- Scripts use:
+  - `test-scenarios/testing-doc-manager/run-all.sh` (existing scenario suite)
+  - scenariolog SQLite schema (scenario_runs, scenario_steps, artifacts tables)
+  - SQLite ATTACH DATABASE for cross-database queries
+- Default paths:
+  - System run: `/tmp/docmgr-system`
+  - Local run: `/tmp/docmgr-local`
+  - scenariolog: `/tmp/scenariolog-local`
+
+### What I'd do differently next time
+- Consider extracting the SQL queries into a separate file or function to make them easier to test and modify
+- Add a `--dry-run` flag to show what would be executed without actually running the scenarios
+- Consider adding JSON output option for the comparison results to enable programmatic analysis

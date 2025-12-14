@@ -35,6 +35,6 @@
 - [x] [19] Run integration test suite after Phase 1 — `bash test-scenarios/testing-doc-manager/run-all.sh`
 - [x] [20] Run integration test suite after Phase 2
 - [x] [21] Run integration test suite after Phase 3
-- [ ] [22] Final integration test suite after Phase 4
-- [ ] [23] Manual smoke tests for all migrated commands
+- [x] [22] Final integration test suite after Phase 4
+- [x] [23] Manual smoke tests for all migrated commands
 

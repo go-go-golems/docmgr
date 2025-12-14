@@ -96,6 +96,22 @@ Use this diary while reviewing the cleanup PRs. Each step should contain:
 - the validation commands run,
 - and any compatibility notes (behavior preserved vs intentionally changed).
 
+## Final validation (wrap-up)
+
+This ticket is considered complete once both the unit tests and the scenario integration suite pass on the final state (Phase 4), and a small set of “manual smoke” invocations confirm the migrated commands behave sensibly.
+
+- **Unit tests**: `go test ./... -count=1` (pass)
+- **Integration suite**: `bash test-scenarios/testing-doc-manager/run-all.sh ...` (pass)
+  - Note: the scenario harness now records its own sqlite DB via `scenariolog` under the scenario root (for example: `/tmp/docmgr-scenario/.scenario-run.db`), so failures can be inspected after the fact with:
+    - `scenariolog summary --db /tmp/docmgr-scenario/.scenario-run.db --output table`
+    - `scenariolog failures --db /tmp/docmgr-scenario/.scenario-run.db --output table`
+    - `scenariolog search --db /tmp/docmgr-scenario/.scenario-run.db --run-id <run_id> --query "error OR FAIL" --output table`
+- **Manual smoke** (examples):
+  - `docmgr status --summary-only`
+  - `docmgr list tickets --output table`
+  - `docmgr list docs --ticket CLEANUP-LEGACY-WALKERS --output table`
+  - `docmgr search --query findTicketDirectory --output table`
+
 ## Related
 
 - `ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/design/01-cleanup-overview-and-migration-guide.md`

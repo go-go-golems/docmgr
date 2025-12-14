@@ -225,3 +225,13 @@ Update verification workflow to use scenariolog (queryable logs) instead of wait
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/reference/01-diary.md — Added scenariolog capture/query snippet
 
+
+## 2025-12-13
+
+Wrap-up: final Phase 4 validation completed (unit tests + scenario suite + smoke commands), with scenario suite now recorded via scenariolog DB for post-hoc inspection.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/reference/01-diary.md — Added final validation section
+- /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/tasks.md — Mark final validation tasks complete
+

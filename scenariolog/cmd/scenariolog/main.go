@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/go-go-golems/docmgr/scenariolog/internal/scenariolog"
+	"github.com/go-go-golems/docmgr/scenariolog/pkg/doc"
+	"github.com/go-go-golems/glazed/pkg/help"
+	help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +32,12 @@ func newRootCmd() (*cobra.Command, error) {
 		Use:   "scenariolog",
 		Short: "Scenario logging flight recorder (sqlite + artifacts + FTS)",
 	}
+
+	helpSystem := help.NewHelpSystem()
+	if err := doc.AddDocToHelpSystem(helpSystem); err != nil {
+		return nil, err
+	}
+	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
 
 	rootCmd.AddCommand(newInitCmd())
 	rootCmd.AddCommand(newRunCmd())

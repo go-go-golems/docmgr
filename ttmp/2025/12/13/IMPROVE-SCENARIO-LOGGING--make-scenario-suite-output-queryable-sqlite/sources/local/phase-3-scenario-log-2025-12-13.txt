@@ -1,0 +1,1033 @@
+[info] Using DOCMGR_PATH=/tmp/docmgr-scenario-local
+[ok] Reset to /tmp/docmgr-scenario
+[ok] Mock codebase created at /tmp/docmgr-scenario/acme-chat-app
+Docs root initialized at /tmp/docmgr-scenario/acme-chat-app/ttmp
+- Vocabulary: /tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml
+- .docmgrignore: /tmp/docmgr-scenario/acme-chat-app/ttmp/.docmgrignore
+- Config: /tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml
+- Status: initialized
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+
+## Ticket Workspace Created
+
+- Ticket: MEN-4242
+- Title: Normalize chat API paths and WebSocket lifecycle
+- Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle`
+- Directories: 9
+- Files: 4
+
+### Created Directories
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/design`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/playbooks`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/scripts`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/sources`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/.meta`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/various`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/archive`
+
+### Created Files
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/README.md`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/tasks.md`
+- `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/changelog.md`
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+
+## Ticket Workspace Created
+
+- Ticket: MEN-5678
+- Title: Secondary ticket — WebSocket reconnection plan
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan`
+- Directories: 9
+- Files: 4
+
+### Created Directories
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/reference`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/playbooks`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/scripts`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/sources`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/.meta`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/various`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/archive`
+
+### Created Files
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/README.md`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/tasks.md`
+- `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/changelog.md`
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Paths are relative to this root.
+
+## Tickets (2)
+
+### MEN-5678 — Secondary ticket — WebSocket reconnection plan
+- Status: **active**
+- Topics: backend, chat
+- Tasks: 1 open / 0 done
+- Updated: 2025-12-13 21:08
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan`
+
+### MEN-4242 — Normalize chat API paths and WebSocket lifecycle
+- Status: **active**
+- Topics: backend, chat, websocket
+- Tasks: 1 open / 0 done
+- Updated: 2025-12-13 21:08
+- Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle`
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Paths are relative to this root.
+
+## Tickets (1)
+
+### MEN-5678 — Secondary ticket — WebSocket reconnection plan
+- Status: **active**
+- Topics: backend, chat
+- Tasks: 1 open / 0 done
+- Updated: 2025-12-13 21:08
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan`
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Document Created
+
+- Ticket: MEN-4242
+- Doc type: design-doc
+- Title: Path Normalization Strategy
+- Status: active
+- Intent: long-term
+- Topics: chat, backend, websocket
+- Owners: manuel
+- Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/design-doc/01-path-normalization-strategy.md`
+
+### Guidelines for design-doc
+
+# Guidelines: Design Documents
+
+## Purpose
+Design documents provide structured rationale and architecture notes. They document decisions, alternatives considered, and implementation plans.
+
+## Required Elements
+- **Executive Summary**: High-level overview
+- **Problem Statement**: Clear description of the problem
+- **Proposed Solution**: Detailed solution description
+- **Design Decisions**: Key decisions with rationale
+- **Alternatives Considered**: Other approaches evaluated
+- **Implementation Plan**: Steps to implement
+
+## Best Practices
+- Start with executive summary for quick scanning
+- Document the "why" behind decisions, not just the "what"
+- Include diagrams or code examples where helpful
+- Keep open questions visible until resolved
+- Link to related RFCs, tickets, or references
+- Use clear section hierarchy for easy navigation
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Document Created
+
+- Ticket: MEN-4242
+- Doc type: reference
+- Title: Chat WebSocket Lifecycle
+- Status: active
+- Intent: long-term
+- Topics: chat, backend, websocket
+- Owners: manuel
+- Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/01-chat-websocket-lifecycle.md`
+
+### Guidelines for reference
+
+# Guidelines: Reference Documents
+
+## Purpose
+Reference documents provide copy/paste-ready context, API contracts, prompt packs, or quick-look tables. They're designed for reuse in LLM prompts or as quick reference during development.
+
+## Required Elements
+- **Goal**: What this reference accomplishes
+- **Context**: Background needed to use the reference
+- **Quick Reference**: The actual reference content (code, tables, prompts)
+- **Usage Examples**: How to use this reference
+
+## Best Practices
+- Focus on copy/paste-ready content
+- Keep context minimal but sufficient
+- Format for easy scanning (tables, code blocks)
+- Include practical examples
+- Update when APIs or processes change
+- Link to related references or design docs
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Document Created
+
+- Ticket: MEN-4242
+- Doc type: playbook
+- Title: Smoke Tests for Chat
+- Status: active
+- Intent: long-term
+- Topics: chat, backend, websocket
+- Owners: manuel
+- Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/playbook/01-smoke-tests-for-chat.md`
+
+### Guidelines for playbook
+
+# Guidelines: Playbook Documents
+
+## Purpose
+Playbooks document command sequences, manual test procedures, or operational steps. They're designed for repeated execution.
+
+## Required Elements
+- **Purpose**: What the playbook accomplishes
+- **Environment Assumptions**: Required setup
+- **Commands**: The actual command sequence
+- **Exit Criteria**: Success indicators
+
+## Best Practices
+- List all prerequisites upfront
+- Use code blocks for commands
+- Include expected outputs
+- Document failure modes
+- Update when commands change
+- Keep environment assumptions explicit
+- Include timing estimates if relevant
+
+# Guidelines: Design Documents
+
+## Purpose
+Design documents provide structured rationale and architecture notes. They document decisions, alternatives considered, and implementation plans.
+
+## Required Elements
+- **Executive Summary**: High-level overview
+- **Problem Statement**: Clear description of the problem
+- **Proposed Solution**: Detailed solution description
+- **Design Decisions**: Key decisions with rationale
+- **Alternatives Considered**: Other approaches evaluated
+- **Implementation Plan**: Steps to implement
+
+## Best Practices
+- Start with executive summary for quick scanning
+- Document the "why" behind decisions, not just the "what"
+- Include diagrams or code examples where helpful
+- Keep open questions visible until resolved
+- Link to related RFCs, tickets, or references
+- Use clear section hierarchy for easy navigation
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: Owners → manuel,alex
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: Summary → Unify chat HTTP paths and stabilize WebSocket flows.
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: ExternalSources → https://example.com/rfc/chat-api,https://example.com/ws-lifecycle
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Document Created
+
+- Ticket: MEN-5678
+- Doc type: design-doc
+- Title: WebSocket Reconnection Strategy
+- Status: active
+- Intent: long-term
+- Topics: chat, backend
+- Owners: manuel
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design-doc/01-websocket-reconnection-strategy.md`
+
+### Guidelines for design-doc
+
+# Guidelines: Design Documents
+
+## Purpose
+Design documents provide structured rationale and architecture notes. They document decisions, alternatives considered, and implementation plans.
+
+## Required Elements
+- **Executive Summary**: High-level overview
+- **Problem Statement**: Clear description of the problem
+- **Proposed Solution**: Detailed solution description
+- **Design Decisions**: Key decisions with rationale
+- **Alternatives Considered**: Other approaches evaluated
+- **Implementation Plan**: Steps to implement
+
+## Best Practices
+- Start with executive summary for quick scanning
+- Document the "why" behind decisions, not just the "what"
+- Include diagrams or code examples where helpful
+- Keep open questions visible until resolved
+- Link to related RFCs, tickets, or references
+- Use clear section hierarchy for easy navigation
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Document Created
+
+- Ticket: MEN-5678
+- Doc type: reference
+- Title: Reconnect Lifecycle
+- Status: active
+- Intent: long-term
+- Topics: chat, backend
+- Owners: manuel
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/reference/01-reconnect-lifecycle.md`
+
+### Guidelines for reference
+
+# Guidelines: Reference Documents
+
+## Purpose
+Reference documents provide copy/paste-ready context, API contracts, prompt packs, or quick-look tables. They're designed for reuse in LLM prompts or as quick reference during development.
+
+## Required Elements
+- **Goal**: What this reference accomplishes
+- **Context**: Background needed to use the reference
+- **Quick Reference**: The actual reference content (code, tables, prompts)
+- **Usage Examples**: How to use this reference
+
+## Best Practices
+- Focus on copy/paste-ready content
+- Keep context minimal but sufficient
+- Format for easy scanning (tables, code blocks)
+- Include practical examples
+- Update when APIs or processes change
+- Link to related references or design docs
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Document Created
+
+- Ticket: MEN-5678
+- Doc type: playbook
+- Title: Reconnect Smoke Tests
+- Status: active
+- Intent: long-term
+- Topics: chat, backend
+- Owners: manuel
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/playbook/01-reconnect-smoke-tests.md`
+
+### Guidelines for playbook
+
+# Guidelines: Playbook Documents
+
+## Purpose
+Playbooks document command sequences, manual test procedures, or operational steps. They're designed for repeated execution.
+
+## Required Elements
+- **Purpose**: What the playbook accomplishes
+- **Environment Assumptions**: Required setup
+- **Commands**: The actual command sequence
+- **Exit Criteria**: Success indicators
+
+## Best Practices
+- List all prerequisites upfront
+- Use code blocks for commands
+- Include expected outputs
+- Document failure modes
+- Update when commands change
+- Keep environment assumptions explicit
+- Include timing estimates if relevant
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md`: Owners → manuel
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md`: Summary → Plan WebSocket reconnection strategy.
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md`: ExternalSources → https://example.com/ws-reconnect
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Paths are relative to this root.
+
+## Tickets (1)
+
+### MEN-4242 — Normalize chat API paths and WebSocket lifecycle
+- Status: **active**
+- Topics: backend, chat, websocket
+- Tasks: 1 open / 0 done
+- Updated: 2025-12-13 21:08
+- Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle`
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Paths are relative to this root.
+
+## Documents (4)
+
+### MEN-4242 (4 docs)
+
+- **design-doc** — Path Normalization Strategy
+  - Status: **active**
+  - Topics: backend, chat, websocket
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/design-doc/01-path-normalization-strategy.md`
+
+- **playbook** — Smoke Tests for Chat
+  - Status: **active**
+  - Topics: backend, chat, websocket
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/playbook/01-smoke-tests-for-chat.md`
+
+- **reference** — Chat WebSocket Lifecycle
+  - Status: **active**
+  - Topics: backend, chat, websocket
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/01-chat-websocket-lifecycle.md`
+
+- **reference** — Wonky Path Fixture
+  - Status: **active**
+  - Topics: backend, chat
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md`
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Paths are relative to this root.
+
+## Tickets (1)
+
+### MEN-5678 — Secondary ticket — WebSocket reconnection plan
+- Status: **active**
+- Topics: backend, chat
+- Tasks: 1 open / 0 done
+- Updated: 2025-12-13 21:08
+- Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan`
+
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Paths are relative to this root.
+
+## Documents (3)
+
+### MEN-5678 (3 docs)
+
+- **design-doc** — WebSocket Reconnection Strategy
+  - Status: **active**
+  - Topics: backend, chat
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design-doc/01-websocket-reconnection-strategy.md`
+
+- **playbook** — Reconnect Smoke Tests
+  - Status: **active**
+  - Topics: backend, chat
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/playbook/01-reconnect-smoke-tests.md`
+
+- **reference** — Reconnect Lifecycle
+  - Status: **active**
+  - Topics: backend, chat
+  - Updated: 2025-12-13 21:08
+  - Path: `2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/reference/01-reconnect-lifecycle.md`
+
+Related files updated for /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+- Added: 3
+- Updated: 0
+- Removed: 0
+- Total: 3
+Related files updated for /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md
+- Added: 2
+- Updated: 0
+- Removed: 0
+- Total: 2
+## Doctor Report (2 findings)
+
+### MEN-4242
+
+- ✅ All checks passed
+
+### MEN-5678
+
+- ✅ All checks passed
+
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview of the ticket, its goals, and current status ...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/01-chat-websocket-lifecycle.md — Chat WebSocket Lifecycle [MEN-4242] :: 
+# Chat WebSocket Lifecycle
+
+## Goal
+
+<!-- What is the purpose of this reference document? -->
+
+## Context
+
+<!-- Prov...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design-doc/01-websocket-reconnection-strategy.md — WebSocket Reconnection Strategy [MEN-5678] :: 
+# WebSocket Reconnection Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the design propo...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md — Secondary ticket — WebSocket reconnection plan [MEN-5678] :: 
+
+
+
+
+# Secondary ticket — WebSocket reconnection plan
+
+## Overview
+
+<!-- Provide a brief overview of the ticket, its goals, and current...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/design-doc/01-path-normalization-strategy.md — Path Normalization Strategy [MEN-4242] :: 
+# Path Normalization Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the desi...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design-doc/01-websocket-reconnection-strategy.md — WebSocket Reconnection Strategy [MEN-5678] :: 
+# WebSocket Reconnection Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the ...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ... file=backend/chat/api/register.go note=Registers API routes (scenario)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/design-doc/01-path-normalization-strategy.md — Path Normalization Strategy [MEN-4242] :: 
+# Path Normalization Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the desi...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/playbook/01-smoke-tests-for-chat.md — Smoke Tests for Chat [MEN-4242] :: 
+# Smoke Tests for Chat
+
+## Purpose
+
+<!-- What does this playbook accomplish? -->
+
+## Environment As...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/01-chat-websocket-lifecycle.md — Chat WebSocket Lifecycle [MEN-4242] :: 
+# Chat WebSocket Lifecycle
+
+## Goal
+
+<!-- What is the purpose of this reference document? -->
+
+## C...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/design-doc/01-path-normalization-strategy.md — Path Normalization Strategy [MEN-4242] :: 
+# Path Normalization Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the desi...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/playbook/01-smoke-tests-for-chat.md — Smoke Tests for Chat [MEN-4242] :: 
+# Smoke Tests for Chat
+
+## Purpose
+
+<!-- What does this playbook accomplish? -->
+
+## Environment As...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/01-chat-websocket-lifecycle.md — Chat WebSocket Lifecycle [MEN-4242] :: 
+# Chat WebSocket Lifecycle
+
+## Goal
+
+<!-- What is the purpose of this reference document? -->
+
+## C...
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f...
+/tmp/docmgr-scenario/acme-chat-app/backend/chat/ws/manager.go — referenced by documents; note: Absolute path reference (host-specific) (source=related_files)
+backend/chat/api/register.go — referenced by documents; note: Registers API routes (scenario) (source=related_files)
+backend/chat/ws/manager.go — referenced by documents; note: WebSocket lifecycle (scenario) (source=related_files)
+web/src/store/api/chatApi.ts — referenced by documents; note: Frontend API integration (scenario) (source=related_files)
+../../../../../backend/chat/api/register.go — referenced by documents; note: Doc-relative path reference (deep traversal) (source=related_files)
+../backend/chat/api/register.go — referenced by documents; note: Ttmp-relative path reference (shallower traversal) (source=related_files)
+backend/chat/ws/manager.go — recent commit activity (source=git_history)
+backend/chat/api/register.go — recent commit activity (source=git_history)
+web/src/store/api/chatApi.ts — recent commit activity (source=git_history)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ... file=backend/chat/api/register.go note=Registers API routes (scenario)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ... file=backend/chat/api/register.go note=Registers API routes (scenario)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ... file=backend/chat/ws/manager.go note=WebSocket lifecycle (scenario)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=backend/chat/ws/manager.go note=Absolute path reference (host-specific)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief overview ... file=backend/chat/api/register.go note=Registers API routes (scenario)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design-doc/01-websocket-reconnection-strategy.md — WebSocket Reconnection Strategy [MEN-5678] :: 
+# WebSocket Reconnection Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the ...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md — Secondary ticket — WebSocket reconnection plan [MEN-5678] :: 
+
+
+
+
+# Secondary ticket — WebSocket reconnection plan
+
+## Overview
+
+<!-- Provide a brief overview ...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/playbook/01-reconnect-smoke-tests.md — Reconnect Smoke Tests [MEN-5678] :: 
+# Reconnect Smoke Tests
+
+## Purpose
+
+<!-- What does this playbook accomplish? -->
+
+## Environment A...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/reference/01-reconnect-lifecycle.md — Reconnect Lifecycle [MEN-5678] :: 
+# Reconnect Lifecycle
+
+## Goal
+
+<!-- What is the purpose of this reference document? -->
+
+## Contex...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/design-doc/01-websocket-reconnection-strategy.md — WebSocket Reconnection Strategy [MEN-5678] :: 
+# WebSocket Reconnection Strategy
+
+## Executive Summary
+
+<!-- Provide a high-level overview of the ...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/index.md — Secondary ticket — WebSocket reconnection plan [MEN-5678] :: 
+
+
+
+
+# Secondary ticket — WebSocket reconnection plan
+
+## Overview
+
+<!-- Provide a brief overview ...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/playbook/01-reconnect-smoke-tests.md — Reconnect Smoke Tests [MEN-5678] :: 
+# Reconnect Smoke Tests
+
+## Purpose
+
+<!-- What does this playbook accomplish? -->
+
+## Environment A...
+2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan/reference/01-reconnect-lifecycle.md — Reconnect Lifecycle [MEN-5678] :: 
+# Reconnect Lifecycle
+
+## Goal
+
+<!-- What is the purpose of this reference document? -->
+
+## Contex...
+web/src/ui/chat/ChatPanel.tsx — referenced by documents; note: Frontend chat panel (scenario) (source=related_files)
+backend/chat/ws/manager.go — referenced by documents; note: WebSocket lifecycle (scenario) (source=related_files)
+web/src/store/api/chatApi.ts — recent commit activity (source=git_history)
+backend/chat/ws/manager.go — recent commit activity (source=git_history)
+backend/chat/api/register.go — recent commit activity (source=git_history)
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: Topics → chat,backend,websocket,nonexistent-topic
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: RelatedFiles → backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts,backend/chat/api/does-not-exist.go
+1) [warning] Unknown vocabulary value for Topics
+File: /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+Field: Topics
+Value: "nonexistent-topic"
+Known values: chat, backend, websocket
+Actions:
+- Add to vocabulary: docmgr vocab add --category topics --slug nonexistent-topic
+- List vocabulary: docmgr vocab list
+
+1) [warning] Missing related file entry
+Doc: /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+Related file: backend/chat/api/does-not-exist.go
+Note: 
+Status: missing on disk
+Actions:
+- Remove invalid entry: docmgr doc relate --doc /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md --remove-files backend/chat/api/does-not-exist.go
+- Fix path: docmgr doc relate --doc /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md --file-note backend/chat/api/does-not-exist.go:<reason>
+
+Error: doctor failed: severity >= warning
+1) [warning] Unknown vocabulary value for Topics
+File: /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+Field: Topics
+Value: "nonexistent-topic"
+Known values: chat, backend, websocket
+Actions:
+- Add to vocabulary: docmgr vocab add --category topics --slug nonexistent-topic
+- List vocabulary: docmgr vocab list
+
+1) [warning] Missing related file entry
+Doc: /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+Related file: backend/chat/api/does-not-exist.go
+Note: 
+Status: missing on disk
+Actions:
+- Remove invalid entry: docmgr doc relate --doc /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md --remove-files backend/chat/api/does-not-exist.go
+- Fix path: docmgr doc relate --doc /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md --file-note backend/chat/api/does-not-exist.go:<reason>
+
+Error: doctor failed: severity >= warning
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: Topics → chat,backend,websocket
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+## Metadata Updates
+
+- `ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md`: RelatedFiles → backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts
+## Doctor Report (4 findings)
+
+### MEN-4242
+
+- [WARNING] missing_related_file_note — related file has no Note: backend/chat/api/register.go (path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md)
+- [WARNING] missing_related_file_note — related file has no Note: backend/chat/ws/manager.go (path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md)
+- [WARNING] missing_related_file_note — related file has no Note: web/src/store/api/chatApi.ts (path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md)
+
+### MEN-5678
+
+- ✅ All checks passed
+
+[ok] Advanced doctor scenario completed
+MEN-4242 ‘Normalize chat API paths and WebSocket lifecycle’ status=active stale=false docs=4 path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle
+MEN-5678 ‘Secondary ticket — WebSocket reconnection plan’ status=active stale=false docs=3 path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan
+root=/tmp/docmgr-scenario/acme-chat-app/ttmp config=/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml vocabulary=/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml tickets=2 stale=0 docs=7 (design 2 / reference 3 / playbooks 2) stale-after=30
+root=/tmp/docmgr-scenario/acme-chat-app/ttmp config=/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml vocabulary=/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml tickets=2 stale=0 docs=7 (design 2 / reference 3 / playbooks 2) stale-after=30
+MEN-4242 ‘Normalize chat API paths and WebSocket lifecycle’ status=active stale=false docs=4 path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle
+MEN-5678 ‘Secondary ticket — WebSocket reconnection plan’ status=active stale=false docs=3 path=/tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-5678--secondary-ticket-websocket-reconnection-plan
+root=/tmp/docmgr-scenario/acme-chat-app/ttmp config=/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml vocabulary=/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml tickets=2 stale=0 docs=7 (design 2 / reference 3 / playbooks 2) stale-after=30
+root=/tmp/docmgr-scenario/acme-chat-app/ttmp config=/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml vocabulary=/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml tickets=2 stale=0 docs=7 (design 2 / reference 3 / playbooks 2) stale-after=30
+[ok] Status checks completed
+Configuration file: /tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml
+- Root: ttmp
+- Vocabulary: ttmp/vocabulary.yaml
+- Status: written
+[ok] configure wrote .ttmp.yaml via CLI
+Related files updated for /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+- Added: 0
+- Updated: 0
+- Removed: 0
+- Total: 3
+[ok] relate --from-git suggestions applied
+[
+{
+  "level": "warning",
+  "message": "Multiple ttmp/ roots detected: /tmp/docmgr-scenario/acme-chat-app/ttmp, /tmp/ttmp, /ttmp"
+}
+, {
+  "config_path": "/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml",
+  "design_docs": 2,
+  "docs_total": 7,
+  "playbooks": 2,
+  "reference_docs": 3,
+  "root": "/tmp/docmgr-scenario/acme-chat-app/ttmp",
+  "stale_after_days": 30,
+  "status": "ok",
+  "tickets_stale": 0,
+  "tickets_total": 2,
+  "vocabulary_path": "/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml"
+}
+]
+[ok] status warnings (multiple roots/fallback) surfaced
+Changelog updated: /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/changelog.md
+Reminder: update the ticket index (docmgr relate/meta) and refresh file relationships in any impacted docs if needed.
+--- BEGIN changelog excerpt: ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/changelog.md ---
+# Changelog
+
+## 2025-12-13
+
+- Initial workspace created
+
+
+## 2025-12-13
+
+Test changelog file notes rendering
+
+### Related Files
+
+- backend/chat/api/register.go — Source of path normalization
+- web/src/store/api/chatApi.ts — Frontend integration
+
+--- END changelog excerpt ---
+[ok] changelog file-notes appended
+Docs root: `/tmp/docmgr-scenario/acme-chat-app/ttmp`
+Config: `/tmp/docmgr-scenario/acme-chat-app/.ttmp.yaml`
+Vocabulary: `/tmp/docmgr-scenario/acme-chat-app/ttmp/vocabulary.yaml`
+
+Vocabulary entry added:
+- Category: topics
+- Slug: test-auto-1765660141
+- Description: Temporary test topic
+[ok] vocab add included vocabulary_path in output
+[test] Testing --print-template-schema for list docs
+[ok] list docs --print-template-schema outputs only schema
+[test] Testing --print-template-schema for list tickets
+[ok] list tickets --print-template-schema outputs only schema
+[test] Testing --print-template-schema for doctor
+[ok] doctor --print-template-schema outputs only schema
+[test] Testing --print-template-schema for status
+[ok] status --print-template-schema outputs only schema
+[test] Testing --print-template-schema for tasks list
+[ok] tasks list --print-template-schema outputs only schema
+[test] Testing --print-template-schema for search
+[ok] doc search --print-template-schema outputs only schema
+[test] Testing --print-template-schema for vocab list
+[ok] vocab list --print-template-schema outputs only schema
+[test] Testing --print-template-schema for guidelines
+[ok] doc guidelines --print-template-schema outputs only schema
+[ok] All --print-template-schema tests passed
+Related files updated for /tmp/docmgr-scenario/acme-chat-app/ttmp/2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md
+- Added: 0
+- Updated: 2
+- Removed: 0
+- Total: 3
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+
+
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief ove... file=backend/chat/api/register.go note=Doc-relative path reference
+ttmp-relative path reference
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+
+
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief ove... file=backend/chat/api/register.go note=Doc-relative path reference
+ttmp-relative path reference
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+
+
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief ove... file=backend/chat/ws/manager.go note=Absolute path reference
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=backend/chat/ws/manager.go note=Absolute path reference (host-specific)
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/index.md — Normalize chat API paths and WebSocket lifecycle [MEN-4242] :: 
+
+
+
+
+
+
+
+
+
+
+# Normalize chat API paths and WebSocket lifecycle
+
+## Overview
+
+<!-- Provide a brief ove... file=backend/chat/api/register.go note=Doc-relative path reference
+ttmp-relative path reference
+2025/12/13/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/reference/99-wonky-paths-fixture.md — Wonky Path Fixture [MEN-4242] :: 
+# Wonky Path Fixture
+
+This document is created directly by the scenario scripts to ensure we have
+f... file=ttmp/backend/chat/api/register.go, backend/chat/api/register.go note=Doc-relative path reference (deep traversal) | Ttmp-relative path reference (shallower traversal)
+==> Exporting workspace index sqlite to /tmp/docmgr-scenario/workspace-index.sqlite
+Exported workspace index to /tmp/docmgr-scenario/workspace-index.sqlite
+[ok] README table exists and contains embedded docs
+[ok] Scenario completed at /tmp/docmgr-scenario/acme-chat-app

@@ -13,7 +13,6 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
-	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -121,9 +120,6 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type DocInfo struct {
@@ -164,88 +160,75 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 		return nil
 	}
 
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
 
-	// Find all markdown files recursively
-	err := filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Filters: workspace.DocFilters{
+			Ticket:    settings.Ticket,
+			Status:    settings.Status,
+			DocType:   settings.DocType,
+			TopicsAny: settings.Topics,
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeDiagnostics:  true,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByPath,
+			Reverse:             false,
+			IncludeBody:         false,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query docs: %w", err)
+	}
 
+	for _, h := range res.Docs {
 		// Skip index.md files (those are tickets, use list tickets for those)
-		if info.Name() == "index.md" {
-			return nil
+		if filepath.Base(h.Path) == "index.md" {
+			continue
+		}
+		if h.Doc == nil {
+			continue
 		}
 
-		doc, err := readDocumentFrontmatter(path)
+		relPath, err := filepath.Rel(settings.Root, h.Path)
 		if err != nil {
-			docmgr.RenderTaxonomy(ctx, docmgrctx.NewListingSkip("list_docs", path, err.Error(), err))
-			return nil
+			relPath = h.Path
 		}
-
-		// Apply filters
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			return nil
-		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			return nil
-		}
-		if settings.DocType != "" && doc.DocType != settings.DocType {
-			return nil
-		}
-		if len(settings.Topics) > 0 {
-			// Check if any of the filter topics match any of the document's topics
-			topicMatch := false
-			for _, filterTopic := range settings.Topics {
-				for _, docTopic := range doc.Topics {
-					if strings.EqualFold(strings.TrimSpace(filterTopic), strings.TrimSpace(docTopic)) {
-						topicMatch = true
-						break
-					}
-				}
-				if topicMatch {
-					break
-				}
-			}
-			if !topicMatch {
-				return nil
-			}
-		}
-
-		// Get relative path from root
-		relPath, err := filepath.Rel(settings.Root, path)
-		if err != nil {
-			relPath = path
-		}
+		relPath = filepath.ToSlash(relPath)
 
 		row := types.NewRow(
-			types.MRP(ColTicket, doc.Ticket),
-			types.MRP(ColDocType, doc.DocType),
-			types.MRP(ColTitle, doc.Title),
-			types.MRP(ColStatus, doc.Status),
-			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
+			types.MRP(ColTicket, h.Doc.Ticket),
+			types.MRP(ColDocType, h.Doc.DocType),
+			types.MRP(ColTitle, h.Doc.Title),
+			types.MRP(ColStatus, h.Doc.Status),
+			types.MRP(ColTopics, strings.Join(h.Doc.Topics, ", ")),
 			types.MRP(ColPath, relPath),
-			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02 15:04")),
+			types.MRP(ColLastUpdated, h.Doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
 			return fmt.Errorf("failed to add document row for %s: %w", relPath, err)
 		}
-
-		return nil
-	})
-
-	if err != nil {
-		return fmt.Errorf("failed to list documents under %s: %w", settings.Root, err)
 	}
+
+	for i := range res.Diagnostics {
+		docmgr.RenderTaxonomy(ctx, &res.Diagnostics[i])
+	}
+
 	return nil
 }
 
@@ -261,9 +244,6 @@ func (c *ListDocsCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type DocInfo struct {
@@ -304,8 +284,16 @@ func (c *ListDocsCommand) Run(
 		return nil
 	}
 
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
+	}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
 	type docEntry struct {
@@ -319,70 +307,49 @@ func (c *ListDocsCommand) Run(
 	}
 
 	var entries []docEntry
-	err := filepath.Walk(settings.Root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-		if info.Name() == "index.md" {
-			return nil
-		}
-
-		doc, err := readDocumentFrontmatter(path)
-		if err != nil {
-			return nil
-		}
-
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			return nil
-		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			return nil
-		}
-		if settings.DocType != "" && doc.DocType != settings.DocType {
-			return nil
-		}
-		if len(settings.Topics) > 0 {
-			topicMatch := false
-			for _, filterTopic := range settings.Topics {
-				for _, docTopic := range doc.Topics {
-					if strings.EqualFold(strings.TrimSpace(filterTopic), strings.TrimSpace(docTopic)) {
-						topicMatch = true
-						break
-					}
-				}
-				if topicMatch {
-					break
-				}
-			}
-			if !topicMatch {
-				return nil
-			}
-		}
-
-		relPath, err := filepath.Rel(settings.Root, path)
-		if err != nil {
-			relPath = path
-		}
-
-		entries = append(entries, docEntry{
-			ticket:      doc.Ticket,
-			docType:     doc.DocType,
-			title:       doc.Title,
-			status:      doc.Status,
-			topics:      append([]string{}, doc.Topics...),
-			lastUpdated: doc.LastUpdated,
-			path:        filepath.ToSlash(relPath),
-		})
-		return nil
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Filters: workspace.DocFilters{
+			Ticket:    settings.Ticket,
+			Status:    settings.Status,
+			DocType:   settings.DocType,
+			TopicsAny: settings.Topics,
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeDiagnostics:  false, // keep human mode quiet (matches previous behavior)
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByPath,
+			Reverse:             false,
+			IncludeBody:         false,
+		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to list documents under %s: %w", settings.Root, err)
+		return fmt.Errorf("failed to query docs: %w", err)
+	}
+
+	for _, h := range res.Docs {
+		if filepath.Base(h.Path) == "index.md" {
+			continue
+		}
+		if h.Doc == nil {
+			continue
+		}
+		relPath, err := filepath.Rel(settings.Root, h.Path)
+		if err != nil {
+			relPath = h.Path
+		}
+		entries = append(entries, docEntry{
+			ticket:      h.Doc.Ticket,
+			docType:     h.Doc.DocType,
+			title:       h.Doc.Title,
+			status:      h.Doc.Status,
+			topics:      append([]string{}, h.Doc.Topics...),
+			lastUpdated: h.Doc.LastUpdated,
+			path:        filepath.ToSlash(relPath),
+		})
 	}
 
 	if len(entries) == 0 {

@@ -150,7 +150,7 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.createDocument(settings)
+	result, err := c.createDocument(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,10 @@ func (c *AddCommand) RunIntoGlazeProcessor(
 	return gp.AddRow(ctx, row)
 }
 
-func (c *AddCommand) createDocument(settings *AddSettings) (*AddResult, error) {
+func (c *AddCommand) createDocument(ctx context.Context, settings *AddSettings) (*AddResult, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 	cfgPath, _ := workspace.FindTTMPConfigPath()
 	vocabPath, _ := workspace.ResolveVocabularyPath()
@@ -177,9 +180,15 @@ func (c *AddCommand) createDocument(settings *AddSettings) (*AddResult, error) {
 		}
 	}
 
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	// Ticket discovery is now Workspace+QueryDocs-backed (no legacy walkers).
+	ticketDir, resolvedRoot, err := findTicketDirectoryViaWorkspace(ctx, settings.Root, settings.Ticket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
+	}
+	// Keep Root consistent with Workspace resolution (affects templates/guidelines lookup + output paths).
+	if strings.TrimSpace(resolvedRoot) != "" {
+		settings.Root = resolvedRoot
+		absRoot = resolvedRoot
 	}
 
 	subdir := settings.DocType
@@ -318,7 +327,7 @@ func (c *AddCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.createDocument(settings)
+	result, err := c.createDocument(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -365,3 +374,55 @@ func (c *AddCommand) Run(
 
 var _ cmds.GlazeCommand = &AddCommand{}
 var _ cmds.BareCommand = &AddCommand{}
+
+func findTicketDirectoryViaWorkspace(ctx context.Context, rootOverride string, ticketID string) (string, string, error) {
+	if ctx == nil {
+		return "", "", fmt.Errorf("nil context")
+	}
+	ticketID = strings.TrimSpace(ticketID)
+	if ticketID == "" {
+		return "", "", fmt.Errorf("empty ticket id")
+	}
+
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: rootOverride})
+	if err != nil {
+		return "", "", fmt.Errorf("discover workspace: %w", err)
+	}
+	resolvedRoot := ws.Context().Root
+
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return "", resolvedRoot, fmt.Errorf("init workspace index: %w", err)
+	}
+
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
+		Filters: workspace.DocFilters{DocType: "index"},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByPath,
+		},
+	})
+	if err != nil {
+		return "", resolvedRoot, fmt.Errorf("query ticket index doc: %w", err)
+	}
+	if len(res.Docs) == 0 {
+		return "", resolvedRoot, fmt.Errorf("ticket not found: %s", ticketID)
+	}
+	if len(res.Docs) > 1 {
+		return "", resolvedRoot, fmt.Errorf("ambiguous ticket index doc for %s (got %d)", ticketID, len(res.Docs))
+	}
+
+	p := strings.TrimSpace(res.Docs[0].Path)
+	if p == "" {
+		return "", resolvedRoot, fmt.Errorf("ticket index doc has empty path for %s", ticketID)
+	}
+	ticketDir := filepath.Clean(filepath.Dir(filepath.FromSlash(p)))
+	if ticketDir == "" || ticketDir == "." {
+		return "", resolvedRoot, fmt.Errorf("failed to derive ticket dir from %q", p)
+	}
+
+	return ticketDir, resolvedRoot, nil
+}

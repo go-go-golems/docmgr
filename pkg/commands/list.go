@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/go-go-golems/docmgr/internal/workspace"
@@ -72,34 +73,56 @@ func (c *ListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
-
-	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
-	if err != nil {
-		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	for _, ws := range workspaces {
-		doc := ws.Doc
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Filters: workspace.DocFilters{
+			Ticket:  strings.TrimSpace(settings.Ticket),
+			Status:  strings.TrimSpace(settings.Status),
+			DocType: "index",
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByLastUpdated,
+			Reverse:             true,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query docs: %w", err)
+	}
+
+	for _, h := range res.Docs {
+		doc := h.Doc
 		if doc == nil {
 			continue
 		}
-		// Apply filters
-		if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) {
-			continue
+		ticketDirAbs := filepath.Clean(filepath.Dir(filepath.FromSlash(h.Path)))
+		relPath := ticketDirAbs
+		if rel, err := filepath.Rel(settings.Root, ticketDirAbs); err == nil {
+			relPath = rel
 		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			continue
-		}
+		relPath = filepath.ToSlash(relPath)
 
 		row := types.NewRow(
 			types.MRP("ticket", doc.Ticket),
 			types.MRP("title", doc.Title),
 			types.MRP("status", doc.Status),
 			types.MRP("topics", strings.Join(doc.Topics, ", ")),
-			types.MRP("path", ws.Path),
+			types.MRP("path", relPath),
 			types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02 15:04")),
 		)
 

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/go-go-golems/docmgr/internal/templates"
@@ -124,9 +125,6 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type TicketInfo struct {
@@ -167,53 +165,26 @@ func (c *ListTicketsCommand) RunIntoGlazeProcessor(
 		return nil
 	}
 
-	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
-		return fmt.Errorf("root directory does not exist: %s", settings.Root)
-	}
-
-	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
+	root, tickets, err := queryTicketIndexDocs(ctx, settings.Root, settings.Ticket, settings.Status)
 	if err != nil {
-		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
+		return err
 	}
+	settings.Root = root
 
-	// Filter and sort by last updated (newest first)
-	filtered := make([]workspace.TicketWorkspace, 0, len(workspaces))
-	for _, ws := range workspaces {
-		doc := ws.Doc
-		if doc == nil {
-			continue
-		}
-
-		// Apply filters
-		if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) {
-			continue
-		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			continue
-		}
-
-		filtered = append(filtered, ws)
-	}
-	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i].Doc.LastUpdated.After(filtered[j].Doc.LastUpdated)
-	})
-
-	for _, ws := range filtered {
-		doc := ws.Doc
-		open, done := countTasksInTicket(ws.Path)
+	for _, t := range tickets {
 		row := types.NewRow(
-			types.MRP(ColTicket, doc.Ticket),
-			types.MRP(ColTitle, doc.Title),
-			types.MRP(ColStatus, doc.Status),
-			types.MRP(ColTopics, strings.Join(doc.Topics, ", ")),
-			types.MRP(ColTasksOpen, open),
-			types.MRP(ColTasksDone, done),
-			types.MRP(ColPath, ws.Path),
-			types.MRP(ColLastUpdated, doc.LastUpdated.Format("2006-01-02 15:04")),
+			types.MRP(ColTicket, t.Ticket),
+			types.MRP(ColTitle, t.Title),
+			types.MRP(ColStatus, t.Status),
+			types.MRP(ColTopics, strings.Join(t.Topics, ", ")),
+			types.MRP(ColTasksOpen, t.TasksOpen),
+			types.MRP(ColTasksDone, t.TasksDone),
+			types.MRP(ColPath, t.Path),
+			types.MRP(ColLastUpdated, t.LastUpdated.Format("2006-01-02 15:04")),
 		)
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return fmt.Errorf("failed to add ticket row for %s: %w", doc.Ticket, err)
+			return fmt.Errorf("failed to add ticket row for %s: %w", t.Ticket, err)
 		}
 	}
 
@@ -232,9 +203,6 @@ func (c *ListTicketsCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	// Apply config root if present
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
 		type TicketInfo struct {
@@ -275,36 +243,14 @@ func (c *ListTicketsCommand) Run(
 		return nil
 	}
 
-	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
-		return fmt.Errorf("root directory does not exist: %s", settings.Root)
-	}
-
-	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
+	root, tickets, err := queryTicketIndexDocs(ctx, settings.Root, settings.Ticket, settings.Status)
 	if err != nil {
-		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
+		return err
 	}
-
-	// Filter and sort by last updated (newest first)
-	filtered := make([]workspace.TicketWorkspace, 0, len(workspaces))
-	for _, ws := range workspaces {
-		doc := ws.Doc
-		if doc == nil {
-			continue
-		}
-		if settings.Ticket != "" && !strings.Contains(doc.Ticket, settings.Ticket) {
-			continue
-		}
-		if settings.Status != "" && doc.Status != settings.Status {
-			continue
-		}
-		filtered = append(filtered, ws)
-	}
-	sort.Slice(filtered, func(i, j int) bool {
-		return filtered[i].Doc.LastUpdated.After(filtered[j].Doc.LastUpdated)
-	})
+	settings.Root = root
 
 	// Markdown-formatted sections for human-friendly output
-	if len(filtered) == 0 {
+	if len(tickets) == 0 {
 		fmt.Println("No tickets found.")
 		return nil
 	}
@@ -317,35 +263,18 @@ func (c *ListTicketsCommand) Run(
 		fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", rootDisplay)
 	}
 
-	b.WriteString(fmt.Sprintf("## Tickets (%d)\n\n", len(filtered)))
-	for _, ws := range filtered {
-		doc := ws.Doc
-		open, done := countTasksInTicket(ws.Path)
+	b.WriteString(fmt.Sprintf("## Tickets (%d)\n\n", len(tickets)))
+	for _, t := range tickets {
 		topics := "—"
-		if len(doc.Topics) > 0 {
-			topics = strings.Join(doc.Topics, ", ")
+		if len(t.Topics) > 0 {
+			topics = strings.Join(t.Topics, ", ")
 		}
-		relPath := ws.Path
-		absRoot := rootDisplay
-		if abs, err := filepath.Abs(ws.Path); err == nil {
-			if absRoot != "" {
-				if rel, err2 := filepath.Rel(absRoot, abs); err2 == nil && rel != "" && rel != "." {
-					relPath = rel
-				} else if err2 == nil && rel == "." {
-					relPath = "."
-				} else {
-					relPath = abs
-				}
-			} else {
-				relPath = abs
-			}
-		}
-		fmt.Fprintf(&b, "### %s — %s\n", doc.Ticket, doc.Title)
-		fmt.Fprintf(&b, "- Status: **%s**\n", doc.Status)
+		fmt.Fprintf(&b, "### %s — %s\n", t.Ticket, t.Title)
+		fmt.Fprintf(&b, "- Status: **%s**\n", t.Status)
 		fmt.Fprintf(&b, "- Topics: %s\n", topics)
-		fmt.Fprintf(&b, "- Tasks: %d open / %d done\n", open, done)
-		fmt.Fprintf(&b, "- Updated: %s\n", doc.LastUpdated.Format("2006-01-02 15:04"))
-		fmt.Fprintf(&b, "- Path: `%s`\n\n", relPath)
+		fmt.Fprintf(&b, "- Tasks: %d open / %d done\n", t.TasksOpen, t.TasksDone)
+		fmt.Fprintf(&b, "- Updated: %s\n", t.LastUpdated.Format("2006-01-02 15:04"))
+		fmt.Fprintf(&b, "- Path: `%s`\n\n", t.Path)
 	}
 	content := b.String()
 
@@ -381,72 +310,41 @@ func (c *ListTicketsCommand) Run(
 		LastUpdated string
 	}
 
-	ticketInfos := make([]TicketInfo, 0, len(filtered))
-	for _, ws := range filtered {
-		doc := ws.Doc
-		topics := doc.Topics
+	ticketInfos := make([]TicketInfo, 0, len(tickets))
+	for _, t := range tickets {
+		topics := t.Topics
 		if topics == nil {
 			topics = []string{}
 		}
-		relPath := ws.Path
-		if abs, err := filepath.Abs(ws.Path); err == nil {
-			if rootDisplay != "" {
-				if rel, err2 := filepath.Rel(rootDisplay, abs); err2 == nil && rel != "" && rel != "." {
-					relPath = rel
-				} else if err2 == nil && rel == "." {
-					relPath = "."
-				} else {
-					relPath = abs
-				}
-			} else {
-				relPath = abs
-			}
-		}
 		ticketInfos = append(ticketInfos, TicketInfo{
-			Ticket:      doc.Ticket,
-			Title:       doc.Title,
-			Status:      doc.Status,
+			Ticket:      t.Ticket,
+			Title:       t.Title,
+			Status:      t.Status,
 			Topics:      topics,
-			Path:        relPath,
-			LastUpdated: doc.LastUpdated.Format("2006-01-02 15:04"),
+			Path:        t.Path,
+			LastUpdated: t.LastUpdated.Format("2006-01-02 15:04"),
 		})
 	}
 
 	// Build rows for template (same as Glaze rows)
-	rows := make([]map[string]interface{}, 0, len(filtered))
+	rows := make([]map[string]interface{}, 0, len(tickets))
 	fields := []string{"ticket", "title", "status", "topics", "path", "last_updated"}
-	for _, ws := range filtered {
-		doc := ws.Doc
-		open, done := countTasksInTicket(ws.Path)
-		topicsStr := strings.Join(doc.Topics, ", ")
-		relPath := ws.Path
-		if abs, err := filepath.Abs(ws.Path); err == nil {
-			if rootDisplay != "" {
-				if rel, err2 := filepath.Rel(rootDisplay, abs); err2 == nil && rel != "" && rel != "." {
-					relPath = rel
-				} else if err2 == nil && rel == "." {
-					relPath = "."
-				} else {
-					relPath = abs
-				}
-			} else {
-				relPath = abs
-			}
-		}
+	for _, t := range tickets {
+		topicsStr := strings.Join(t.Topics, ", ")
 		rows = append(rows, map[string]interface{}{
-			"ticket":       doc.Ticket,
-			"title":        doc.Title,
-			"status":       doc.Status,
+			"ticket":       t.Ticket,
+			"title":        t.Title,
+			"status":       t.Status,
 			"topics":       topicsStr,
-			"tasks_open":   open,
-			"tasks_done":   done,
-			"path":         relPath,
-			"last_updated": doc.LastUpdated.Format("2006-01-02 15:04"),
+			"tasks_open":   t.TasksOpen,
+			"tasks_done":   t.TasksDone,
+			"path":         t.Path,
+			"last_updated": t.LastUpdated.Format("2006-01-02 15:04"),
 		})
 	}
 
 	templateData := map[string]interface{}{
-		"TotalTickets": len(filtered),
+		"TotalTickets": len(tickets),
 		"Tickets":      ticketInfos,
 		"Rows":         rows,
 		"Fields":       fields,
@@ -467,3 +365,83 @@ func (c *ListTicketsCommand) Run(
 }
 
 var _ cmds.BareCommand = &ListTicketsCommand{}
+
+type ticketIndexDoc struct {
+	Ticket      string
+	Title       string
+	Status      string
+	Topics      []string
+	Path        string // relative to docs root (slash-separated) when possible; fallback abs
+	TicketDir   string // absolute OS path to the ticket directory
+	LastUpdated time.Time
+	TasksOpen   int
+	TasksDone   int
+}
+
+func queryTicketIndexDocs(ctx context.Context, rootOverride string, ticketFilter string, statusFilter string) (string, []ticketIndexDoc, error) {
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: rootOverride})
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	root := ws.Context().Root
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return "", nil, fmt.Errorf("root directory does not exist: %s", root)
+	}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return "", nil, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Filters: workspace.DocFilters{
+			Ticket:  strings.TrimSpace(ticketFilter),
+			Status:  strings.TrimSpace(statusFilter),
+			DocType: "index",
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByLastUpdated,
+			Reverse:             true,
+		},
+	})
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to query docs: %w", err)
+	}
+
+	out := make([]ticketIndexDoc, 0, len(res.Docs))
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
+		}
+		ticketDirAbs := filepath.Clean(filepath.Dir(filepath.FromSlash(h.Path)))
+		open, done := countTasksInTicket(ticketDirAbs)
+
+		relPath := ticketDirAbs
+		if rel, err := filepath.Rel(root, ticketDirAbs); err == nil {
+			relPath = rel
+		}
+		relPath = filepath.ToSlash(relPath)
+
+		out = append(out, ticketIndexDoc{
+			Ticket:      h.Doc.Ticket,
+			Title:       h.Doc.Title,
+			Status:      h.Doc.Status,
+			Topics:      h.Doc.Topics,
+			Path:        relPath,
+			TicketDir:   ticketDirAbs,
+			LastUpdated: h.Doc.LastUpdated,
+			TasksOpen:   open,
+			TasksDone:   done,
+		})
+	}
+
+	// Order by LastUpdated (newest first).
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].LastUpdated.After(out[j].LastUpdated)
+	})
+
+	return root, out, nil
+}

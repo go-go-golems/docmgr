@@ -126,7 +126,7 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.applyMetaUpdate(settings)
+	result, err := c.applyMetaUpdate(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -159,7 +159,10 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 	return nil
 }
 
-func (c *MetaUpdateCommand) applyMetaUpdate(settings *MetaUpdateSettings) (*MetaUpdateExecutionResult, error) {
+func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaUpdateSettings) (*MetaUpdateExecutionResult, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
 	cfgPath, _ := workspace.FindTTMPConfigPath()
 	vocabPath, _ := workspace.ResolveVocabularyPath()
@@ -170,7 +173,7 @@ func (c *MetaUpdateCommand) applyMetaUpdate(settings *MetaUpdateSettings) (*Meta
 		}
 	}
 
-	ctx := MetaUpdateContext{
+	muCtx := MetaUpdateContext{
 		Root:           absRoot,
 		ConfigPath:     cfgPath,
 		VocabularyPath: vocabPath,
@@ -181,19 +184,61 @@ func (c *MetaUpdateCommand) applyMetaUpdate(settings *MetaUpdateSettings) (*Meta
 	if settings.Doc != "" {
 		filesToUpdate = []string{settings.Doc}
 	} else if settings.Ticket != "" {
-		ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+		// Workspace+QueryDocs-backed ticket discovery and document enumeration.
+		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
 		if err != nil {
-			return nil, fmt.Errorf("failed to find ticket directory: %w", err)
+			return nil, fmt.Errorf("failed to discover workspace: %w", err)
+		}
+		settings.Root = ws.Context().Root
+		muCtx.Root = ws.Context().Root
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
 		}
 
 		if settings.DocType == "" {
-			filesToUpdate = []string{filepath.Join(ticketDir, "index.md")}
-		} else {
-			files, err := findMarkdownFiles(ticketDir, settings.DocType)
+			// Default: update ticket index.md only.
+			res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+				Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
+				Filters: workspace.DocFilters{DocType: "index"},
+				Options: workspace.DocQueryOptions{
+					IncludeErrors:       false,
+					IncludeArchivedPath: true,
+					IncludeScriptsPath:  true,
+					IncludeControlDocs:  true,
+					OrderBy:             workspace.OrderByPath,
+				},
+			})
 			if err != nil {
-				return nil, fmt.Errorf("failed to find files: %w", err)
+				return nil, fmt.Errorf("failed to find ticket index doc: %w", err)
 			}
-			filesToUpdate = files
+			if len(res.Docs) != 1 || res.Docs[0].Path == "" {
+				return nil, fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(settings.Ticket))
+			}
+			filesToUpdate = []string{filepath.FromSlash(res.Docs[0].Path)}
+		} else {
+			// Update all docs of the requested doc type within the ticket.
+			res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+				Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
+				Filters: workspace.DocFilters{
+					DocType: strings.TrimSpace(settings.DocType),
+				},
+				Options: workspace.DocQueryOptions{
+					IncludeErrors:       false,
+					IncludeArchivedPath: true,
+					IncludeScriptsPath:  true,
+					IncludeControlDocs:  true,
+					OrderBy:             workspace.OrderByPath,
+				},
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to query docs: %w", err)
+			}
+			for _, h := range res.Docs {
+				if strings.TrimSpace(h.Path) == "" {
+					continue
+				}
+				filesToUpdate = append(filesToUpdate, filepath.FromSlash(h.Path))
+			}
 		}
 	} else {
 		return nil, fmt.Errorf("must specify either --doc or --ticket")
@@ -220,7 +265,7 @@ func (c *MetaUpdateCommand) applyMetaUpdate(settings *MetaUpdateSettings) (*Meta
 	}
 
 	return &MetaUpdateExecutionResult{
-		Context: ctx,
+		Context: muCtx,
 		Updates: updates,
 	}, nil
 }
@@ -234,7 +279,7 @@ func (c *MetaUpdateCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.applyMetaUpdate(settings)
+	result, err := c.applyMetaUpdate(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -331,39 +376,6 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 
 	// Write back to file
 	return documents.WriteDocumentWithFrontmatter(filePath, doc, content, true)
-}
-
-// findMarkdownFiles finds all markdown files in a directory, optionally filtered by doc type
-func findMarkdownFiles(rootDir string, docTypeFilter string) ([]string, error) {
-	var files []string
-
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip errors
-		}
-		if info.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, ".md") {
-			return nil
-		}
-
-		// If docType filter specified, check frontmatter
-		if docTypeFilter != "" {
-			doc, _, err := documents.ReadDocumentWithFrontmatter(path)
-			if err != nil {
-				return nil // Skip files with invalid frontmatter
-			}
-			if doc.DocType != docTypeFilter {
-				return nil
-			}
-		}
-
-		files = append(files, path)
-		return nil
-	})
-
-	return files, err
 }
 
 var _ cmds.GlazeCommand = &MetaUpdateCommand{}

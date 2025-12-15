@@ -98,6 +98,9 @@ func (c *TicketCloseCommand) RunIntoGlazeProcessor(
 	parsedLayers *layers.ParsedLayers,
 	gp middlewares.Processor,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &TicketCloseSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
@@ -106,8 +109,17 @@ func (c *TicketCloseCommand) RunIntoGlazeProcessor(
 	// Resolve root
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	// Find ticket directory
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	// Find ticket directory (Workspace+QueryDocs-backed)
+	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
@@ -199,6 +211,9 @@ func (c *TicketCloseCommand) Run(
 	ctx context.Context,
 	parsedLayers *layers.ParsedLayers,
 ) error {
+	if ctx == nil {
+		return fmt.Errorf("nil context")
+	}
 	settings := &TicketCloseSettings{}
 	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
@@ -207,8 +222,17 @@ func (c *TicketCloseCommand) Run(
 	// Resolve root
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	// Find ticket directory
-	ticketDir, err := findTicketDirectory(settings.Root, settings.Ticket)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	// Find ticket directory (Workspace+QueryDocs-backed)
+	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}

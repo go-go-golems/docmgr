@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -146,94 +147,27 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	ticketsTotal := 0
-	ticketsStale := 0
-	docsTotal := 0
-	designDocs := 0
-	referenceDocs := 0
-	playbooks := 0
-
-	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
+	tickets, summary, err := computeStatusTickets(ctx, settings.Root, settings.Ticket, settings.StaleAfterDays)
 	if err != nil {
-		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
+		return err
 	}
 
-	for _, ws := range workspaces {
-		doc := ws.Doc
-		if doc == nil {
-			continue
-		}
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			continue
-		}
-
-		ticketsTotal++
-		ticketPath := ws.Path
-
-		stale := false
-		if !doc.LastUpdated.IsZero() {
-			days := time.Since(doc.LastUpdated).Hours() / 24
-			if int(days) > settings.StaleAfterDays {
-				stale = true
-			}
-		}
-		if stale {
-			ticketsStale++
-		}
-
-		ticketDocs := 0
-		dd := 0
-		rd := 0
-		pb := 0
-		_ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return nil
-			}
-			if info.IsDir() {
-				return nil
-			}
-			if !strings.HasSuffix(path, ".md") {
-				return nil
-			}
-			if info.Name() == "index.md" {
-				return nil
-			}
-			d, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			ticketDocs++
-			switch d.DocType {
-			case "design-doc":
-				dd++
-			case "reference":
-				rd++
-			case "playbook":
-				pb++
-			}
-			return nil
-		})
-
-		docsTotal += ticketDocs
-		designDocs += dd
-		referenceDocs += rd
-		playbooks += pb
-
-		if !settings.SummaryOnly {
+	if !settings.SummaryOnly {
+		for _, t := range tickets {
 			row := types.NewRow(
-				types.MRP("ticket", doc.Ticket),
-				types.MRP("title", doc.Title),
-				types.MRP("status", doc.Status),
-				types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
-				types.MRP("stale", stale),
-				types.MRP("docs", ticketDocs),
-				types.MRP("design_docs", dd),
-				types.MRP("reference_docs", rd),
-				types.MRP("playbooks", pb),
-				types.MRP("path", ticketPath),
+				types.MRP("ticket", t.Ticket),
+				types.MRP("title", t.Title),
+				types.MRP("status", t.Status),
+				types.MRP("last_updated", formatDate(t.LastUpdated)),
+				types.MRP("stale", t.Stale),
+				types.MRP("docs", t.Docs),
+				types.MRP("design_docs", t.DesignDocs),
+				types.MRP("reference_docs", t.ReferenceDocs),
+				types.MRP("playbooks", t.Playbooks),
+				types.MRP("path", t.Path),
 			)
 			if err := gp.AddRow(ctx, row); err != nil {
-				return fmt.Errorf("failed to add status row for %s: %w", doc.Ticket, err)
+				return fmt.Errorf("failed to add status row for %s: %w", t.Ticket, err)
 			}
 		}
 	}
@@ -269,12 +203,12 @@ func (c *StatusCommand) RunIntoGlazeProcessor(
 		types.MRP("root", settings.Root),
 		types.MRP("config_path", cfgPath),
 		types.MRP("vocabulary_path", vocabPath),
-		types.MRP("tickets_total", ticketsTotal),
-		types.MRP("tickets_stale", ticketsStale),
-		types.MRP("docs_total", docsTotal),
-		types.MRP("design_docs", designDocs),
-		types.MRP("reference_docs", referenceDocs),
-		types.MRP("playbooks", playbooks),
+		types.MRP("tickets_total", summary.TicketsTotal),
+		types.MRP("tickets_stale", summary.TicketsStale),
+		types.MRP("docs_total", summary.DocsTotal),
+		types.MRP("design_docs", summary.DesignDocs),
+		types.MRP("reference_docs", summary.ReferenceDocs),
+		types.MRP("playbooks", summary.Playbooks),
 		types.MRP("stale_after_days", settings.StaleAfterDays),
 		types.MRP("status", "ok"),
 	)
@@ -347,74 +281,15 @@ func (c *StatusCommand) Run(
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	ticketsTotal := 0
-	ticketsStale := 0
-	docsTotal := 0
-	designDocs := 0
-	referenceDocs := 0
-	playbooks := 0
-
-	workspaces, err := workspace.CollectTicketWorkspaces(settings.Root, nil)
+	tickets, summary, err := computeStatusTickets(ctx, settings.Root, settings.Ticket, settings.StaleAfterDays)
 	if err != nil {
-		return fmt.Errorf("failed to discover ticket workspaces: %w", err)
+		return err
 	}
 
-	for _, ws := range workspaces {
-		doc := ws.Doc
-		if doc == nil {
-			continue
-		}
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			continue
-		}
-
-		ticketsTotal++
-		ticketPath := ws.Path
-
-		stale := false
-		if !doc.LastUpdated.IsZero() {
-			days := time.Since(doc.LastUpdated).Hours() / 24
-			if int(days) > settings.StaleAfterDays {
-				stale = true
-			}
-		}
-		if stale {
-			ticketsStale++
-		}
-
-		ticketDocs := 0
-		dd, rd, pb := 0, 0, 0
-		_ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-				return nil
-			}
-			if info.Name() == "index.md" {
-				return nil
-			}
-			d, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			ticketDocs++
-			switch d.DocType {
-			case "design-doc":
-				dd++
-			case "reference":
-				rd++
-			case "playbook":
-				pb++
-			}
-			return nil
-		})
-
-		docsTotal += ticketDocs
-		designDocs += dd
-		referenceDocs += rd
-		playbooks += pb
-
-		if !settings.SummaryOnly {
+	if !settings.SummaryOnly {
+		for _, t := range tickets {
 			fmt.Printf("%s ‘%s’ status=%s stale=%t docs=%d path=%s\n",
-				doc.Ticket, doc.Title, doc.Status, stale, ticketDocs, ticketPath,
+				t.Ticket, t.Title, t.Status, t.Stale, t.Docs, t.Path,
 			)
 		}
 	}
@@ -423,7 +298,7 @@ func (c *StatusCommand) Run(
 	vocabPath, _ := workspace.ResolveVocabularyPath()
 	fmt.Printf(
 		"root=%s config=%s vocabulary=%s tickets=%d stale=%d docs=%d (design %d / reference %d / playbooks %d) stale-after=%d\n",
-		settings.Root, cfgPath, vocabPath, ticketsTotal, ticketsStale, docsTotal, designDocs, referenceDocs, playbooks, settings.StaleAfterDays,
+		settings.Root, cfgPath, vocabPath, summary.TicketsTotal, summary.TicketsStale, summary.DocsTotal, summary.DesignDocs, summary.ReferenceDocs, summary.Playbooks, settings.StaleAfterDays,
 	)
 
 	// Render postfix template if it exists
@@ -441,76 +316,34 @@ func (c *StatusCommand) Run(
 		LastUpdated   string
 	}
 
-	ticketInfos := make([]TicketInfo, 0)
-	for _, ws := range workspaces {
-		doc := ws.Doc
-		if doc == nil {
-			continue
-		}
-		if settings.Ticket != "" && doc.Ticket != settings.Ticket {
-			continue
-		}
-
-		ticketPath := ws.Path
-		stale := false
-		if !doc.LastUpdated.IsZero() {
-			days := time.Since(doc.LastUpdated).Hours() / 24
-			if int(days) > settings.StaleAfterDays {
-				stale = true
-			}
-		}
-
-		ticketDocs := 0
-		dd, rd, pb := 0, 0, 0
-		_ = filepath.Walk(ticketPath, func(path string, info os.FileInfo, err error) error {
-			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".md") {
-				return nil
-			}
-			if info.Name() == "index.md" {
-				return nil
-			}
-			d, err := readDocumentFrontmatter(path)
-			if err != nil {
-				return nil
-			}
-			ticketDocs++
-			switch d.DocType {
-			case "design-doc":
-				dd++
-			case "reference":
-				rd++
-			case "playbook":
-				pb++
-			}
-			return nil
-		})
-
+	ticketInfos := make([]TicketInfo, 0, len(tickets))
+	for _, t := range tickets {
 		lastUpdated := ""
-		if !doc.LastUpdated.IsZero() {
-			lastUpdated = doc.LastUpdated.Format("2006-01-02 15:04")
+		if !t.LastUpdated.IsZero() {
+			lastUpdated = t.LastUpdated.Format("2006-01-02 15:04")
 		}
 
 		ticketInfos = append(ticketInfos, TicketInfo{
-			Ticket:        doc.Ticket,
-			Title:         doc.Title,
-			Status:        doc.Status,
-			Stale:         stale,
-			Docs:          ticketDocs,
-			DesignDocs:    dd,
-			ReferenceDocs: rd,
-			Playbooks:     pb,
-			Path:          ticketPath,
+			Ticket:        t.Ticket,
+			Title:         t.Title,
+			Status:        t.Status,
+			Stale:         t.Stale,
+			Docs:          t.Docs,
+			DesignDocs:    t.DesignDocs,
+			ReferenceDocs: t.ReferenceDocs,
+			Playbooks:     t.Playbooks,
+			Path:          t.Path,
 			LastUpdated:   lastUpdated,
 		})
 	}
 
 	templateData := map[string]interface{}{
-		"TicketsTotal":   ticketsTotal,
-		"TicketsStale":   ticketsStale,
-		"DocsTotal":      docsTotal,
-		"DesignDocs":     designDocs,
-		"ReferenceDocs":  referenceDocs,
-		"Playbooks":      playbooks,
+		"TicketsTotal":   summary.TicketsTotal,
+		"TicketsStale":   summary.TicketsStale,
+		"DocsTotal":      summary.DocsTotal,
+		"DesignDocs":     summary.DesignDocs,
+		"ReferenceDocs":  summary.ReferenceDocs,
+		"Playbooks":      summary.Playbooks,
 		"StaleAfterDays": settings.StaleAfterDays,
 		"Root":           settings.Root,
 		"ConfigPath":     cfgPath,
@@ -538,3 +371,151 @@ func (c *StatusCommand) Run(
 }
 
 var _ cmds.BareCommand = &StatusCommand{}
+
+type statusTicket struct {
+	Ticket        string
+	Title         string
+	Status        string
+	Stale         bool
+	Docs          int
+	DesignDocs    int
+	ReferenceDocs int
+	Playbooks     int
+	Path          string
+	LastUpdated   time.Time
+}
+
+type statusSummary struct {
+	TicketsTotal  int
+	TicketsStale  int
+	DocsTotal     int
+	DesignDocs    int
+	ReferenceDocs int
+	Playbooks     int
+}
+
+func computeStatusTickets(ctx context.Context, root string, ticketFilter string, staleAfterDays int) ([]statusTicket, statusSummary, error) {
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: root})
+	if err != nil {
+		return nil, statusSummary{}, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{}); err != nil {
+		return nil, statusSummary{}, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
+
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Options: workspace.DocQueryOptions{
+			OrderBy:             workspace.OrderByPath,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+		},
+	})
+	if err != nil {
+		return nil, statusSummary{}, fmt.Errorf("failed to query docs: %w", err)
+	}
+
+	type agg struct {
+		ticketID     string
+		title        string
+		status       string
+		lastUpdated  time.Time
+		ticketDir    string
+		hasIndex     bool
+		docs         int
+		designDocs   int
+		referenceDoc int
+		playbooks    int
+	}
+
+	aggs := map[string]*agg{}
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
+		}
+		ticketID := strings.TrimSpace(h.Doc.Ticket)
+		if ticketID == "" {
+			continue
+		}
+		a, ok := aggs[ticketID]
+		if !ok {
+			a = &agg{ticketID: ticketID}
+			aggs[ticketID] = a
+		}
+
+		docPathOS := filepath.Clean(filepath.FromSlash(h.Path))
+		if filepath.Base(docPathOS) == "index.md" || strings.TrimSpace(h.Doc.DocType) == "index" {
+			a.title = h.Doc.Title
+			a.status = h.Doc.Status
+			a.lastUpdated = h.Doc.LastUpdated
+			a.ticketDir = filepath.Dir(docPathOS)
+			a.hasIndex = true
+			continue
+		}
+
+		a.docs++
+		switch strings.TrimSpace(h.Doc.DocType) {
+		case "design-doc":
+			a.designDocs++
+		case "reference":
+			a.referenceDoc++
+		case "playbook":
+			a.playbooks++
+		}
+	}
+
+	out := make([]statusTicket, 0, len(aggs))
+	sum := statusSummary{}
+	for _, a := range aggs {
+		if !a.hasIndex {
+			continue
+		}
+		if ticketFilter != "" && strings.TrimSpace(a.ticketID) != strings.TrimSpace(ticketFilter) {
+			continue
+		}
+
+		stale := false
+		if !a.lastUpdated.IsZero() {
+			days := time.Since(a.lastUpdated).Hours() / 24
+			if int(days) > staleAfterDays {
+				stale = true
+			}
+		}
+
+		out = append(out, statusTicket{
+			Ticket:        a.ticketID,
+			Title:         a.title,
+			Status:        a.status,
+			Stale:         stale,
+			Docs:          a.docs,
+			DesignDocs:    a.designDocs,
+			ReferenceDocs: a.referenceDoc,
+			Playbooks:     a.playbooks,
+			Path:          a.ticketDir,
+			LastUpdated:   a.lastUpdated,
+		})
+
+		sum.TicketsTotal++
+		if stale {
+			sum.TicketsStale++
+		}
+		sum.DocsTotal += a.docs
+		sum.DesignDocs += a.designDocs
+		sum.ReferenceDocs += a.referenceDoc
+		sum.Playbooks += a.playbooks
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Path < out[j].Path
+	})
+
+	return out, sum, nil
+}
+
+func formatDate(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format("2006-01-02")
+}

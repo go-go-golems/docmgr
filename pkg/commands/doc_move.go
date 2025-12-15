@@ -104,7 +104,7 @@ func (c *DocMoveCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	result, err := c.applyMove(settings)
+	result, err := c.applyMove(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -120,8 +120,19 @@ func (c *DocMoveCommand) RunIntoGlazeProcessor(
 	return gp.AddRow(ctx, row)
 }
 
-func (c *DocMoveCommand) applyMove(settings *DocMoveSettings) (*DocMoveResult, error) {
+func (c *DocMoveCommand) applyMove(ctx context.Context, settings *DocMoveSettings) (*DocMoveResult, error) {
+	if ctx == nil {
+		return nil, fmt.Errorf("nil context")
+	}
 	settings.Root = workspace.ResolveRoot(settings.Root)
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return nil, fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	settings.Root = ws.Context().Root
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
+	}
 
 	srcPath, err := resolveDocPath(settings.Root, settings.Doc)
 	if err != nil {
@@ -141,11 +152,11 @@ func (c *DocMoveCommand) applyMove(settings *DocMoveSettings) (*DocMoveResult, e
 		return nil, fmt.Errorf("source document missing Ticket in frontmatter: %s", srcPath)
 	}
 
-	srcTicketDir, err := findTicketDirectory(settings.Root, srcTicket)
+	srcTicketDir, err := resolveTicketDirViaWorkspace(ctx, ws, srcTicket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find source ticket directory: %w", err)
 	}
-	destTicketDir, err := findTicketDirectory(settings.Root, settings.DestTicket)
+	destTicketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.DestTicket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find destination ticket directory: %w", err)
 	}
@@ -194,6 +205,46 @@ func (c *DocMoveCommand) applyMove(settings *DocMoveSettings) (*DocMoveResult, e
 		DestPath:     destPath,
 		CompletedAt:  time.Now(),
 	}, nil
+}
+
+func resolveTicketDirViaWorkspace(ctx context.Context, ws *workspace.Workspace, ticketID string) (string, error) {
+	if ctx == nil {
+		return "", fmt.Errorf("nil context")
+	}
+	if ws == nil {
+		return "", fmt.Errorf("nil workspace")
+	}
+	ticketID = strings.TrimSpace(ticketID)
+	if ticketID == "" {
+		return "", fmt.Errorf("empty ticket id")
+	}
+
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
+		Filters: workspace.DocFilters{DocType: "index"},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeDiagnostics:  false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByPath,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(res.Docs) == 0 {
+		return "", fmt.Errorf("ticket not found: %s", ticketID)
+	}
+	if len(res.Docs) > 1 {
+		return "", fmt.Errorf("ambiguous ticket index doc for %s (got %d)", ticketID, len(res.Docs))
+	}
+	p := strings.TrimSpace(res.Docs[0].Path)
+	if p == "" {
+		return "", fmt.Errorf("ticket index doc has empty path for %s", ticketID)
+	}
+	return filepath.Dir(filepath.FromSlash(p)), nil
 }
 
 func resolveDocPath(root, doc string) (string, error) {

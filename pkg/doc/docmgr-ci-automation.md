@@ -354,6 +354,20 @@ if ! docmgr doctor --all --stale-after 14 --fail-on error; then
 fi
 ```
 
+**Pattern 2b: Export the workspace index as a CI artifact (debugging)**
+
+When CI fails or behaves differently than local, exporting the workspace index to SQLite can make investigation much faster: you can download the DB artifact and inspect exactly what docs/topics/related-files were indexed.
+
+```bash
+# Export index for offline inspection (artifact)
+docmgr workspace export-sqlite --out diagnostics/docmgr-index.sqlite --force
+
+# Optional: include markdown bodies for deeper debugging (larger file)
+docmgr workspace export-sqlite --out diagnostics/docmgr-index-with-body.sqlite --force --include-body
+```
+
+The exported DB includes a `README` table populated from docmgr’s embedded docs (`pkg/doc/*.md`), so the artifact is self-describing even outside the repo.
+
 **Pattern 3: Weekly doc report**
 
 ```bash

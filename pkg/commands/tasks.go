@@ -28,36 +28,23 @@ type parsedTask struct {
 
 // removed unused regex to satisfy linter; parsing handled in code below
 
-func loadTasksFile(root string, ticket string, tasksFile string) (string, []string, []parsedTask, error) {
+func loadTasksFile(ctx context.Context, root string, ticket string, tasksFile string) (string, []string, []parsedTask, error) {
+	if ctx == nil {
+		return "", nil, nil, fmt.Errorf("nil context")
+	}
 	var path string
 	if tasksFile != "" {
 		path = tasksFile
 	} else {
 		root = workspace.ResolveRoot(root)
-		// Prefer simple name-based match to avoid false positives with guideline folders
-		// and non-ticket directories that may contain an index.md without frontmatter.
-		td := ""
-		if ticket != "" {
-			if entries, err := os.ReadDir(root); err == nil {
-				for _, e := range entries {
-					if e.IsDir() && strings.Contains(strings.ToLower(e.Name()), strings.ToLower(ticket)) {
-						td = filepath.Join(root, e.Name())
-						break
-					}
-				}
-			}
+		if strings.TrimSpace(ticket) == "" {
+			return "", nil, nil, fmt.Errorf("must specify --ticket when --tasks-file is not set")
 		}
-		if td == "" {
-			// Fallback to metadata-based resolution
-			var err error
-			td, err = findTicketDirectory(root, ticket)
-			if err != nil {
-				return "", nil, nil, fmt.Errorf("failed to find ticket directory: %w", err)
-			}
-			path = filepath.Join(td, "tasks.md")
-		} else {
-			path = filepath.Join(td, "tasks.md")
+		p, _, err := findTasksFileViaWorkspace(ctx, root, ticket)
+		if err != nil {
+			return "", nil, nil, fmt.Errorf("failed to resolve tasks file: %w", err)
 		}
+		path = p
 	}
 
 	content, err := os.ReadFile(path)
@@ -73,6 +60,35 @@ func loadTasksFile(root string, ticket string, tasksFile string) (string, []stri
 	}
 	tasks := parseTasksFromLines(lines)
 	return path, lines, tasks, nil
+}
+
+func findTasksFileViaWorkspace(ctx context.Context, rootOverride string, ticketID string) (string, string, error) {
+	if ctx == nil {
+		return "", "", fmt.Errorf("nil context")
+	}
+	ticketID = strings.TrimSpace(ticketID)
+	if ticketID == "" {
+		return "", "", fmt.Errorf("empty ticket id")
+	}
+
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: rootOverride})
+	if err != nil {
+		return "", "", fmt.Errorf("discover workspace: %w", err)
+	}
+	resolvedRoot := ws.Context().Root
+
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return "", resolvedRoot, fmt.Errorf("init workspace index: %w", err)
+	}
+
+	// NOTE: tasks.md does not have frontmatter by default, so it may not be indexed by QueryDocs.
+	// We therefore derive the ticket directory from the canonical index.md (DocType=index) and
+	// then join tasks.md directly.
+	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, ticketID)
+	if err != nil {
+		return "", resolvedRoot, err
+	}
+	return filepath.Join(ticketDir, "tasks.md"), resolvedRoot, nil
 }
 
 func parseTasksFromLines(lines []string) []parsedTask {
@@ -179,7 +195,7 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 		return nil
 	}
 
-	_, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	_, _, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
 	}
@@ -232,7 +248,7 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 		return nil
 	}
 
-	path, _, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, _, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
 	}
@@ -328,7 +344,7 @@ func (c *TasksAddCommand) Run(ctx context.Context, pl *layers.ParsedLayers) erro
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks add settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
@@ -390,7 +406,7 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) er
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
@@ -464,7 +480,7 @@ func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layer
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
@@ -567,7 +583,7 @@ func (c *TasksUncheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) 
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks uncheck settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks file: %w", err)
 	}
@@ -653,7 +669,7 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
-	path, err := editTaskLine(s)
+	path, err := editTaskLine(ctx, s)
 	if err != nil {
 		return err
 	}
@@ -671,7 +687,7 @@ func (c *TasksEditCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
-	path, err := editTaskLine(s)
+	path, err := editTaskLine(ctx, s)
 	if err != nil {
 		return err
 	}
@@ -682,8 +698,8 @@ func (c *TasksEditCommand) Run(ctx context.Context, pl *layers.ParsedLayers) err
 
 var _ cmds.BareCommand = &TasksEditCommand{}
 
-func editTaskLine(s *TasksEditSettings) (string, error) {
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+func editTaskLine(ctx context.Context, s *TasksEditSettings) (string, error) {
+	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to load tasks file: %w", err)
 	}
@@ -734,7 +750,7 @@ func (c *TasksRemoveCommand) Run(ctx context.Context, pl *layers.ParsedLayers) e
 	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks remove settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(s.Root, s.Ticket, s.TasksFile)
+	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
 		return fmt.Errorf("failed to load tasks file: %w", err)
 	}

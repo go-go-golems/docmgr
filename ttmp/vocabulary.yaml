@@ -25,6 +25,12 @@ topics:
       description: docmgr tool itself (CLI, workflows, documentation)
     - slug: ai
       description: AI and LLM related
+    - slug: testing
+      description: Testing and scenario/integration suite workflows
+    - slug: tooling
+      description: Developer tooling, harnesses, automation scripts
+    - slug: diagnostics
+      description: Diagnostics, logging, validation findings, error reporting
 docTypes:
     - slug: index
       description: Ticket index

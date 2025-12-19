@@ -86,3 +86,21 @@ Step 13: Implemented skill list command with filtering (commit 57f7185)
 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_list.go — Implemented skill list with --ticket
 
+
+## 2025-12-19
+
+Step 14: Implemented skill show command (commit 5942fb0)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Implemented skill show with title matching and ambiguity handling
+
+
+## 2025-12-19
+
+Step 14: Implemented skill show command (commit 5942fb0)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Implemented skill show with title matching and ambiguity handling
+

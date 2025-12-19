@@ -678,3 +678,59 @@ This step implements the `docmgr skill list` command that queries skills from th
 - Output columns: skill, what_for, when_to_use, topics, related_paths, path
 - Human output: indented sections with labels
 - Structured output: standard Glazed rows
+
+## Step 14: Implement skill show command
+
+This step implements the `docmgr skill show <skill>` command that displays detailed information about a single skill, including its preamble fields, related files, and full markdown body.
+
+**Commit (code):** 5942fb0 — "Implement skill show command"
+
+### What I did
+- Created `pkg/commands/skill_show.go` with `SkillShowCommand` struct
+- Implemented `BareCommand` interface (human-friendly output)
+- Added skill name matching: case-insensitive exact or contains match
+- Ambiguity handling: shows first match + warns if multiple matches found
+- Displays: title, ticket, status, WhatFor, WhenToUse, topics, related files, path, and body
+- Uses `IncludeBody: true` to retrieve markdown content
+
+### Why
+- Skills need a way to view full details including the markdown body
+- Title matching allows flexible lookup (exact or partial)
+- Ambiguity warning helps users understand when multiple matches exist
+
+### What worked
+- Title matching works well for discovery
+- Ambiguity handling provides good UX (shows first + lists alternatives)
+- Body display shows full skill documentation
+
+### What didn't work
+- N/A
+
+### What I learned
+- Show commands typically use human-friendly output (BareCommand)
+- IncludeBody: true is needed to retrieve markdown content
+- Title matching can be simple (case-insensitive contains)
+
+### What was tricky to build
+- Deciding on ambiguity behavior (chose first match + warning)
+- Ensuring body is retrieved when needed
+
+### What warrants a second pair of eyes
+- Verify ambiguity behavior is appropriate (first match vs error)
+- Confirm output format is readable
+
+### What should be done in the future
+- Consider adding slug-based matching for better discovery
+- Add tests for matching and ambiguity handling
+- Consider adding structured output option if needed
+
+### Code review instructions
+- Review `pkg/commands/skill_show.go` for command implementation
+- Verify matching logic is appropriate
+- Check ambiguity handling behavior
+
+### Technical details
+- Query: all skills, then filter by title match
+- Matching: case-insensitive exact or contains
+- Ambiguity: first match + warning with all candidates
+- Output: formatted sections with preamble, metadata, related files, body

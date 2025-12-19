@@ -734,3 +734,53 @@ This step implements the `docmgr skill show <skill>` command that displays detai
 - Matching: case-insensitive exact or contains
 - Ambiguity: first match + warning with all candidates
 - Output: formatted sections with preamble, metadata, related files, body
+
+## Step 15: Add 'skill' to vocabulary and create skill template
+
+This step adds 'skill' as a recognized docType in the vocabulary and creates a template file for scaffolding new skills.
+
+**Commit (code):** f1329e0 — "Add 'skill' to vocabulary and create skill template"
+
+### What I did
+- Added `skill` docType to `ttmp/vocabulary.yaml` with description "Skill documentation (what it's for and when to use it)"
+- Created `ttmp/_templates/skill.md` template with frontmatter fields including WhatFor and WhenToUse
+- Template includes sections for overview, what it's for, when to use, examples, related files, and notes
+
+### Why
+- Vocabulary registration ensures skills are recognized and validated
+- Template provides a starting point for creating new skills
+- Template includes all required fields (WhatFor, WhenToUse) to guide users
+
+### What worked
+- Vocabulary addition is straightforward
+- Template follows existing template patterns
+- Template includes all skill-specific fields
+
+### What didn't work
+- N/A
+
+### What I learned
+- Vocabulary entries use slug/description format
+- Templates use placeholder syntax like `[Name]` or `{{TITLE}}`
+- Template should include all relevant frontmatter fields
+
+### What was tricky to build
+- Deciding on template structure (chose sections matching skill purpose)
+- Ensuring template includes WhatFor/WhenToUse fields
+
+### What warrants a second pair of eyes
+- Verify template structure is appropriate
+- Confirm vocabulary description is clear
+
+### What should be done in the future
+- Consider adding more template examples if needed
+- Update template based on user feedback
+
+### Code review instructions
+- Review `ttmp/vocabulary.yaml` for skill docType entry
+- Review `ttmp/_templates/skill.md` for template structure
+
+### Technical details
+- Vocabulary entry: `slug: skill, description: Skill documentation (what it's for and when to use it)`
+- Template includes: Title, Ticket, DocType, Status, Topics, WhatFor, WhenToUse, RelatedFiles, Intent, etc.
+- Template sections: Overview, What This Skill Is For, When To Use This Skill, Examples, Related Files, Notes

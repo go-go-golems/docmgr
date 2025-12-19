@@ -104,3 +104,23 @@ Step 14: Implemented skill show command (commit 5942fb0)
 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Implemented skill show with title matching and ambiguity handling
 
+
+## 2025-12-19
+
+Step 15: Added 'skill' to vocabulary and created skill template (commit <hash>)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/_templates/skill.md — Created skill template
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/vocabulary.yaml — Added skill docType
+
+
+## 2025-12-19
+
+Step 15: Added 'skill' to vocabulary and created skill template (commit f1329e0)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/_templates/skill.md — Created skill template
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/vocabulary.yaml — Added skill docType
+

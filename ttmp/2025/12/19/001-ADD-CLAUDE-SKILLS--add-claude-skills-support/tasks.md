@@ -10,6 +10,6 @@
 - [x] Add Cobra command group cmd/docmgr/cmds/skill and register in cmd/docmgr/cmds/root.go
 - [x] Implement pkg/commands/skill_list.go (filters: --ticket, --topics, --file, --dir; outputs what_for/when_to_use/topics/related_paths)
 - [x] Implement pkg/commands/skill_show.go (show preamble + related files + body; decide ambiguity behavior)
-- [ ] Add 'skill' to ttmp/vocabulary.yaml docTypes and add optional _templates skill scaffold
+- [x] Add 'skill' to ttmp/vocabulary.yaml docTypes and add optional _templates skill scaffold
 - [ ] Add tests: schema/query hydration + scenario test for skill list --file/--dir
 - [ ] Update docs: pkg/doc/docmgr-cli-guide.md to include docmgr skill list/show + filtering examples

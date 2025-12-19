@@ -861,3 +861,9 @@ This step creates a comprehensive smoke test for the skills feature in the test-
 - May need to check if index is being rebuilt after creating skills
 - Testing with `doc list --doc-type skill` returns "No documents found"
 - Testing with `vocab list --category docTypes` confirms skill is registered
+- Skills files exist in test scenario directory (verified)
+- Frontmatter looks correct (DocType: skill, WhatFor, WhenToUse present)
+- Issue: `skill list` returns empty results even though files exist
+- Hypothesis: workspace index may not be picking up skills, or root resolution issue
+- Testing workspace status to verify root resolution
+- Need to verify index is being built correctly for skills

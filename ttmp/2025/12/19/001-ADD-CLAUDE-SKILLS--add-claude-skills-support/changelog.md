@@ -57,3 +57,13 @@ Step 10: Updated index builder to populate what_for/when_to_use during ingest (c
 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/index_builder.go — Extract and insert WhatFor/WhenToUse fields during document indexing
 
+
+## 2025-12-19
+
+Step 11: Updated QueryDocs to hydrate what_for/when_to_use fields (commit d4012c7)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/query_docs.go — Updated scan and Document hydration
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/query_docs_sql.go — Added what_for/when_to_use to SELECT
+

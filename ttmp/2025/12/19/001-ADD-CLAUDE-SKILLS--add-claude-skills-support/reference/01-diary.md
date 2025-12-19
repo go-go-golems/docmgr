@@ -9,8 +9,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: internal/workspace/index_builder.go
-      Note: Populate what_for/when_to_use during ingest (commit 6caef53)
+    - Path: internal/workspace/query_docs.go
+      Note: Updated scan and hydration
+    - Path: internal/workspace/query_docs_sql.go
+      Note: Added what_for/when_to_use to SELECT (commit d4012c7)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T12:40:20.201200764-05:00
@@ -517,3 +519,57 @@ This step updates the index builder to extract and store WhatFor/WhenToUse field
 - INSERT now includes: `what_for, when_to_use` after `last_updated`
 - Extraction: `whatFor = nullString(doc.WhatFor)` and `whenToUse = nullString(doc.WhenToUse)`
 - Values inserted as sql.NullString (NULL if empty string or parse failed)
+
+## Step 11: Hydrate what_for/when_to_use in QueryDocs
+
+This step updates the query layer to include the new skill fields in SELECT statements and hydrate them into the Document model. This ensures that skill list/show commands can access these fields without re-reading files.
+
+**Commit (code):** d4012c7 — "Hydrate what_for/when_to_use in QueryDocs"
+
+### What I did
+- Updated SELECT statement in `internal/workspace/query_docs_sql.go` to include `d.what_for, d.when_to_use` columns
+- Added `whatFor` and `whenToUse` sql.NullString variables to the scan in `query_docs.go`
+- Updated rows.Scan() call to include the new fields in the correct order
+- Set `doc.WhatFor` and `doc.WhenToUse` when constructing Document model
+- Updated diagnostics query scan to match SELECT statement (even though fields aren't used)
+
+### Why
+- QueryDocs must hydrate all indexed fields into the Document model
+- Skills need these fields available in query results for list/show commands
+- Scan order must match SELECT column order exactly
+
+### What worked
+- Field hydration follows existing pattern for other optional fields
+- Nullable handling ensures empty/NULL values work correctly
+- Both main query and diagnostics query scans updated consistently
+
+### What didn't work
+- N/A
+
+### What I learned
+- SELECT column order must match Scan argument order exactly
+- Diagnostics query uses same SELECT, so scan must match even if fields unused
+- Nullable fields use .String property directly (empty string if NULL)
+
+### What was tricky to build
+- Ensuring scan order matches SELECT order (what_for/when_to_use after last_updated, before parse_ok)
+- Remembering to update diagnostics scan even though fields aren't used there
+
+### What warrants a second pair of eyes
+- Verify field order matches between SELECT and Scan
+- Confirm nullable handling is correct (empty string vs NULL)
+
+### What should be done in the future
+- Consider adding tests that verify hydration works correctly
+- Monitor query performance if these fields become large
+
+### Code review instructions
+- Review `internal/workspace/query_docs_sql.go` lines 127-139 for SELECT statement
+- Review `internal/workspace/query_docs.go` lines 104-130 for scan variables and Scan call
+- Review lines 158-164 for Document model construction with new fields
+- Review lines 224-249 for diagnostics scan update
+
+### Technical details
+- SELECT now includes: `d.what_for, d.when_to_use` after `d.last_updated`
+- Scan variables: `whatFor sql.NullString` and `whenToUse sql.NullString`
+- Document hydration: `WhatFor: whatFor.String, WhenToUse: whenToUse.String`

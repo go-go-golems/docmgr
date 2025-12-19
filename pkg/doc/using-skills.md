@@ -28,20 +28,11 @@ Before ANY task, review the skills list:
 
 - Run: `docmgr skill list`
 
-If supported in this environment, prefer structured output:
-
-- Run: `docmgr skill list --with-glaze-output --output table`
-
 ## Tool for loading a skill (docmgr)
 
 When you decide a skill might apply, load it:
 
-- Run: `docmgr skill show <skill-name>`
-
-If the environment does not have `docmgr skill show` yet, use the skills-as-documents fallback:
-
-- Find skill docs: `docmgr doc search --query "DocType: skill" --with-glaze-output --output table`
-- Then open the matching skill document (and treat its contents as the skill)
+- Run: `docmgr skill show --skill <skill-name>`
 
 ## Tool Mapping (docmgr)
 

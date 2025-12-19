@@ -105,3 +105,14 @@ Step 17: Added new analysis + diary v2 for skills smoke tests; identified cwd/--
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/2025/12/19/001-ADD-CLAUDE-SKILLS--add-claude-skills-support/analysis/02-skills-smoke-tests-failures-so-far-structured-approach.md — Analysis of failures + proposed structured approach
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/2025/12/19/001-ADD-CLAUDE-SKILLS--add-claude-skills-support/reference/02-diary-v2-skills-smoke-tests.md — New diary focused on smoke tests
 
+
+## 2025-12-19
+
+Step 18: Fixed init --seed-vocabulary to include docType=skill; hardened skills smoke test and re-ran successfully (commits f015d9c, 621b7c4)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/init.go — Seed 'skill' docType in default vocabulary
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Deterministic root + assertions for skills list/show
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Ensure step ordering
+

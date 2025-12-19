@@ -48,3 +48,12 @@ Step 9: Extended SQLite schema with what_for and when_to_use columns (commit 650
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/sqlite_schema.go — Added what_for and when_to_use columns to docs table
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/sqlite_schema_test.go — Added test assertions for new columns
 
+
+## 2025-12-19
+
+Step 10: Updated index builder to populate what_for/when_to_use during ingest (commit 6caef53)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/index_builder.go — Extract and insert WhatFor/WhenToUse fields during document indexing
+

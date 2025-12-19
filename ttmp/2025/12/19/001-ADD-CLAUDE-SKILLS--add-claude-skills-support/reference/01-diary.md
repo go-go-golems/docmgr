@@ -9,10 +9,8 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: internal/workspace/sqlite_schema.go
-      Note: Added what_for/when_to_use columns to docs table (commit 6507653)
-    - Path: internal/workspace/sqlite_schema_test.go
-      Note: Added column existence tests
+    - Path: internal/workspace/index_builder.go
+      Note: Populate what_for/when_to_use during ingest (commit 6caef53)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T12:40:20.201200764-05:00
@@ -467,3 +465,55 @@ This step adds the database columns needed to store skill-specific fields in the
 - Columns added: `what_for TEXT` and `when_to_use TEXT` (nullable)
 - Test uses `pragma_table_info('docs')` to verify columns exist
 - Columns follow existing naming convention (snake_case)
+
+## Step 10: Populate what_for/when_to_use during document ingest
+
+This step updates the index builder to extract and store WhatFor/WhenToUse fields from documents during workspace indexing. These fields are extracted from the parsed Document model and inserted into the SQLite index.
+
+**Commit (code):** 6caef53 — "Populate what_for/when_to_use during document ingest"
+
+### What I did
+- Updated INSERT statement in `internal/workspace/index_builder.go` to include `what_for` and `when_to_use` columns
+- Added `whatFor` and `whenToUse` sql.NullString variables to extract values from parsed documents
+- Updated ExecContext call to include the new fields in the correct order
+- Fields are extracted from `doc.WhatFor` and `doc.WhenToUse` when parsing succeeds
+
+### Why
+- Documents need their skill fields indexed so they can be queried without re-reading files
+- The index builder is responsible for extracting all document metadata and storing it in SQLite
+- Nullable fields ensure parse-failed documents still insert successfully (with NULL values)
+
+### What worked
+- Extraction logic follows existing pattern for other optional fields
+- Nullable handling ensures backward compatibility
+- Field order matches the INSERT statement
+
+### What didn't work
+- N/A
+
+### What I learned
+- Index builder extracts fields from parsed Document model, not directly from frontmatter
+- Nullable fields use `nullString()` helper for consistent NULL handling
+- Field order in INSERT must match VALUES order exactly
+
+### What was tricky to build
+- Ensuring field order matches between INSERT columns and VALUES placeholders
+- Deciding where to place new fields in the INSERT (before parse_ok, after last_updated)
+
+### What warrants a second pair of eyes
+- Verify field order matches schema definition
+- Confirm NULL handling is correct for parse-failed documents
+
+### What should be done in the future
+- Consider adding validation if we want to require these fields for skills
+- Monitor index size if these fields become large
+
+### Code review instructions
+- Review `internal/workspace/index_builder.go` lines 65-70 for INSERT statement
+- Review lines 114-141 for field extraction logic
+- Review lines 144-155 for ExecContext call with new fields
+
+### Technical details
+- INSERT now includes: `what_for, when_to_use` after `last_updated`
+- Extraction: `whatFor = nullString(doc.WhatFor)` and `whenToUse = nullString(doc.WhenToUse)`
+- Values inserted as sql.NullString (NULL if empty string or parse failed)

@@ -323,3 +323,39 @@ After completing the codebase analysis, I was asked to create implementation gui
 - Architecture doc covers: workspace discovery (6-level fallback), SQLite indexing (in-memory, rebuilt per invocation), ticket structure, document model, frontmatter parsing (3-stage pipeline), document walking, query system
 - Command guide covers: command group structure, list command pattern (dual-mode), show command pattern, common patterns (workspace integration, error handling, output formatting), testing, pitfalls
 - Both docs use topic-focused introductions per section, following style guide principles
+
+## Step 7: Skills implementation plan + ticket tasks
+
+This step turned the earlier analysis into an actionable implementation plan and a concrete task list in `tasks.md`. The main goal was to make sure we don’t “accidentally design” something that can’t work with docmgr’s current query/index architecture (especially around where skill-specific fields live).
+
+### What I did
+- Read how `workspace.QueryDocs()` constructs `models.Document` results to check whether it re-parses markdown files or relies on indexed columns.
+- Confirmed how the workspace ingest/index builder inserts docs into SQLite.
+- Wrote a dedicated design doc: `design-doc/01-skills-implementation-plan.md`.
+- Added a set of actionable tasks to `tasks.md` via `docmgr task add`.
+
+### Where I searched and why
+- `internal/workspace/query_docs.go`: to confirm what fields are hydrated into `models.Document` (and whether unknown frontmatter fields could be accessed without re-reading files).
+- `internal/workspace/index_builder.go`: to confirm what document fields are persisted into the SQLite index at ingest time.
+- `internal/workspace/sqlite_schema.go`: to confirm which columns exist in `docs` and how schema changes should be planned.
+- `pkg/commands/search.go`: to confirm how `--file` and `--dir` are wired (via `DocFilters.RelatedFile` / `DocFilters.RelatedDir`) so skills can reuse the same semantics.
+
+### What I learned
+- `workspace.QueryDocs()` **does not** read markdown files when returning results. It hydrates `models.Document` from the SQLite `docs` columns + a batch hydration of topics and related files.
+- Therefore, adding skill fields purely to `models.Document` is not enough: to show `WhatFor` and `WhenToUse` in `skill list/show`, we must also store those fields in the SQLite `docs` table and hydrate them in the query layer.
+- Path filtering is already implemented in the query layer (via `RelatedFile`/`RelatedDir`), so `skill list` can support `--file` and `--dir` without any new “discovery” mechanism.
+
+### What was tricky to build
+- Avoiding a design trap where skills “work” only via an extra per-file parsing pass. That would conflict with docmgr’s current architecture and make behavior/performance inconsistent.
+
+### What warrants a second pair of eyes
+- Schema changes for the in-memory SQLite index: ensure we update **all** relevant places (DDL, ingest insert, query SELECT/scan, and tests) so we don’t ship a partially-hydrated document model.
+- Confirm the desired UX for ambiguity in `docmgr skill show <skill>` (error-with-candidates vs best-match selection).
+
+### What should be done in the future
+- Once implementation starts, keep the ticket tasks in sync with reality (check off tasks as they land).
+- Add a minimal scenario test that exercises `skill list --file` and `skill list --dir` against a small sample workspace.
+
+### Code review instructions
+- Start with `design-doc/01-skills-implementation-plan.md` for the full plan and rationale.
+- Then review `tasks.md` to see the concrete implementation sequence that should be followed.

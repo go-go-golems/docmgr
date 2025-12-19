@@ -28,7 +28,7 @@ This document analyzes the docmgr codebase to understand how to implement a "ski
 - Ticket-specific directories under `<ticket>/skills`
 
 The implementation requires:
-1. `docmgr skill list` - Lists all skills with: what it's for, when to use, topics, and related paths
+1. `docmgr skill list` - Lists all skills with: what it's for, when to use, topics, and related paths. Supports filtering by ticket, topics, file paths, and directories.
 2. `docmgr skill show <skill>` - Shows detailed information about a specific skill
 
 ## Codebase Architecture Analysis
@@ -211,22 +211,25 @@ Create `cmd/docmgr/cmds/skill/` directory:
 - `list.go` - `newListCommand()` for `skill list`
 - `show.go` - `newShowCommand()` for `skill show`
 
-#### 3. Skill Discovery
-
-Create `pkg/commands/skill_discovery.go`:
-- `DiscoverSkills()` - Walks `/skills` directory and ticket `skills/` directories
-- Uses `documents.WalkDocuments()` with custom skip logic
-- Filters for `DocType == "skill"`
-
-#### 4. Skill List Command
+#### 3. Skill List Command
 
 `docmgr skill list` should:
-- Discover all skills (workspace root + ticket-specific)
+- Query all skills using `workspace.QueryDocs()` with `DocType == "skill"`
 - Output columns: `skill`, `what_for`, `when_to_use`, `topics`, `related_paths`, `path`
-- Support filtering by `--ticket`, `--topics`
+- Support filtering by:
+  - `--ticket` - Filter by ticket ID
+  - `--topics` - Filter by topics (OR logic, any topic matches)
+  - `--file` - Filter by related file path (skills that reference this file)
+  - `--dir` - Filter by directory (skills that reference files in this directory)
 - Support structured output (`--with-glaze-output`)
 
-#### 5. Skill Show Command
+**Implementation notes:**
+- Use `workspace.QueryDocs()` with `DocFilters{DocType: "skill"}`
+- Use `RelatedFile` filter for `--file` flag (same as `docmgr doc search`)
+- Use `RelatedDir` filter for `--dir` flag (same as `docmgr doc search`)
+- Skills are automatically indexed in SQLite (no separate discovery needed)
+
+#### 4. Skill Show Command
 
 `docmgr skill show <skill>` should:
 - Find skill by name (slug or title match)
@@ -252,14 +255,15 @@ Create `pkg/commands/skill_discovery.go`:
 2. **Skill Validation**: Should skills require `WhatFor` and `WhenToUse`? Or make them optional?
 3. **Ticket Skills**: Should ticket-specific skills inherit ticket context automatically?
 4. **Search Integration**: Should `docmgr doc search` include skills? Or keep them separate?
-5. **Indexing**: Should skills be indexed in SQLite? Or discovered on-demand?
+
+**Resolved:**
+- **Indexing**: Skills are indexed in SQLite automatically (same as regular documents). No separate discovery needed - `skill list` uses `QueryDocs()` with `DocType == "skill"` filter.
 
 ### Next Steps
 
 1. Create skill command structure (`cmd/docmgr/cmds/skill/`)
-2. Implement skill discovery logic
-3. Implement `skill list` command
-4. Implement `skill show` command
-5. Add `skill` to vocabulary
-6. Test with sample skill documents
-7. Update documentation
+2. Implement `skill list` command with filtering (ticket, topics, file, dir)
+3. Implement `skill show` command
+4. Add `skill` to vocabulary
+5. Test with sample skill documents
+6. Update documentation

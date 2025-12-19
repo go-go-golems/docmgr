@@ -21,6 +21,16 @@ RelatedFiles:
       Note: Document walking utilities
     - Path: internal/workspace/discovery.go
       Note: Workspace discovery
+    - Path: internal/workspace/index_builder.go
+      Note: Index ingest to persist WhatFor/WhenToUse
+    - Path: internal/workspace/query_docs.go
+      Note: Key constraint for skills fields (QueryDocs hydrates from SQLite)
+    - Path: internal/workspace/query_docs_sql.go
+      Note: Query compilation updates for new columns
+    - Path: internal/workspace/sqlite_schema.go
+      Note: Schema changes required for skill fields
+    - Path: pkg/commands/search.go
+      Note: Path filtering semantics to reuse for skill list
     - Path: pkg/commands/vocab_list.go
       Note: List command implementation pattern
     - Path: pkg/doc/docmgr-codebase-architecture.md
@@ -33,6 +43,7 @@ ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T12:39:33.38089524-05:00
 ---
+
 
 
 

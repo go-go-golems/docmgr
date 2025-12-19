@@ -9,8 +9,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: pkg/models/document.go
-      Note: Document model extended with WhatFor/WhenToUse fields (commit e8e0341)
+    - Path: internal/workspace/sqlite_schema.go
+      Note: Added what_for/when_to_use columns to docs table (commit 6507653)
+    - Path: internal/workspace/sqlite_schema_test.go
+      Note: Added column existence tests
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T12:40:20.201200764-05:00
@@ -414,3 +416,54 @@ This step adds the two new optional fields to the Document model that will store
 - Fields added: `WhatFor string \`yaml:"WhatFor" json:"whatFor"\`` and `WhenToUse string \`yaml:"WhenToUse" json:"whenToUse"\``
 - Both fields are optional (empty string default)
 - Follows existing Document model pattern for optional fields
+
+## Step 9: Extend SQLite schema with what_for and when_to_use columns
+
+This step adds the database columns needed to store skill-specific fields in the workspace index. The columns are nullable TEXT fields that will be populated during document ingestion.
+
+**Commit (code):** 6507653 — "Extend SQLite schema with what_for and when_to_use columns"
+
+### What I did
+- Added `what_for TEXT` and `when_to_use TEXT` columns to the `docs` table DDL in `internal/workspace/sqlite_schema.go`
+- Added test assertions in `sqlite_schema_test.go` to verify the columns exist using `pragma_table_info('docs')`
+- Columns are nullable (no NOT NULL constraint) to support documents without these fields
+
+### Why
+- The workspace index stores document metadata in SQLite for fast querying
+- Skills need these fields indexed so `skill list/show` can display them without re-reading files
+- Nullable columns ensure backward compatibility with existing documents
+
+### What worked
+- Schema change is straightforward - just two new TEXT columns
+- Test uses SQLite pragma to verify column existence
+- Nullable columns match the optional nature of the fields
+
+### What didn't work
+- N/A
+
+### What I learned
+- SQLite schema uses TEXT for string fields (not VARCHAR)
+- Columns are nullable by default unless NOT NULL is specified
+- Schema tests can use `pragma_table_info()` to verify column existence
+
+### What was tricky to build
+- Ensuring column names match SQL naming conventions (snake_case)
+- Deciding on nullable vs NOT NULL - chose nullable for flexibility
+
+### What warrants a second pair of eyes
+- Confirm column names match design expectations (what_for/when_to_use)
+- Verify nullable columns are appropriate (vs NOT NULL with empty string default)
+
+### What should be done in the future
+- Consider adding indexes if we frequently filter by these fields
+- Monitor schema migration needs if we ever persist the index to disk
+
+### Code review instructions
+- Review `internal/workspace/sqlite_schema.go` lines 85-86 for the new columns
+- Review `sqlite_schema_test.go` for column existence assertions
+- Verify column names match the design doc
+
+### Technical details
+- Columns added: `what_for TEXT` and `when_to_use TEXT` (nullable)
+- Test uses `pragma_table_info('docs')` to verify columns exist
+- Columns follow existing naming convention (snake_case)

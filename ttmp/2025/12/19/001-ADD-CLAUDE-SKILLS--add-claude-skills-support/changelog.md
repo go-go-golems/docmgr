@@ -38,3 +38,13 @@ Step 8: Added WhatFor and WhenToUse fields to Document model (commit e8e0341)
 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/models/document.go — Added optional WhatFor/WhenToUse fields for skills preamble
 
+
+## 2025-12-19
+
+Step 9: Extended SQLite schema with what_for and when_to_use columns (commit 6507653)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/sqlite_schema.go — Added what_for and when_to_use columns to docs table
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/sqlite_schema_test.go — Added test assertions for new columns
+

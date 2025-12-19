@@ -3,7 +3,7 @@
 ## TODO
 
 <!-- Tasks are managed via `docmgr task add/check/edit/remove`. -->
-- [ ] Add WhatFor/WhenToUse fields to pkg/models/document.go (YAML+JSON tags)
+- [x] Add WhatFor/WhenToUse fields to pkg/models/document.go (YAML+JSON tags)
 - [ ] Extend internal/workspace/sqlite_schema.go docs table with what_for + when_to_use columns (and update schema tests)
 - [ ] Populate what_for/when_to_use during ingest in internal/workspace/index_builder.go
 - [ ] Hydrate what_for/when_to_use in QueryDocs (internal/workspace/query_docs_sql.go + query_docs.go)

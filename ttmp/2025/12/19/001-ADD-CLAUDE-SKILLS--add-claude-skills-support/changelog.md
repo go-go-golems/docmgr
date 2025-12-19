@@ -29,3 +29,12 @@ Updated analysis: removed skill discovery concept (same as list), added path fil
 
 Created design-doc implementation plan for skills (DocType=skill, WhatFor/WhenToUse, skill list with --file/--dir filtering via existing query layer). Added concrete implementation tasks to tasks.md and documented the key constraint: QueryDocs hydrates from SQLite, so skill fields must be indexed.
 
+
+## 2025-12-19
+
+Step 8: Added WhatFor and WhenToUse fields to Document model (commit e8e0341)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/models/document.go — Added optional WhatFor/WhenToUse fields for skills preamble
+

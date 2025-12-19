@@ -25,3 +25,8 @@ Created 3 test skills to verify docmgr skills functionality: test-driven-develop
 - ttmp/skills/systematic-debugging.md — Debugging skill
 - ttmp/skills/test-driven-development.md — TDD skill
 
+
+## 2025-12-19
+
+Completed: Created using-skills.md (LLM bootstrap prompt), how-to-write-skills.md (human guide), and 3 test skills. All verified working with docmgr skill list/show commands.
+

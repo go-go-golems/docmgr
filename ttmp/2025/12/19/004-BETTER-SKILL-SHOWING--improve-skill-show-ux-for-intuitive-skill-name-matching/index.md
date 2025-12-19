@@ -1,38 +1,30 @@
 ---
-Title: Create printable skill prompts / usage docs
-Ticket: 003-CREATE-SKILL-PROMPTS
-Status: complete
+Title: Improve skill show UX for intuitive skill name matching
+Ticket: 004-BETTER-SKILL-SHOWING
+Status: active
 Topics:
     - skills
-    - prompts
-    - docs
+    - ux
+    - cli
 DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: pkg/doc/doc.go
-      Note: Embedded docs registry (updated to include new skill docs)
-    - Path: pkg/doc/how-to-write-skills.md
-      Note: Human guide for creating skill documents
+    - Path: cmd/docmgr/cmds/skill/show.go
+      Note: Current skill show implementation (needs UX improvements)
     - Path: pkg/doc/using-skills.md
-      Note: LLM bootstrap prompt (tells model how to use docmgr + skills)
-    - Path: ttmp/skills/documenting-as-you-code.md
-      Note: Test skill demonstrating docmgr-specific workflow
-    - Path: ttmp/skills/systematic-debugging.md
-      Note: Test skill demonstrating four-phase process
+      Note: LLM bootstrap prompt that instructs skill loading
     - Path: ttmp/skills/test-driven-development.md
-      Note: Test skill demonstrating rigid enforcement patterns
+      Note: Test skill that exposed matching issues
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-19T18:40:22.642720284-05:00
+LastUpdated: 2025-12-19T18:40:24.767417291-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
 
 
-
-
-# Create printable skill prompts / usage docs
+# Improve skill show UX for intuitive skill name matching
 
 ## Overview
 
@@ -50,8 +42,8 @@ Current status: **active**
 ## Topics
 
 - skills
-- prompts
-- docs
+- ux
+- cli
 
 ## Tasks
 

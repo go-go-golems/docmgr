@@ -362,4 +362,3 @@ func (c *SkillListCommand) Run(
 }
 
 var _ cmds.BareCommand = &SkillListCommand{}
-

@@ -24,4 +24,3 @@ that provide structured information about what a skill is for and when to use it
 	root.AddCommand(skillCmd)
 	return nil
 }
-

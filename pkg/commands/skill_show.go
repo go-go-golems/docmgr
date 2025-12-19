@@ -167,4 +167,3 @@ func (c *SkillShowCommand) Run(
 }
 
 var _ cmds.BareCommand = &SkillShowCommand{}
-

@@ -190,17 +190,17 @@ ${DOCMGR} skill list --with-glaze-output --output json --root ttmp | head -n 20
 # Test 8: Show skill by exact title
 echo ""
 echo "==> Test 8: Show skill by exact title"
-${DOCMGR} skill show "API Design" --root ttmp
+${DOCMGR} skill show --skill "API Design" --root ttmp
 
 # Test 9: Show skill by partial match
 echo ""
 echo "==> Test 9: Show skill by partial match (websocket)"
-${DOCMGR} skill show websocket --root ttmp
+${DOCMGR} skill show --skill websocket --root ttmp
 
 # Test 10: Show workspace-level skill
 echo ""
 echo "==> Test 10: Show workspace-level skill"
-${DOCMGR} skill show "Workspace Testing" --root ttmp
+${DOCMGR} skill show --skill "Workspace Testing" --root ttmp
 
 # Test 11: Verify skill list filters work together
 echo ""

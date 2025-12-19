@@ -854,6 +854,10 @@ This step creates a comprehensive smoke test for the skills feature in the test-
 - Skills have correct frontmatter (DocType: skill, WhatFor, WhenToUse)
 - Issue: skills not appearing in index queries
 - Hypothesis: vocabulary.yaml in test scenario doesn't include 'skill' docType
-- Need to check if test scenario vocabulary.yaml needs updating or if skills should work without vocabulary entry
+- Added code to ensure 'skill' is in vocabulary (vocab add)
+- Vocabulary check shows 'skill' is registered
+- Still investigating why skills aren't being found in queries
+- Testing frontmatter validation to see if skills parse correctly
+- May need to check if index is being rebuilt after creating skills
 - Testing with `doc list --doc-type skill` returns "No documents found"
-- Testing with `vocab list --category docTypes` to see if skill is registered
+- Testing with `vocab list --category docTypes` confirms skill is registered

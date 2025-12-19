@@ -152,11 +152,9 @@ EOF
 
 echo "==> Created skill documents"
 
-# Add 'skill' to vocabulary if not present
-if ! grep -q "slug: skill" "${REPO}/ttmp/vocabulary.yaml" 2>/dev/null; then
-  echo "==> Adding 'skill' to vocabulary"
-  ${DOCMGR} vocab add --category docTypes --slug skill --description "Skill documentation (what it's for and when to use it)" --root ttmp || true
-fi
+# Add 'skill' to vocabulary if not present (ignore error if already exists)
+echo "==> Ensuring 'skill' is in vocabulary"
+${DOCMGR} vocab add --category docTypes --slug skill --description "Skill documentation (what it's for and when to use it)" --root ttmp 2>&1 | grep -v "already exists" || true
 
 # Test 1: List all skills
 echo ""

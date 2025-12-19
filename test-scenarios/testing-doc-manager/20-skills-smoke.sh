@@ -9,6 +9,7 @@ set -euo pipefail
 ROOT_DIR="${1:-/tmp/docmgr-scenario}"
 REPO="${ROOT_DIR}/acme-chat-app"
 DOCMGR="${DOCMGR_PATH:-docmgr}"
+DOCS_ROOT="${REPO}/ttmp"
 
 if [[ ! -d "${REPO}" ]]; then
   echo "Repository not found at ${REPO}. Run 01-create-mock-codebase.sh and 02-init-ticket.sh first." >&2
@@ -18,9 +19,9 @@ fi
 cd "${REPO}"
 
 # Find the MEN-4242 ticket directory (created by earlier scripts)
-TICKET_DIR="$(find ttmp -maxdepth 4 -type d -name '*MEN-4242--*' | head -n1 || true)"
+TICKET_DIR="$(find "${DOCS_ROOT}" -maxdepth 4 -type d -name '*MEN-4242--*' | head -n1 || true)"
 if [[ -z "${TICKET_DIR}" ]]; then
-  echo "Could not locate MEN-4242 ticket directory under ttmp/. Ensure earlier scenario steps ran." >&2
+  echo "Could not locate MEN-4242 ticket directory under ${DOCS_ROOT}. Ensure earlier scenario steps ran." >&2
   exit 1
 fi
 
@@ -111,7 +112,7 @@ Use this skill when:
 EOF
 
 # Create workspace-level skill
-WORKSPACE_SKILLS_DIR="ttmp/skills"
+WORKSPACE_SKILLS_DIR="${DOCS_ROOT}/skills"
 mkdir -p "${WORKSPACE_SKILLS_DIR}"
 
 cat > "${WORKSPACE_SKILLS_DIR}/workspace-testing.md" <<'EOF'
@@ -152,69 +153,103 @@ EOF
 
 echo "==> Created skill documents"
 
-# Add 'skill' to vocabulary if not present (ignore error if already exists)
-echo "==> Ensuring 'skill' is in vocabulary"
-${DOCMGR} vocab add --category docTypes --slug skill --description "Skill documentation (what it's for and when to use it)" --root ttmp 2>&1 | grep -v "already exists" || true
+# Assert: seeded vocabulary includes 'skill' docType
+echo "==> Check: vocabulary includes docType 'skill'"
+if ! ${DOCMGR} vocab list --category docTypes --root "${DOCS_ROOT}" | grep -q "docTypes: skill"; then
+  echo "[fail] vocabulary is missing docType 'skill' (expected init --seed-vocabulary to include it)" >&2
+  exit 1
+fi
 
 # Test 1: List all skills
 echo ""
 echo "==> Test 1: List all skills"
-${DOCMGR} skill list --root ttmp
+OUT_1="$(${DOCMGR} skill list --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_1}"
+printf '%s\n' "${OUT_1}" | grep -q "Skill: Skill: API Design"
+printf '%s\n' "${OUT_1}" | grep -q "Skill: Skill: WebSocket Management"
+printf '%s\n' "${OUT_1}" | grep -q "Skill: Skill: Workspace Testing"
 
 # Test 2: List skills for ticket
 echo ""
 echo "==> Test 2: List skills for ticket MEN-4242"
-${DOCMGR} skill list --ticket MEN-4242 --root ttmp
+OUT_2="$(${DOCMGR} skill list --ticket MEN-4242 --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_2}"
+printf '%s\n' "${OUT_2}" | grep -q "Skill: Skill: API Design"
+printf '%s\n' "${OUT_2}" | grep -q "Skill: Skill: WebSocket Management"
 
 # Test 3: List skills by topic
 echo ""
 echo "==> Test 3: List skills by topic backend"
-${DOCMGR} skill list --topics backend --root ttmp
+OUT_3="$(${DOCMGR} skill list --topics backend --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_3}"
+printf '%s\n' "${OUT_3}" | grep -q "Skill: Skill: API Design"
+printf '%s\n' "${OUT_3}" | grep -q "Skill: Skill: WebSocket Management"
 
 # Test 4: List skills by multiple topics
 echo ""
 echo "==> Test 4: List skills by topics backend,websocket"
-${DOCMGR} skill list --topics backend,websocket --root ttmp
+OUT_4="$(${DOCMGR} skill list --topics backend,websocket --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_4}"
+printf '%s\n' "${OUT_4}" | grep -q "Skill: Skill: API Design"
+printf '%s\n' "${OUT_4}" | grep -q "Skill: Skill: WebSocket Management"
 
 # Test 5: List skills by file (reverse lookup)
 echo ""
 echo "==> Test 5: List skills related to file backend/chat/api/register.go"
-${DOCMGR} skill list --file backend/chat/api/register.go --root ttmp
+OUT_5="$(${DOCMGR} skill list --file backend/chat/api/register.go --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_5}"
+printf '%s\n' "${OUT_5}" | grep -q "Skill: Skill: API Design"
 
 # Test 6: List skills by directory
 echo ""
 echo "==> Test 6: List skills related to directory backend/chat/api/"
-${DOCMGR} skill list --dir backend/chat/api/ --root ttmp
+OUT_6="$(${DOCMGR} skill list --dir backend/chat/api/ --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_6}"
+printf '%s\n' "${OUT_6}" | grep -q "Skill: Skill: API Design"
 
 # Test 7: List skills with structured output
 echo ""
 echo "==> Test 7: List skills with structured output (JSON)"
-${DOCMGR} skill list --with-glaze-output --output json --root ttmp | head -n 20
+OUT_7="$(${DOCMGR} skill list --with-glaze-output --output json --root "${DOCS_ROOT}" | head -n 50)"
+printf '%s\n' "${OUT_7}"
+printf '%s\n' "${OUT_7}" | grep -q "\"skill\": \"Skill: API Design\""
 
 # Test 8: Show skill by exact title
 echo ""
 echo "==> Test 8: Show skill by exact title"
-${DOCMGR} skill show --skill "API Design" --root ttmp
+OUT_8="$(${DOCMGR} skill show --skill "API Design" --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_8}"
+printf '%s\n' "${OUT_8}" | grep -q "Title: Skill: API Design"
+printf '%s\n' "${OUT_8}" | grep -q "What this skill is for:"
+printf '%s\n' "${OUT_8}" | grep -q "# Skill: API Design"
 
 # Test 9: Show skill by partial match
 echo ""
 echo "==> Test 9: Show skill by partial match (websocket)"
-${DOCMGR} skill show --skill websocket --root ttmp
+OUT_9="$(${DOCMGR} skill show --skill websocket --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_9}"
+printf '%s\n' "${OUT_9}" | grep -q "Title: Skill: WebSocket Management"
 
 # Test 10: Show workspace-level skill
 echo ""
 echo "==> Test 10: Show workspace-level skill"
-${DOCMGR} skill show --skill "Workspace Testing" --root ttmp
+OUT_10="$(${DOCMGR} skill show --skill "Workspace Testing" --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_10}"
+printf '%s\n' "${OUT_10}" | grep -q "Title: Skill: Workspace Testing"
 
 # Test 11: Verify skill list filters work together
 echo ""
 echo "==> Test 11: Combined filters (ticket + topic)"
-${DOCMGR} skill list --ticket MEN-4242 --topics backend --root ttmp
+OUT_11="$(${DOCMGR} skill list --ticket MEN-4242 --topics backend --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_11}"
+printf '%s\n' "${OUT_11}" | grep -q "Skill: Skill: API Design"
 
 # Test 12: Verify file filter works with ticket filter
 echo ""
 echo "==> Test 12: Combined filters (ticket + file)"
-${DOCMGR} skill list --ticket MEN-4242 --file backend/chat/api/register.go --root ttmp
+OUT_12="$(${DOCMGR} skill list --ticket MEN-4242 --file backend/chat/api/register.go --root "${DOCS_ROOT}")"
+printf '%s\n' "${OUT_12}"
+printf '%s\n' "${OUT_12}" | grep -q "Skill: Skill: API Design"
 
 echo ""
 echo "==> Skills smoke tests completed successfully!"

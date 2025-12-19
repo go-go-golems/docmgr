@@ -86,7 +86,7 @@ step 11 "11-changelog-file-notes" "./11-changelog-file-notes.sh" "${ROOT_DIR}"
 step 12 "12-vocab-add-output" "./12-vocab-add-output.sh" "${ROOT_DIR}"
 step 13 "13-template-schema-output" "./13-template-schema-output.sh" "${ROOT_DIR}"
 step 14 "14-path-normalization" "./14-path-normalization.sh" "${ROOT_DIR}"
-step 20 "20-skills-smoke" "./20-skills-smoke.sh" "${ROOT_DIR}"
 step 19 "19-export-sqlite" "./19-export-sqlite.sh" "${ROOT_DIR}"
+step 20 "20-skills-smoke" "./20-skills-smoke.sh" "${ROOT_DIR}"
 
 echo "[ok] Scenario completed at ${ROOT_DIR}/acme-chat-app"

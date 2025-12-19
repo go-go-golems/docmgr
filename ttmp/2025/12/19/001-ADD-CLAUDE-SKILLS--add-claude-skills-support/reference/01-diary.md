@@ -848,3 +848,12 @@ This step creates a comprehensive smoke test for the skills feature in the test-
 - Creates workspace-level skill: `ttmp/skills/*.md`
 - Tests: list (all, ticket, topics, file, dir), show (exact, partial), structured output
 - Uses DOCMGR_PATH environment variable for binary path
+
+### Debugging notes
+- Skills files are created correctly (verified with find/ls)
+- Skills have correct frontmatter (DocType: skill, WhatFor, WhenToUse)
+- Issue: skills not appearing in index queries
+- Hypothesis: vocabulary.yaml in test scenario doesn't include 'skill' docType
+- Need to check if test scenario vocabulary.yaml needs updating or if skills should work without vocabulary entry
+- Testing with `doc list --doc-type skill` returns "No documents found"
+- Testing with `vocab list --category docTypes` to see if skill is registered

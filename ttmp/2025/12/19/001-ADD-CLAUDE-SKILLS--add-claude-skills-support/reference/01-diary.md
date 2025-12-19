@@ -8,16 +8,11 @@ Topics:
 DocType: reference
 Intent: long-term
 Owners: []
-RelatedFiles:
-    - Path: cmd/docmgr/cmds/root.go
-      Note: Registered skill commands
-    - Path: cmd/docmgr/cmds/skill/skill.go
-      Note: Created skill command group (commit 7c8e9f2)
+RelatedFiles: []
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T12:40:20.201200764-05:00
 ---
-
 
 # Diary
 
@@ -627,3 +622,59 @@ This step creates the command group structure for `docmgr skill` commands. The g
 - Command group: `docmgr skill` with subcommands `list` and `show`
 - Uses `common.BuildCommand()` wrapper for dual-mode (human + structured output)
 - Carapace completions added for `--ticket`, `--topics`, `--root` flags
+
+## Step 13: Implement skill list command
+
+This step implements the `docmgr skill list` command that queries skills from the workspace index and displays them with filtering support. The command supports filtering by ticket, topics, file, and directory, reusing the existing query layer semantics.
+
+**Commit (code):** 57f7185 — "Implement skill list command with filtering"
+
+### What I did
+- Created `pkg/commands/skill_list.go` with `SkillListCommand` struct
+- Implemented both `GlazeCommand` (structured output) and `BareCommand` (human output) interfaces
+- Added flags: `--root`, `--ticket`, `--topics`, `--file`, `--dir`
+- Used `workspace.QueryDocs()` with `DocType: "skill"` filter
+- Output columns: skill (title), what_for, when_to_use, topics, related_paths, path
+- Human output formats skills with indented sections
+
+### Why
+- Skills need a dedicated list command to discover available skills
+- Filtering by file/dir enables reverse lookups ("what skills relate to this code?")
+- Dual-mode output supports both human use and scripting
+
+### What worked
+- Query layer integration works seamlessly with existing filters
+- File/dir filtering reuses RelatedFile/RelatedDir semantics from search
+- Human output is readable with clear sections
+
+### What didn't work
+- N/A
+
+### What I learned
+- QueryDocs with DocType filter is the right approach (no separate discovery needed)
+- RelatedFile/RelatedDir filters work the same for skills as for documents
+- Template rendering can be added for verb templates
+
+### What was tricky to build
+- Ensuring output format matches design expectations
+- Deciding on human output format (chose indented sections)
+
+### What warrants a second pair of eyes
+- Verify output columns match design expectations
+- Confirm filtering behavior matches `doc search` semantics
+
+### What should be done in the future
+- Add tests for filtering behavior
+- Consider adding more output formats if needed
+- Add template examples for verb templates
+
+### Code review instructions
+- Review `pkg/commands/skill_list.go` for command implementation
+- Verify query filters match design expectations
+- Check output format is appropriate
+
+### Technical details
+- Query: `DocQuery{Filters: {DocType: "skill", ...}}`
+- Output columns: skill, what_for, when_to_use, topics, related_paths, path
+- Human output: indented sections with labels
+- Structured output: standard Glazed rows

@@ -77,3 +77,12 @@ Step 12: Added Cobra command group for skill commands (commit 7c8e9f2)
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/cmd/docmgr/cmds/root.go — Registered skill command group
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/cmd/docmgr/cmds/skill/skill.go — Created skill command group with Attach function
 
+
+## 2025-12-19
+
+Step 13: Implemented skill list command with filtering (commit 57f7185)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_list.go — Implemented skill list with --ticket
+

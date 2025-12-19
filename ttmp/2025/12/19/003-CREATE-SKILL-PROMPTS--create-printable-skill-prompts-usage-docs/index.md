@@ -16,10 +16,19 @@ RelatedFiles:
       Note: Human guide for creating skill documents
     - Path: pkg/doc/using-skills.md
       Note: LLM bootstrap prompt (tells model how to use docmgr + skills)
+    - Path: ttmp/skills/documenting-as-you-code.md
+      Note: Test skill demonstrating docmgr-specific workflow
+    - Path: ttmp/skills/systematic-debugging.md
+      Note: Test skill demonstrating four-phase process
+    - Path: ttmp/skills/test-driven-development.md
+      Note: Test skill demonstrating rigid enforcement patterns
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T17:17:58.9468881-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # Create printable skill prompts / usage docs

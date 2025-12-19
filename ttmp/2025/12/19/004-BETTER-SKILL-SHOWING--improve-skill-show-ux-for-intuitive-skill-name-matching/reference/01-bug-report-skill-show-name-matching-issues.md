@@ -1,5 +1,5 @@
 ---
-Title: Bug Report: skill show name matching issues
+Title: 'Bug Report: skill show name matching issues'
 Ticket: 004-BETTER-SKILL-SHOWING
 Status: active
 Topics:

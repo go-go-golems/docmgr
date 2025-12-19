@@ -95,3 +95,13 @@ Step 14: Implemented skill show command (commit 5942fb0)
 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Implemented skill show with title matching and ambiguity handling
 
+
+## 2025-12-19
+
+Step 17: Added new analysis + diary v2 for skills smoke tests; identified cwd/--root contract as the primary failure mode (commit 3868e25)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/2025/12/19/001-ADD-CLAUDE-SKILLS--add-claude-skills-support/analysis/02-skills-smoke-tests-failures-so-far-structured-approach.md — Analysis of failures + proposed structured approach
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/2025/12/19/001-ADD-CLAUDE-SKILLS--add-claude-skills-support/reference/02-diary-v2-skills-smoke-tests.md — New diary focused on smoke tests
+

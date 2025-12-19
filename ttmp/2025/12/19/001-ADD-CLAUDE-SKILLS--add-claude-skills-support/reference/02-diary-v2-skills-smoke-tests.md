@@ -8,11 +8,20 @@ Topics:
 DocType: reference
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: pkg/commands/skill_list.go
+      Note: Implements skill list used by smoke tests
+    - Path: pkg/commands/skill_show.go
+      Note: Implements skill show used by smoke tests
+    - Path: test-scenarios/testing-doc-manager/20-skills-smoke.sh
+      Note: Skills smoke test script under iteration
+    - Path: test-scenarios/testing-doc-manager/run-all.sh
+      Note: Scenario runner wiring for step 20
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T13:34:17.25026493-05:00
 ---
+
 
 # Diary (v2): Skills smoke tests
 

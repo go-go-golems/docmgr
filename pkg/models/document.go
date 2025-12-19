@@ -78,6 +78,8 @@ type Document struct {
 	ExternalSources []string     `yaml:"ExternalSources" json:"externalSources"`
 	Summary         string       `yaml:"Summary" json:"summary"`
 	LastUpdated     time.Time    `yaml:"LastUpdated" json:"lastUpdated"`
+	WhatFor         string       `yaml:"WhatFor" json:"whatFor"`
+	WhenToUse       string       `yaml:"WhenToUse" json:"whenToUse"`
 }
 
 // Validate checks that the document has all required fields populated.

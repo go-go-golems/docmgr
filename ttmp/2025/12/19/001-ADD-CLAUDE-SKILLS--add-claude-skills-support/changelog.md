@@ -67,3 +67,13 @@ Step 11: Updated QueryDocs to hydrate what_for/when_to_use fields (commit d4012c
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/query_docs.go — Updated scan and Document hydration
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/workspace/query_docs_sql.go — Added what_for/when_to_use to SELECT
 
+
+## 2025-12-19
+
+Step 12: Added Cobra command group for skill commands (commit 7c8e9f2)
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/cmd/docmgr/cmds/root.go — Registered skill command group
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/cmd/docmgr/cmds/skill/skill.go — Created skill command group with Attach function
+

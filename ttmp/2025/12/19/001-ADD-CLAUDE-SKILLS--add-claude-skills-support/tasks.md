@@ -7,7 +7,7 @@
 - [x] Extend internal/workspace/sqlite_schema.go docs table with what_for + when_to_use columns (and update schema tests)
 - [x] Populate what_for/when_to_use during ingest in internal/workspace/index_builder.go
 - [x] Hydrate what_for/when_to_use in QueryDocs (internal/workspace/query_docs_sql.go + query_docs.go)
-- [ ] Add Cobra command group cmd/docmgr/cmds/skill and register in cmd/docmgr/cmds/root.go
+- [x] Add Cobra command group cmd/docmgr/cmds/skill and register in cmd/docmgr/cmds/root.go
 - [ ] Implement pkg/commands/skill_list.go (filters: --ticket, --topics, --file, --dir; outputs what_for/when_to_use/topics/related_paths)
 - [ ] Implement pkg/commands/skill_show.go (show preamble + related files + body; decide ambiguity behavior)
 - [ ] Add 'skill' to ttmp/vocabulary.yaml docTypes and add optional _templates skill scaffold

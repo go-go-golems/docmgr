@@ -9,10 +9,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: internal/workspace/query_docs.go
-      Note: Updated scan and hydration
-    - Path: internal/workspace/query_docs_sql.go
-      Note: Added what_for/when_to_use to SELECT (commit d4012c7)
+    - Path: cmd/docmgr/cmds/root.go
+      Note: Registered skill commands
+    - Path: cmd/docmgr/cmds/skill/skill.go
+      Note: Created skill command group (commit 7c8e9f2)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2025-12-19T12:40:20.201200764-05:00
@@ -573,3 +573,57 @@ This step updates the query layer to include the new skill fields in SELECT stat
 - SELECT now includes: `d.what_for, d.when_to_use` after `d.last_updated`
 - Scan variables: `whatFor sql.NullString` and `whenToUse sql.NullString`
 - Document hydration: `WhatFor: whatFor.String, WhenToUse: whenToUse.String`
+
+## Step 12: Add Cobra command group for skill commands
+
+This step creates the command group structure for `docmgr skill` commands. The group will contain `list` and `show` subcommands, following the same pattern as other command groups like `vocab`.
+
+**Commit (code):** 7c8e9f2 — "Add Cobra command group for skill commands"
+
+### What I did
+- Created `cmd/docmgr/cmds/skill/skill.go` with `Attach()` function that registers the skill command group
+- Created placeholder files `cmd/docmgr/cmds/skill/list.go` and `cmd/docmgr/cmds/skill/show.go` that will wire up command implementations
+- Registered skill command group in `cmd/docmgr/cmds/root.go` by importing and calling `skill.Attach()`
+- Added command descriptions and help text
+
+### Why
+- Command groups provide a consistent CLI structure
+- Following existing patterns (vocab, doc, ticket) ensures consistency
+- Placeholder files allow incremental implementation
+
+### What worked
+- Command group structure follows established pattern
+- Registration in root.go matches other command groups
+- Placeholder files compile (will fail until implementations exist)
+
+### What didn't work
+- Command implementations don't exist yet (will be added in next steps)
+- Compilation will fail until `commands.NewSkillListCommand()` and `commands.NewSkillShowCommand()` are implemented
+
+### What I learned
+- Command groups use `Attach()` pattern for registration
+- Commands use `common.BuildCommand()` wrapper for consistent setup
+- Carapace completions can be added per-command
+
+### What was tricky to build
+- Understanding the relationship between command group files and command implementations
+- Deciding on command structure (list/show vs single command with flags)
+
+### What warrants a second pair of eyes
+- Verify command group registration order is appropriate
+- Confirm command structure matches design expectations
+
+### What should be done in the future
+- Implement `pkg/commands/skill_list.go` and `pkg/commands/skill_show.go` (next steps)
+- Add tests for command group registration
+- Consider adding more subcommands if needed
+
+### Code review instructions
+- Review `cmd/docmgr/cmds/skill/skill.go` for command group structure
+- Review `cmd/docmgr/cmds/root.go` for registration
+- Note that implementations are placeholders until next steps
+
+### Technical details
+- Command group: `docmgr skill` with subcommands `list` and `show`
+- Uses `common.BuildCommand()` wrapper for dual-mode (human + structured output)
+- Carapace completions added for `--ticket`, `--topics`, `--root` flags

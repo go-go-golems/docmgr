@@ -60,6 +60,13 @@ fi
 
 echo "==> Using ticket directory: ${TICKET_DIR}"
 
+# Find the MEN-5678 ticket directory (created by earlier scripts) - we'll close it to test filtering.
+TICKET_DIR_5678="$(find "${DOCS_ROOT}" -maxdepth 4 -type d -name '*MEN-5678--*' | head -n1 || true)"
+if [[ -z "${TICKET_DIR_5678}" ]]; then
+  echo "Could not locate MEN-5678 ticket directory under ${DOCS_ROOT}. Ensure earlier scenario steps ran." >&2
+  exit 1
+fi
+
 # Create skills directory in ticket
 SKILLS_DIR="${TICKET_DIR}/skills"
 mkdir -p "${SKILLS_DIR}"
@@ -206,6 +213,32 @@ EOF
 
 echo "==> Created skill documents"
 
+# Create a skill under MEN-5678, then close MEN-5678 (complete) to verify `skill show`
+# excludes non-active tickets unless --ticket is provided.
+SKILLS_DIR_5678="${TICKET_DIR_5678}/skills"
+mkdir -p "${SKILLS_DIR_5678}"
+cat > "${SKILLS_DIR_5678}/01-closed-ticket-only-skill.md" <<'EOF'
+---
+Title: "Skill: Closed Ticket Only Skill"
+Ticket: MEN-5678
+DocType: skill
+Status: active
+Topics: [backend]
+WhatFor: "Should be hidden unless --ticket MEN-5678 is passed"
+WhenToUse: "Only for testing ticket-status filtering"
+Intent: long-term
+Owners: []
+ExternalSources: []
+Summary: ""
+LastUpdated: 2025-12-19T12:00:00Z
+---
+
+# Skill: Closed Ticket Only Skill
+EOF
+
+# Close MEN-5678.
+${DOCMGR} ticket close --ticket MEN-5678 --root "${DOCS_ROOT}" --status complete --changelog-entry "Close ticket for skills filtering smoke test" >/dev/null
+
 # Assert: seeded vocabulary includes 'skill' docType
 echo "==> Check: vocabulary includes docType 'skill'"
 if ! ${DOCMGR} vocab list --category docTypes --root "${DOCS_ROOT}" | grep -q "docTypes: skill"; then
@@ -334,6 +367,21 @@ OUT_10C="$(${DOCMGR} skill show "${SKILLS_DIR}/01-api-design.md" --root "${DOCS_
 assert_contains "Test 10c" "${OUT_10C}" "Title: Skill: API Design"
 assert_contains "Test 10c" "${OUT_10C}" "Ticket: MEN-4242"
 echo "[ok] Test 10c"
+
+# Test 10d: Skills from non-active tickets are excluded unless --ticket is provided.
+echo ""
+echo "==> Test 10d: Exclude non-active ticket skills unless --ticket is provided"
+set +e
+OUT_10D="$(${DOCMGR} skill show closed-ticket-only-skill --root "${DOCS_ROOT}" 2>&1)"
+RC_10D=$?
+set -e
+assert_rc_ne_zero "Test 10d (no --ticket)" "${RC_10D}" "${OUT_10D}"
+assert_contains "Test 10d (no --ticket)" "${OUT_10D}" "no skills found matching"
+
+OUT_10D2="$(${DOCMGR} skill show --ticket MEN-5678 closed-ticket-only-skill --root "${DOCS_ROOT}")"
+assert_contains "Test 10d (with --ticket)" "${OUT_10D2}" "Title: Skill: Closed Ticket Only Skill"
+assert_contains "Test 10d (with --ticket)" "${OUT_10D2}" "Ticket: MEN-5678"
+echo "[ok] Test 10d"
 
 # Test 11: Verify skill list filters work together
 echo ""

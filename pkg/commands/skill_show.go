@@ -213,6 +213,22 @@ func (c *SkillShowCommand) Run(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
+	// When no --ticket is provided, only consider skills belonging to ACTIVE tickets.
+	// Ticket-specific skills from completed/archived tickets are excluded by default.
+	// Workspace-level skills (no Ticket) are always included.
+	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
+	ticketStatusByID := map[string]string{}
+	if activeTicketOnly {
+		if _, ticketIndexDocs, err := queryTicketIndexDocs(ctx, settings.Root, "", ""); err == nil {
+			for _, t := range ticketIndexDocs {
+				if strings.TrimSpace(t.Ticket) == "" {
+					continue
+				}
+				ticketStatusByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Status)
+			}
+		}
+	}
+
 	queryRaw := strings.TrimSpace(query)
 	queryLower := strings.ToLower(queryRaw)
 	queryNoPrefixLower := strings.ToLower(stripSkillPrefix(queryRaw))
@@ -230,6 +246,14 @@ func (c *SkillShowCommand) Run(
 	for _, handle := range res.Docs {
 		if handle.Doc == nil {
 			continue
+		}
+
+		if activeTicketOnly && strings.TrimSpace(handle.Doc.Ticket) != "" {
+			if st, ok := ticketStatusByID[strings.TrimSpace(handle.Doc.Ticket)]; ok {
+				if strings.ToLower(strings.TrimSpace(st)) != "active" {
+					continue
+				}
+			}
 		}
 
 		title := strings.TrimSpace(handle.Doc.Title)

@@ -383,6 +383,14 @@ assert_contains "Test 10d (with --ticket)" "${OUT_10D2}" "Title: Skill: Closed T
 assert_contains "Test 10d (with --ticket)" "${OUT_10D2}" "Ticket: MEN-5678"
 echo "[ok] Test 10d"
 
+# Test 10e: Skills from review tickets are still included by default (they're still in-progress).
+echo ""
+echo "==> Test 10e: Include review ticket skills by default"
+${DOCMGR} meta update --ticket MEN-4242 --field Status --value review --root "${DOCS_ROOT}" >/dev/null
+OUT_10E="$(${DOCMGR} skill show --skill websocket --root "${DOCS_ROOT}")"
+assert_contains "Test 10e" "${OUT_10E}" "Title: Skill: WebSocket Management"
+echo "[ok] Test 10e"
+
 # Test 11: Verify skill list filters work together
 echo ""
 echo "==> Test 11: Combined filters (ticket + topic)"

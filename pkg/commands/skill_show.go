@@ -92,6 +92,20 @@ var (
 	nonSlugCharRe    = regexp.MustCompile(`[^a-z0-9-]+`)
 )
 
+// isTicketActiveForSkillDefaultFilter decides whether a ticket status should be treated as
+// "active enough" to keep ticket-scoped skills visible when the user did NOT specify --ticket.
+//
+// Rationale: "review" and "draft" are still in-progress states; only completed/archived tickets
+// should be hidden by default to reduce noise.
+func isTicketActiveForSkillDefaultFilter(st string) bool {
+	switch strings.ToLower(strings.TrimSpace(st)) {
+	case "active", "review", "draft":
+		return true
+	default:
+		return false
+	}
+}
+
 func stripSkillPrefix(s string) string {
 	return strings.TrimSpace(skillPrefixRe.ReplaceAllString(strings.TrimSpace(s), ""))
 }
@@ -213,7 +227,7 @@ func (c *SkillShowCommand) Run(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
-	// When no --ticket is provided, only consider skills belonging to ACTIVE tickets.
+	// When no --ticket is provided, only consider skills belonging to active-ish tickets.
 	// Ticket-specific skills from completed/archived tickets are excluded by default.
 	// Workspace-level skills (no Ticket) are always included.
 	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
@@ -250,7 +264,7 @@ func (c *SkillShowCommand) Run(
 
 		if activeTicketOnly && strings.TrimSpace(handle.Doc.Ticket) != "" {
 			if st, ok := ticketStatusByID[strings.TrimSpace(handle.Doc.Ticket)]; ok {
-				if strings.ToLower(strings.TrimSpace(st)) != "active" {
+				if !isTicketActiveForSkillDefaultFilter(st) {
 					continue
 				}
 			}

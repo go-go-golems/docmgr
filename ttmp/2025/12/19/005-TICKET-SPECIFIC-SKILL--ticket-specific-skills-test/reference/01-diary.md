@@ -20,6 +20,16 @@ RelatedFiles:
     Note: Nested scenariolog module; `go mod tidy` may update this when fixing missing dependency sums
   - Path: scenariolog/go.sum
     Note: Nested scenariolog module dependency sums; updated so `go build` works in module mode (GOWORK=off)
+  - Path: ttmp/_guidelines/skill.md
+    Note: Skill-writing guidelines shown after `docmgr doc add --doc-type skill` (fixes “No guidelines found” UX)
+  - Path: internal/templates/embedded/_guidelines/skill.md
+    Note: Embedded skill guideline scaffolded by `docmgr init` for fresh docs roots
+  - Path: internal/templates/embedded/_templates/skill.md
+    Note: Embedded skill template scaffolded by `docmgr init` for fresh docs roots
+  - Path: pkg/doc/using-skills.md
+    Note: User-facing prompt pack docs; updated to document `--ticket` and active-ticket filtering behavior
+  - Path: pkg/doc/how-to-write-skills.md
+    Note: Authoring docs; updated to clarify ticket-level `skill/` vs workspace-level `skills/` convention
   - Path: test-scenarios/testing-doc-manager/20-skills-smoke.sh
     Note: Scenario coverage for --ticket, ambiguity, and active-ticket filtering
   - Path: ttmp/2025/12/19/005-TICKET-SPECIFIC-SKILL--ticket-specific-skills-test/skill/01-systematic-debugging.md
@@ -197,6 +207,8 @@ Note: I initially tried to commit from the wrong directory and thought this work
 
 This step fixes the “No guidelines found for doc-type skill” UX when creating skills via `docmgr doc add --doc-type skill`. It also adds an embedded skill template + guideline so `docmgr init` can scaffold them into fresh docs roots (new workspaces shouldn’t have to hand-create these files).
 
+**Commit (docs+templates):** 24a0813 — "Skills: add guidelines + init scaffolding template"
+
 ### What I did
 - Added a filesystem guideline at:
   - `ttmp/_guidelines/skill.md`
@@ -223,5 +235,28 @@ This step fixes the “No guidelines found for doc-type skill” UX when creatin
   - `internal/templates/embedded/_templates/skill.md`
 - Validate quickly with:
   - `cd docmgr && docmgr doc guidelines --doc-type skill --root ttmp`
+
+## Step 7: Update skills docs for `--ticket`, ticket context, active-ticket filtering, and `skill/` convention
+
+This step updates the user-facing documentation to reflect the current skills UX: `skill show` supports `--ticket` narrowing, ticket-scoped skills show ticket id + title, and `skill show` defaults to hiding skills from non-active tickets unless `--ticket` is provided. It also clarifies the directory convention difference between workspace-level skills (`ttmp/skills/`) and ticket-level skills created by `doc add` (`.../skill/`).
+
+**Commit (docs):** fa2cf94 — "Docs: clarify skills usage and conventions"
+
+### What I did
+- Updated docs:
+  - `pkg/doc/using-skills.md` (documented `--ticket` and default filtering behavior; added mention of ticket context in output)
+  - `pkg/doc/how-to-write-skills.md` (clarified ticket-level `skill/` vs workspace-level `skills/` convention; adjusted examples)
+- Checked off ticket tasks:
+  - [7] Update docs
+  - [9] Decide/confirm convention (documented as `skill/` for ticket-level)
+
+### Why
+- The UX improvements from ticket 004/005 are user-facing behavior changes; docs must match what the CLI does.
+- The repo currently has both `ttmp/skills/` (workspace library) and per-ticket `skill/` folders; the docs should explain that intentional split instead of implying everything is `skills/`.
+
+### Code review instructions
+- Review the diff in:
+  - `pkg/doc/using-skills.md`
+  - `pkg/doc/how-to-write-skills.md`
 
 

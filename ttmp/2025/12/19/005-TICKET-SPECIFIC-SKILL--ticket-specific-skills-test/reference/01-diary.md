@@ -126,7 +126,11 @@ This step changed default behavior in `skill show`: if you don’t specify `--ti
 
 This step validated the ticket end-to-end by running the full `testing-doc-manager` scenario suite, including the skills smoke test. Along the way, we fixed a real-world “new contributor” footgun: with a repo-level `go.work` present, the suite’s auto-build of `scenariolog` (a nested Go module) failed unless we force module mode.
 
-There was no git commit captured in this workspace (it’s not a git repo), so the diary records the exact commands and error output instead.
+**Commit (code):** 53df7f0 — "Scenarios: build scenariolog under go.work"
+
+**Commit (docs):** 1cb530a — "Ticket 005: record scenario run; check off smoke"
+
+Note: I initially tried to commit from the wrong directory and thought this workspace wasn’t a git repo. It’s actually a git worktree (see `docmgr/.git`), so the work is committed above.
 
 ### What I did
 - Ran the suite as documented (pinned docmgr binary):
@@ -188,5 +192,36 @@ There was no git commit captured in this workspace (it’s not a git repo), so t
 ### Technical details
 - Key snippet: build `scenariolog` as a nested module even when `go.work` is present:
   - `GOWORK=off go -C "${REPO_ROOT}/scenariolog" build -tags sqlite_fts5 -o "${SCENARIOLOG_PATH}" ./cmd/scenariolog`
+
+## Step 6: Add DocType=skill guidelines + embed skill template/guidelines for `docmgr init`
+
+This step fixes the “No guidelines found for doc-type skill” UX when creating skills via `docmgr doc add --doc-type skill`. It also adds an embedded skill template + guideline so `docmgr init` can scaffold them into fresh docs roots (new workspaces shouldn’t have to hand-create these files).
+
+### What I did
+- Added a filesystem guideline at:
+  - `ttmp/_guidelines/skill.md`
+- Added embedded scaffolding files so `docmgr init` can seed new roots:
+  - `internal/templates/embedded/_guidelines/skill.md`
+  - `internal/templates/embedded/_templates/skill.md`
+- Verified the guideline is discoverable in the current docs root:
+  - `docmgr doc guidelines --doc-type skill --root ttmp`
+
+### Why
+- Skills are first-class docs (`DocType: skill`), so `doc add` should provide immediate guidance instead of printing a warning.
+- `docmgr init` should scaffold skill docs the same way it scaffolds reference/design-doc/etc.
+
+### What worked
+- `docmgr doc guidelines --doc-type skill --root ttmp` prints the new guidelines text (no “no guideline found” error).
+
+### What warrants a second pair of eyes
+- Confirm the intended policy: runtime template/guideline resolution is filesystem-only, while embedded files are for `init` scaffolding. (Today `doc add` won’t fall back to embedded templates/guidelines unless they exist on disk.)
+
+### Code review instructions
+- Start in:
+  - `ttmp/_guidelines/skill.md`
+  - `internal/templates/embedded/_guidelines/skill.md`
+  - `internal/templates/embedded/_templates/skill.md`
+- Validate quickly with:
+  - `cd docmgr && docmgr doc guidelines --doc-type skill --root ttmp`
 
 

@@ -28,3 +28,14 @@ Scenarios: make run-all build nested scenariolog under go.work (GOWORK=off), the
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/scenariolog/go.sum — Update sums (via go mod tidy) so scenariolog builds cleanly
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Force GOWORK=off for scenariolog build so suite runs under repo-level go.work
 
+
+## 2025-12-19
+
+Docs/templates: add DocType=skill guideline + embed skill template/guideline so init can scaffold skills; remove 'No guidelines found' UX for skills.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/templates/embedded/_guidelines/skill.md — Embedded skill guideline seeded by docmgr init
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/templates/embedded/_templates/skill.md — Embedded skill template seeded by docmgr init
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/_guidelines/skill.md — New guidelines shown after doc add for skill docs
+

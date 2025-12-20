@@ -18,3 +18,13 @@
 
 - `reference/02-intern-onboarding-guide.md` — Intern onboarding guide for ticket 005
 
+
+## 2025-12-19
+
+Scenarios: make run-all build nested scenariolog under go.work (GOWORK=off), then run full suite (skills smoke passes).
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/scenariolog/go.sum — Update sums (via go mod tidy) so scenariolog builds cleanly
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Force GOWORK=off for scenariolog build so suite runs under repo-level go.work
+

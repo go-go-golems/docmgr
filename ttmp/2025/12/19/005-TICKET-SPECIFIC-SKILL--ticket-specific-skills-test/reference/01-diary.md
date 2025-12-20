@@ -259,4 +259,28 @@ This step updates the user-facing documentation to reflect the current skills UX
   - `pkg/doc/using-skills.md`
   - `pkg/doc/how-to-write-skills.md`
 
+## Step 8: Treat Status=review (and draft) as “active enough” for default skill filtering
+
+This step tightens the meaning of “active tickets only by default” for `docmgr skill show`: tickets in `review` are still in-progress, so their ticket-scoped skills should remain visible without requiring `--ticket`. We kept the original goal (hide noise from finished tickets) by still excluding `complete`/`archived` tickets unless the user explicitly passes `--ticket`.
+
+**Commit (code):** b425acb — "Skill show: treat review tickets as active"
+
+### What I did
+- Updated the default ticket-status filter in `pkg/commands/skill_show.go`:
+  - Treat `draft`, `active`, and `review` as “active enough” for default visibility.
+  - Continue to hide `complete`/`archived` ticket skills unless `--ticket` is provided.
+- Extended the scenario suite `20-skills-smoke.sh`:
+  - Added an assertion that skills under a `review` ticket are still returned by default `skill show`.
+- Validated end-to-end by running the full scenario suite against a freshly built binary:
+  - `gofmt -w pkg/commands/skill_show.go`
+  - `go build -o /tmp/docmgr-local ./cmd/docmgr`
+  - `DOCMGR_PATH=/tmp/docmgr-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario`
+
+### Why
+- `review` is an “in progress” lifecycle stage; hiding its skills by default makes `skill show` feel broken/noisy in the wrong direction.
+- The actual “noise” we want to suppress is from tickets that are done (`complete`/`archived`).
+
+### What warrants a second pair of eyes
+- Confirm `draft` should be treated as visible by default (the rationale is the same as `review`, but teams might interpret `draft` differently).
+
 

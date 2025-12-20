@@ -49,3 +49,13 @@ Docs: update skills docs for --ticket narrowing, ticket context in outputs, defa
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/doc/how-to-write-skills.md — Clarify where to store skills (ticket skill/ vs workspace skills/)
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/doc/using-skills.md — Document skill list/show behavior including --ticket and active-ticket filtering
 
+
+## 2025-12-19
+
+Skill show: treat ticket Status=review as active for default filtering (draft/active/review visible; complete/archived hidden). Added scenario coverage.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Default filter now keeps review/draft tickets (commit b425acb)
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Add test that review ticket skills are included by default (commit b425acb)
+

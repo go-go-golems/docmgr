@@ -1,5 +1,5 @@
 ---
-Title: "Skill: Test-Driven Development"
+Title: "Test-Driven Development"
 DocType: skill
 Topics:
   - testing

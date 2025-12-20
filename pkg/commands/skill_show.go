@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -20,8 +23,12 @@ type SkillShowCommand struct {
 
 // SkillShowSettings holds command parameters
 type SkillShowSettings struct {
-	Root  string `glazed.parameter:"root"`
+	Root   string `glazed.parameter:"root"`
+	Ticket string `glazed.parameter:"ticket"`
+	// Skill is the legacy/explicit flag-based query (docmgr skill show --skill <query>)
 	Skill string `glazed.parameter:"skill"`
+	// Query is the positional argument (docmgr skill show <query>)
+	Query string `glazed.parameter:"query"`
 }
 
 func NewSkillShowCommand() (*SkillShowCommand, error) {
@@ -31,16 +38,28 @@ func NewSkillShowCommand() (*SkillShowCommand, error) {
 			cmds.WithShort("Show detailed information about a skill"),
 			cmds.WithLong(`Shows detailed information about a specific skill.
 
-The skill name can be matched by:
-  - Exact title match (case-insensitive)
-  - Case-insensitive contains match
+The skill can be located by a resilient multi-strategy matcher:
+  - Title match (with or without the "Skill:" prefix)
+  - Filename/slug match (including numeric prefixes like 01-foo.md)
+  - Path match (absolute, repo-relative, docs-root-relative; file or directory)
 
-If multiple skills match, the first match is shown and a warning is printed.
+If multiple skills match, candidates are listed with exact commands to load each one.
 
 Examples:
   docmgr skill show "API Design"
   docmgr skill show api-design
+  docmgr skill show ttmp/skills/test-driven-development.md
+  docmgr skill show --skill "Skill: Test-Driven Development"
+  docmgr skill show --ticket MEN-4242 api-design
 `),
+			cmds.WithArguments(
+				parameters.NewParameterDefinition(
+					"query",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Skill query (title/slug/path)"),
+					parameters.WithRequired(false),
+				),
+			),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
 					"root",
@@ -49,14 +68,94 @@ Examples:
 					parameters.WithDefault("ttmp"),
 				),
 				parameters.NewParameterDefinition(
+					"ticket",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Limit search to a ticket workspace (useful when skills clash)"),
+					parameters.WithDefault(""),
+				),
+				parameters.NewParameterDefinition(
 					"skill",
 					parameters.ParameterTypeString,
-					parameters.WithHelp("Skill name to show (matched against title)"),
-					parameters.WithRequired(true),
+					parameters.WithHelp("Skill query (title/slug/path). Deprecated in favor of positional argument, but still supported."),
+					parameters.WithRequired(false),
 				),
 			),
 		),
 	}, nil
+}
+
+var (
+	skillPrefixRe    = regexp.MustCompile(`(?i)^\s*skill\s*:\s*`)
+	looseNumPrefixRe = regexp.MustCompile(`(?i)^\s*\d+[-_ ]+`)
+	extMDRe          = regexp.MustCompile(`(?i)\.md$`)
+	multiSpaceRe     = regexp.MustCompile(`\s+`)
+	nonSlugCharRe    = regexp.MustCompile(`[^a-z0-9-]+`)
+)
+
+func stripSkillPrefix(s string) string {
+	return strings.TrimSpace(skillPrefixRe.ReplaceAllString(strings.TrimSpace(s), ""))
+}
+
+func stripLeadingNumericPrefixLoose(s string) string {
+	s = strings.TrimSpace(s)
+	// Prefer the canonical NN-/NNN- stripping used elsewhere in docmgr.
+	if stripped, _, _ := stripNumericPrefix(s); stripped != s {
+		return strings.TrimSpace(stripped)
+	}
+	// Fallback: accept looser formats (e.g. "1-foo", "01_foo", "01 foo").
+	return strings.TrimSpace(looseNumPrefixRe.ReplaceAllString(s, ""))
+}
+
+func stripMDExt(s string) string {
+	return strings.TrimSpace(extMDRe.ReplaceAllString(strings.TrimSpace(s), ""))
+}
+
+func normalizeSpacesLower(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = strings.ReplaceAll(s, "_", " ")
+	s = strings.ReplaceAll(s, "-", " ")
+	s = multiSpaceRe.ReplaceAllString(s, " ")
+	return strings.TrimSpace(s)
+}
+
+func slugifyLower(s string) string {
+	s = normalizeSpacesLower(s)
+	s = strings.ReplaceAll(s, " ", "-")
+	s = nonSlugCharRe.ReplaceAllString(s, "")
+	s = strings.Trim(s, "-")
+	s = multiSpaceRe.ReplaceAllString(s, "-")
+	return s
+}
+
+type skillCandidate struct {
+	Handle workspace.DocHandle
+
+	TitleLower         string
+	TitleNoPrefixLower string
+	TitleSlugLower     string
+	TitleNoPrefixSlug  string
+
+	FileStemLower      string
+	FileStemNoNumLower string
+
+	PathNorm paths.NormalizedPath
+
+	Score int
+	Why   string
+}
+
+func looksLikePathQuery(q string) bool {
+	q = strings.TrimSpace(q)
+	if q == "" {
+		return false
+	}
+	lower := strings.ToLower(q)
+	// We only want path scoring when the user likely provided a path, because
+	// otherwise generic words (e.g. "websocket") can accidentally match directory names.
+	return filepath.IsAbs(q) ||
+		strings.Contains(q, "/") ||
+		strings.Contains(q, "\\") ||
+		strings.HasSuffix(lower, ".md")
 }
 
 // Run implements BareCommand (show commands typically use human-friendly output)
@@ -69,10 +168,16 @@ func (c *SkillShowCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	if strings.TrimSpace(settings.Skill) == "" {
-		return fmt.Errorf("skill name is required")
+	query := strings.TrimSpace(settings.Skill)
+	if query == "" {
+		query = strings.TrimSpace(settings.Query)
+	}
+	if query == "" {
+		return fmt.Errorf("skill query is required (provide a positional <query> or --skill)")
 	}
 
+	// Apply config root if present (consistent with other verbs like skill list).
+	settings.Root = workspace.ResolveRoot(settings.Root)
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
@@ -86,11 +191,17 @@ func (c *SkillShowCommand) Run(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	// Query all skills
+	scope := workspace.Scope{Kind: workspace.ScopeRepo}
+	if strings.TrimSpace(settings.Ticket) != "" {
+		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	}
+
+	// Query skills
 	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Scope: scope,
 		Filters: workspace.DocFilters{
 			DocType: "skill",
+			Ticket:  strings.TrimSpace(settings.Ticket),
 		},
 		Options: workspace.DocQueryOptions{
 			IncludeBody:        true,
@@ -102,34 +213,192 @@ func (c *SkillShowCommand) Run(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
-	// Match skills by title (case-insensitive exact or contains)
-	queryLower := strings.ToLower(strings.TrimSpace(settings.Skill))
-	var matches []workspace.DocHandle
+	queryRaw := strings.TrimSpace(query)
+	queryLower := strings.ToLower(queryRaw)
+	queryNoPrefixLower := strings.ToLower(stripSkillPrefix(queryRaw))
+	queryStemLower := strings.ToLower(stripMDExt(filepath.Base(queryRaw)))
+	queryStemNoNumLower := strings.ToLower(stripLeadingNumericPrefixLoose(queryStemLower))
+	querySlugLower := slugifyLower(queryRaw)
+	querySlugNoPrefixLower := slugifyLower(stripSkillPrefix(queryRaw))
+
+	var queryPathNorm paths.NormalizedPath
+	if looksLikePathQuery(queryRaw) {
+		queryPathNorm = ws.Resolver().Normalize(queryRaw)
+	}
+
+	var candidates []skillCandidate
 	for _, handle := range res.Docs {
 		if handle.Doc == nil {
 			continue
 		}
-		titleLower := strings.ToLower(handle.Doc.Title)
-		if titleLower == queryLower || strings.Contains(titleLower, queryLower) {
-			matches = append(matches, handle)
+
+		title := strings.TrimSpace(handle.Doc.Title)
+		titleLower := strings.ToLower(title)
+		titleNoPrefix := stripSkillPrefix(title)
+		titleNoPrefixLower := strings.ToLower(titleNoPrefix)
+
+		fileStem := stripMDExt(filepath.Base(handle.Path))
+		fileStemNoNum := stripLeadingNumericPrefixLoose(fileStem)
+
+		pathNorm := ws.Resolver().Normalize(handle.Path)
+
+		cand := skillCandidate{
+			Handle:             handle,
+			TitleLower:         titleLower,
+			TitleNoPrefixLower: titleNoPrefixLower,
+			TitleSlugLower:     slugifyLower(title),
+			TitleNoPrefixSlug:  slugifyLower(titleNoPrefix),
+			FileStemLower:      strings.ToLower(fileStem),
+			FileStemNoNumLower: strings.ToLower(fileStemNoNum),
+			PathNorm:           pathNorm,
+		}
+
+		// Path matching: prefer existing, then representation overlap / suffix / substring.
+		if looksLikePathQuery(queryRaw) && !queryPathNorm.Empty() {
+			if queryPathNorm.Exists {
+				// If query resolves to a directory, match skills under it.
+				if queryPathNorm.Abs != "" {
+					if fi, err := os.Stat(filepath.FromSlash(queryPathNorm.Abs)); err == nil && fi.IsDir() {
+						if paths.DirectoryMatch(queryPathNorm, cand.PathNorm) {
+							cand.Score = 1000
+							cand.Why = "path-dir"
+						}
+					}
+				}
+				if cand.Score == 0 && paths.MatchPaths(queryPathNorm, cand.PathNorm) {
+					cand.Score = 1100
+					cand.Why = "path-file"
+				}
+			} else {
+				// Non-existent path-like input: still allow fuzzy match against indexed paths.
+				if paths.MatchPaths(queryPathNorm, cand.PathNorm) {
+					cand.Score = 900
+					cand.Why = "path-fuzzy"
+				}
+			}
+		}
+
+		// Exact title match (case-insensitive).
+		if cand.Score == 0 && titleLower == queryLower {
+			cand.Score = 800
+			cand.Why = "title-exact"
+		}
+		// Exact title match without "Skill:" prefix.
+		if cand.Score == 0 && titleNoPrefixLower != "" && titleNoPrefixLower == queryNoPrefixLower {
+			cand.Score = 780
+			cand.Why = "title-no-prefix-exact"
+		}
+
+		// Exact filename/slug match.
+		if cand.Score == 0 && (cand.FileStemLower == queryLower || cand.FileStemLower == queryStemLower || cand.FileStemNoNumLower == queryStemNoNumLower) {
+			cand.Score = 760
+			cand.Why = "filename-exact"
+		}
+		if cand.Score == 0 && (cand.FileStemLower == querySlugLower || cand.FileStemNoNumLower == querySlugLower || cand.FileStemNoNumLower == querySlugNoPrefixLower) {
+			cand.Score = 750
+			cand.Why = "filename-slug-exact"
+		}
+
+		// Slugified title match.
+		if cand.Score == 0 && (cand.TitleSlugLower == querySlugLower || cand.TitleNoPrefixSlug == querySlugLower || cand.TitleNoPrefixSlug == querySlugNoPrefixLower) {
+			cand.Score = 740
+			cand.Why = "title-slug-exact"
+		}
+
+		// Contains matches (lower priority).
+		if cand.Score == 0 && queryLower != "" && strings.Contains(titleLower, queryLower) {
+			cand.Score = 600
+			cand.Why = "title-contains"
+		}
+		if cand.Score == 0 && queryNoPrefixLower != "" && titleNoPrefixLower != "" && strings.Contains(titleNoPrefixLower, queryNoPrefixLower) {
+			cand.Score = 590
+			cand.Why = "title-no-prefix-contains"
+		}
+		if cand.Score == 0 && queryLower != "" && strings.Contains(cand.FileStemLower, queryLower) {
+			cand.Score = 580
+			cand.Why = "filename-contains"
+		}
+		if cand.Score == 0 && querySlugLower != "" && (strings.Contains(cand.TitleSlugLower, querySlugLower) || strings.Contains(cand.FileStemNoNumLower, querySlugLower)) {
+			cand.Score = 570
+			cand.Why = "slug-contains"
+		}
+
+		if cand.Score > 0 {
+			candidates = append(candidates, cand)
 		}
 	}
 
-	if len(matches) == 0 {
-		return fmt.Errorf("no skills found matching %q", settings.Skill)
+	if len(candidates) == 0 {
+		// Provide a helpful, actionable list (same UX principle as skill list).
+		fmt.Fprintf(os.Stderr, "Error: no skills found matching %q\n\n", queryRaw)
+		fmt.Fprintf(os.Stderr, "Tip: Try matching by title, filename, or path. Examples:\n")
+		fmt.Fprintf(os.Stderr, "  docmgr skill show %q\n", queryRaw)
+		fmt.Fprintf(os.Stderr, "  docmgr skill show --skill %q\n", queryRaw)
+		fmt.Fprintf(os.Stderr, "  docmgr skill show ttmp/skills/<skill>.md\n\n")
+		return fmt.Errorf("no skills found matching %q", queryRaw)
 	}
 
-	// Handle ambiguity: show first match + warn if multiple
-	if len(matches) > 1 {
-		fmt.Fprintf(os.Stderr, "Warning: Multiple skills found matching %q, showing first match:\n", settings.Skill)
-		for _, m := range matches {
-			fmt.Fprintf(os.Stderr, "  - %s (%s)\n", m.Doc.Title, m.Path)
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if candidates[i].Score != candidates[j].Score {
+			return candidates[i].Score > candidates[j].Score
 		}
-		fmt.Fprintf(os.Stderr, "\n")
+		// Stabilize ordering for deterministic output.
+		ti := ""
+		tj := ""
+		if candidates[i].Handle.Doc != nil {
+			ti = candidates[i].Handle.Doc.Title
+		}
+		if candidates[j].Handle.Doc != nil {
+			tj = candidates[j].Handle.Doc.Title
+		}
+		if ti != tj {
+			return ti < tj
+		}
+		return candidates[i].Handle.Path < candidates[j].Handle.Path
+	})
+
+	// If top score ties, treat as ambiguity and print candidate load commands.
+	if len(candidates) > 1 && candidates[0].Score == candidates[1].Score {
+		fmt.Fprintf(os.Stdout, "Multiple skills match %q. Load one of these:\n\n", queryRaw)
+		defaultRoot := workspace.ResolveRoot("ttmp")
+
+		// Build a uniqueness index for load command generation.
+		titleCounts := map[string]int{}
+		slugCounts := map[string]int{}
+		for _, cand := range candidates {
+			if cand.Handle.Doc == nil {
+				continue
+			}
+			titleNoPrefix := strings.TrimSpace(stripSkillPrefix(cand.Handle.Doc.Title))
+			if titleNoPrefix == "" {
+				titleNoPrefix = strings.TrimSpace(cand.Handle.Doc.Title)
+			}
+			titleCounts[strings.ToLower(titleNoPrefix)]++
+			slugCounts[strings.ToLower(skillSlugFromPath(cand.Handle.Path))]++
+		}
+
+		loadCtx := skillLoadCommandContext{
+			EffectiveRoot: settings.Root,
+			DefaultRoot:   defaultRoot,
+			TicketFilter:  strings.TrimSpace(settings.Ticket),
+			TitleCounts:   titleCounts,
+			SlugCounts:    slugCounts,
+		}
+
+		for _, cand := range candidates {
+			doc := cand.Handle.Doc
+			if doc == nil {
+				continue
+			}
+			fmt.Printf("Skill: %s\n", doc.Title)
+			fmt.Printf("  Load: %s\n", buildSkillLoadCommand(loadCtx, doc.Title, cand.Handle.Path))
+			fmt.Println()
+		}
+		return fmt.Errorf("multiple skills match %q", queryRaw)
 	}
 
-	// Display skill details
-	h := matches[0]
+	// Display skill details (best match).
+	h := candidates[0].Handle
 	doc := h.Doc
 
 	fmt.Printf("Title: %s\n", doc.Title)

@@ -1,5 +1,5 @@
 ---
-Title: "Skill: Documenting as You Code"
+Title: "Documenting as You Code"
 DocType: skill
 Topics:
   - documentation

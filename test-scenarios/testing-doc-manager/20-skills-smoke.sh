@@ -18,6 +18,39 @@ fi
 
 cd "${REPO}"
 
+# Keep output short: only print headings + success markers.
+# If an assertion fails, dump the captured output for debugging.
+dump_output() {
+  local label="$1"
+  local out="$2"
+  echo "" >&2
+  echo "[fail] ${label}" >&2
+  echo "----- output (first 120 lines) -----" >&2
+  printf '%s\n' "${out}" | head -n 120 >&2
+  echo "----- output (last 80 lines) -----" >&2
+  printf '%s\n' "${out}" | tail -n 80 >&2
+}
+
+assert_contains() {
+  local label="$1"
+  local out="$2"
+  local needle="$3"
+  if ! printf '%s\n' "${out}" | grep -Fq -- "${needle}"; then
+    dump_output "${label} (missing: ${needle})" "${out}"
+    exit 1
+  fi
+}
+
+assert_rc_ne_zero() {
+  local label="$1"
+  local rc="$2"
+  local out="$3"
+  if [[ "${rc}" -eq 0 ]]; then
+    dump_output "${label} (expected non-zero exit code)" "${out}"
+    exit 1
+  fi
+}
+
 # Find the MEN-4242 ticket directory (created by earlier scripts)
 TICKET_DIR="$(find "${DOCS_ROOT}" -maxdepth 4 -type d -name '*MEN-4242--*' | head -n1 || true)"
 if [[ -z "${TICKET_DIR}" ]]; then
@@ -151,6 +184,26 @@ Use this skill when:
 - Debugging workspace issues
 EOF
 
+# Create a workspace-level skill that CLASHES by title/slug with the ticket-level one.
+# This is used to verify ambiguity handling and --ticket disambiguation in `skill show`.
+cat > "${WORKSPACE_SKILLS_DIR}/api-design.md" <<'EOF'
+---
+Title: "Skill: API Design"
+DocType: skill
+Status: active
+Topics: [backend, api]
+WhatFor: "Designing RESTful APIs (workspace-level copy)"
+WhenToUse: "Use this skill when designing APIs (workspace-level copy)"
+Intent: long-term
+Owners: []
+ExternalSources: []
+Summary: ""
+LastUpdated: 2025-12-19T12:00:00Z
+---
+
+# Skill: API Design (Workspace-level)
+EOF
+
 echo "==> Created skill documents"
 
 # Assert: seeded vocabulary includes 'skill' docType
@@ -164,92 +217,137 @@ fi
 echo ""
 echo "==> Test 1: List all skills"
 OUT_1="$(${DOCMGR} skill list --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_1}"
-printf '%s\n' "${OUT_1}" | grep -q "Skill: Skill: API Design"
-printf '%s\n' "${OUT_1}" | grep -q "Skill: Skill: WebSocket Management"
-printf '%s\n' "${OUT_1}" | grep -q "Skill: Skill: Workspace Testing"
+assert_contains "Test 1" "${OUT_1}" "Skill: Skill: API Design"
+assert_contains "Test 1" "${OUT_1}" "Skill: Skill: WebSocket Management"
+assert_contains "Test 1" "${OUT_1}" "Skill: Skill: Workspace Testing"
+assert_contains "Test 1" "${OUT_1}" "Load: docmgr skill show"
+echo "[ok] Test 1"
 
 # Test 2: List skills for ticket
 echo ""
 echo "==> Test 2: List skills for ticket MEN-4242"
 OUT_2="$(${DOCMGR} skill list --ticket MEN-4242 --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_2}"
-printf '%s\n' "${OUT_2}" | grep -q "Skill: Skill: API Design"
-printf '%s\n' "${OUT_2}" | grep -q "Skill: Skill: WebSocket Management"
+assert_contains "Test 2" "${OUT_2}" "Skill: Skill: API Design"
+assert_contains "Test 2" "${OUT_2}" "Skill: Skill: WebSocket Management"
+assert_contains "Test 2" "${OUT_2}" "Load: docmgr skill show"
+echo "[ok] Test 2"
 
 # Test 3: List skills by topic
 echo ""
 echo "==> Test 3: List skills by topic backend"
 OUT_3="$(${DOCMGR} skill list --topics backend --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_3}"
-printf '%s\n' "${OUT_3}" | grep -q "Skill: Skill: API Design"
-printf '%s\n' "${OUT_3}" | grep -q "Skill: Skill: WebSocket Management"
+assert_contains "Test 3" "${OUT_3}" "Skill: Skill: API Design"
+assert_contains "Test 3" "${OUT_3}" "Skill: Skill: WebSocket Management"
+echo "[ok] Test 3"
 
 # Test 4: List skills by multiple topics
 echo ""
 echo "==> Test 4: List skills by topics backend,websocket"
 OUT_4="$(${DOCMGR} skill list --topics backend,websocket --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_4}"
-printf '%s\n' "${OUT_4}" | grep -q "Skill: Skill: API Design"
-printf '%s\n' "${OUT_4}" | grep -q "Skill: Skill: WebSocket Management"
+assert_contains "Test 4" "${OUT_4}" "Skill: Skill: API Design"
+assert_contains "Test 4" "${OUT_4}" "Skill: Skill: WebSocket Management"
+echo "[ok] Test 4"
 
 # Test 5: List skills by file (reverse lookup)
 echo ""
 echo "==> Test 5: List skills related to file backend/chat/api/register.go"
 OUT_5="$(${DOCMGR} skill list --file backend/chat/api/register.go --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_5}"
-printf '%s\n' "${OUT_5}" | grep -q "Skill: Skill: API Design"
+assert_contains "Test 5" "${OUT_5}" "Skill: Skill: API Design"
+echo "[ok] Test 5"
 
 # Test 6: List skills by directory
 echo ""
 echo "==> Test 6: List skills related to directory backend/chat/api/"
 OUT_6="$(${DOCMGR} skill list --dir backend/chat/api/ --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_6}"
-printf '%s\n' "${OUT_6}" | grep -q "Skill: Skill: API Design"
+assert_contains "Test 6" "${OUT_6}" "Skill: Skill: API Design"
+echo "[ok] Test 6"
 
 # Test 7: List skills with structured output
 echo ""
 echo "==> Test 7: List skills with structured output (JSON)"
-OUT_7="$(${DOCMGR} skill list --with-glaze-output --output json --root "${DOCS_ROOT}" | head -n 50)"
-printf '%s\n' "${OUT_7}"
-printf '%s\n' "${OUT_7}" | grep -q "\"skill\": \"Skill: API Design\""
+OUT_7="$(${DOCMGR} skill list --with-glaze-output --output json --root "${DOCS_ROOT}")"
+assert_contains "Test 7" "${OUT_7}" "\"skill\": \"Skill: API Design\""
+assert_contains "Test 7" "${OUT_7}" "\"load_command\": \"docmgr skill show"
+echo "[ok] Test 7"
 
 # Test 8: Show skill by exact title
 echo ""
 echo "==> Test 8: Show skill by exact title"
-OUT_8="$(${DOCMGR} skill show --skill "API Design" --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_8}"
-printf '%s\n' "${OUT_8}" | grep -q "Title: Skill: API Design"
-printf '%s\n' "${OUT_8}" | grep -q "What this skill is for:"
-printf '%s\n' "${OUT_8}" | grep -q "# Skill: API Design"
+set +e
+OUT_8="$(${DOCMGR} skill show --skill "API Design" --root "${DOCS_ROOT}" 2>&1)"
+RC_8=$?
+set -e
+assert_rc_ne_zero "Test 8" "${RC_8}" "${OUT_8}"
+assert_contains "Test 8" "${OUT_8}" "Multiple skills match"
+assert_contains "Test 8" "${OUT_8}" "Load: docmgr skill show"
+echo "[ok] Test 8"
+
+# Test 8b: Show skill by exact title with --ticket disambiguation (flag-based)
+echo ""
+echo "==> Test 8b: Show skill by exact title with --ticket (disambiguation)"
+OUT_8B="$(${DOCMGR} skill show --skill "API Design" --ticket MEN-4242 --root "${DOCS_ROOT}")"
+assert_contains "Test 8b" "${OUT_8B}" "Title: Skill: API Design"
+assert_contains "Test 8b" "${OUT_8B}" "Ticket: MEN-4242"
+assert_contains "Test 8b" "${OUT_8B}" "What this skill is for:"
+assert_contains "Test 8b" "${OUT_8B}" "# Skill: API Design"
+echo "[ok] Test 8b"
+
+# Test 8c: Show skill by positional argument with --ticket (disambiguation)
+echo ""
+echo "==> Test 8c: Show skill by positional argument with --ticket"
+OUT_8C="$(${DOCMGR} skill show "API Design" --ticket MEN-4242 --root "${DOCS_ROOT}")"
+assert_contains "Test 8c" "${OUT_8C}" "Title: Skill: API Design"
+assert_contains "Test 8c" "${OUT_8C}" "Ticket: MEN-4242"
+assert_contains "Test 8c" "${OUT_8C}" "What this skill is for:"
+assert_contains "Test 8c" "${OUT_8C}" "# Skill: API Design"
+echo "[ok] Test 8c"
 
 # Test 9: Show skill by partial match
 echo ""
 echo "==> Test 9: Show skill by partial match (websocket)"
 OUT_9="$(${DOCMGR} skill show --skill websocket --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_9}"
-printf '%s\n' "${OUT_9}" | grep -q "Title: Skill: WebSocket Management"
+assert_contains "Test 9" "${OUT_9}" "Title: Skill: WebSocket Management"
+echo "[ok] Test 9"
 
 # Test 10: Show workspace-level skill
 echo ""
 echo "==> Test 10: Show workspace-level skill"
 OUT_10="$(${DOCMGR} skill show --skill "Workspace Testing" --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_10}"
-printf '%s\n' "${OUT_10}" | grep -q "Title: Skill: Workspace Testing"
+assert_contains "Test 10" "${OUT_10}" "Title: Skill: Workspace Testing"
+echo "[ok] Test 10"
+
+# Test 10b: Show by filename/slug (should work, but will be ambiguous for api-design)
+echo ""
+echo "==> Test 10b: Show by filename/slug (ambiguity case: api-design)"
+set +e
+OUT_10B="$(${DOCMGR} skill show api-design --root "${DOCS_ROOT}" 2>&1)"
+RC_10B=$?
+set -e
+assert_rc_ne_zero "Test 10b" "${RC_10B}" "${OUT_10B}"
+assert_contains "Test 10b" "${OUT_10B}" "Multiple skills match"
+echo "[ok] Test 10b"
+
+# Test 10c: Show by explicit path (unambiguous)
+echo ""
+echo "==> Test 10c: Show by explicit path"
+OUT_10C="$(${DOCMGR} skill show "${SKILLS_DIR}/01-api-design.md" --root "${DOCS_ROOT}")"
+assert_contains "Test 10c" "${OUT_10C}" "Title: Skill: API Design"
+assert_contains "Test 10c" "${OUT_10C}" "Ticket: MEN-4242"
+echo "[ok] Test 10c"
 
 # Test 11: Verify skill list filters work together
 echo ""
 echo "==> Test 11: Combined filters (ticket + topic)"
 OUT_11="$(${DOCMGR} skill list --ticket MEN-4242 --topics backend --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_11}"
-printf '%s\n' "${OUT_11}" | grep -q "Skill: Skill: API Design"
+assert_contains "Test 11" "${OUT_11}" "Skill: Skill: API Design"
+echo "[ok] Test 11"
 
 # Test 12: Verify file filter works with ticket filter
 echo ""
 echo "==> Test 12: Combined filters (ticket + file)"
 OUT_12="$(${DOCMGR} skill list --ticket MEN-4242 --file backend/chat/api/register.go --root "${DOCS_ROOT}")"
-printf '%s\n' "${OUT_12}"
-printf '%s\n' "${OUT_12}" | grep -q "Skill: Skill: API Design"
+assert_contains "Test 12" "${OUT_12}" "Skill: Skill: API Design"
+echo "[ok] Test 12"
 
 echo ""
 echo "==> Skills smoke tests completed successfully!"

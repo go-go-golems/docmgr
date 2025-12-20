@@ -32,7 +32,9 @@ Before ANY task, review the skills list:
 
 When you decide a skill might apply, load it:
 
-- Run: `docmgr skill show --skill <skill-name>`
+- Run: `docmgr skill show <skill-name>`
+  - Also supported: `docmgr skill show --skill <skill-name>` (legacy)
+  - Matching is resilient: you can use title (with/without `Skill:`), filename slug, or a path to the skill file.
 
 ## Tool Mapping (docmgr)
 

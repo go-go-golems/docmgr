@@ -42,7 +42,7 @@ func NewSkillListCommand() (*SkillListCommand, error) {
 Skills are structured documentation artifacts that provide information about what a skill is for and when to use it.
 
 Columns:
-  skill,what_for,when_to_use,topics,related_paths,path
+  skill,what_for,when_to_use,topics,related_paths,path,load_command
 
 Examples:
   # Human output
@@ -129,6 +129,8 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
+	defaultRoot := workspace.ResolveRoot("ttmp")
+
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
 	if strings.TrimSpace(settings.Ticket) != "" {
 		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
@@ -163,6 +165,29 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
+	// Build a uniqueness index for load command generation.
+	titleCounts := map[string]int{}
+	slugCounts := map[string]int{}
+	for _, handle := range res.Docs {
+		if handle.Doc == nil {
+			continue
+		}
+		titleNoPrefix := strings.TrimSpace(stripSkillPrefix(handle.Doc.Title))
+		if titleNoPrefix == "" {
+			titleNoPrefix = strings.TrimSpace(handle.Doc.Title)
+		}
+		titleCounts[strings.ToLower(titleNoPrefix)]++
+		slugCounts[strings.ToLower(skillSlugFromPath(handle.Path))]++
+	}
+
+	loadCtx := skillLoadCommandContext{
+		EffectiveRoot: settings.Root,
+		DefaultRoot:   defaultRoot,
+		TicketFilter:  strings.TrimSpace(settings.Ticket),
+		TitleCounts:   titleCounts,
+		SlugCounts:    slugCounts,
+	}
+
 	for _, handle := range res.Docs {
 		if handle.Doc == nil {
 			continue
@@ -182,6 +207,7 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 			types.MRP("topics", strings.Join(doc.Topics, ",")),
 			types.MRP("related_paths", strings.Join(relatedPaths, ",")),
 			types.MRP("path", handle.Path),
+			types.MRP("load_command", buildSkillLoadCommand(loadCtx, doc.Title, handle.Path)),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err
@@ -215,6 +241,7 @@ func (c *SkillListCommand) Run(
 			Topics       []string
 			RelatedPaths []string
 			Path         string
+			LoadCommand  string
 		}
 		templateData := map[string]interface{}{
 			"TotalResults": 0,
@@ -226,6 +253,7 @@ func (c *SkillListCommand) Run(
 					Topics:       []string{},
 					RelatedPaths: []string{},
 					Path:         "",
+					LoadCommand:  "",
 				},
 			},
 		}
@@ -245,6 +273,7 @@ func (c *SkillListCommand) Run(
 		return fmt.Errorf("failed to discover workspace: %w", err)
 	}
 	settings.Root = ws.Context().Root
+	defaultRoot := workspace.ResolveRoot("ttmp")
 	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
@@ -283,6 +312,29 @@ func (c *SkillListCommand) Run(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
+	// Build a uniqueness index for load command generation.
+	titleCounts := map[string]int{}
+	slugCounts := map[string]int{}
+	for _, handle := range res.Docs {
+		if handle.Doc == nil {
+			continue
+		}
+		titleNoPrefix := strings.TrimSpace(stripSkillPrefix(handle.Doc.Title))
+		if titleNoPrefix == "" {
+			titleNoPrefix = strings.TrimSpace(handle.Doc.Title)
+		}
+		titleCounts[strings.ToLower(titleNoPrefix)]++
+		slugCounts[strings.ToLower(skillSlugFromPath(handle.Path))]++
+	}
+
+	loadCtx := skillLoadCommandContext{
+		EffectiveRoot: settings.Root,
+		DefaultRoot:   defaultRoot,
+		TicketFilter:  strings.TrimSpace(settings.Ticket),
+		TitleCounts:   titleCounts,
+		SlugCounts:    slugCounts,
+	}
+
 	// Build template data
 	type SkillResult struct {
 		Skill        string
@@ -291,6 +343,7 @@ func (c *SkillListCommand) Run(
 		Topics       []string
 		RelatedPaths []string
 		Path         string
+		LoadCommand  string
 	}
 
 	results := make([]SkillResult, 0, len(res.Docs))
@@ -313,6 +366,7 @@ func (c *SkillListCommand) Run(
 			Topics:       doc.Topics,
 			RelatedPaths: relatedPaths,
 			Path:         handle.Path,
+			LoadCommand:  buildSkillLoadCommand(loadCtx, doc.Title, handle.Path),
 		})
 	}
 
@@ -331,7 +385,7 @@ func (c *SkillListCommand) Run(
 		if len(result.RelatedPaths) > 0 {
 			fmt.Printf("  Related files: %s\n", strings.Join(result.RelatedPaths, ", "))
 		}
-		fmt.Printf("  Path: %s\n", result.Path)
+		fmt.Printf("  Load: %s\n", result.LoadCommand)
 		fmt.Println()
 	}
 

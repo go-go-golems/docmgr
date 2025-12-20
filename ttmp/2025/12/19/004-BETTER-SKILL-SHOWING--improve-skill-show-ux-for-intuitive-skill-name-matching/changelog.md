@@ -13,3 +13,8 @@ Created bug report documenting skill show UX issues: positional argument not sup
 
 - ttmp/2025/12/19/004-BETTER-SKILL-SHOWING--improve-skill-show-ux-for-intuitive-skill-name-matching/reference/01-bug-report-skill-show-name-matching-issues.md — Bug report with recommendations
 
+
+## 2025-12-19
+
+Ship resilient skill show (positional + slug/title/path matching), improve skill list load commands, extend+quiet smoke tests
+

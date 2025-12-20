@@ -1,5 +1,5 @@
 ---
-Title: "Skill: Systematic Debugging"
+Title: "Systematic Debugging"
 DocType: skill
 Topics:
   - debugging

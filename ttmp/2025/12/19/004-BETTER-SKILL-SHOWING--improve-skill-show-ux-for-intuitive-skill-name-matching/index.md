@@ -1,7 +1,7 @@
 ---
 Title: Improve skill show UX for intuitive skill name matching
 Ticket: 004-BETTER-SKILL-SHOWING
-Status: active
+Status: complete
 Topics:
     - skills
     - ux
@@ -18,10 +18,11 @@ RelatedFiles:
       Note: Test skill that exposed matching issues
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-19T18:40:24.767417291-05:00
+LastUpdated: 2025-12-19T19:22:20.016871837-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 # Improve skill show UX for intuitive skill name matching

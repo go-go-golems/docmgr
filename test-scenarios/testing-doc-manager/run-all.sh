@@ -31,7 +31,10 @@ if [[ -z "${SCENARIOLOG_PATH}" ]]; then
   REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
   SCENARIOLOG_PATH="/tmp/scenariolog-local"
   echo "[info] SCENARIOLOG_PATH is not set; building scenariolog: ${REPO_ROOT}/scenariolog -> ${SCENARIOLOG_PATH}" >&2
-  go -C "${REPO_ROOT}/scenariolog" build -tags sqlite_fts5 -o "${SCENARIOLOG_PATH}" ./cmd/scenariolog
+  # NOTE: This repo may be used with a top-level go.work (workspace mode), but scenariolog is
+  # a nested module with its own go.mod. Force module mode for this build so it doesn't get
+  # resolved against the go.work module set.
+  GOWORK=off go -C "${REPO_ROOT}/scenariolog" build -tags sqlite_fts5 -o "${SCENARIOLOG_PATH}" ./cmd/scenariolog
 fi
 
 echo "[info] Using SCENARIOLOG_PATH=${SCENARIOLOG_PATH}" >&2

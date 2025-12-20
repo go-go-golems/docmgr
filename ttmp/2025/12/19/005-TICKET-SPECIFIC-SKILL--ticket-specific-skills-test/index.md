@@ -1,7 +1,7 @@
 ---
 Title: Ticket-specific skills test
 Ticket: 005-TICKET-SPECIFIC-SKILL
-Status: review
+Status: complete
 Topics:
     - skills
     - cli

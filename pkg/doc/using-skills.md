@@ -28,6 +28,7 @@ Before ANY task, review the skills list:
 
 - Run: `docmgr skill list`
   - Human output includes copy/pasteable `Load:` commands and ticket context (`Ticket: <ID> — <Title>`) for ticket-scoped skills.
+  - By default, `skill list` only shows skills from tickets whose status is `active` (workspace-level skills are always shown).
   - To narrow to a single ticket’s skills: `docmgr skill list --ticket <TICKET-ID>`
 
 ## Tool for loading a skill (docmgr)

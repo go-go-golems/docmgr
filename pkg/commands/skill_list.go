@@ -132,11 +132,14 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 	defaultRoot := workspace.ResolveRoot("ttmp")
 	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
 	ticketTitleByID := map[string]string{}
+	ticketStatusByID := map[string]string{}
 	for _, t := range ticketIndexDocs {
-		if strings.TrimSpace(t.Ticket) == "" {
+		ticketID := strings.TrimSpace(t.Ticket)
+		if ticketID == "" {
 			continue
 		}
-		ticketTitleByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Title)
+		ticketTitleByID[ticketID] = strings.TrimSpace(t.Title)
+		ticketStatusByID[ticketID] = strings.TrimSpace(t.Status)
 	}
 
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
@@ -173,10 +176,28 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
+	// Default behavior: only include skills from ACTIVE tickets unless --ticket is provided.
+	// Workspace-level skills (no Ticket) are always included.
+	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
+	filtered := make([]workspace.DocHandle, 0, len(res.Docs))
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
+		}
+		if activeTicketOnly && strings.TrimSpace(h.Doc.Ticket) != "" {
+			tid := strings.TrimSpace(h.Doc.Ticket)
+			st := strings.ToLower(strings.TrimSpace(ticketStatusByID[tid]))
+			if st != "active" {
+				continue
+			}
+		}
+		filtered = append(filtered, h)
+	}
+
 	// Build a uniqueness index for load command generation.
 	titleCounts := map[string]int{}
 	slugCounts := map[string]int{}
-	for _, handle := range res.Docs {
+	for _, handle := range filtered {
 		if handle.Doc == nil {
 			continue
 		}
@@ -196,7 +217,7 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 		SlugCounts:    slugCounts,
 	}
 
-	for _, handle := range res.Docs {
+	for _, handle := range filtered {
 		if handle.Doc == nil {
 			continue
 		}
@@ -290,11 +311,14 @@ func (c *SkillListCommand) Run(
 
 	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
 	ticketTitleByID := map[string]string{}
+	ticketStatusByID := map[string]string{}
 	for _, t := range ticketIndexDocs {
-		if strings.TrimSpace(t.Ticket) == "" {
+		ticketID := strings.TrimSpace(t.Ticket)
+		if ticketID == "" {
 			continue
 		}
-		ticketTitleByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Title)
+		ticketTitleByID[ticketID] = strings.TrimSpace(t.Title)
+		ticketStatusByID[ticketID] = strings.TrimSpace(t.Status)
 	}
 
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
@@ -331,10 +355,28 @@ func (c *SkillListCommand) Run(
 		return fmt.Errorf("failed to query skills: %w", err)
 	}
 
+	// Default behavior: only include skills from ACTIVE tickets unless --ticket is provided.
+	// Workspace-level skills (no Ticket) are always included.
+	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
+	filtered := make([]workspace.DocHandle, 0, len(res.Docs))
+	for _, h := range res.Docs {
+		if h.Doc == nil {
+			continue
+		}
+		if activeTicketOnly && strings.TrimSpace(h.Doc.Ticket) != "" {
+			tid := strings.TrimSpace(h.Doc.Ticket)
+			st := strings.ToLower(strings.TrimSpace(ticketStatusByID[tid]))
+			if st != "active" {
+				continue
+			}
+		}
+		filtered = append(filtered, h)
+	}
+
 	// Build a uniqueness index for load command generation.
 	titleCounts := map[string]int{}
 	slugCounts := map[string]int{}
-	for _, handle := range res.Docs {
+	for _, handle := range filtered {
 		if handle.Doc == nil {
 			continue
 		}
@@ -368,7 +410,7 @@ func (c *SkillListCommand) Run(
 	}
 
 	results := make([]SkillResult, 0, len(res.Docs))
-	for _, handle := range res.Docs {
+	for _, handle := range filtered {
 		if handle.Doc == nil {
 			continue
 		}

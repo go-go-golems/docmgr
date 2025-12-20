@@ -41,6 +41,16 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local label="$1"
+  local out="$2"
+  local needle="$3"
+  if printf '%s\n' "${out}" | grep -Fq -- "${needle}"; then
+    dump_output "${label} (unexpected: ${needle})" "${out}"
+    exit 1
+  fi
+}
+
 assert_rc_ne_zero() {
   local label="$1"
   local rc="$2"
@@ -254,6 +264,8 @@ assert_contains "Test 1" "${OUT_1}" "Skill: Skill: API Design"
 assert_contains "Test 1" "${OUT_1}" "Skill: Skill: WebSocket Management"
 assert_contains "Test 1" "${OUT_1}" "Skill: Skill: Workspace Testing"
 assert_contains "Test 1" "${OUT_1}" "Load: docmgr skill show"
+assert_not_contains "Test 1" "${OUT_1}" "MEN-5678"
+assert_not_contains "Test 1" "${OUT_1}" "Closed Ticket Only Skill"
 echo "[ok] Test 1"
 
 # Test 2: List skills for ticket

@@ -7,6 +7,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/importcmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/list"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/meta"
+	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/skill"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/tasks"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/template"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket"
@@ -60,6 +61,9 @@ Helpful docs (built-in):
 		return nil, err
 	}
 	if err := vocab.Attach(rootCmd); err != nil {
+		return nil, err
+	}
+	if err := skill.Attach(rootCmd); err != nil {
 		return nil, err
 	}
 	if err := meta.Attach(rootCmd); err != nil {

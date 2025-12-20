@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS docs (
     intent TEXT,                             -- from frontmatter Intent
     title TEXT,                              -- from frontmatter Title
     last_updated TEXT,                       -- ISO8601 timestamp from frontmatter
+    what_for TEXT,                           -- from frontmatter WhatFor (for skills)
+    when_to_use TEXT,                        -- from frontmatter WhenToUse (for skills)
 
     -- Parse state
     parse_ok INTEGER NOT NULL DEFAULT 1,     -- 1 if frontmatter parsed successfully, 0 otherwise

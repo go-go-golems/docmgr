@@ -240,6 +240,7 @@ func seedDefaultVocabulary() error {
 	addItem(&vocab.DocTypes, "reference", "Reference docs and API contracts")
 	addItem(&vocab.DocTypes, "playbook", "Operational procedures and QA/Smoke steps")
 	addItem(&vocab.DocTypes, "index", "Ticket landing page")
+	addItem(&vocab.DocTypes, "skill", "Skill documentation (what it's for and when to use it)")
 
 	// Intent
 	addItem(&vocab.Intent, "long-term", "Likely to persist")

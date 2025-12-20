@@ -64,10 +64,11 @@ func ingestWorkspaceDocs(ctx context.Context, db *sql.DB, wctx WorkspaceContext,
 	insertDocStmt, err := tx.PrepareContext(ctx, `
 INSERT INTO docs (
   path, ticket_id, doc_type, status, intent, title, last_updated,
+  what_for, when_to_use,
   parse_ok, parse_err,
   is_index, is_archived_path, is_scripts_path, is_sources_path, is_control_doc,
   body
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `)
 	if err != nil {
 		return errors.Wrap(err, "prepare insert docs")
@@ -113,6 +114,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		parseErr := ""
 		var ticketID, docType, status, intent, title sql.NullString
 		var lastUpdated sql.NullString
+		var whatFor, whenToUse sql.NullString
 		var bodyVal sql.NullString
 
 		if readErr != nil || doc == nil {
@@ -133,6 +135,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			status = nullString(doc.Status)
 			intent = nullString(doc.Intent)
 			title = nullString(doc.Title)
+			whatFor = nullString(doc.WhatFor)
+			whenToUse = nullString(doc.WhenToUse)
 			if !doc.LastUpdated.IsZero() {
 				lastUpdated = sql.NullString{String: doc.LastUpdated.UTC().Format(time.RFC3339Nano), Valid: true}
 			}
@@ -145,6 +149,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 			ctx,
 			filepath.ToSlash(absPath),
 			ticketID, docType, status, intent, title, lastUpdated,
+			whatFor, whenToUse,
 			parseOK, nullString(parseErr),
 			boolToInt(tags.IsIndex),
 			boolToInt(tags.IsArchivedPath),

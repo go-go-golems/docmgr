@@ -10,6 +10,8 @@
 //   - docmgr-cli-guide.md: Complete CLI reference
 //   - templates-and-guidelines.md: Document templates and guidelines
 //   - docmgr-ci-automation.md: CI/CD integration guide
+//   - using-skills.md: LLM bootstrap prompt pack (docmgr + skills)
+//   - how-to-write-skills.md: Guide for creating and maintaining skill documents
 package doc
 
 import (

@@ -133,6 +133,8 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
   d.intent,
   d.title,
   d.last_updated,
+  d.what_for,
+  d.when_to_use,
   d.parse_ok,
   d.parse_err,
   d.body

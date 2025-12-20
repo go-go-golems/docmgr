@@ -31,4 +31,18 @@ func TestCreateWorkspaceSchema_InMemory(t *testing.T) {
 			t.Fatalf("expected table %q, got %q", table, name)
 		}
 	}
+
+	// Verify docs table has skill-specific columns.
+	for _, col := range []string{"what_for", "when_to_use"} {
+		var name string
+		if err := db.QueryRowContext(ctx,
+			`SELECT name FROM pragma_table_info('docs') WHERE name=?`,
+			col,
+		).Scan(&name); err != nil {
+			t.Fatalf("column %q missing in docs table: %v", col, err)
+		}
+		if name != col {
+			t.Fatalf("expected column %q, got %q", col, name)
+		}
+	}
 }

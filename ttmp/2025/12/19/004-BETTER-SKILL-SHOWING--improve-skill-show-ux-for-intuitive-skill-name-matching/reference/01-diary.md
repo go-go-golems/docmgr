@@ -137,4 +137,24 @@ This step implemented the feature work described in the bug report: `docmgr skil
 - Finally run the smoke test:
   - `DOCMGR_PATH=/tmp/docmgr-local bash test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario`
 
+## Step 3: Post-close follow-ups (ticket-scoped skills + default filtering)
+
+After closing ticket 004, we did two follow-up changes that materially affect the skill UX. They weren’t strictly part of the original 004 spec, but they build directly on it and are important for future readers because they change what “skill show/list” output looks like and which skills are considered by default.
+
+### What I did
+- Added ticket context (ticket id + title) to `skill list` and `skill show` outputs for ticket-scoped skills.
+- Added default filtering in `skill show`: if no `--ticket` is provided, exclude skills that belong to non-active tickets (workspace-level skills are still included). If `--ticket` is provided, do not apply this filter (because the user is explicitly scoping).
+- Extended the skills smoke test to cover the “closed ticket skill should not show up unless `--ticket` is passed” case.
+
+### Why
+- Ticket-scoped skills can clash across tickets; showing ticket id + title makes the UX safe and understandable.
+- Completed tickets should not pollute the default “find me a skill” experience; default filtering keeps the UX high signal.
+
+### Commits (code)
+- d889527 — Skills: show ticket title for ticket-scoped skills
+- e6bd5a7 — Skill show: hide non-active ticket skills by default
+
+### What warrants a second pair of eyes
+- Whether “non-active” should mean strictly `status != active`, or if statuses like `review` should still be considered “active enough” for default `skill show`.
+
 

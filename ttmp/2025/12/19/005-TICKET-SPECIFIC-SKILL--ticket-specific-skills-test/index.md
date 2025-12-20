@@ -21,7 +21,7 @@ WhenToUse: ""
 
 ## Overview
 
-<!-- Provide a brief overview of the ticket, its goals, and current status -->
+Test fixture ticket for verifying ticket-scoped skills behavior and UX. This ticket exists to ensure `docmgr skill list` and `docmgr skill show` can disambiguate ticket-scoped skills, show ticket context (id + title), and behave sensibly with respect to ticket lifecycle status.
 
 ## Key Links
 

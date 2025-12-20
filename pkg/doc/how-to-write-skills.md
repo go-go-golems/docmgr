@@ -754,7 +754,7 @@ ttmp/skills/
 For skills specific to a feature or domain:
 
 ```
-ttmp/YYYY/MM/DD/TICKET--slug/skills/
+ttmp/YYYY/MM/DD/TICKET--slug/skill/
 ├── auth-implementation.md
 ├── websocket-testing.md
 └── frontend-component-patterns.md
@@ -763,6 +763,8 @@ ttmp/YYYY/MM/DD/TICKET--slug/skills/
 **Frontmatter:** Include `Ticket` field
 
 **When to use:** Domain-specific patterns, experimental workflows, ticket-scoped processes
+
+**Note on convention:** `docmgr doc add --doc-type skill` creates ticket-scoped skills under the doc-type folder `skill/` (singular). Workspace-level skills are commonly stored under `ttmp/skills/` (plural) as a curated global library, but the authoritative source for discovery is the frontmatter field `DocType: skill` (not the directory name).
 
 ---
 
@@ -950,8 +952,11 @@ After creating your skill:
    ```bash
    docmgr changelog update --ticket <TICKET> \
      --entry "Created new skill: <skill-name>" \
-     --file-note "ttmp/skills/<skill-name>.md:New skill for <purpose>"
+     --file-note "<skill-path>.md:New skill for <purpose>"
    ```
+   Where `<skill-path>` is typically:
+   - workspace-level: `ttmp/skills/<skill-slug>`
+   - ticket-level: `ttmp/YYYY/MM/DD/<TICKET>--<slug>/skill/<skill-slug>`
 
 4. **Share with team**: Get feedback on trigger conditions and enforcement
 

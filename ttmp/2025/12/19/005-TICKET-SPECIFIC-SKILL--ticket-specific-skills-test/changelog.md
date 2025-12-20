@@ -39,3 +39,13 @@ Docs/templates: add DocType=skill guideline + embed skill template/guideline so 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/internal/templates/embedded/_templates/skill.md — Embedded skill template seeded by docmgr init
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/ttmp/_guidelines/skill.md — New guidelines shown after doc add for skill docs
 
+
+## 2025-12-19
+
+Docs: update skills docs for --ticket narrowing, ticket context in outputs, default active-ticket filtering; clarify ticket-level skill/ vs workspace-level skills/ convention.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/doc/how-to-write-skills.md — Clarify where to store skills (ticket skill/ vs workspace skills/)
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/doc/using-skills.md — Document skill list/show behavior including --ticket and active-ticket filtering
+

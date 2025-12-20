@@ -27,6 +27,8 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 Before ANY task, review the skills list:
 
 - Run: `docmgr skill list`
+  - Human output includes copy/pasteable `Load:` commands and ticket context (`Ticket: <ID> — <Title>`) for ticket-scoped skills.
+  - To narrow to a single ticket’s skills: `docmgr skill list --ticket <TICKET-ID>`
 
 ## Tool for loading a skill (docmgr)
 
@@ -35,6 +37,9 @@ When you decide a skill might apply, load it:
 - Run: `docmgr skill show <skill-name>`
   - Also supported: `docmgr skill show --skill <skill-name>` (legacy)
   - Matching is resilient: you can use title (with/without `Skill:`), filename slug, or a path to the skill file.
+  - If you need to narrow to a specific ticket (disambiguation / archaeology):
+    - `docmgr skill show --ticket <TICKET-ID> <query>`
+  - Note: by default, `skill show` hides skills that belong to **non-active tickets**. `--ticket` overrides that behavior.
 
 ## Tool Mapping (docmgr)
 

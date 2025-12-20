@@ -130,6 +130,14 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 	}
 
 	defaultRoot := workspace.ResolveRoot("ttmp")
+	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
+	ticketTitleByID := map[string]string{}
+	for _, t := range ticketIndexDocs {
+		if strings.TrimSpace(t.Ticket) == "" {
+			continue
+		}
+		ticketTitleByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Title)
+	}
 
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
 	if strings.TrimSpace(settings.Ticket) != "" {
@@ -208,6 +216,8 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 			types.MRP("related_paths", strings.Join(relatedPaths, ",")),
 			types.MRP("path", handle.Path),
 			types.MRP("load_command", buildSkillLoadCommand(loadCtx, doc.Title, handle.Path)),
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("ticket_title", ticketTitleByID[strings.TrimSpace(doc.Ticket)]),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err
@@ -278,6 +288,15 @@ func (c *SkillListCommand) Run(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
+	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
+	ticketTitleByID := map[string]string{}
+	for _, t := range ticketIndexDocs {
+		if strings.TrimSpace(t.Ticket) == "" {
+			continue
+		}
+		ticketTitleByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Title)
+	}
+
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
 	if strings.TrimSpace(settings.Ticket) != "" {
 		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
@@ -344,6 +363,8 @@ func (c *SkillListCommand) Run(
 		RelatedPaths []string
 		Path         string
 		LoadCommand  string
+		Ticket       string
+		TicketTitle  string
 	}
 
 	results := make([]SkillResult, 0, len(res.Docs))
@@ -367,12 +388,21 @@ func (c *SkillListCommand) Run(
 			RelatedPaths: relatedPaths,
 			Path:         handle.Path,
 			LoadCommand:  buildSkillLoadCommand(loadCtx, doc.Title, handle.Path),
+			Ticket:       doc.Ticket,
+			TicketTitle:  ticketTitleByID[strings.TrimSpace(doc.Ticket)],
 		})
 	}
 
 	// Human-friendly output
 	for _, result := range results {
 		fmt.Printf("Skill: %s\n", result.Skill)
+		if strings.TrimSpace(result.Ticket) != "" {
+			line := strings.TrimSpace(result.Ticket)
+			if strings.TrimSpace(result.TicketTitle) != "" {
+				line = fmt.Sprintf("%s — %s", line, strings.TrimSpace(result.TicketTitle))
+			}
+			fmt.Printf("  Ticket: %s\n", line)
+		}
 		if result.WhatFor != "" {
 			fmt.Printf("  What for: %s\n", result.WhatFor)
 		}

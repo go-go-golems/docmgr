@@ -361,6 +361,14 @@ func (c *SkillShowCommand) Run(
 	if len(candidates) > 1 && candidates[0].Score == candidates[1].Score {
 		fmt.Fprintf(os.Stdout, "Multiple skills match %q. Load one of these:\n\n", queryRaw)
 		defaultRoot := workspace.ResolveRoot("ttmp")
+		_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
+		ticketTitleByID := map[string]string{}
+		for _, t := range ticketIndexDocs {
+			if strings.TrimSpace(t.Ticket) == "" {
+				continue
+			}
+			ticketTitleByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Title)
+		}
 
 		// Build a uniqueness index for load command generation.
 		titleCounts := map[string]int{}
@@ -391,6 +399,14 @@ func (c *SkillShowCommand) Run(
 				continue
 			}
 			fmt.Printf("Skill: %s\n", doc.Title)
+			if strings.TrimSpace(doc.Ticket) != "" {
+				tt := ticketTitleByID[strings.TrimSpace(doc.Ticket)]
+				if strings.TrimSpace(tt) != "" {
+					fmt.Printf("  Ticket: %s — %s\n", strings.TrimSpace(doc.Ticket), strings.TrimSpace(tt))
+				} else {
+					fmt.Printf("  Ticket: %s\n", strings.TrimSpace(doc.Ticket))
+				}
+			}
 			fmt.Printf("  Load: %s\n", buildSkillLoadCommand(loadCtx, doc.Title, cand.Handle.Path))
 			fmt.Println()
 		}
@@ -403,7 +419,15 @@ func (c *SkillShowCommand) Run(
 
 	fmt.Printf("Title: %s\n", doc.Title)
 	if doc.Ticket != "" {
-		fmt.Printf("Ticket: %s\n", doc.Ticket)
+		ticketTitle := ""
+		if _, tickets, err := queryTicketIndexDocs(ctx, settings.Root, doc.Ticket, ""); err == nil && len(tickets) > 0 {
+			ticketTitle = strings.TrimSpace(tickets[0].Title)
+		}
+		if ticketTitle != "" {
+			fmt.Printf("Ticket: %s — %s\n", doc.Ticket, ticketTitle)
+		} else {
+			fmt.Printf("Ticket: %s\n", doc.Ticket)
+		}
 	}
 	if doc.Status != "" {
 		fmt.Printf("Status: %s\n", doc.Status)

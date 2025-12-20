@@ -13,4 +13,4 @@
 - [x] Add a guideline/template for DocType=skill so doc add --doc-type skill has good scaffolding (and avoids 'No guidelines found')
 - [x] Decide/confirm convention: ticket skills live under /skill/ (doc-type folder) vs /skills/ (docs mention both); update docs accordingly
 - [x] Review 'active tickets only' semantics: should Status=review count as active? If yes, adjust filter + tests
-- [ ] Perf cleanup (optional): avoid re-discovering/re-indexing when fetching ticket titles/status inside skill list/show
+- [x] Perf cleanup (optional): avoid re-discovering/re-indexing when fetching ticket titles/status inside skill list/show

@@ -59,3 +59,12 @@ Skill show: treat ticket Status=review as active for default filtering (draft/ac
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Default filter now keeps review/draft tickets (commit b425acb)
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Add test that review ticket skills are included by default (commit b425acb)
 
+
+## 2025-12-19
+
+Perf: skill show now reuses a single ticket index query (status + title maps) instead of re-querying multiple times.
+
+### Related Files
+
+- /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Reuse ticket index lookup for status/title (commit 916732b)
+

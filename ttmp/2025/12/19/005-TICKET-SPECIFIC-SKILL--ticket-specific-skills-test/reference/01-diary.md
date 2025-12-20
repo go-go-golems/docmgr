@@ -283,4 +283,20 @@ This step tightens the meaning of “active tickets only by default” for `docm
 ### What warrants a second pair of eyes
 - Confirm `draft` should be treated as visible by default (the rationale is the same as `review`, but teams might interpret `draft` differently).
 
+## Step 9: Perf cleanup — avoid repeated ticket index queries in `skill show`
+
+This step does a small, safe performance cleanup: `skill show` used to call `queryTicketIndexDocs` multiple times (status filtering + ambiguity display + final ticket title lookup). We now load ticket index docs once per command invocation and reuse status/title maps.
+
+**Commit (code):** 916732b — "Skill show: reuse ticket index lookup"
+
+### What I did
+- Refactored `pkg/commands/skill_show.go` to build `ticketStatusByID` and `ticketTitleByID` together from a single `queryTicketIndexDocs` call.
+- Removed redundant per-branch ticket index queries.
+
+### Why
+- `queryTicketIndexDocs` does workspace discovery + index initialization; repeated calls are avoidable overhead in a hot-ish UX command.
+
+### What warrants a second pair of eyes
+- Confirm the “single preload” approach is acceptable even when showing a workspace-level skill (it may still preload ticket index docs).
+
 

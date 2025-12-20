@@ -231,14 +231,24 @@ func (c *SkillShowCommand) Run(
 	// Ticket-specific skills from completed/archived tickets are excluded by default.
 	// Workspace-level skills (no Ticket) are always included.
 	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
+
+	// Preload ticket index docs once per invocation (used for default filtering + ticket title display).
 	ticketStatusByID := map[string]string{}
-	if activeTicketOnly {
-		if _, ticketIndexDocs, err := queryTicketIndexDocs(ctx, settings.Root, "", ""); err == nil {
+	ticketTitleByID := map[string]string{}
+	{
+		ticketFilter := strings.TrimSpace(settings.Ticket)
+		if activeTicketOnly {
+			// For default filtering we need all ticket statuses; avoid per-ticket lookups.
+			ticketFilter = ""
+		}
+		if _, ticketIndexDocs, err := queryTicketIndexDocs(ctx, settings.Root, ticketFilter, ""); err == nil {
 			for _, t := range ticketIndexDocs {
-				if strings.TrimSpace(t.Ticket) == "" {
+				id := strings.TrimSpace(t.Ticket)
+				if id == "" {
 					continue
 				}
-				ticketStatusByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Status)
+				ticketStatusByID[id] = strings.TrimSpace(t.Status)
+				ticketTitleByID[id] = strings.TrimSpace(t.Title)
 			}
 		}
 	}
@@ -399,14 +409,6 @@ func (c *SkillShowCommand) Run(
 	if len(candidates) > 1 && candidates[0].Score == candidates[1].Score {
 		fmt.Fprintf(os.Stdout, "Multiple skills match %q. Load one of these:\n\n", queryRaw)
 		defaultRoot := workspace.ResolveRoot("ttmp")
-		_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
-		ticketTitleByID := map[string]string{}
-		for _, t := range ticketIndexDocs {
-			if strings.TrimSpace(t.Ticket) == "" {
-				continue
-			}
-			ticketTitleByID[strings.TrimSpace(t.Ticket)] = strings.TrimSpace(t.Title)
-		}
 
 		// Build a uniqueness index for load command generation.
 		titleCounts := map[string]int{}
@@ -457,10 +459,7 @@ func (c *SkillShowCommand) Run(
 
 	fmt.Printf("Title: %s\n", doc.Title)
 	if doc.Ticket != "" {
-		ticketTitle := ""
-		if _, tickets, err := queryTicketIndexDocs(ctx, settings.Root, doc.Ticket, ""); err == nil && len(tickets) > 0 {
-			ticketTitle = strings.TrimSpace(tickets[0].Title)
-		}
+		ticketTitle := strings.TrimSpace(ticketTitleByID[strings.TrimSpace(doc.Ticket)])
 		if ticketTitle != "" {
 			fmt.Printf("Ticket: %s — %s\n", doc.Ticket, ticketTitle)
 		} else {

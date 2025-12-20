@@ -68,3 +68,8 @@ Perf: skill show now reuses a single ticket index query (status + title maps) in
 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/pkg/commands/skill_show.go — Reuse ticket index lookup for status/title (commit 916732b)
 
+
+## 2025-12-19
+
+Close ticket: all tasks complete; skills UX + docs updated; scenarios green.
+

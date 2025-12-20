@@ -1,7 +1,7 @@
 ---
 Title: Ticket-specific skills test
 Ticket: 005-TICKET-SPECIFIC-SKILL
-Status: active
+Status: review
 Topics:
     - skills
     - cli
@@ -12,10 +12,11 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-19T19:32:03.952913419-05:00
+LastUpdated: 2025-12-19T20:55:35.115562378-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 # Ticket-specific skills test
 

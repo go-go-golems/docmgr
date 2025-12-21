@@ -64,7 +64,7 @@ If you're used to unstructured markdown files, docmgr adds metadata and command 
 
 If you are an LLM/model working in this repository, you MUST check skills before doing anything else (including clarifying questions). The skills system is the “how we work” contract.
 
-**Run this exact bootstrap command at the start of any task:**
+**Run this exact bootstrap command at the start of any session:**
 
 ```bash
 docmgr help using-skills && echo "SKILLS:" && docmgr skill list

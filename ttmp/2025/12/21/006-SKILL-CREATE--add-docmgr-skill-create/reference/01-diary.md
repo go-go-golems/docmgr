@@ -167,3 +167,99 @@ The push triggered the repo’s pre-push `lefthook` suite, so we also got a clea
 
 ### What I'd do differently next time
 - N/A
+
+## Step 4: Prepare a prescribe session + generate PR copy
+
+This step set up a `prescribe` session for the branch and reduced the context size so generation stays within reasonable token limits for the configured model.
+
+Once the session was in a good state (token count ~22k), I ran `prescribe generate` to get a draft PR title/body.
+
+**Commit (code):** N/A
+
+### What I did
+- Initialized a session: `prescribe session init --save --title ... --description ...`.
+- Inspected the default context size: `prescribe session show` (initial token count was ~126k with all 74 files included).
+- Added exclusion filters to reduce context:
+  - `prescribe filter add --exclude "ttmp/2025/**" ...` (drop ticket workspaces and very large docs)
+  - `prescribe filter add --exclude "scenariolog/go.sum" --exclude "scenariolog/go.mod" --exclude "ttmp/skills/**"`
+- Verified token breakdown: `prescribe session token-count`.
+- Generated PR copy: `prescribe generate --stream --output-file pr-description.md`.
+
+### Why
+- `prescribe` is built for PR description generation, but it needs the included file set to be small enough to fit model context windows.
+
+### What worked
+- Session + filtering brought the context down to ~22k tokens while still including core code + small user-facing docs.
+- `prescribe generate` completed quickly and produced a reasonable draft title/body.
+
+### What didn't work
+- The streamed run reported: `Parsed PR data: failed (failed to parse PR YAML: yaml: mapping values are not allowed in this context)`.
+  - This meant no “last generated PR data” was available for `prescribe create --use-last`.
+
+### What I learned
+- Multiple `--include` patterns in `prescribe filter` behave like an AND (intersection), not an OR; using excludes is the practical way to carve down the file set.
+
+### What was tricky to build
+- Getting the include/exclude logic right without the TUI; `prescribe session token-count` was essential to identify the largest token offenders.
+
+### What warrants a second pair of eyes
+- Sanity-check which doc files should be included in the generation context vs intentionally excluded (e.g., `go.sum` and long `ttmp/skills/*` examples).
+
+### What should be done in the future
+- Improve the generation preset so the model output is reliably parseable YAML (or switch the generator to emit markdown-only when YAML parsing fails).
+
+### Code review instructions
+- N/A (no code changed during this step).
+
+### Technical details
+- Token counts observed:
+  - Before filtering: ~126k (74/74 files included)
+  - After filtering: ~22k (23 visible/included)
+
+### What I'd do differently next time
+- Start with exclude filters up front (ticket workspaces, generated dependency files) before iterating on what to include.
+
+## Step 5: Use prescribe to create the PR (existing PR detected)
+
+This step attempted to create the PR via `prescribe create`. The command succeeded in pushing, but GitHub reported that a PR for this head branch already exists.
+
+I then validated the existing PR’s state and confirmed it is open and targeting `main`.
+
+**Commit (code):** N/A
+
+### What I did
+- Created a small markdown body draft locally and attempted PR creation:
+  - `prescribe create --base main --title ... --body ...`
+- Confirmed the existing PR:
+  - `gh pr view 20 --json number,title,state,url,headRefName,baseRefName`
+
+### Why
+- The user request was to create a PR using `prescribe`; this is the canonical command for that.
+
+### What worked
+- `prescribe create` correctly detected the existing PR and surfaced the existing URL.
+
+### What didn't work
+- PR creation failed because it already exists:
+  - `a pull request for branch "wesen:task/add-docmgr-skills" into branch "main" already exists: https://github.com/go-go-golems/docmgr/pull/20`
+
+### What I learned
+- `prescribe create` saves PR data on failure (e.g., `.pr-builder/pr-data-*.yaml`), which is useful for debugging or reruns.
+
+### What was tricky to build
+- N/A
+
+### What warrants a second pair of eyes
+- N/A
+
+### What should be done in the future
+- If the PR description needs refreshing, use `gh pr edit 20 --title ... --body-file ...` (or add a dedicated `prescribe update` command).
+
+### Code review instructions
+- PR is already open: https://github.com/go-go-golems/docmgr/pull/20
+
+### Technical details
+- `gh` warning observed during create attempt: `Warning: 4 uncommitted changes` (untracked local `prescribe` artifacts; not pushed).
+
+### What I'd do differently next time
+- Check for an existing PR up front with `gh pr list --head wesen:task/add-docmgr-skills` before invoking `prescribe create`.

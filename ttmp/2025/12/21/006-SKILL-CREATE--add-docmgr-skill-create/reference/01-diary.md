@@ -77,3 +77,44 @@ I also skimmed `prescribe`’s built-in workflow help to confirm the intended CL
 
 ### What I'd do differently next time
 - Create the diary doc at the very start of the session, before any exploratory commands, so absolutely everything is captured.
+
+## Step 2: Commit the diary bootstrap
+
+This step commits the newly created diary document so it travels with the branch and is visible to reviewers alongside the PR.
+
+Keeping the diary changes in their own commit also makes it easy to review (and, if needed, to revert) without mixing it with future functional changes.
+
+**Commit (docs):** d2b3326 — "Ticket 006: start diary"
+
+### What I did
+- Added and committed `ttmp/.../reference/01-diary.md`.
+
+### Why
+- Ensure the diary is part of the branch history and PR review context.
+
+### What worked
+- Pre-commit hooks ran and did not block the commit.
+
+### What didn't work
+- N/A
+
+### What I learned
+- The repo runs `lefthook` pre-commit hooks, but this commit only touched docs so lint/test hooks were skipped.
+
+### What was tricky to build
+- N/A
+
+### What warrants a second pair of eyes
+- N/A
+
+### What should be done in the future
+- N/A
+
+### Code review instructions
+- Review `ttmp/2025/12/21/006-SKILL-CREATE--add-docmgr-skill-create/reference/01-diary.md` only.
+
+### Technical details
+- Commit command: `git add ... && git commit -m "Ticket 006: start diary"`
+
+### What I'd do differently next time
+- N/A

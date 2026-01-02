@@ -118,3 +118,52 @@ Keeping the diary changes in their own commit also makes it easy to review (and,
 
 ### What I'd do differently next time
 - N/A
+
+## Step 3: Push branch (and run repo hooks)
+
+This step pushed the branch to the configured tracking remote so a GitHub PR can be opened against the upstream base branch.
+
+The push triggered the repo’s pre-push `lefthook` suite, so we also got a clean signal on tests, a snapshot release build, and `golangci-lint` before opening the PR.
+
+**Commit (code):** N/A (push only)
+
+### What I did
+- Verified a clean working tree: `git status -sb`.
+- Pushed the tracking branch: `git push`.
+- Observed pre-push hooks:
+  - `go test ./...`
+  - `goreleaser release --skip=sign --snapshot --clean`
+  - `golangci-lint run -v`
+
+### Why
+- GitHub PR creation requires the branch to exist on a remote.
+- Running hooks pre-push reduces the risk of opening a PR with obvious failures.
+
+### What worked
+- All hook steps completed successfully; lint reported `0 issues`.
+- Push succeeded to `github.com:wesen/docmgr.git` for `task/add-docmgr-skills`.
+
+### What didn't work
+- N/A
+
+### What I learned
+- The pre-push hook includes a fairly heavy snapshot `goreleaser` run; expect `git push` to take ~1–2 minutes even for small changes.
+- `goreleaser` emitted deprecation warnings (`snapshot.name_template`, `brews`) but still succeeded.
+
+### What was tricky to build
+- N/A
+
+### What warrants a second pair of eyes
+- Confirm that opening a PR from the `wesen` fork into `go-go-golems/docmgr` is the intended upstream flow for this repository.
+
+### What should be done in the future
+- Consider whether the snapshot `goreleaser` step should run on every push (it’s correct, but expensive); if not, tighten the hook conditions.
+
+### Code review instructions
+- N/A (no changes beyond the push).
+
+### Technical details
+- Remote push line: `ab0a666..5d9c8ee  task/add-docmgr-skills -> task/add-docmgr-skills`
+
+### What I'd do differently next time
+- N/A

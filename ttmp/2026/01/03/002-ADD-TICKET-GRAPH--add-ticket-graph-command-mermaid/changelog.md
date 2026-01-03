@@ -53,3 +53,13 @@ Step 10: Upload updated diary + guide to reMarkable
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid/reference/01-diary.md — Upload diary and record publishing step
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid/reference/02-ticket-graph-mermaid-design-and-implementation-guide.md — Upload design/implementation guide
+
+
+## 2026-01-03
+
+Step 11: Keep edges for basename-suffix matched triggers (commit 518570c)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/ticket_graph.go — Preserve triggering edges when QueryDocs discovers docs via basename-only suffix matching
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/ticket_graph_test.go — Regression test for suffix-trigger edge retention

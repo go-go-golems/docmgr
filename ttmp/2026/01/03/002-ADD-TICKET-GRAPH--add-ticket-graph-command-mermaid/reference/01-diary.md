@@ -513,3 +513,53 @@ Because I had already uploaded earlier versions, the first non-`--force` run fai
 ### Technical details
 - Uploader script: `python3 /home/manuel/.local/bin/remarkable_upload.py`
 - Rendering path: `pandoc` → `xelatex` (DejaVu fonts)
+
+## Step 11: Keep edges for basename-suffix matched triggers (avoid orphaned transitive docs)
+
+This step fixed a subtle correctness bug in `docmgr ticket graph` when running transitive expansion with `--expand-files=false`. If the file frontier contains a basename-only key (for example `main.go`), `Workspace.QueryDocs` can discover documents via its suffix matching (`%/main.go`), but the graph builder would drop the triggering edge because the discovered document’s canonicalized `RelatedFiles` entry typically includes a directory (for example `pkg/main.go`) and didn’t exactly match the trigger set. The practical symptom is an orphaned doc node: it appears in the expanded graph but has no visible relationship to the file that caused it to be included.
+
+The fix is to mirror QueryDocs’ basename-only suffix semantics in the graph builder’s “trigger edge retention” filter: when a trigger is basename-only, allow edges to any related file that ends with `/<basename>` (or equals the basename), so the relationship is preserved without re-enabling full file expansion.
+
+**Commit (code):** 518570c0cc26409ec80392c8b9801826e532fdfe — "Ticket: keep edges for basename suffix triggers"
+
+### What I did
+- Updated `pkg/commands/ticket_graph.go` to treat basename-only triggers as suffix matchers when filtering edges for `--expand-files=false`.
+- Added a regression test that reproduces the exact scenario:
+  - Ticket 1 references `a.go` (basename-only, file exists at `pkg/a.go`)
+  - Ticket 2 references `pkg/a.go`
+  - `--scope repo --depth 1 --expand-files=false` must include Ticket 2 and retain an edge to `pkg/a.go`.
+- Ran `GOWORK=off go test ./... -count=1`.
+- Manually re-ran the graph command on this ticket to confirm no regressions:
+  - `GOWORK=off go run ./cmd/docmgr ticket graph --ticket 002-ADD-TICKET-GRAPH --scope repo --depth 1 --expand-files=false --format mermaid`
+
+### Why
+- Transitive graphs are only useful if every discovered node retains the relationship that caused it to be discovered; orphaned nodes hide the causal link and make the graph misleading.
+- The behavior should align with the existing `doc search --file <basename>` UX, which intentionally supports basename-only reverse lookup.
+
+### What worked
+- The regression test now asserts the graph output includes `pkg/a.go` when the trigger is `a.go`.
+- The graph command still runs successfully on the real ticket workspace.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Query-time matching can be strictly more permissive than the graph’s canonicalization, so any “keep only triggering edges” mode needs to mirror the query’s permissive matching rules (at least for basename-only suffix matching).
+
+### What was tricky to build
+- Reproducing the bug deterministically required a setup where:
+  - the trigger key is truly basename-only (because the file does not exist at repo root), and
+  - the discovered doc canonicalizes its related file to a directory path (`pkg/a.go`).
+
+### What warrants a second pair of eyes
+- Confirm this fix is the right “minimal” alignment:
+  - we only add basename-only suffix matching (not broader fuzzy matching),
+  - and we only apply it when `--expand-files=false` (trigger-filtering mode).
+
+### What should be done in the future
+- If more permissive matching is needed (e.g. 2–3 segment suffixes), consider exposing it as an explicit flag rather than silently broadening the meaning of `--expand-files=false`.
+
+### Code review instructions
+- Start in `pkg/commands/ticket_graph.go` (`addDocAndEdges` trigger filtering).
+- Run:
+  - `GOWORK=off go test ./pkg/commands -run BasenameTriggerKeepsEdge -v`

@@ -9,4 +9,4 @@
 - [x] Implement transitive expansion (depth/scope/batching/limits)
 - [x] Add unit tests for Mermaid escaping/ID stability + minimal workspace fixture test
 - [x] Validate by running docmgr ticket graph on this ticket and on a historical ticket
-- [ ] Update diary/changelog and upload updated docs to reMarkable
+- [x] Update diary/changelog and upload updated docs to reMarkable

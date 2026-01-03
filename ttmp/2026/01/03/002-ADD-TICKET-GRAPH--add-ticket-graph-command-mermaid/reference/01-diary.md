@@ -471,3 +471,45 @@ I intentionally avoided testing “error printing” through the cobra wrapper b
 
 ### Code review instructions
 - Start in `pkg/commands/ticket_graph_test.go` and run `GOWORK=off go test ./pkg/commands -run TestTicketGraph -v`.
+
+## Step 10: Upload diary + guide PDFs to reMarkable
+
+This step pushed the latest versions of the ticket diary and the design/implementation guide to the reMarkable so I can review the documents away from the workstation. The upload also serves as a quick “does pandoc still render this cleanly?” check for long Markdown documents.
+
+Because I had already uploaded earlier versions, the first non-`--force` run failed with “entry already exists”; rerunning with `--force` replaced the PDFs successfully.
+
+### What I did
+- Dry-run upload to confirm the remote destination paths and PDF names:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --ticket-dir /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid --mirror-ticket-structure --dry-run ...`
+- Upload with overwrite enabled:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --force --ticket-dir /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid --mirror-ticket-structure ...`
+
+### Why
+- Keep a readable, annotated copy of the docs on the reMarkable (diary + guide).
+- Confirm that the Markdown converts to PDF cleanly (frontmatter stripping + pandoc/xelatex path).
+
+### What worked
+- Both PDFs uploaded to:
+  - `ai/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid/reference/`
+
+### What didn't work
+- The initial upload without `--force` failed with:
+  - `Error: entry already exists (use --force to recreate, --content-only to replace content)`
+
+### What I learned
+- When iterating on the same ticket docs, I should expect collisions and either:
+  - upload into a new remote ticket root, or
+  - explicitly use `--force` once I’ve confirmed the destination is correct via `--dry-run`.
+
+### What was tricky to build
+- N/A (no implementation work here; this was a publishing step).
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- N/A.
+
+### Technical details
+- Uploader script: `python3 /home/manuel/.local/bin/remarkable_upload.py`
+- Rendering path: `pandoc` → `xelatex` (DejaVu fonts)

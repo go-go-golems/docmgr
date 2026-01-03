@@ -341,6 +341,7 @@ This describes the *shape* of the algorithm. In practice, you’ll want to:
 - deduplicate within a batch,
 - avoid emitting edges twice,
 - optionally only connect a newly discovered doc to the *triggering* file(s) (to keep graphs readable),
+- if `RelatedFile` triggers include basename-only keys (e.g. `main.go`), mirror `QueryDocs`’ basename suffix matching (`%/main.go`) when deciding which edges are “triggering” (otherwise discovered docs can become orphaned in `--expand-files=false` mode),
 - enforce `max-nodes/max-edges` aggressively.
 
 ### 5) Choosing canonical keys and labels (docs vs files)

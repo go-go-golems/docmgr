@@ -563,3 +563,25 @@ The fix is to mirror QueryDocs’ basename-only suffix semantics in the graph bu
 - Start in `pkg/commands/ticket_graph.go` (`addDocAndEdges` trigger filtering).
 - Run:
   - `GOWORK=off go test ./pkg/commands -run BasenameTriggerKeepsEdge -v`
+
+## Step 12: Re-upload updated ticket docs to reMarkable
+
+This step re-published the updated diary and guide PDFs to the reMarkable after making changes for the basename-suffix edge retention fix. The goal is to keep the device copies in sync with the repository docs so reviewing/annotating doesn’t drift from the source of truth.
+
+Because these files were already present on the device, I used the standard workflow (dry-run first, then `--force`) to intentionally overwrite the existing PDFs.
+
+### What I did
+- Dry-run to confirm destination and filenames:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --ticket-dir /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid --mirror-ticket-structure --dry-run ...`
+- Upload with overwrite:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --force --ticket-dir /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid --mirror-ticket-structure ...`
+
+### What worked
+- PDFs uploaded to:
+  - `ai/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid/reference/`
+
+### What didn't work
+- N/A.
+
+### What should be done in the future
+- N/A.

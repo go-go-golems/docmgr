@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/workspace"
+	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -29,6 +30,12 @@ type TicketGraphSettings struct {
 	Direction          string `glazed.parameter:"direction"`
 	Label              string `glazed.parameter:"label"`
 	EdgeNotes          string `glazed.parameter:"edge-notes"`
+	Depth              int    `glazed.parameter:"depth"`
+	Scope              string `glazed.parameter:"scope"`
+	ExpandFiles        bool   `glazed.parameter:"expand-files"`
+	MaxNodes           int    `glazed.parameter:"max-nodes"`
+	MaxEdges           int    `glazed.parameter:"max-edges"`
+	BatchSize          int    `glazed.parameter:"batch-size"`
 	IncludeControlDocs bool   `glazed.parameter:"include-control-docs"`
 	IncludeArchived    bool   `glazed.parameter:"include-archived"`
 	IncludeScriptsPath bool   `glazed.parameter:"include-scripts-path"`
@@ -43,7 +50,10 @@ func NewTicketGraphCommand() (*TicketGraphCommand, error) {
 - all markdown docs in the ticket workspace, and
 - the code files referenced via frontmatter RelatedFiles.
 
-This is the "depth=0" ticket graph: it does not yet expand transitively to other tickets.
+With --scope repo and --depth > 0, the command expands the graph transitively:
+  docs -> related files -> other docs that reference those files -> ...
+
+Safety: transitive expansion can grow quickly; use --max-nodes/--max-edges and keep depth small.
 
 Examples:
   # Pasteable Markdown with a mermaid code block (default)
@@ -54,6 +64,9 @@ Examples:
 
   # Structured edge list (for scripts)
   docmgr ticket graph --ticket MEN-4242 --with-glaze-output --output table
+
+  # Repo-wide transitive expansion (depth 1), do not expand file frontier
+  docmgr ticket graph --ticket MEN-4242 --scope repo --depth 1 --expand-files=false
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -93,6 +106,42 @@ Examples:
 					parameters.WithDefault("short"),
 				),
 				parameters.NewParameterDefinition(
+					"depth",
+					parameters.ParameterTypeInteger,
+					parameters.WithHelp("Transitive expansion depth (0=ticket docs + their related files only)"),
+					parameters.WithDefault(0),
+				),
+				parameters.NewParameterDefinition(
+					"scope",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Graph expansion scope: ticket|repo (repo required for depth>0)"),
+					parameters.WithDefault("ticket"),
+				),
+				parameters.NewParameterDefinition(
+					"expand-files",
+					parameters.ParameterTypeBool,
+					parameters.WithHelp("When expanding to new docs, also add their RelatedFiles to the file frontier"),
+					parameters.WithDefault(false),
+				),
+				parameters.NewParameterDefinition(
+					"max-nodes",
+					parameters.ParameterTypeInteger,
+					parameters.WithHelp("Maximum total nodes (docs + files) before failing"),
+					parameters.WithDefault(500),
+				),
+				parameters.NewParameterDefinition(
+					"max-edges",
+					parameters.ParameterTypeInteger,
+					parameters.WithHelp("Maximum total edges before failing"),
+					parameters.WithDefault(2000),
+				),
+				parameters.NewParameterDefinition(
+					"batch-size",
+					parameters.ParameterTypeInteger,
+					parameters.WithHelp("Batch size for repo-scope reverse lookup queries during expansion"),
+					parameters.WithDefault(50),
+				),
+				parameters.NewParameterDefinition(
 					"include-control-docs",
 					parameters.ParameterTypeBool,
 					parameters.WithHelp("Include control docs (README.md, tasks.md, changelog.md)"),
@@ -125,7 +174,7 @@ func (c *TicketGraphCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	graph, err := buildTicketGraphDepth0(ctx, settings)
+	graph, err := buildTicketGraph(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -158,7 +207,7 @@ func (c *TicketGraphCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	graph, err := buildTicketGraphDepth0(ctx, settings)
+	graph, err := buildTicketGraph(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -195,9 +244,40 @@ type ticketGraphEdge struct {
 	label       string
 }
 
-func buildTicketGraphDepth0(ctx context.Context, settings *TicketGraphSettings) (*ticketGraph, error) {
+type ticketGraphBuilder struct {
+	ws       *workspace.Workspace
+	settings *TicketGraphSettings
+
+	graph   *ticketGraph
+	edgeSet map[string]struct{}
+}
+
+func buildTicketGraph(ctx context.Context, settings *TicketGraphSettings) (*ticketGraph, error) {
 	if strings.TrimSpace(settings.Ticket) == "" {
 		return nil, fmt.Errorf("missing --ticket")
+	}
+
+	if settings.Depth < 0 {
+		return nil, fmt.Errorf("invalid --depth %d (must be >= 0)", settings.Depth)
+	}
+	settings.Scope = strings.ToLower(strings.TrimSpace(settings.Scope))
+	if settings.Scope == "" {
+		settings.Scope = "ticket"
+	}
+	if settings.Scope != "ticket" && settings.Scope != "repo" {
+		return nil, fmt.Errorf("invalid --scope %q (expected ticket or repo)", settings.Scope)
+	}
+	if settings.Depth > 0 && settings.Scope != "repo" {
+		return nil, fmt.Errorf("--depth %d requires --scope repo (refusing to expand without explicit repo scope)", settings.Depth)
+	}
+	if settings.BatchSize <= 0 {
+		return nil, fmt.Errorf("invalid --batch-size %d (must be > 0)", settings.BatchSize)
+	}
+	if settings.MaxNodes <= 0 {
+		return nil, fmt.Errorf("invalid --max-nodes %d (must be > 0)", settings.MaxNodes)
+	}
+	if settings.MaxEdges <= 0 {
+		return nil, fmt.Errorf("invalid --max-edges %d (must be > 0)", settings.MaxEdges)
 	}
 
 	settings.Root = workspace.ResolveRoot(settings.Root)
@@ -211,81 +291,252 @@ func buildTicketGraphDepth0(ctx context.Context, settings *TicketGraphSettings) 
 		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
+	b := &ticketGraphBuilder{
+		ws:       ws,
+		settings: settings,
+		graph: &ticketGraph{
+			direction: strings.TrimSpace(settings.Direction),
+			docNodes:  map[string]ticketGraphDocNode{},
+			fileNodes: map[string]struct{}{},
+		},
+		edgeSet: map[string]struct{}{},
+	}
+	if err := b.addTicketDocsDepth0(ctx); err != nil {
+		return nil, err
+	}
+	if settings.Depth > 0 {
+		if err := b.expandTransitive(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	// Stable output ordering.
+	sort.Slice(b.graph.edges, func(i, j int) bool {
+		if b.graph.edges[i].fromDocPath != b.graph.edges[j].fromDocPath {
+			return b.graph.edges[i].fromDocPath < b.graph.edges[j].fromDocPath
+		}
+		if b.graph.edges[i].toFileKey != b.graph.edges[j].toFileKey {
+			return b.graph.edges[i].toFileKey < b.graph.edges[j].toFileKey
+		}
+		return b.graph.edges[i].label < b.graph.edges[j].label
+	})
+
+	return b.graph, nil
+}
+
+func (b *ticketGraphBuilder) addTicketDocsDepth0(ctx context.Context) error {
+	res, err := b.ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(b.settings.Ticket)},
 		Options: workspace.DocQueryOptions{
 			IncludeErrors:       false,
 			IncludeDiagnostics:  false,
 			IncludeBody:         false,
-			IncludeControlDocs:  settings.IncludeControlDocs,
-			IncludeArchivedPath: settings.IncludeArchived,
-			IncludeScriptsPath:  settings.IncludeScriptsPath,
+			IncludeControlDocs:  b.settings.IncludeControlDocs,
+			IncludeArchivedPath: b.settings.IncludeArchived,
+			IncludeScriptsPath:  b.settings.IncludeScriptsPath,
 			OrderBy:             workspace.OrderByPath,
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to query docs: %w", err)
-	}
-
-	g := &ticketGraph{
-		direction: strings.TrimSpace(settings.Direction),
-		docNodes:  map[string]ticketGraphDocNode{},
-		fileNodes: map[string]struct{}{},
+		return fmt.Errorf("failed to query ticket docs: %w", err)
 	}
 
 	for _, h := range res.Docs {
 		if h.Doc == nil {
 			continue
 		}
+		if err := b.addDocAndEdges(h.Path, h.Doc, nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-		docPathAbs := filepath.ToSlash(filepath.Clean(h.Path))
+func (b *ticketGraphBuilder) expandTransitive(ctx context.Context) error {
+	frontier := make([]string, 0, len(b.graph.fileNodes))
+	for k := range b.graph.fileNodes {
+		frontier = append(frontier, k)
+	}
+	sort.Strings(frontier)
+
+	for level := 1; level <= b.settings.Depth; level++ {
+		if len(frontier) == 0 {
+			return nil
+		}
+
+		var nextFrontier []string
+		seenThisLevel := map[string]struct{}{}
+
+		for i := 0; i < len(frontier); i += b.settings.BatchSize {
+			end := i + b.settings.BatchSize
+			if end > len(frontier) {
+				end = len(frontier)
+			}
+			batch := frontier[i:end]
+
+			res, err := b.ws.QueryDocs(ctx, workspace.DocQuery{
+				Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+				Filters: workspace.DocFilters{
+					RelatedFile: batch,
+				},
+				Options: workspace.DocQueryOptions{
+					IncludeErrors:       false,
+					IncludeDiagnostics:  false,
+					IncludeBody:         false,
+					IncludeControlDocs:  b.settings.IncludeControlDocs,
+					IncludeArchivedPath: b.settings.IncludeArchived,
+					IncludeScriptsPath:  b.settings.IncludeScriptsPath,
+					OrderBy:             workspace.OrderByPath,
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to expand via related file batch (level=%d): %w", level, err)
+			}
+
+			for _, h := range res.Docs {
+				if h.Doc == nil {
+					continue
+				}
+				if strings.TrimSpace(h.Doc.Ticket) == "" {
+					continue
+				}
+				// In repo scope we include all tickets; keep this check here in case we add more scopes later.
+				if b.settings.Scope != "repo" && strings.TrimSpace(h.Doc.Ticket) != strings.TrimSpace(b.settings.Ticket) {
+					continue
+				}
+
+				if err := b.addDocAndEdges(h.Path, h.Doc, batch); err != nil {
+					return err
+				}
+
+				if b.settings.ExpandFiles {
+					for _, rf := range h.Doc.RelatedFiles {
+						key := canonicalizeForGraph(b.docResolver(h.Path), rf.Path)
+						if strings.TrimSpace(key) == "" {
+							continue
+						}
+						if _, ok := b.graph.fileNodes[key]; ok {
+							continue
+						}
+						if _, ok := seenThisLevel[key]; ok {
+							continue
+						}
+						seenThisLevel[key] = struct{}{}
+						nextFrontier = append(nextFrontier, key)
+					}
+				}
+			}
+		}
+
+		sort.Strings(nextFrontier)
+		frontier = nextFrontier
+	}
+
+	return nil
+}
+
+func (b *ticketGraphBuilder) addDocAndEdges(docPath string, doc *models.Document, triggerFiles []string) error {
+	if doc == nil {
+		return nil
+	}
+
+	docPathAbs := filepath.ToSlash(filepath.Clean(docPath))
+	if _, ok := b.graph.docNodes[docPathAbs]; !ok {
+		if err := b.ensureNodeBudget(1); err != nil {
+			return err
+		}
+
 		docPathRel := docPathAbs
-		if rel, err := filepath.Rel(ws.Context().Root, filepath.FromSlash(docPathAbs)); err == nil {
+		if rel, err := filepath.Rel(b.ws.Context().Root, filepath.FromSlash(docPathAbs)); err == nil {
 			docPathRel = filepath.ToSlash(rel)
 		}
-
-		g.docNodes[docPathAbs] = ticketGraphDocNode{
+		b.graph.docNodes[docPathAbs] = ticketGraphDocNode{
 			pathRel: docPathRel,
-			ticket:  h.Doc.Ticket,
-			title:   h.Doc.Title,
-			docType: h.Doc.DocType,
-		}
-
-		docResolver := paths.NewResolver(paths.ResolverOptions{
-			DocsRoot:  ws.Context().Root,
-			DocPath:   filepath.FromSlash(docPathAbs),
-			ConfigDir: ws.Context().ConfigDir,
-			RepoRoot:  ws.Context().RepoRoot,
-		})
-
-		for _, rf := range h.Doc.RelatedFiles {
-			fileKey := canonicalizeForGraph(docResolver, rf.Path)
-			if strings.TrimSpace(fileKey) == "" {
-				continue
-			}
-			g.fileNodes[fileKey] = struct{}{}
-			g.edges = append(g.edges, ticketGraphEdge{
-				fromDocPath: docPathAbs,
-				fromTicket:  h.Doc.Ticket,
-				fromTitle:   h.Doc.Title,
-				toFileKey:   fileKey,
-				label:       edgeLabel(settings.EdgeNotes, rf.Note),
-			})
+			ticket:  doc.Ticket,
+			title:   doc.Title,
+			docType: doc.DocType,
 		}
 	}
 
-	// Stable output ordering.
-	sort.Slice(g.edges, func(i, j int) bool {
-		if g.edges[i].fromDocPath != g.edges[j].fromDocPath {
-			return g.edges[i].fromDocPath < g.edges[j].fromDocPath
+	docResolver := b.docResolver(docPathAbs)
+	triggerSet := map[string]struct{}{}
+	if len(triggerFiles) > 0 && !b.settings.ExpandFiles {
+		for _, t := range triggerFiles {
+			triggerSet[strings.TrimSpace(t)] = struct{}{}
 		}
-		if g.edges[i].toFileKey != g.edges[j].toFileKey {
-			return g.edges[i].toFileKey < g.edges[j].toFileKey
-		}
-		return g.edges[i].label < g.edges[j].label
-	})
+	}
 
-	return g, nil
+	for _, rf := range doc.RelatedFiles {
+		fileKey := canonicalizeForGraph(docResolver, rf.Path)
+		if strings.TrimSpace(fileKey) == "" {
+			continue
+		}
+		if len(triggerSet) > 0 {
+			if _, ok := triggerSet[fileKey]; !ok {
+				continue
+			}
+		}
+
+		if _, ok := b.graph.fileNodes[fileKey]; !ok {
+			if err := b.ensureNodeBudget(1); err != nil {
+				return err
+			}
+			b.graph.fileNodes[fileKey] = struct{}{}
+		}
+
+		label := edgeLabel(b.settings.EdgeNotes, rf.Note)
+		edgeKey := docPathAbs + "\x00" + fileKey + "\x00" + label
+		if _, ok := b.edgeSet[edgeKey]; ok {
+			continue
+		}
+		if err := b.ensureEdgeBudget(1); err != nil {
+			return err
+		}
+		b.edgeSet[edgeKey] = struct{}{}
+		b.graph.edges = append(b.graph.edges, ticketGraphEdge{
+			fromDocPath: docPathAbs,
+			fromTicket:  doc.Ticket,
+			fromTitle:   doc.Title,
+			toFileKey:   fileKey,
+			label:       label,
+		})
+	}
+
+	return nil
+}
+
+func (b *ticketGraphBuilder) docResolver(docPath string) *paths.Resolver {
+	docPathAbs := filepath.ToSlash(filepath.Clean(docPath))
+	return paths.NewResolver(paths.ResolverOptions{
+		DocsRoot:  b.ws.Context().Root,
+		DocPath:   filepath.FromSlash(docPathAbs),
+		ConfigDir: b.ws.Context().ConfigDir,
+		RepoRoot:  b.ws.Context().RepoRoot,
+	})
+}
+
+func (b *ticketGraphBuilder) ensureNodeBudget(delta int) error {
+	if delta <= 0 {
+		return nil
+	}
+	current := len(b.graph.docNodes) + len(b.graph.fileNodes)
+	next := current + delta
+	if next > b.settings.MaxNodes {
+		return fmt.Errorf("graph would exceed --max-nodes=%d (current=%d, next=%d); increase --max-nodes or reduce --depth/--scope/--expand-files", b.settings.MaxNodes, current, next)
+	}
+	return nil
+}
+
+func (b *ticketGraphBuilder) ensureEdgeBudget(delta int) error {
+	if delta <= 0 {
+		return nil
+	}
+	current := len(b.graph.edges)
+	next := current + delta
+	if next > b.settings.MaxEdges {
+		return fmt.Errorf("graph would exceed --max-edges=%d (current=%d, next=%d); increase --max-edges or reduce --depth/--scope/--expand-files", b.settings.MaxEdges, current, next)
+	}
+	return nil
 }
 
 func canonicalizeForGraph(resolver *paths.Resolver, raw string) string {

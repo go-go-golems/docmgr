@@ -11,6 +11,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/commands/changelog.go
+      Note: Adjust reminder text to canonical verbs
+    - Path: pkg/commands/relate.go
+      Note: Doc relate example changes verified by running relate
     - Path: ttmp/2026/01/03/003-BETTER-EXAMPLES--add-better-usage-examples-to-docmgr-command-help/index.md
       Note: Define ticket overview
     - Path: ttmp/2026/01/03/003-BETTER-EXAMPLES--add-better-usage-examples-to-docmgr-command-help/reference/01-diary.md
@@ -23,6 +27,7 @@ LastUpdated: 2026-01-03T18:14:20.549352964-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 # Diary
@@ -73,3 +78,44 @@ The key outcome is a concrete audit starting point: `pkg/commands/*.go` uses `cm
 ### Technical details
 - Status command used: `GOWORK=off go run ./cmd/docmgr status --summary-only`
 - Ticket created with: `GOWORK=off go run ./cmd/docmgr ticket create-ticket --ticket 003-BETTER-EXAMPLES --title "Add better usage examples to docmgr command help" --topics docmgr,cli,docs,ux`
+
+## Step 2: Fix initial help examples + validate doc relate
+
+This step started the actual “better examples” work by updating a first slice of command long help strings, focusing on correctness (use real subcommands) and on having copy/paste-ready multi-flag examples. It also removed the suggestion-focused `doc relate` examples per request and replaced them with multi-file relating examples.
+
+**Commit (code):** 8692e86 — "CLI: refresh help examples"
+
+### What I did
+- Updated long help examples to use the actual cobra command tree (`docmgr ticket ...`, `docmgr doc ...`), and fixed the README template text emitted by ticket creation.
+- Removed `--suggest` examples from `docmgr doc relate` and replaced them with “relate multiple files at once” examples.
+- Ran “real” CLI invocations against ticket `003-BETTER-EXAMPLES` to validate `docmgr doc relate` behavior.
+
+### Why
+- Some examples in the codebase referenced legacy root-level verbs (`docmgr add`, `docmgr create-ticket`) that are no longer valid in this build.
+- The goal of this ticket is for examples to be executable, not aspirational.
+
+### What worked
+- `docmgr doc relate --ticket 003-BETTER-EXAMPLES --file-note ...` updates `index.md` RelatedFiles as expected.
+- `docmgr doc relate --doc .../reference/01-diary.md --file-note ...` updates the document frontmatter as expected.
+- `go test ./... -count=1` passed after the edits.
+
+### What didn't work
+- N/A
+
+### What I learned
+- The same command implementation can be surfaced under multiple cobra paths (e.g., search), so help examples should prefer the canonical grouping even if aliases exist.
+
+### What was tricky to build
+- Keeping examples correct across both the CLI surface and template-generated docs (ticket README template).
+
+### What warrants a second pair of eyes
+- Confirm which invocation style we want to standardize on in examples when a command is intentionally duplicated (e.g., `docmgr status` vs `docmgr workspace status`, `docmgr search` alias).
+
+### What should be done in the future
+- N/A
+
+### Code review instructions
+- Start with `pkg/commands/relate.go`, then skim `pkg/commands/create_ticket.go` and `pkg/commands/add.go`.
+- Validate the examples by running:
+  - `GOWORK=off go run ./cmd/docmgr doc relate --help`
+  - `GOWORK=off go run ./cmd/docmgr ticket create-ticket --help`

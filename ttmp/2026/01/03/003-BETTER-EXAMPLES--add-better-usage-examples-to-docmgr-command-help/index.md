@@ -10,13 +10,20 @@ Topics:
 DocType: index
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: pkg/commands/add.go
+      Note: Update doc add help examples
+    - Path: pkg/commands/create_ticket.go
+      Note: Update create-ticket help examples + README template
+    - Path: pkg/commands/relate.go
+      Note: Update doc relate help examples (remove suggest
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-03T18:14:17.539055087-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 # Add better usage examples to docmgr command help
 

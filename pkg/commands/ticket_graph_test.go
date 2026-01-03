@@ -254,6 +254,102 @@ LastUpdated: 2026-01-03T00:00:00Z
 	}
 }
 
+func TestTicketGraph_TransitiveDepth1_RepoScope_BasenameTriggerKeepsEdge(t *testing.T) {
+	tmp := t.TempDir()
+	repo := filepath.Join(tmp, "repo")
+	root := filepath.Join(repo, "ttmp")
+
+	if err := os.MkdirAll(filepath.Join(repo, "pkg"), 0o755); err != nil {
+		t.Fatalf("mkdir repo/pkg: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "pkg", "a.go"), []byte("package pkg\n"), 0o644); err != nil {
+		t.Fatalf("write a.go: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "go.mod"), []byte("module example.com/test\n\ngo 1.24.2\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+
+	// Ticket 1 references the shared file by basename only ("a.go"). This does not exist
+	// at repo root, so canonicalizeForGraph yields "a.go"; QueryDocs will still match other
+	// docs via suffix matching ("%/a.go").
+	t1Dir := filepath.Join(root, "2026", "01", "03", "MEN-1--demo")
+	if err := os.MkdirAll(t1Dir, 0o755); err != nil {
+		t.Fatalf("mkdir t1: %v", err)
+	}
+	t1 := `---
+Title: Ticket One
+Ticket: MEN-1
+DocType: index
+Status: active
+Topics: []
+Owners: []
+RelatedFiles:
+  - Path: a.go
+    Note: basename-only
+ExternalSources: []
+Summary: ""
+LastUpdated: 2026-01-03T00:00:00Z
+---
+
+# Ticket One
+`
+	if err := os.WriteFile(filepath.Join(t1Dir, "index.md"), []byte(t1), 0o644); err != nil {
+		t.Fatalf("write t1 index: %v", err)
+	}
+
+	// Ticket 2 references the same file with a repo-relative path.
+	t2Dir := filepath.Join(root, "2026", "01", "03", "MEN-2--demo")
+	if err := os.MkdirAll(filepath.Join(t2Dir, "reference"), 0o755); err != nil {
+		t.Fatalf("mkdir t2: %v", err)
+	}
+	t2 := `---
+Title: External Doc
+Ticket: MEN-2
+DocType: reference
+Status: active
+Topics: []
+Owners: []
+RelatedFiles:
+  - Path: pkg/a.go
+    Note: repo-relative
+ExternalSources: []
+Summary: ""
+LastUpdated: 2026-01-03T00:00:00Z
+---
+
+# External Doc
+`
+	if err := os.WriteFile(filepath.Join(t2Dir, "reference", "01-external.md"), []byte(t2), 0o644); err != nil {
+		t.Fatalf("write t2 doc: %v", err)
+	}
+
+	oldCwd, _ := os.Getwd()
+	_ = os.Chdir(repo)
+	t.Cleanup(func() { _ = os.Chdir(oldCwd) })
+
+	cobraCmd := buildTicketGraphCobra(t)
+	cobraCmd.SetArgs([]string{
+		"--ticket", "MEN-1",
+		"--root", root,
+		"--format", "mermaid",
+		"--scope", "repo",
+		"--depth", "1",
+		"--expand-files=false",
+		"--max-nodes", "200",
+		"--max-edges", "500",
+	})
+	s, err := captureStdout(t, cobraCmd.Execute)
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !strings.Contains(s, "MEN-2") {
+		t.Fatalf("expected transitive expansion to include external ticket doc, got: %s", s)
+	}
+	if !strings.Contains(s, "pkg/a.go") {
+		t.Fatalf("expected suffix-matched trigger to keep an edge to the canonical related file (pkg/a.go), got: %s", s)
+	}
+}
+
 func TestTicketGraph_DepthRequiresRepoScope(t *testing.T) {
 	// Don't exercise the cobra wiring for this error case because the glazed CLI wrapper
 	// can call os.Exit on errors; validate the underlying contract directly.

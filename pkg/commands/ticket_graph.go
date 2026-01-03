@@ -460,9 +460,26 @@ func (b *ticketGraphBuilder) addDocAndEdges(docPath string, doc *models.Document
 
 	docResolver := b.docResolver(docPathAbs)
 	triggerSet := map[string]struct{}{}
+	triggerBasenames := map[string]struct{}{}
 	if len(triggerFiles) > 0 && !b.settings.ExpandFiles {
 		for _, t := range triggerFiles {
-			triggerSet[strings.TrimSpace(t)] = struct{}{}
+			t = strings.TrimSpace(t)
+			if t == "" {
+				continue
+			}
+			triggerSet[t] = struct{}{}
+			// Mirror QueryDocs behavior: if the trigger is basename-only (no separators),
+			// QueryDocs enables suffix matching ("%/basename"). When a doc is pulled in via
+			// such a suffix match, its canonicalized RelatedFiles entry will typically be
+			// repo-relative (e.g. "pkg/main.go") and would otherwise be dropped here.
+			if strings.Contains(t, "/") || strings.Contains(t, "\\") {
+				continue
+			}
+			base := filepath.ToSlash(filepath.Clean(t))
+			if base == "" || base == "." || base == "/" {
+				continue
+			}
+			triggerBasenames[base] = struct{}{}
 		}
 	}
 
@@ -473,7 +490,16 @@ func (b *ticketGraphBuilder) addDocAndEdges(docPath string, doc *models.Document
 		}
 		if len(triggerSet) > 0 {
 			if _, ok := triggerSet[fileKey]; !ok {
-				continue
+				matched := false
+				for base := range triggerBasenames {
+					if fileKey == base || strings.HasSuffix(fileKey, "/"+base) {
+						matched = true
+						break
+					}
+				}
+				if !matched {
+					continue
+				}
 			}
 		}
 

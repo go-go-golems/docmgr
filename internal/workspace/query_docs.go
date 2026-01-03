@@ -355,6 +355,7 @@ func fetchTopicsByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) (map[i
 		return map[int64][]string{}, nil
 	}
 	placeholders := makePlaceholders(len(docIDs))
+	// #nosec G202 -- placeholders are generated ("?,?") and values are bound via args, not string-interpolated.
 	sqlQ := `SELECT doc_id, COALESCE(topic_original,'') FROM doc_topics WHERE doc_id IN (` + placeholders + `) ORDER BY doc_id, topic_lower;`
 	args := make([]any, 0, len(docIDs))
 	for _, id := range docIDs {
@@ -388,6 +389,7 @@ func fetchRelatedFilesByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) 
 		return map[int64]models.RelatedFiles{}, nil
 	}
 	placeholders := makePlaceholders(len(docIDs))
+	// #nosec G202 -- placeholders are generated ("?,?") and values are bound via args, not string-interpolated.
 	sqlQ := `SELECT doc_id, COALESCE(raw_path,''), COALESCE(note,'') FROM related_files WHERE doc_id IN (` + placeholders + `) ORDER BY doc_id, rf_id;`
 	args := make([]any, 0, len(docIDs))
 	for _, id := range docIDs {

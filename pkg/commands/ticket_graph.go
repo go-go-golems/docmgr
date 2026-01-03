@@ -2,9 +2,8 @@ package commands
 
 import (
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
+	"hash/fnv"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -754,8 +753,9 @@ func buildDocLabel(n ticketGraphDocNode, labelMode string) string {
 }
 
 func shortHash(s string) string {
-	sum := sha1.Sum([]byte(s))
-	return hex.EncodeToString(sum[:])[:10]
+	h := fnv.New64a()
+	_, _ = h.Write([]byte(s))
+	return fmt.Sprintf("%016x", h.Sum64())[:10]
 }
 
 func sanitizeMermaidLabel(s string, maxLen int) string {

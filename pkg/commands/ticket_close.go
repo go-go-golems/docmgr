@@ -178,7 +178,7 @@ func (c *TicketCloseCommand) RunIntoGlazeProcessor(
 	// Append changelog entry
 	today := time.Now().Format("2006-01-02")
 	entryText := fmt.Sprintf("\n## %s\n\n%s\n\n", today, changelogEntry)
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0644)
+	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open changelog: %w", err)
 	}
@@ -290,7 +290,7 @@ func (c *TicketCloseCommand) Run(
 	// Append changelog entry
 	today := time.Now().Format("2006-01-02")
 	entryText := fmt.Sprintf("\n## %s\n\n%s\n\n", today, changelogEntry)
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0644)
+	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open changelog: %w", err)
 	}

@@ -359,7 +359,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Append to changelog
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0644)
+	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open changelog.md: %w", err)
 	}
@@ -542,7 +542,7 @@ func (c *ChangelogUpdateCommand) Run(
 		sb.WriteString("\n")
 	}
 
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0644)
+	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open changelog.md: %w", err)
 	}

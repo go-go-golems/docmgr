@@ -4,6 +4,8 @@ all: build
 
 VERSION=v0.1.14
 
+export GOWORK=off
+
 docker-lint:
 	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run -v
 

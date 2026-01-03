@@ -11,6 +11,10 @@ DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: Makefile
+      Note: Ensures hooks and local make targets don't use parent go.work
+    - Path: cmd/docmgr/cmds/ticket/graph.go
+      Note: Cobra wrapper for ticket graph
     - Path: cmd/docmgr/cmds/ticket/ticket.go
       Note: Attach point for new
     - Path: internal/paths/resolver.go
@@ -19,10 +23,13 @@ RelatedFiles:
       Note: Graph command should enumerate docs and expand transitive closure using this API
     - Path: internal/workspace/query_docs_sql.go
       Note: Defines OR semantics for RelatedFile/RelatedDir filters used for expansion
+    - Path: pkg/commands/ticket_graph.go
+      Note: New ticket graph command implementation
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-03T15:01:44.555086045-05:00
 ---
+
 
 
 # Add ticket graph command (Mermaid)

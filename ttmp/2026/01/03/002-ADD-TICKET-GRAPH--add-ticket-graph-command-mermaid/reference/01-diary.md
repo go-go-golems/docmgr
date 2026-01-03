@@ -323,3 +323,55 @@ This step translated the guide into an actionable task list inside the ticket wo
 - Commands used:
   - `cd docmgr && GOWORK=off go run ./cmd/docmgr task add --ticket 002-ADD-TICKET-GRAPH --text "..."`
   - `cd docmgr && GOWORK=off go run ./cmd/docmgr task remove --ticket 002-ADD-TICKET-GRAPH --id 1`
+
+## Step 7: Implement `docmgr ticket graph` (depth=0 Mermaid output)
+
+This step introduced the first working version of the new command: `docmgr ticket graph`. It outputs a Mermaid flowchart representing the bipartite graph between ticket docs and the code files referenced via `RelatedFiles`. The command supports a minimal but useful CLI contract (ticket selection, basic formatting controls, include/exclude knobs) and can also emit a structured edge list in glazed mode.
+
+I also fixed a practical development workflow blocker: the docmgr repo lives inside a larger workspace that contains a parent `go.work`. Pre-commit hooks run `make test` and `make lint`, and those commands were unintentionally picking up the parent `go.work` and failing. Exporting `GOWORK=off` from the docmgr `Makefile` makes the repo self-contained for `go test` and `golangci-lint` during hooks.
+
+**Commit (code):** e473c1c494d1a1c44b317d49eb42ce5db32ef892 — "Ticket: add ticket graph command (mermaid, depth 0)"
+
+### What I did
+- Added cobra wiring for the new command:
+  - `cmd/docmgr/cmds/ticket/graph.go`
+  - `cmd/docmgr/cmds/ticket/ticket.go`
+- Implemented the depth=0 graph builder + Mermaid renderer:
+  - `pkg/commands/ticket_graph.go`
+- Ensured docmgr’s `make test`/`make lint` don’t accidentally use the parent workspace `go.work`:
+  - `Makefile` now exports `GOWORK=off`
+
+### Why
+- The base ticket graph (no transitive expansion) is the smallest “end-to-end useful” slice: it exercises workspace discovery, doc enumeration, `RelatedFiles` normalization, and Mermaid rendering.
+- Fixing the hook environment was necessary to support the user request to commit in small steps while keeping pre-commit validation enabled.
+
+### What worked
+- `docmgr ticket graph` produces a valid Mermaid graph for both:
+  - `--ticket 002-ADD-TICKET-GRAPH`
+  - `--ticket 001-ADD-DOCMGR-UI` (acts as a “historical ticket” check)
+- Pre-commit hooks now pass because `make test` and `make lint` run with `GOWORK=off`.
+
+### What didn't work
+- The first commit attempt failed because pre-commit hooks ran in an environment that picked up the parent `go.work`, causing `go test`/`golangci-lint` to error. The `Makefile` export fix resolved this.
+
+### What I learned
+- When a repo is nested inside a larger mono-workspace, `go` will happily discover and use a parent `go.work` unless you explicitly disable it. This can break “self-contained module” repos in CI hooks.
+
+### What was tricky to build
+- Mermaid output contracts:
+  - Node IDs must be Mermaid-safe and stable; I used a short SHA1-based identifier.
+  - Labels and edge notes need sanitization (newlines, quotes, `|`) and truncation to avoid invalid syntax and unreadable graphs.
+
+### What warrants a second pair of eyes
+- Confirm the current label/escaping policy is sufficient for real-world paths and notes (especially edge labels that can contain punctuation and newlines).
+- Confirm whether including control docs by default is the desired UX (currently default true).
+
+### What should be done in the future
+- Add transitive expansion and safety limits (depth/scope/batching) as described in the guide, with tests that prevent graph explosion regressions.
+
+### Code review instructions
+- Start at `pkg/commands/ticket_graph.go` for the core behavior.
+- Verify wiring in `cmd/docmgr/cmds/ticket/ticket.go`.
+- Validate locally:
+  - `cd docmgr && GOWORK=off go test ./...`
+  - `cd docmgr && GOWORK=off go run ./cmd/docmgr ticket graph --ticket 002-ADD-TICKET-GRAPH --format mermaid`

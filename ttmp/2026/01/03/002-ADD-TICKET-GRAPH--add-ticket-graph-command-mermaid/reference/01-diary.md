@@ -283,6 +283,8 @@ This step published the two main documents for this ticket (the diary and the ti
 
 This step translated the guide into an actionable task list inside the ticket workspace and set up the expected commit discipline for the implementation phase. The main outcome is a scoped checklist that matches the incremental implementation plan: wire the command, implement depth=0, then add transitive expansion, tests, and validation runs.
 
+**Commit (docs):** 1a7d7bbec00ca8e34a4509cbd8b7002c6776c9d6 — "Docs: add ticket graph spec and tasks"
+
 ### What I did
 - Read `~/.cursor/commands/git-commit-instructions.md` and committed to following the “diff → stage specific files → commit message → record hash” workflow for each implementation step.
 - Added ticket tasks using `docmgr task add` and removed the scaffold placeholder task:

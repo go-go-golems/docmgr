@@ -53,8 +53,13 @@ func NewCreateTicketCommand() (*CreateTicketCommand, error) {
 			cmds.WithShort("Create a new ticket workspace under the docs root"),
 			cmds.WithLong(`Creates a new ticket workspace directory with the standard structure.
 
-Example:
-  docmgr create-ticket --ticket MEN-3475 --title "Chat API cleanup" --topics chat,llm-workflow
+Examples:
+  # Create a ticket (default root + default date-based path template)
+  docmgr ticket create-ticket --ticket MEN-3475 --title "Chat API cleanup" --topics chat,llm-workflow
+
+  # Create under a custom path template (relative to --root)
+  docmgr ticket create-ticket --ticket MEN-9999 --title "Scratch ticket for experiments" \
+    --root ttmp --path-template "_examples/{{TICKET}}--{{SLUG}}"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -209,10 +214,10 @@ This is the document workspace for ticket %s.
 
 Use docmgr commands to manage this workspace:
 
-- Add documents: `+"`docmgr add design-doc \"My Design\"`"+`
-- Import sources: `+"`docmgr import file path/to/doc.md`"+`
-- Update metadata: `+"`docmgr meta update --field Status --value review`"+`
-`, settings.Title, settings.Ticket)
+- Add documents: `+"`docmgr doc add --ticket %s --doc-type design-doc --title \"My Design\"`"+`
+- Import sources: `+"`docmgr import file --ticket %s --file /path/to/doc.md`"+`
+- Update metadata: `+"`docmgr meta update --ticket %s --field Status --value review`"+`
+`, settings.Title, settings.Ticket, settings.Ticket, settings.Ticket, settings.Ticket)
 
 	if err := writeFileIfNotExists(readmePath, []byte(readmeContent), settings.Force); err != nil {
 		return nil, fmt.Errorf("failed to write README.md: %w", err)

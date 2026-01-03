@@ -66,20 +66,16 @@ func NewRelateCommand() (*RelateCommand, error) {
 			cmds.WithLong(`Update RelatedFiles in a document's frontmatter or the ticket index.
 
 Examples:
-  # Relate files to the ticket index (notes required)
-  docmgr relate --ticket MEN-4242 \
+  # Relate multiple files to the ticket index (notes required; repeat --file-note)
+  docmgr doc relate --ticket MEN-4242 \
     --file-note "backend/chat/api/register.go:Registers API routes" \
+    --file-note "backend/chat/ws/manager.go:WebSocket lifecycle management" \
     --file-note "web/src/store/api/chatApi.ts:Frontend integration"
 
-  # Relate files to a specific document (notes required)
-  docmgr relate --doc ttmp/YYYY/MM/DD/MEN-4242--.../design/path-normalization-strategy.md \
-    --file-note "backend/chat/ws/manager.go:WebSocket lifecycle management"
-
-  # Suggest files using heuristics (git + ripgrep + existing RelatedFiles)
-  docmgr relate --ticket MEN-4242 --suggest --query WebSocket --topics chat,backend
-
-  # Apply suggestions automatically to the ticket index
-  docmgr relate --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
+  # Relate multiple files to a specific document (notes required)
+  docmgr doc relate --doc ttmp/YYYY/MM/DD/MEN-4242--.../design/path-normalization-strategy.md \
+    --file-note "backend/chat/ws/manager.go:WebSocket lifecycle management" \
+    --file-note "backend/chat/ws/heartbeat.go:Ping/pong behavior and timeouts"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
@@ -469,7 +465,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// We keep the flag definition at the CLI layer for a friendlier error.
 	// If any values are provided, fail fast with guidance.
 	if len(settings.Files) > 0 {
-		return fmt.Errorf("--files has been removed from 'docmgr relate'. Use repeated --file-note 'path:note' instead. Example: docmgr relate --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
+		return fmt.Errorf("--files has been removed from 'docmgr doc relate'. Use repeated --file-note 'path:note' instead. Example: docmgr doc relate --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
 	}
 
 	// Validate that all provided file-note mappings contain a non-empty note

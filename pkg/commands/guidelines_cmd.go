@@ -36,10 +36,12 @@ func NewGuidelinesCommand() (*GuidelinesCommand, error) {
 			cmds.WithShort("Show guidelines for document types"),
 			cmds.WithLong(`Displays guidelines for writing different types of documents.
 
-Example:
-  docmgr guidelines --doc-type design-doc
-  docmgr guidelines --list
-  docmgr guidelines --doc-type reference
+Examples:
+  # List all available guideline doc types
+  docmgr doc guidelines --list
+
+  # Show the guideline text for a specific doc type
+  docmgr doc guidelines --doc-type design-doc
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

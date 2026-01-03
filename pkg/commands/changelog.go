@@ -552,7 +552,7 @@ func (c *ChangelogUpdateCommand) Run(
 	}
 
 	fmt.Printf("Changelog updated: %s\n", changelogPath)
-	fmt.Println("Reminder: update the ticket index (docmgr relate/meta) and refresh file relationships in any impacted docs if needed.")
+	fmt.Println("Reminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.")
 	return nil
 }
 

@@ -35,3 +35,12 @@ Step 8: Add repo-scope transitive expansion to ticket graph (commit 2ee7273)
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/ticket_graph.go — Implements depth/scope/expand-files BFS expansion + budgets
 
+
+## 2026-01-03
+
+Step 9: Add tests for ticket graph CLI + transitive expansion semantics
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/ticket_graph_test.go — Unit/fixture tests for mermaid sanitization and transitive expansion
+

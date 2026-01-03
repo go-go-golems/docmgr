@@ -424,3 +424,48 @@ The most important engineering constraint here is safety: repo-wide expansion ca
   - `buildTicketGraph` (argument validation + wiring),
   - `ticketGraphBuilder.expandTransitive` (BFS + batching + limits),
   - `ticketGraphBuilder.addDocAndEdges` (trigger-file filtering vs expand-files behavior).
+
+## Step 9: Add tests for ticket graph behavior (depth=0, transitive, sanitization)
+
+This step added a small but meaningful test suite around the ticket graph command. The tests focus on the most failure-prone parts of the feature:
+
+- Mermaid label sanitization (newlines, quotes, pipes, brackets).
+- Stable node IDs (`shortHash`) so graphs don’t churn across runs.
+- A minimal workspace fixture that validates:
+  - depth=0 outputs expected doc and file nodes, and
+  - repo-scope transitive expansion (depth=1) discovers an “external” ticket document that references the same file.
+
+I intentionally avoided testing “error printing” through the cobra wrapper because the glazed CLI wrapper can call `os.Exit` on errors in some configurations; for the “depth requires repo scope” contract I validate the underlying builder function directly.
+
+### What I did
+- Added `pkg/commands/ticket_graph_test.go`:
+  - unit tests for `sanitizeMermaidLabel` and `shortHash`
+  - end-to-end-ish tests that build a temporary repo (`go.mod` + `ttmp/`) and run `ticket graph` via the same `common.BuildCommand` configuration the real CLI uses.
+- Ran:
+  - `GOWORK=off go test ./...`
+
+### Why
+- The ticket graph command is output-heavy and easy to break subtly (invalid Mermaid, unstable output, incorrect expansion). Tests reduce the risk of regressions as we iterate on transitive expansion and output formatting.
+
+### What worked
+- The fixture-based transitive test proves `--scope repo --depth 1` discovers another ticket’s doc via shared `RelatedFiles` entries.
+
+### What didn't work
+- A first attempt to test the “depth requires repo scope” error via cobra printed an error and terminated the test run; switching that one check to call `buildTicketGraph(...)` directly avoided the issue.
+
+### What I learned
+- For commands built on glazed’s cobra integration, “expected error cases” are sometimes best tested one layer down (command logic) to avoid CLI wrappers that may exit the process.
+
+### What was tricky to build
+- Building a minimal workspace fixture required:
+  - a `go.mod` so `FindRepositoryRoot()` resolves the repo root, and
+  - real code files on disk so `paths.Resolver.Normalize` can produce repo-relative canonical keys.
+
+### What warrants a second pair of eyes
+- Confirm that importing `cmd/docmgr/cmds/common` in a `pkg/commands` test is an acceptable pattern in this repo (it avoids duplicating the CLI wiring logic but crosses “cmd → pkg” layering in tests).
+
+### What should be done in the future
+- Add a test for budget enforcement (`--max-nodes/--max-edges`) once we settle on whether the command should hard-fail or produce partial output when limits are exceeded.
+
+### Code review instructions
+- Start in `pkg/commands/ticket_graph_test.go` and run `GOWORK=off go test ./pkg/commands -run TestTicketGraph -v`.

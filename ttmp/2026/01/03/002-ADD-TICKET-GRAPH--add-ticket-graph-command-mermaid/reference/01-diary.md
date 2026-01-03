@@ -435,6 +435,8 @@ This step added a small but meaningful test suite around the ticket graph comman
   - depth=0 outputs expected doc and file nodes, and
   - repo-scope transitive expansion (depth=1) discovers an “external” ticket document that references the same file.
 
+**Commit (code):** c470912857eaba220f35a9dfc108617aad7a2044 — "Test: add ticket graph fixtures and unit tests"
+
 I intentionally avoided testing “error printing” through the cobra wrapper because the glazed CLI wrapper can call `os.Exit` on errors in some configurations; for the “depth requires repo scope” contract I validate the underlying builder function directly.
 
 ### What I did

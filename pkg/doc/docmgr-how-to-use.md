@@ -60,6 +60,20 @@ If you're used to unstructured markdown files, docmgr adds metadata and command 
 - Write document body content (markdown) in your editor
 - Keep `tasks.md` and `changelog.md` current via CLI commands for consistency
 
+## Skills (MANDATORY for LLMs using this repo)
+
+If you are an LLM/model working in this repository, you MUST check skills before doing anything else (including clarifying questions). The skills system is the “how we work” contract.
+
+**Run this exact bootstrap command at the start of any session:**
+
+```bash
+docmgr help using-skills && echo "SKILLS:" && docmgr skill list
+```
+
+Then, if any skill might apply, load it before responding:
+- `docmgr skill show <query>` (positional)
+- `docmgr skill show --ticket <TICKET-ID> <query>` (when you need ticket scoping / archaeology)
+
 ---
 
 # Part 1: Essentials 📚

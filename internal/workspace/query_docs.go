@@ -110,6 +110,8 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			intent      sql.NullString
 			title       sql.NullString
 			lastUpdated sql.NullString
+			whatFor     sql.NullString
+			whenToUse   sql.NullString
 			parseOK     int
 			parseErr    sql.NullString
 			body        sql.NullString
@@ -124,6 +126,8 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			&intent,
 			&title,
 			&lastUpdated,
+			&whatFor,
+			&whenToUse,
 			&parseOK,
 			&parseErr,
 			&body,
@@ -156,11 +160,13 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 		}
 
 		doc := &models.Document{
-			Ticket:  ticketID.String,
-			DocType: docType.String,
-			Status:  status.String,
-			Intent:  intent.String,
-			Title:   title.String,
+			Ticket:    ticketID.String,
+			DocType:   docType.String,
+			Status:    status.String,
+			Intent:    intent.String,
+			Title:     title.String,
+			WhatFor:   whatFor.String,
+			WhenToUse: whenToUse.String,
 		}
 
 		if strings.TrimSpace(lastUpdated.String) != "" {
@@ -216,17 +222,19 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 				defer func() { _ = diagRows.Close() }()
 				for diagRows.Next() {
 					var (
-						_docID    int64
-						_path     string
-						_ticketID sql.NullString
-						_docType  sql.NullString
-						_status   sql.NullString
-						_intent   sql.NullString
-						_title    sql.NullString
-						_lastUpd  sql.NullString
-						_parseOK  int
-						_parseErr sql.NullString
-						_body     sql.NullString
+						_docID     int64
+						_path      string
+						_ticketID  sql.NullString
+						_docType   sql.NullString
+						_status    sql.NullString
+						_intent    sql.NullString
+						_title     sql.NullString
+						_lastUpd   sql.NullString
+						_whatFor   sql.NullString
+						_whenToUse sql.NullString
+						_parseOK   int
+						_parseErr  sql.NullString
+						_body      sql.NullString
 					)
 					if err := diagRows.Scan(
 						&_docID,
@@ -237,6 +245,8 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 						&_intent,
 						&_title,
 						&_lastUpd,
+						&_whatFor,
+						&_whenToUse,
 						&_parseOK,
 						&_parseErr,
 						&_body,

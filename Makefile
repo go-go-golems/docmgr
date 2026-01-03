@@ -28,7 +28,7 @@ test:
 
 build:
 	go generate ./...
-	go build ./...
+	go build -tags "sqlite_fts5" ./...
 
 goreleaser:
 	goreleaser release --skip=sign --snapshot --clean
@@ -53,5 +53,5 @@ bump-glazed:
 
 DOCMGR_BINARY=$(shell which docmgr)
 install:
-	go build -o ./dist/docmgr ./cmd/docmgr && \
+	go build -tags "sqlite_fts5" -o ./dist/docmgr ./cmd/docmgr && \
 		cp ./dist/docmgr $(DOCMGR_BINARY)

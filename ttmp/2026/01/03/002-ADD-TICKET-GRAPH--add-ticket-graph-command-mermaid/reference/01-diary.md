@@ -375,3 +375,52 @@ I also fixed a practical development workflow blocker: the docmgr repo lives ins
 - Validate locally:
   - `cd docmgr && GOWORK=off go test ./...`
   - `cd docmgr && GOWORK=off go run ./cmd/docmgr ticket graph --ticket 002-ADD-TICKET-GRAPH --format mermaid`
+
+## Step 8: Add repo-scope transitive expansion (depth/scope/batching/limits)
+
+This step extended the ticket graph command to support transitive expansion across the repository: starting from a ticket’s related files, it can now discover other documents (potentially in other tickets) that reference those same files. This is the “doc knowledge graph” style expansion described in the ticket guide, implemented as a bounded BFS over doc↔file edges.
+
+The most important engineering constraint here is safety: repo-wide expansion can balloon quickly. I enforced explicit `--scope repo` for `--depth > 0` and added hard limits (`--max-nodes`, `--max-edges`) plus batched reverse-lookup queries (`--batch-size`) so the algorithm scales predictably.
+
+**Commit (code):** 2ee7273b457631b65c5236a0f3f569f63118f391 — "Ticket: add transitive expansion to ticket graph"
+
+### What I did
+- Added CLI flags to control expansion and safety:
+  - `--depth`, `--scope`, `--expand-files`, `--batch-size`, `--max-nodes`, `--max-edges`
+- Refactored the implementation into a graph builder that:
+  - builds the base ticket graph (depth 0),
+  - then expands outward layer-by-layer using `Workspace.QueryDocs` with `ScopeRepo` and `Filters.RelatedFile`.
+
+### Why
+- The original request explicitly asked for a “transitive graph thing”.
+- Docmgr already has robust reverse lookup via the indexed `related_files` table; transitive expansion is a natural reuse of that capability.
+
+### What worked
+- Running a repo-scope depth=1 graph for this ticket succeeds and produces a large but valid Mermaid graph:
+  - `cd docmgr && GOWORK=off go run ./cmd/docmgr ticket graph --ticket 002-ADD-TICKET-GRAPH --scope repo --depth 1 --expand-files=false --format mermaid`
+- Pre-commit hooks still pass (tests + lint).
+
+### What didn't work
+- N/A (no new blockers beyond the already-addressed go.work hook issue).
+
+### What I learned
+- Using `QueryDocs` with `RelatedFile: []string{...}` is an efficient way to implement “OR of many files” reverse lookup, especially when you batch the query inputs.
+
+### What was tricky to build
+- Correctly defining expansion semantics that don’t explode:
+  - When `--expand-files=false`, newly discovered docs only connect to the triggering file batch (instead of pulling in all their related files).
+  - When `--expand-files=true`, you must use a visited set and strict budgets (`--max-nodes/--max-edges`) to keep the BFS bounded.
+
+### What warrants a second pair of eyes
+- Confirm the safety contracts are acceptable UX:
+  - hard failure when budgets are exceeded (instead of partial output),
+  - requiring `--scope repo` for `--depth > 0`.
+
+### What should be done in the future
+- Add targeted tests and a small scenario fixture for transitive expansion so semantics don’t drift (this is the next task).
+
+### Code review instructions
+- Start in `pkg/commands/ticket_graph.go`:
+  - `buildTicketGraph` (argument validation + wiring),
+  - `ticketGraphBuilder.expandTransitive` (BFS + batching + limits),
+  - `ticketGraphBuilder.addDocAndEdges` (trigger-file filtering vs expand-files behavior).

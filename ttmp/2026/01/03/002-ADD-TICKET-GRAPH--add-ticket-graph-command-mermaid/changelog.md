@@ -26,3 +26,12 @@ Step 7: Implement depth=0 mermaid ticket graph command (docs ↔ related files) 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/cmd/docmgr/cmds/ticket/ticket.go — Attaches graph subcommand under
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/ticket_graph.go — Implements graph construction and Mermaid rendering
 
+
+## 2026-01-03
+
+Step 8: Add repo-scope transitive expansion to ticket graph (commit 2ee7273)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/ticket_graph.go — Implements depth/scope/expand-files BFS expansion + budgets
+

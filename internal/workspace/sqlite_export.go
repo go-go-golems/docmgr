@@ -71,6 +71,7 @@ func (w *Workspace) ExportIndexToSQLiteFile(ctx context.Context, opts ExportSQLi
 	if err != nil {
 		return err
 	}
+	// #nosec G202 -- VACUUM INTO cannot be parameterized; `lit` is a properly quoted SQLite string literal.
 	_, err = w.db.ExecContext(ctx, "VACUUM INTO "+lit)
 	if err != nil {
 		return errors.Wrap(err, "vacuum into output sqlite file")

@@ -29,8 +29,12 @@ func Attach(root *cobra.Command) error {
 	if err != nil {
 		return err
 	}
+	graphCmd, err := newGraphCommand()
+	if err != nil {
+		return err
+	}
 
-	ticketCmd.AddCommand(createCmd, listCmd, renameCmd, closeCmd, moveCmd)
+	ticketCmd.AddCommand(createCmd, listCmd, renameCmd, closeCmd, moveCmd, graphCmd)
 	root.AddCommand(ticketCmd)
 	return nil
 }

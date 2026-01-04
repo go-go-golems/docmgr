@@ -11,12 +11,26 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: pkg/commands/add.go
+      Note: Multi-value examples for external-sources and related-files (commit 9ec7300)
     - Path: pkg/commands/changelog.go
-      Note: Adjust reminder text to canonical verbs
+      Note: |-
+        Adjust reminder text to canonical verbs
+        Multi topics in suggest example (commit 9ec7300)
+    - Path: pkg/commands/create_ticket.go
+      Note: Multi-topic create-ticket example (commit 9ec7300)
+    - Path: pkg/commands/doctor.go
+      Note: Multi ignore-dir/ignore-glob example (commit 9ec7300)
+    - Path: pkg/commands/list_docs.go
+      Note: Multi topics/status example (commit 9ec7300)
     - Path: pkg/commands/relate.go
-      Note: Doc relate example changes verified by running relate
+      Note: |-
+        Doc relate example changes verified by running relate
+        Multi remove-files example (commit 9ec7300)
     - Path: pkg/commands/search.go
-      Note: Verified --query behavior (commit 8ec1c61)
+      Note: |-
+        Verified --query behavior (commit 8ec1c61)
+        Multi topics/status example (commit 9ec7300)
     - Path: pkg/commands/ticket_move.go
       Note: Verified ticket move example + underscore skip (commit 8ec1c61)
     - Path: ttmp/2026/01/03/003-BETTER-EXAMPLES--add-better-usage-examples-to-docmgr-command-help/index.md
@@ -31,6 +45,7 @@ LastUpdated: 2026-01-03T18:14:20.549352964-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -173,3 +188,52 @@ I also ran a battery of real CLI commands against scratch tickets to verify exam
   - `GOWORK=off go run ./cmd/docmgr --help`
   - `GOWORK=off go run ./cmd/docmgr doc --help`
   - `GOWORK=off go run ./cmd/docmgr ticket --help`
+
+## Step 4: Add multi-value examples for stringlist flags
+
+This step systematically targeted `ParameterTypeStringList` flags and ensured the help text shows multi-value usage (e.g., multiple topics, multiple owners, multiple ignore globs, multiple related files, etc.). I also expanded the number of examples per command where it was still sparse.
+
+All new examples were executed “for real” against a scratch ticket to confirm parsing and behavior, especially for flags that are easy to misunderstand (comma-separated lists vs repeatable flags).
+
+**Commit (code):** 9ec7300 — "CLI: add multi-value examples"
+
+### What I did
+- Added multi-value examples for string-list flags across: create-ticket, doc add, search, list docs, doctor, relate, and changelog.
+- Executed the new commands against `003-BETTER-EXAMPLES-SCRATCH3-A` to confirm the flags parse and do something sensible.
+
+### Why
+- `StringList` flags are common in docmgr and easy to misuse without a concrete example (especially when the help text says “comma-separated”).
+
+### What worked
+- Created a scratch ticket with 3 topics:
+  - `GOWORK=off go run ./cmd/docmgr ticket create-ticket --ticket 003-BETTER-EXAMPLES-SCRATCH3-A --title "Scratch3 A for multi-value example testing" --topics docmgr,examples,cli --path-template "examples/{{TICKET}}--{{SLUG}}"`
+- Created a doc seeding multiple `--external-sources` and `--related-files`:
+  - `GOWORK=off go run ./cmd/docmgr doc add --ticket 003-BETTER-EXAMPLES-SCRATCH3-A --doc-type reference --title "Trace Links" --external-sources "https://example.com/spec,https://github.com/org/repo/issues/123" --related-files "pkg/commands/add.go,pkg/commands/relate.go"`
+- Verified `--file-note` is repeatable and `--remove-files` accepts multiple values:
+  - `GOWORK=off go run ./cmd/docmgr doc relate --doc <trace-links.md> --file-note "pkg/commands/search.go:Search examples" --file-note "pkg/commands/list_docs.go:List docs examples" --file-note "pkg/commands/doctor.go:Doctor examples"`
+  - `GOWORK=off go run ./cmd/docmgr doc relate --doc <trace-links.md> --remove-files "pkg/commands/search.go,pkg/commands/list_docs.go"`
+- Verified multi-topic filters:
+  - `GOWORK=off go run ./cmd/docmgr search --query "Trace Links" --topics docmgr,examples --ticket 003-BETTER-EXAMPLES-SCRATCH3-A --with-glaze-output --output json`
+  - `GOWORK=off go run ./cmd/docmgr list docs --topics docmgr,examples,cli --status active --with-glaze-output --select path`
+- Verified multi ignore flags parse:
+  - `GOWORK=off go run ./cmd/docmgr doctor --all --ignore-dir archive --ignore-dir sources --ignore-glob "*.bak" --ignore-glob "*.tmp"`
+
+### What didn't work
+- N/A (the examples added in this step executed successfully).
+
+### What I learned
+- `--external-sources` and `--related-files` are easiest to understand when shown in combination with `doc add`, because they directly change the created frontmatter.
+
+### What was tricky to build
+- Picking examples that demonstrate multi-value parsing without creating noisy or long-running side effects in the repository.
+
+### What warrants a second pair of eyes
+- Confirm the preferred style for multi-value string lists in examples:
+  - always comma-separated in one flag, vs
+  - repeating the flag (for those flags that support it).
+
+### What should be done in the future
+- N/A
+
+### Code review instructions
+- Start with the examples in: `pkg/commands/add.go`, `pkg/commands/doctor.go`, `pkg/commands/relate.go`, and `pkg/commands/changelog.go`.

@@ -74,9 +74,18 @@ Tips:
   • '--ignore-glob' is handy for suppressing known noisy paths; the command also reads patterns from
     both repository and docs-root .docmgrignore files.
 
-Example:
+Examples:
+  # Validate a specific ticket workspace
   docmgr doctor --ticket MEN-3475
+
+  # Validate all tickets
   docmgr doctor --all
+
+  # Tighten staleness and fail CI on warnings
+  docmgr doctor --all --stale-after 14 --fail-on warning
+
+  # Emit diagnostics JSON for scripts/CI
+  docmgr doctor --ticket MEN-3475 --diagnostics-json - --with-glaze-output --output json
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

@@ -146,10 +146,10 @@ Columns:
 
 Examples:
   # Human output
-  docmgr tasks list --ticket MEN-4242
+  docmgr task list --ticket MEN-4242
 
   # Scriptable (CSV without headers)
-  docmgr tasks list --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields index,text
+  docmgr task list --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields index,text
 `),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
@@ -327,7 +327,15 @@ func NewTasksAddCommand() (*TasksAddCommand, error) {
 	cmd := cmds.NewCommandDescription(
 		"add",
 		cmds.WithShort("Add a task to tasks.md"),
-		cmds.WithLong(`Add a new checkbox task to the ticket's tasks.md.`),
+		cmds.WithLong(`Add a new checkbox task to the ticket's tasks.md.
+
+Examples:
+  # Append a new task
+  docmgr task add --ticket MEN-4242 --text "Write design doc"
+
+  # Insert after an existing task index
+  docmgr task add --ticket MEN-4242 --text "Add tests" --after 1
+`),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
@@ -389,7 +397,12 @@ func NewTasksCheckCommand() (*TasksCheckCommand, error) {
 	cmd := cmds.NewCommandDescription(
 		"check",
 		cmds.WithShort("Mark a task as done"),
-		cmds.WithLong(`Mark a checkbox task as completed in tasks.md.`),
+		cmds.WithLong(`Mark a checkbox task as completed in tasks.md.
+
+Examples:
+  docmgr task check --ticket MEN-4242 --id 1
+  docmgr task check --ticket MEN-4242 --id 1,2
+`),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
@@ -566,7 +579,12 @@ func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
 	cmd := cmds.NewCommandDescription(
 		"uncheck",
 		cmds.WithShort("Mark a task as not done"),
-		cmds.WithLong(`Mark a checkbox task as incomplete in tasks.md.`),
+		cmds.WithLong(`Mark a checkbox task as incomplete in tasks.md.
+
+Examples:
+  docmgr task uncheck --ticket MEN-4242 --id 1
+  docmgr task uncheck --ticket MEN-4242 --id 1,2
+`),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
@@ -652,7 +670,11 @@ func NewTasksEditCommand() (*TasksEditCommand, error) {
 	cmd := cmds.NewCommandDescription(
 		"edit",
 		cmds.WithShort("Edit a task's text"),
-		cmds.WithLong(`Edit the text of a checkbox task in tasks.md.`),
+		cmds.WithLong(`Edit the text of a checkbox task in tasks.md.
+
+Examples:
+  docmgr task edit --ticket MEN-4242 --id 1 --text "Updated task text"
+`),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
@@ -734,7 +756,12 @@ func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
 	cmd := cmds.NewCommandDescription(
 		"remove",
 		cmds.WithShort("Remove a task"),
-		cmds.WithLong(`Remove a checkbox task from tasks.md.`),
+		cmds.WithLong(`Remove a checkbox task from tasks.md.
+
+Examples:
+  docmgr task remove --ticket MEN-4242 --id 3
+  docmgr task remove --ticket MEN-4242 --id 3,4
+`),
 		cmds.WithFlags(
 			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
 			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),

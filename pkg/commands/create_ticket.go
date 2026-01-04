@@ -59,7 +59,7 @@ Examples:
 
   # Create under a custom path template (relative to --root)
   docmgr ticket create-ticket --ticket MEN-9999 --title "Scratch ticket for experiments" \
-    --root ttmp --path-template "_examples/{{TICKET}}--{{SLUG}}"
+    --root ttmp --path-template "examples/{{TICKET}}--{{SLUG}}"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

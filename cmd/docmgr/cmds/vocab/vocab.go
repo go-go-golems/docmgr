@@ -7,6 +7,15 @@ func Attach(root *cobra.Command) error {
 	vocabCmd := &cobra.Command{
 		Use:   "vocab",
 		Short: "Manage workspace vocabulary",
+		Long: `Manage vocabulary entries used to validate Topics/DocTypes/Status/Intent.
+
+Examples:
+  # List vocabulary entries
+  docmgr vocab list --category topics
+
+  # Add a new topic
+  docmgr vocab add --category topics --slug observability --description "Logging and metrics"
+`,
 	}
 
 	listCmd, err := newListCommand()

@@ -7,6 +7,15 @@ func Attach(root *cobra.Command) error {
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List tickets or documents",
+		Long: `Convenience listing commands.
+
+Examples:
+  # List tickets
+  docmgr list tickets
+
+  # List docs for a ticket
+  docmgr list docs --ticket MEN-4242
+`,
 	}
 
 	docsCmd, err := newDocsCommand()

@@ -10,6 +10,15 @@ func Attach(root *cobra.Command) error {
 	validateCmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validation utilities",
+		Long: `Validation helpers for docmgr-managed documents.
+
+Examples:
+  # Validate one markdown file's YAML frontmatter
+  docmgr validate frontmatter --doc ttmp/YYYY/MM/DD/MEN-4242--.../index.md
+
+  # Attempt auto-fix for common YAML issues (creates .bak)
+  docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix
+`,
 	}
 
 	frontmatterCmd, err := validator.NewFrontmatterCommand()

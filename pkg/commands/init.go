@@ -54,6 +54,9 @@ Examples:
 
   # Initialize a specific root path
   docmgr init --root ttmp
+
+  # Seed the vocabulary with common defaults
+  docmgr init --root ttmp --seed-vocabulary
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

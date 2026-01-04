@@ -48,9 +48,12 @@ func NewVocabAddCommand() (*VocabAddCommand, error) {
 The vocabulary path is resolved from .ttmp.yaml if configured via 'vocabulary'.
 By default, it is '<root>/vocabulary.yaml' (root defaults to 'ttmp').
 
-Example:
+Examples:
   docmgr vocab add --category topics --slug observability --description "Logging and metrics"
   docmgr vocab add --category docTypes --slug working-note --description "Free-form notes"
+
+  # Scriptable output (JSON)
+  docmgr vocab add --category topics --slug observability --description "Logging and metrics" --with-glaze-output --output json
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

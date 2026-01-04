@@ -8,6 +8,17 @@ func Attach(root *cobra.Command) error {
 		Use:     "task",
 		Aliases: []string{"tasks"},
 		Short:   "Manage ticket task lists",
+		Long: `Manage checkbox tasks stored in a ticket's tasks.md.
+
+Examples:
+  # List tasks for a ticket
+  docmgr task list --ticket MEN-4242
+
+  # Add and complete a task
+  docmgr task add --ticket MEN-4242 --text "Write design doc"
+
+  docmgr task check --ticket MEN-4242 --id 1
+`,
 	}
 
 	listCmd, err := newListCommand()

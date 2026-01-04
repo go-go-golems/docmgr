@@ -37,7 +37,17 @@ issues and understand which config file is being used.
 The command shows:
 - Configuration sources checked in precedence order
 - Which source was actually used
-- Active configuration values (root, vocabulary, defaults)`),
+- Active configuration values (root, vocabulary, defaults)
+
+Examples:
+  # Show which .ttmp.yaml/root is active from the current directory
+  docmgr config show
+
+  # Simulate a different root for debugging resolution
+  docmgr config show --root ttmp
+
+  # Force a config file via env var
+  DOCMGR_CONFIG=/path/to/.ttmp.yaml docmgr config show`),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
 					"root",

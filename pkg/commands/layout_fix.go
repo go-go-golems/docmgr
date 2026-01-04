@@ -42,7 +42,18 @@ func NewLayoutFixCommand() (*LayoutFixCommand, error) {
 			cmds.WithShort("Move docs into <doc-type>/ subdirectories and update links"),
 			cmds.WithLong(`Scans ticket workspaces and moves markdown documents into a subdirectory
 named exactly after their DocType frontmatter (e.g., design-doc/, reference/, playbook/, or custom).
-Skips root-level control files (index.md, tasks.md, changelog.md, README.md).`),
+Skips root-level control files (index.md, tasks.md, changelog.md, README.md).
+
+Examples:
+  # Preview moves for a single ticket
+  docmgr doc layout-fix --ticket MEN-4242 --dry-run
+
+  # Apply moves for a single ticket
+  docmgr doc layout-fix --ticket MEN-4242
+
+  # Preview across all tickets (can be noisy)
+  docmgr doc layout-fix --dry-run
+`),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
 					"root",

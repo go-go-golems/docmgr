@@ -19,6 +19,9 @@ type Workspace struct {
 	ctx      WorkspaceContext
 	resolver *paths.Resolver
 	db       *sql.DB
+	// ftsAvailable indicates whether this workspace index instance has an FTS table.
+	// It is set during InitIndex after best-effort FTS table creation.
+	ftsAvailable bool
 }
 
 // WorkspaceContext captures the resolved "environment" for a workspace instance.
@@ -128,4 +131,9 @@ func (w *Workspace) Resolver() *paths.Resolver {
 // DB returns the in-memory SQLite database backing this workspace (if initialized).
 func (w *Workspace) DB() *sql.DB {
 	return w.db
+}
+
+// FTSAvailable reports whether the workspace index includes an FTS5 table for text queries.
+func (w *Workspace) FTSAvailable() bool {
+	return w.ftsAvailable
 }

@@ -26,6 +26,7 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 
 	var where []string
 	var args []any
+	var joins []string
 
 	// Visibility defaults: hide tagged categories unless explicitly included.
 	if !q.Options.IncludeArchivedPath {
@@ -108,6 +109,13 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 		}
 	}
 
+	// TextQuery: FTS-backed search (no compatibility guarantees).
+	if strings.TrimSpace(q.Filters.TextQuery) != "" {
+		joins = append(joins, "JOIN docs_fts ON docs_fts.rowid = d.doc_id")
+		where = append(where, "docs_fts MATCH ?")
+		args = append(args, strings.TrimSpace(q.Filters.TextQuery))
+	}
+
 	// Order.
 	orderExpr := ""
 	switch q.Options.OrderBy {
@@ -115,6 +123,11 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 		orderExpr = "d.path"
 	case OrderByLastUpdated:
 		orderExpr = "d.last_updated"
+	case OrderByRank:
+		if strings.TrimSpace(q.Filters.TextQuery) == "" {
+			return compiledSQL{}, errors.New("OrderByRank requires a non-empty TextQuery")
+		}
+		orderExpr = "bm25(docs_fts)"
 	default:
 		return compiledSQL{}, errors.Errorf("unsupported OrderBy: %q", q.Options.OrderBy)
 	}
@@ -140,6 +153,10 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
   d.body
 FROM docs d
 `)
+	if len(joins) > 0 {
+		sql.WriteString(strings.Join(joins, "\n"))
+		sql.WriteString("\n")
+	}
 	if len(where) > 0 {
 		sql.WriteString("WHERE ")
 		sql.WriteString(strings.Join(where, " AND "))

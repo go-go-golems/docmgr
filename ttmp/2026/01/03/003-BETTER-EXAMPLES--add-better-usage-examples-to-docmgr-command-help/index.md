@@ -1,7 +1,7 @@
 ---
 Title: Add better usage examples to docmgr command help
 Ticket: 003-BETTER-EXAMPLES
-Status: active
+Status: archived
 Topics:
     - docmgr
     - cli
@@ -31,10 +31,11 @@ RelatedFiles:
       Note: Add examples and clarify path-template usage (commit 8ec1c61)
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-03T18:14:17.539055087-05:00
+LastUpdated: 2026-01-03T21:15:10.36053916-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

@@ -1,7 +1,7 @@
 ---
 Title: Fix Frontmatter Validation - Improve Ticket Recognition and Missing Frontmatter Handling
 Ticket: FIX-FRONTMATTER-VALIDATION
-Status: active
+Status: archived
 Topics:
     - frontmatter
     - validation
@@ -14,8 +14,11 @@ RelatedFiles:
       Note: Upload ticket docs to reMarkable (pandoc->pdf + rmapi)
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-11T14:55:37.122852182-05:00
+LastUpdated: 2026-01-03T21:12:49.093373871-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # Fix Frontmatter Validation - Improve Ticket Recognition and Missing Frontmatter Handling

@@ -73,3 +73,8 @@ Step 12: Re-upload updated docs to reMarkable
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid/reference/01-diary.md — Publish the updated diary to the device
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/002-ADD-TICKET-GRAPH--add-ticket-graph-command-mermaid/reference/02-ticket-graph-mermaid-design-and-implementation-guide.md — Publish the updated guide to the device
+
+## 2026-01-03
+
+Manual close per request; all tasks done
+

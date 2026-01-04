@@ -172,3 +172,8 @@ Wrap-up: Makefile install workflow, run-all.sh validation (success+failure), and
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/reference/02-diary.md — Diary steps 11-12 wrap-up
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/IMPROVE-SCENARIO-LOGGING--make-scenario-suite-output-queryable-sqlite/tasks.md — Mark skeleton + log_lines_fts tasks complete
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-13 21:15; tasks_open 13)
+

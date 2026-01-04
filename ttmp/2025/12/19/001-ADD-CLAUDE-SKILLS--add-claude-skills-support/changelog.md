@@ -116,3 +116,8 @@ Step 18: Fixed init --seed-vocabulary to include docType=skill; hardened skills 
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Deterministic root + assertions for skills list/show
 - /home/manuel/workspaces/2025-12-19/add-docmgr-skills/docmgr/test-scenarios/testing-doc-manager/run-all.sh — Ensure step ordering
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-19 17:39; tasks_open 2)
+

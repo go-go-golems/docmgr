@@ -13,7 +13,7 @@ export SCENARIOLOG_PATH="${SCENARIOLOG_PATH:-}"
 #   DOCMGR_PATH="$(command -v docmgr)"
 #
 # To run against the repo code (recommended), build a binary and set DOCMGR_PATH:
-#   go build -o /tmp/docmgr-local ./cmd/docmgr
+#   go build -tags sqlite_fts5 -o /tmp/docmgr-local ./cmd/docmgr
 #   DOCMGR_PATH=/tmp/docmgr-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
 if [[ -z "${DOCMGR_PATH}" ]]; then
   echo "[fail] DOCMGR_PATH is not set. Refusing to run with ambiguous system docmgr from PATH." >&2

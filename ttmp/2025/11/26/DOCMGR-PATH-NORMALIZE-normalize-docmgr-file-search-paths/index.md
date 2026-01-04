@@ -1,7 +1,7 @@
 ---
 Title: Normalize docmgr file search paths
 Ticket: DOCMGR-PATH-NORMALIZE
-Status: active
+Status: complete
 Topics:
     - docmgr
     - search
@@ -16,12 +16,13 @@ RelatedFiles:
     - Path: docmgr/internal/workspace/config.go
       Note: Provides doc root + config resolution leveraged by the path resolver
 ExternalSources: []
-Summary: >
-    Baselines docmgr’s previous path handling, implements canonical path
-    normalization + fuzzy search for relate/search verbs, and backstops the
-    behavior with unit tests plus a scenario playbook.
-LastUpdated: 2025-11-26T18:40:00-05:00
+Summary: |
+    Baselines docmgr’s previous path handling, implements canonical path normalization + fuzzy search for relate/search verbs, and backstops the behavior with unit tests plus a scenario playbook.
+LastUpdated: 2026-01-03T21:12:48.334712689-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 # Normalize docmgr file search paths
 

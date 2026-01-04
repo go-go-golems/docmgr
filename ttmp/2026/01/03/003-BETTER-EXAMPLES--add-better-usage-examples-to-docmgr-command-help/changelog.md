@@ -52,3 +52,8 @@ Step 4: Add multi-value examples for stringlist flags (commit 9ec7300)
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/commands/search.go — Show multi topics/status
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/003-BETTER-EXAMPLES--add-better-usage-examples-to-docmgr-command-help/reference/01-diary.md — Record Step 4 and real commands
 
+
+## 2026-01-03
+
+Manual close per request
+

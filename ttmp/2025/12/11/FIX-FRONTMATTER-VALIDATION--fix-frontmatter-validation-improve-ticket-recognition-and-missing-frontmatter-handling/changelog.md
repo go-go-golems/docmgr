@@ -32,3 +32,8 @@ Added script to upload ticket docs to reMarkable (pandoc/xelatex + DejaVu + rmap
 
 - ttmp/2025/12/11/FIX-FRONTMATTER-VALIDATION--fix-frontmatter-validation-improve-ticket-recognition-and-missing-frontmatter-handling/scripts/remarkable_upload.py — Upload automation script
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-11 19:55; tasks_open 1)
+

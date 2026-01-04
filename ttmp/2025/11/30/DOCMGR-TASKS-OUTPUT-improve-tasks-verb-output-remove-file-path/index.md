@@ -1,7 +1,7 @@
 ---
 Title: Improve tasks verb output remove file path
 Ticket: DOCMGR-TASKS-OUTPUT
-Status: active
+Status: archived
 Topics:
     - cli
     - ux
@@ -11,8 +11,11 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-11-30T19:09:53.548963458-05:00
+LastUpdated: 2026-01-03T21:12:48.461971352-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 # Improve tasks verb output remove file path
 

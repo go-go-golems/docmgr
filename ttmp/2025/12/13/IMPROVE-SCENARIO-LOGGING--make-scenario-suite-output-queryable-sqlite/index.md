@@ -1,7 +1,7 @@
 ---
 Title: Make scenario suite output queryable (sqlite)
 Ticket: IMPROVE-SCENARIO-LOGGING
-Status: active
+Status: archived
 Topics:
     - testing
     - tooling
@@ -16,9 +16,12 @@ RelatedFiles:
       Note: Current harness entrypoint (to be instrumented)
 ExternalSources:
     - local:phase-3-scenario-log-2025-12-13.txt
-Summary: "Make the integration scenario suite output queryable by logging runs/steps/commands to sqlite with captured stdout/stderr artifacts."
-LastUpdated: 2025-12-13T16:15:22.087377798-05:00
+Summary: Make the integration scenario suite output queryable by logging runs/steps/commands to sqlite with captured stdout/stderr artifacts.
+LastUpdated: 2026-01-03T21:12:49.617955639-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 

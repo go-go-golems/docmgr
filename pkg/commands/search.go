@@ -4,19 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strconv"
 	"strings"
-	"time"
 
-	"github.com/go-go-golems/docmgr/internal/paths"
+	"github.com/go-go-golems/docmgr/internal/searchsvc"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
-	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
@@ -36,6 +30,7 @@ type SearchSettings struct {
 	Topics              []string `glazed.parameter:"topics"`
 	DocType             string   `glazed.parameter:"doc-type"`
 	Status              string   `glazed.parameter:"status"`
+	OrderBy             string   `glazed.parameter:"order-by"`
 	Files               bool     `glazed.parameter:"files"`
 	File                string   `glazed.parameter:"file"`
 	Dir                 string   `glazed.parameter:"dir"`
@@ -110,6 +105,12 @@ Examples:
 					parameters.ParameterTypeString,
 					parameters.WithHelp("Filter by status"),
 					parameters.WithDefault(""),
+				),
+				parameters.NewParameterDefinition(
+					"order-by",
+					parameters.ParameterTypeString,
+					parameters.WithHelp("Order results by: path|last_updated|rank"),
+					parameters.WithDefault("path"),
 				),
 				parameters.NewParameterDefinition(
 					"files",
@@ -237,32 +238,11 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("must provide at least a query or filter")
 	}
 
-	// Parse date filters
-	sinceTime, err := parseDate(settings.Since)
-	if err != nil {
-		return fmt.Errorf("invalid --since date: %w", err)
-	}
-	untilTime, err2 := parseDate(settings.Until)
-	if err2 != nil {
-		return fmt.Errorf("invalid --until date: %w", err2)
-	}
-	createdSinceTime, err3 := parseDate(settings.CreatedSince)
-	if err3 != nil {
-		return fmt.Errorf("invalid --created-since date: %w", err3)
-	}
-	updatedSinceTime, err4 := parseDate(settings.UpdatedSince)
-	if err4 != nil {
-		return fmt.Errorf("invalid --updated-since date: %w", err4)
-	}
-
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
 
-	queryLower := strings.ToLower(settings.Query)
 	fileQueryRaw := strings.TrimSpace(settings.File)
-	dirQueryRaw := strings.TrimSpace(settings.Dir)
-	dirQueryRawSlash := filepath.ToSlash(dirQueryRaw)
 
 	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
 	if err != nil {
@@ -273,169 +253,62 @@ func (c *SearchCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	orderBy := workspace.OrderBy(strings.TrimSpace(settings.OrderBy))
+	if orderBy == "" {
+		orderBy = workspace.OrderByPath
 	}
 
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: scope,
-		Filters: workspace.DocFilters{
-			Ticket:    strings.TrimSpace(settings.Ticket),
-			Status:    strings.TrimSpace(settings.Status),
-			DocType:   strings.TrimSpace(settings.DocType),
-			TopicsAny: settings.Topics,
-			RelatedFile: func() []string {
-				if fileQueryRaw != "" {
-					return []string{fileQueryRaw}
-				}
-				return nil
-			}(),
-			RelatedDir: func() []string {
-				if dirQueryRaw != "" {
-					return []string{dirQueryRaw}
-				}
-				return nil
-			}(),
-		},
-		Options: workspace.DocQueryOptions{
-			IncludeBody:         true,
-			IncludeErrors:       false,
-			IncludeDiagnostics:  true,
-			IncludeArchivedPath: true,
-			IncludeScriptsPath:  true,
-			IncludeControlDocs:  true,
-		},
+	resp, err := searchsvc.SearchDocs(ctx, ws, searchsvc.SearchQuery{
+		TextQuery:           strings.TrimSpace(settings.Query),
+		Ticket:              strings.TrimSpace(settings.Ticket),
+		Topics:              settings.Topics,
+		DocType:             strings.TrimSpace(settings.DocType),
+		Status:              strings.TrimSpace(settings.Status),
+		File:                strings.TrimSpace(settings.File),
+		Dir:                 strings.TrimSpace(settings.Dir),
+		ExternalSource:      strings.TrimSpace(settings.ExternalSource),
+		Since:               strings.TrimSpace(settings.Since),
+		Until:               strings.TrimSpace(settings.Until),
+		CreatedSince:        strings.TrimSpace(settings.CreatedSince),
+		UpdatedSince:        strings.TrimSpace(settings.UpdatedSince),
+		OrderBy:             orderBy,
+		Reverse:             false,
+		IncludeArchivedPath: true,
+		IncludeScriptsPath:  true,
+		IncludeControlDocs:  true,
+		IncludeDiagnostics:  true,
+		IncludeErrors:       false,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to query docs: %w", err)
+		return err
 	}
 
-	for _, h := range res.Docs {
-		if h.Doc == nil {
-			continue
-		}
-
-		doc := h.Doc
-		content := h.Body
-
-		// Apply external source filter (not indexed yet; best-effort read frontmatter).
-		if settings.ExternalSource != "" {
-			fm, ferr := readDocumentFrontmatter(h.Path)
-			if ferr != nil {
-				continue
-			}
-			sourceMatch := false
-			for _, externalSource := range fm.ExternalSources {
-				if strings.Contains(externalSource, settings.ExternalSource) || strings.Contains(settings.ExternalSource, externalSource) {
-					sourceMatch = true
-					break
-				}
-			}
-			if !sourceMatch {
-				continue
-			}
-		}
-
-		// Apply date filters
-		if fi, err := os.Stat(h.Path); err == nil {
-			createdTime := fi.ModTime()
-			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
-				continue
-			}
-		}
-		if !doc.LastUpdated.IsZero() {
-			if !sinceTime.IsZero() && doc.LastUpdated.Before(sinceTime) {
-				continue
-			}
-			if !untilTime.IsZero() && doc.LastUpdated.After(untilTime) {
-				continue
-			}
-			if !updatedSinceTime.IsZero() && doc.LastUpdated.Before(updatedSinceTime) {
-				continue
-			}
-		}
-
-		// Apply content search
-		if settings.Query != "" {
-			if !strings.Contains(strings.ToLower(content), queryLower) {
-				continue
-			}
-		}
-
-		relPath, err := filepath.Rel(settings.Root, h.Path)
-		if err != nil {
-			relPath = h.Path
-		}
-		relPath = filepath.ToSlash(relPath)
-
-		snippet := extractSnippet(content, settings.Query, 100)
-
-		var matchedFiles []string
-		var matchedNotes []string
-		if fileQueryRaw != "" {
-			docResolver := paths.NewResolver(paths.ResolverOptions{
-				DocsRoot:  settings.Root,
-				DocPath:   h.Path,
-				ConfigDir: ws.Context().ConfigDir,
-				RepoRoot:  ws.Context().RepoRoot,
-			})
-			fileQueryNorm := docResolver.Normalize(fileQueryRaw)
-			if fileQueryNorm.Empty() && fileQueryRaw != "" {
-				fileQueryNorm = paths.NormalizedPath{
-					Canonical:     filepath.ToSlash(fileQueryRaw),
-					OriginalClean: filepath.ToSlash(fileQueryRaw),
-				}
-			}
-			baseQuery := filepath.Base(filepath.ToSlash(fileQueryRaw))
-			for _, rf := range doc.RelatedFiles {
-				n := docResolver.Normalize(rf.Path)
-				if paths.MatchPaths(fileQueryNorm, n) ||
-					(strings.TrimSpace(baseQuery) != "" && (filepath.Base(filepath.ToSlash(rf.Path)) == baseQuery)) ||
-					(strings.TrimSpace(baseQuery) != "" && strings.HasSuffix(filepath.ToSlash(rf.Path), "/"+baseQuery)) {
-					matchedFiles = append(matchedFiles, bestDisplay(n, rf.Path))
-					if strings.TrimSpace(rf.Note) != "" {
-						matchedNotes = append(matchedNotes, rf.Note)
-					}
-				}
-			}
-		}
-
-		// Preserve legacy "dir" behavior: treat dir as prefix on doc path OR related_files.
-		// QueryDocs currently filters related_files; the doc-path prefix check remains a no-op
-		// for most usage (dir points at code), but we keep it for compatibility.
-		if dirQueryRawSlash != "" {
-			relDocPath := relPath
-			// We don't currently use relDocPath here because QueryDocs performs the dir filtering
-			// against related_files. Keep the computation to document intent (legacy behavior).
-			_ = relDocPath
-		}
-
+	for _, r := range resp.Results {
 		row := types.NewRow(
-			types.MRP("ticket", doc.Ticket),
-			types.MRP("title", doc.Title),
-			types.MRP("doc_type", doc.DocType),
-			types.MRP("status", doc.Status),
-			types.MRP("topics", strings.Join(doc.Topics, ", ")),
-			types.MRP("path", relPath),
-			types.MRP("snippet", snippet),
+			types.MRP("ticket", r.Ticket),
+			types.MRP("title", r.Title),
+			types.MRP("doc_type", r.DocType),
+			types.MRP("status", r.Status),
+			types.MRP("topics", strings.Join(r.Topics, ", ")),
+			types.MRP("path", r.Path),
+			types.MRP("snippet", r.Snippet),
 		)
-		if settings.File != "" {
-			if len(matchedFiles) > 0 {
-				row.Set("file", strings.Join(matchedFiles, ", "))
+		if fileQueryRaw != "" {
+			if len(r.MatchedFiles) > 0 {
+				row.Set("file", strings.Join(r.MatchedFiles, ", "))
 			}
-			if len(matchedNotes) > 0 {
-				row.Set("file_note", strings.Join(matchedNotes, " | "))
+			if len(r.MatchedNotes) > 0 {
+				row.Set("file_note", strings.Join(r.MatchedNotes, " | "))
 			}
 		}
 
 		if err := gp.AddRow(ctx, row); err != nil {
-			return fmt.Errorf("failed to emit search result for %s: %w", relPath, err)
+			return fmt.Errorf("failed to emit search result for %s: %w", r.Path, err)
 		}
 	}
 
-	for i := range res.Diagnostics {
-		docmgr.RenderTaxonomy(ctx, &res.Diagnostics[i])
+	for i := range resp.Diagnostics {
+		docmgr.RenderTaxonomy(ctx, &resp.Diagnostics[i])
 	}
 
 	return nil
@@ -456,544 +329,27 @@ func (c *SearchCommand) suggestFiles(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	// Find ticket directory if specified (for git/ripgrep heuristics).
-	ticketDir := settings.Root
-	if strings.TrimSpace(settings.Ticket) != "" {
-		idxRes, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
-			Filters: workspace.DocFilters{DocType: "index"},
-			Options: workspace.DocQueryOptions{
-				IncludeErrors:       false,
-				IncludeDiagnostics:  false,
-				IncludeArchivedPath: true,
-				IncludeScriptsPath:  true,
-				IncludeControlDocs:  true,
-				OrderBy:             workspace.OrderByPath,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to resolve ticket directory: %w", err)
-		}
-		if len(idxRes.Docs) != 1 || strings.TrimSpace(idxRes.Docs[0].Path) == "" {
-			return fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(settings.Ticket))
-		}
-		ticketDir = filepath.Dir(filepath.FromSlash(idxRes.Docs[0].Path))
-	}
-
-	// Collect search terms from query and topics
-	searchTerms := []string{}
-	if settings.Query != "" {
-		searchTerms = append(searchTerms, settings.Query)
-	}
-	searchTerms = append(searchTerms, settings.Topics...)
-
-	// Use heuristics to suggest files
-	// For now, we'll use a simple approach:
-	// 1. If query is provided, search for it in code files
-	// 2. If topics are provided, search for topic-related terms
-	// 3. Look at RelatedFiles in documents for hints
-
-	suggestedFiles := make(map[string]bool)
-
-	// Search documents for RelatedFiles
-	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
-	}
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: scope,
-		Filters: workspace.DocFilters{
-			TopicsAny: settings.Topics,
-		},
-		Options: workspace.DocQueryOptions{
-			IncludeBody:         false,
-			IncludeErrors:       false,
-			IncludeDiagnostics:  false,
-			IncludeArchivedPath: true,
-			IncludeScriptsPath:  true,
-			IncludeControlDocs:  true,
-			OrderBy:             workspace.OrderByPath,
-		},
+	suggestions, err := searchsvc.SuggestFiles(ctx, ws, searchsvc.SuggestFilesQuery{
+		Ticket: strings.TrimSpace(settings.Ticket),
+		Topics: settings.Topics,
+		Query:  strings.TrimSpace(settings.Query),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to query docs for related_files suggestions: %w", err)
-	}
-	for _, h := range res.Docs {
-		if h.Doc == nil {
-			continue
-		}
-		for _, rf := range h.Doc.RelatedFiles {
-			if strings.TrimSpace(rf.Path) == "" {
-				continue
-			}
-			suggestedFiles[rf.Path] = true
-		}
+		return err
 	}
 
-	// Output suggested files from RelatedFiles
-	for file := range suggestedFiles {
+	for _, s := range suggestions {
 		row := types.NewRow(
-			types.MRP("file", file),
-			types.MRP("source", "related_files"),
-			types.MRP("reason", "referenced by documents"),
+			types.MRP("file", s.File),
+			types.MRP("source", s.Source),
+			types.MRP("reason", s.Reason),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
-			return fmt.Errorf("failed to emit related_files suggestion for %s: %w", file, err)
-		}
-	}
-
-	// Add git-based heuristics (recent commits, changed files)
-	gitFiles, err := suggestFilesFromGit(ticketDir, searchTerms)
-	if err == nil {
-		for _, file := range gitFiles {
-			if !suggestedFiles[file] {
-				row := types.NewRow(
-					types.MRP("file", file),
-					types.MRP("source", "git_history"),
-					types.MRP("reason", "recent commit activity"),
-				)
-				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to emit git_modified suggestion for %s: %w", file, err)
-				}
-			}
-		}
-	}
-
-	// Add git status heuristics (modified, staged, untracked)
-	if modified, staged, untracked, err := suggestFilesFromGitStatus(ticketDir); err == nil {
-		for _, file := range modified {
-			if !suggestedFiles[file] {
-				row := types.NewRow(
-					types.MRP("file", file),
-					types.MRP("source", "git_modified"),
-					types.MRP("reason", "working tree modified"),
-				)
-				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to emit git_staged suggestion for %s: %w", file, err)
-				}
-			}
-		}
-		for _, file := range staged {
-			if !suggestedFiles[file] {
-				row := types.NewRow(
-					types.MRP("file", file),
-					types.MRP("source", "git_staged"),
-					types.MRP("reason", "staged for commit"),
-				)
-				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to emit git_untracked suggestion for %s: %w", file, err)
-				}
-			}
-		}
-		for _, file := range untracked {
-			if !suggestedFiles[file] {
-				row := types.NewRow(
-					types.MRP("file", file),
-					types.MRP("source", "git_untracked"),
-					types.MRP("reason", "untracked new file"),
-				)
-				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to emit ripgrep suggestion for %s: %w", file, err)
-				}
-			}
-		}
-	}
-
-	// Add ripgrep-based heuristics (search for query/topics in code)
-	if settings.Query != "" || len(settings.Topics) > 0 {
-		ripgrepFiles, err := suggestFilesFromRipgrep(ticketDir, searchTerms)
-		if err == nil {
-			for _, file := range ripgrepFiles {
-				if !suggestedFiles[file] {
-					row := types.NewRow(
-						types.MRP("file", file),
-						types.MRP("source", "ripgrep"),
-						types.MRP("reason", fmt.Sprintf("content match: %s", firstTerm(searchTerms))),
-					)
-					if err := gp.AddRow(ctx, row); err != nil {
-						return fmt.Errorf("failed to emit git_history suggestion for %s: %w", file, err)
-					}
-				}
-			}
+			return fmt.Errorf("failed to emit suggestion for %s: %w", s.File, err)
 		}
 	}
 
 	return nil
-}
-
-// suggestFilesFromGit suggests files based on git history
-func suggestFilesFromGit(repoPath string, searchTerms []string) ([]string, error) {
-	// Check if we're in a git repository
-	cmd := exec.Command("git", "rev-parse", "--git-dir")
-	cmd.Dir = repoPath
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("not a git repository")
-	}
-
-	// Get recently modified files (last 30 commits)
-	cmd = exec.Command("git", "log", "--name-only", "--pretty=format:", "-30")
-	cmd.Dir = repoPath
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get git log: %w", err)
-	}
-
-	files := make(map[string]bool)
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// Skip non-file paths
-		if strings.Contains(line, " ") {
-			continue
-		}
-		// Only include common code file extensions
-		if isCodeFile(line) {
-			files[line] = true
-		}
-	}
-
-	// Convert to slice
-	result := make([]string, 0, len(files))
-	for file := range files {
-		result = append(result, file)
-	}
-
-	return result, nil
-}
-
-// suggestFilesFromGitStatus returns modified, staged, and untracked files
-func suggestFilesFromGitStatus(repoPath string) ([]string, []string, []string, error) {
-	// Check if in a git repo
-	cmd := exec.Command("git", "rev-parse", "--git-dir")
-	cmd.Dir = repoPath
-	if err := cmd.Run(); err != nil {
-		return nil, nil, nil, fmt.Errorf("not a git repository")
-	}
-
-	// Unstaged modified
-	cmd = exec.Command("git", "diff", "--name-only")
-	cmd.Dir = repoPath
-	outMod, _ := cmd.Output()
-	modified := nonEmptyLines(string(outMod))
-
-	// Staged changes
-	cmd = exec.Command("git", "diff", "--name-only", "--cached")
-	cmd.Dir = repoPath
-	outStaged, _ := cmd.Output()
-	staged := nonEmptyLines(string(outStaged))
-
-	// Untracked files
-	cmd = exec.Command("git", "ls-files", "--others", "--exclude-standard")
-	cmd.Dir = repoPath
-	outUntracked, _ := cmd.Output()
-	untracked := nonEmptyLines(string(outUntracked))
-
-	// Filter to code-like files
-	modified = filterCodeFiles(modified)
-	staged = filterCodeFiles(staged)
-	untracked = filterCodeFiles(untracked)
-
-	return modified, staged, untracked, nil
-}
-
-// suggestFilesFromRipgrep suggests files using ripgrep
-func suggestFilesFromRipgrep(searchPath string, searchTerms []string) ([]string, error) {
-	if len(searchTerms) == 0 {
-		return nil, nil
-	}
-
-	// Try to find ripgrep
-	rgPath, err := exec.LookPath("rg")
-	if err != nil {
-		// Fallback to grep if ripgrep not available
-		return suggestFilesFromGrep(searchPath, searchTerms)
-	}
-
-	// Build ripgrep command
-	args := []string{
-		"--files-with-matches",
-		"--type", "go",
-		"--type", "typescript",
-		"--type", "javascript",
-		"--type", "python",
-		"--type", "rust",
-		"--type", "java",
-		"--type", "kotlin",
-		"--type", "scala",
-	}
-
-	// Use first search term as query
-	if len(searchTerms) > 0 {
-		args = append(args, searchTerms[0])
-	}
-
-	cmd := exec.Command(rgPath, args...)
-	cmd.Dir = searchPath
-	output, err := cmd.Output()
-	if err != nil {
-		// ripgrep returns exit code 1 when no matches found, which is OK
-		if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 1 {
-			return []string{}, nil
-		}
-		return nil, fmt.Errorf("failed to run ripgrep: %w", err)
-	}
-
-	files := []string{}
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			files = append(files, line)
-		}
-	}
-
-	return files, nil
-}
-
-// suggestFilesFromGrep suggests files using grep (fallback when ripgrep not available)
-func suggestFilesFromGrep(searchPath string, searchTerms []string) ([]string, error) {
-	if len(searchTerms) == 0 {
-		return nil, nil
-	}
-
-	// Use grep to find files
-	args := []string{
-		"-r", "-l",
-		"--include=*.go",
-		"--include=*.ts",
-		"--include=*.js",
-		"--include=*.py",
-		"--include=*.rs",
-		"--include=*.java",
-		searchTerms[0],
-		searchPath,
-	}
-
-	cmd := exec.Command("grep", args...)
-	output, err := cmd.Output()
-	if err != nil {
-		// grep returns exit code 1 when no matches found, which is OK
-		if cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 1 {
-			return []string{}, nil
-		}
-		return nil, fmt.Errorf("failed to run grep: %w", err)
-	}
-
-	files := []string{}
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			files = append(files, line)
-		}
-	}
-
-	return files, nil
-}
-
-// isCodeFile checks if a file path looks like a code file
-func isCodeFile(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
-	codeExts := map[string]bool{
-		".go": true, ".ts": true, ".js": true, ".py": true,
-		".rs": true, ".java": true, ".kt": true, ".scala": true,
-		".cpp": true, ".c": true, ".h": true, ".hpp": true,
-		".rb": true, ".php": true, ".swift": true,
-	}
-	return codeExts[ext]
-}
-
-func nonEmptyLines(s string) []string {
-	lines := strings.Split(s, "\n")
-	out := make([]string, 0, len(lines))
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" {
-			out = append(out, line)
-		}
-	}
-	return out
-}
-
-func filterCodeFiles(files []string) []string {
-	out := make([]string, 0, len(files))
-	for _, f := range files {
-		if isCodeFile(f) {
-			out = append(out, f)
-		}
-	}
-	return out
-}
-
-func firstTerm(terms []string) string {
-	if len(terms) == 0 {
-		return ""
-	}
-	return terms[0]
-}
-
-// extractSnippet extracts a snippet of text around a query match
-func extractSnippet(content, query string, contextLen int) string {
-	if query == "" {
-		// Return first contextLen characters
-		if len(content) <= contextLen {
-			return content
-		}
-		return content[:contextLen] + "..."
-	}
-
-	queryLower := strings.ToLower(query)
-	contentLower := strings.ToLower(content)
-
-	idx := strings.Index(contentLower, queryLower)
-	if idx == -1 {
-		// Query not found, return beginning
-		if len(content) <= contextLen {
-			return content
-		}
-		return content[:contextLen] + "..."
-	}
-
-	start := idx - contextLen
-	if start < 0 {
-		start = 0
-	}
-	end := idx + len(query) + contextLen
-	if end > len(content) {
-		end = len(content)
-	}
-
-	snippet := content[start:end]
-	if start > 0 {
-		snippet = "..." + snippet
-	}
-	if end < len(content) {
-		snippet = snippet + "..."
-	}
-
-	return snippet
-}
-
-func bestDisplay(norm paths.NormalizedPath, fallback string) string {
-	if best := norm.Best(); strings.TrimSpace(best) != "" {
-		return best
-	}
-	return filepath.ToSlash(strings.TrimSpace(fallback))
-}
-
-// parseDate parses relative and absolute date strings
-// Supports formats like:
-// - Relative: "2 weeks ago", "last month", "1 day ago", "3 months ago"
-// - Absolute: "2025-01-01", "2025-01-01 15:04:05"
-// - Predefined: "today", "yesterday", "last week", "this month"
-func parseDate(dateStr string) (time.Time, error) {
-	if dateStr == "" {
-		return time.Time{}, nil
-	}
-
-	dateStr = strings.TrimSpace(dateStr)
-	dateStrLower := strings.ToLower(dateStr)
-
-	now := time.Now()
-
-	// Handle predefined ranges
-	switch dateStrLower {
-	case "today":
-		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()), nil
-	case "yesterday":
-		yesterday := now.AddDate(0, 0, -1)
-		return time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 0, 0, 0, 0, yesterday.Location()), nil
-	case "last week", "lastweek":
-		weekday := int(now.Weekday())
-		if weekday == 0 { // Sunday
-			weekday = 7
-		}
-		thisWeekStart := now.AddDate(0, 0, -(weekday - 1))
-		start := thisWeekStart.AddDate(0, 0, -7)
-		return time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location()), nil
-	case "this week", "thisweek":
-		weekday := int(now.Weekday())
-		if weekday == 0 { // Sunday
-			weekday = 7
-		}
-		start := now.AddDate(0, 0, -(weekday - 1))
-		return time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location()), nil
-	case "last month", "lastmonth":
-		thisMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-		start := thisMonthStart.AddDate(0, -1, 0)
-		return start, nil
-	case "this month", "thismonth":
-		return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()), nil
-	case "last year", "lastyear":
-		return time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, now.Location()), nil
-	case "this year", "thisyear":
-		return time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location()), nil
-	}
-
-	// Handle relative dates like "2 weeks ago", "1 day ago", "3 months ago"
-	relativePattern := regexp.MustCompile(`^(\d+)\s+(day|week|month|year)(s?)\s+ago$`)
-	matches := relativePattern.FindStringSubmatch(dateStrLower)
-	if len(matches) == 4 {
-		num, err := strconv.Atoi(matches[1])
-		if err != nil {
-			return time.Time{}, fmt.Errorf("invalid number in relative date: %s", dateStr)
-		}
-		unit := matches[2]
-		var result time.Time
-		switch unit {
-		case "day":
-			result = now.AddDate(0, 0, -num)
-		case "week":
-			result = now.AddDate(0, 0, -num*7)
-		case "month":
-			result = now.AddDate(0, -num, 0)
-		case "year":
-			result = now.AddDate(-num, 0, 0)
-		default:
-			return time.Time{}, fmt.Errorf("unknown time unit: %s", unit)
-		}
-		return time.Date(result.Year(), result.Month(), result.Day(), 0, 0, 0, 0, result.Location()), nil
-	}
-
-	// Handle "last week", "last month" without numbers
-	if strings.HasPrefix(dateStrLower, "last ") {
-		rest := strings.TrimPrefix(dateStrLower, "last ")
-		switch rest {
-		case "week":
-			weekday := int(now.Weekday())
-			if weekday == 0 {
-				weekday = 7
-			}
-			thisWeekStart := now.AddDate(0, 0, -(weekday - 1))
-			start := thisWeekStart.AddDate(0, 0, -7)
-			return time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, start.Location()), nil
-		case "month":
-			thisMonthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
-			start := thisMonthStart.AddDate(0, -1, 0)
-			return start, nil
-		case "year":
-			return time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, now.Location()), nil
-		}
-	}
-
-	// Try absolute date formats
-	formats := []string{
-		"2006-01-02",
-		"2006-01-02 15:04:05",
-		time.RFC3339,
-		time.RFC3339Nano,
-	}
-
-	for _, format := range formats {
-		if t, err := time.Parse(format, dateStr); err == nil {
-			return t, nil
-		}
-	}
-
-	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
 }
 
 var _ cmds.GlazeCommand = &SearchCommand{}
@@ -1050,158 +406,23 @@ func (c *SearchCommand) Run(
 			return fmt.Errorf("failed to initialize workspace index: %w", err)
 		}
 
-		// derive ticketDir (for git/ripgrep heuristics)
-		ticketDir := settings.Root
-		if strings.TrimSpace(settings.Ticket) != "" {
-			idxRes, err := ws.QueryDocs(ctx, workspace.DocQuery{
-				Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
-				Filters: workspace.DocFilters{DocType: "index"},
-				Options: workspace.DocQueryOptions{
-					IncludeErrors:       false,
-					IncludeDiagnostics:  false,
-					IncludeArchivedPath: true,
-					IncludeScriptsPath:  true,
-					IncludeControlDocs:  true,
-					OrderBy:             workspace.OrderByPath,
-				},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to resolve ticket directory: %w", err)
-			}
-			if len(idxRes.Docs) != 1 || strings.TrimSpace(idxRes.Docs[0].Path) == "" {
-				return fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(settings.Ticket))
-			}
-			ticketDir = filepath.Dir(filepath.FromSlash(idxRes.Docs[0].Path))
-		}
-		// collect search terms
-		terms := []string{}
-		if settings.Query != "" {
-			terms = append(terms, settings.Query)
-		}
-		terms = append(terms, settings.Topics...)
-
-		// existing docs' RelatedFiles (QueryDocs-backed)
-		existing := map[string]bool{}
-		existingNotes := map[string]map[string]bool{}
-		scope := workspace.Scope{Kind: workspace.ScopeRepo}
-		if strings.TrimSpace(settings.Ticket) != "" {
-			scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
-		}
-		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope: scope,
-			Filters: workspace.DocFilters{
-				TopicsAny: settings.Topics,
-			},
-			Options: workspace.DocQueryOptions{
-				IncludeBody:         false,
-				IncludeErrors:       false,
-				IncludeDiagnostics:  false,
-				IncludeArchivedPath: true,
-				IncludeScriptsPath:  true,
-				IncludeControlDocs:  true,
-				OrderBy:             workspace.OrderByPath,
-			},
+		suggestions, err := searchsvc.SuggestFiles(ctx, ws, searchsvc.SuggestFilesQuery{
+			Ticket: strings.TrimSpace(settings.Ticket),
+			Topics: settings.Topics,
+			Query:  strings.TrimSpace(settings.Query),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to query docs for related_files suggestions: %w", err)
+			return err
 		}
-		for _, h := range res.Docs {
-			if h.Doc == nil {
-				continue
-			}
-			for _, rf := range h.Doc.RelatedFiles {
-				if strings.TrimSpace(rf.Path) == "" {
-					continue
-				}
-				existing[rf.Path] = true
-				if strings.TrimSpace(rf.Note) != "" {
-					if _, ok := existingNotes[rf.Path]; !ok {
-						existingNotes[rf.Path] = map[string]bool{}
-					}
-					existingNotes[rf.Path][rf.Note] = true
-				}
-			}
-		}
-		for f := range existing {
-			if f == "" {
-				continue
-			}
-			note := "referenced by documents"
-			if notes, ok := existingNotes[f]; ok {
-				var ns []string
-				for n := range notes {
-					ns = append(ns, n)
-				}
-				sort.Strings(ns)
-				if len(ns) > 0 {
-					note += "; note: " + strings.Join(ns, "; ")
-				}
-			}
-			fmt.Printf("%s — %s (source=related_files)\n", f, note)
-		}
-		if files, err := suggestFilesFromGit(ticketDir, terms); err == nil {
-			for _, f := range files {
-				fmt.Printf("%s — recent commit activity (source=git_history)\n", f)
-			}
-		}
-		if files, err := suggestFilesFromRipgrep(ticketDir, terms); err == nil {
-			reason := fmt.Sprintf("content match: %s", firstTerm(terms))
-			for _, f := range files {
-				fmt.Printf("%s — %s (source=ripgrep)\n", f, reason)
-			}
-		}
-		if modified, staged, untracked, err := suggestFilesFromGitStatus(ticketDir); err == nil {
-			for _, f := range modified {
-				fmt.Printf("%s — working tree modified (source=git_modified)\n", f)
-			}
-			for _, f := range staged {
-				fmt.Printf("%s — staged for commit (source=git_staged)\n", f)
-			}
-			for _, f := range untracked {
-				fmt.Printf("%s — untracked new file (source=git_untracked)\n", f)
-			}
+		for _, s := range suggestions {
+			fmt.Printf("%s — %s (source=%s)\n", s.File, s.Reason, s.Source)
 		}
 		return nil
 	}
 
-	// Validate query/filters presence
-	if settings.Query == "" && settings.Ticket == "" && len(settings.Topics) == 0 && settings.DocType == "" && settings.Status == "" &&
-		settings.File == "" && settings.Dir == "" && settings.ExternalSource == "" &&
-		settings.Since == "" && settings.Until == "" && settings.CreatedSince == "" && settings.UpdatedSince == "" {
-		return fmt.Errorf("must provide at least a query or filter")
-	}
-
-	sinceTime, err := parseDate(settings.Since)
-	if err != nil {
-		return fmt.Errorf("invalid --since date: %w", err)
-	}
-	untilTime, err := parseDate(settings.Until)
-	if err != nil {
-		return fmt.Errorf("invalid --until date: %w", err)
-	}
-	createdSinceTime, err := parseDate(settings.CreatedSince)
-	if err != nil {
-		return fmt.Errorf("invalid --created-since date: %w", err)
-	}
-	updatedSinceTime, err := parseDate(settings.UpdatedSince)
-	if err != nil {
-		return fmt.Errorf("invalid --updated-since date: %w", err)
-	}
 	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
 		return fmt.Errorf("root directory does not exist: %s", settings.Root)
 	}
-
-	queryLower := strings.ToLower(settings.Query)
-
-	// Collect search results first
-	type searchResult struct {
-		relPath      string
-		doc          *models.Document
-		snippet      string
-		matchedFiles []string
-		matchedNotes []string
-	}
-	var results []searchResult
 
 	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
 	if err != nil {
@@ -1212,151 +433,49 @@ func (c *SearchCommand) Run(
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	orderBy := workspace.OrderBy(strings.TrimSpace(settings.OrderBy))
+	if orderBy == "" {
+		orderBy = workspace.OrderByPath
 	}
 
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: scope,
-		Filters: workspace.DocFilters{
-			Ticket:    strings.TrimSpace(settings.Ticket),
-			Status:    strings.TrimSpace(settings.Status),
-			DocType:   strings.TrimSpace(settings.DocType),
-			TopicsAny: settings.Topics,
-			RelatedFile: func() []string {
-				if strings.TrimSpace(settings.File) != "" {
-					return []string{strings.TrimSpace(settings.File)}
-				}
-				return nil
-			}(),
-			RelatedDir: func() []string {
-				if strings.TrimSpace(settings.Dir) != "" {
-					return []string{strings.TrimSpace(settings.Dir)}
-				}
-				return nil
-			}(),
-		},
-		Options: workspace.DocQueryOptions{
-			IncludeBody:         true,
-			IncludeErrors:       false,
-			IncludeDiagnostics:  false,
-			IncludeArchivedPath: true,
-			IncludeScriptsPath:  true,
-			IncludeControlDocs:  true,
-		},
+	resp, err := searchsvc.SearchDocs(ctx, ws, searchsvc.SearchQuery{
+		TextQuery:           strings.TrimSpace(settings.Query),
+		Ticket:              strings.TrimSpace(settings.Ticket),
+		Topics:              settings.Topics,
+		DocType:             strings.TrimSpace(settings.DocType),
+		Status:              strings.TrimSpace(settings.Status),
+		File:                strings.TrimSpace(settings.File),
+		Dir:                 strings.TrimSpace(settings.Dir),
+		ExternalSource:      strings.TrimSpace(settings.ExternalSource),
+		Since:               strings.TrimSpace(settings.Since),
+		Until:               strings.TrimSpace(settings.Until),
+		CreatedSince:        strings.TrimSpace(settings.CreatedSince),
+		UpdatedSince:        strings.TrimSpace(settings.UpdatedSince),
+		OrderBy:             orderBy,
+		Reverse:             false,
+		IncludeArchivedPath: true,
+		IncludeScriptsPath:  true,
+		IncludeControlDocs:  true,
+		IncludeDiagnostics:  false,
+		IncludeErrors:       false,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to query docs: %w", err)
-	}
-
-	for _, h := range res.Docs {
-		if h.Doc == nil {
-			continue
-		}
-		doc := h.Doc
-		content := h.Body
-
-		if settings.ExternalSource != "" {
-			fm, ferr := readDocumentFrontmatter(h.Path)
-			if ferr != nil {
-				continue
-			}
-			sourceMatch := false
-			for _, es := range fm.ExternalSources {
-				if strings.Contains(es, settings.ExternalSource) || strings.Contains(settings.ExternalSource, es) {
-					sourceMatch = true
-					break
-				}
-			}
-			if !sourceMatch {
-				continue
-			}
-		}
-
-		if fi, err := os.Stat(h.Path); err == nil {
-			createdTime := fi.ModTime()
-			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
-				continue
-			}
-		}
-		if !doc.LastUpdated.IsZero() {
-			if !sinceTime.IsZero() && doc.LastUpdated.Before(sinceTime) {
-				continue
-			}
-			if !untilTime.IsZero() && doc.LastUpdated.After(untilTime) {
-				continue
-			}
-			if !updatedSinceTime.IsZero() && doc.LastUpdated.Before(updatedSinceTime) {
-				continue
-			}
-		}
-
-		if settings.Query != "" {
-			if !strings.Contains(strings.ToLower(content), queryLower) {
-				continue
-			}
-		}
-
-		relPath, err := filepath.Rel(settings.Root, h.Path)
-		if err != nil {
-			relPath = h.Path
-		}
-		snippet := extractSnippet(content, settings.Query, 100)
-
-		var matchedFiles []string
-		var matchedNotes []string
-		if strings.TrimSpace(settings.File) != "" {
-			docResolver := paths.NewResolver(paths.ResolverOptions{
-				DocsRoot:  settings.Root,
-				DocPath:   h.Path,
-				ConfigDir: ws.Context().ConfigDir,
-				RepoRoot:  ws.Context().RepoRoot,
-			})
-			fileQueryRaw := strings.TrimSpace(settings.File)
-			fileQueryNorm := docResolver.Normalize(fileQueryRaw)
-			if fileQueryNorm.Empty() && fileQueryRaw != "" {
-				fileQueryNorm = paths.NormalizedPath{
-					Canonical:     filepath.ToSlash(fileQueryRaw),
-					OriginalClean: filepath.ToSlash(fileQueryRaw),
-				}
-			}
-			baseQuery := filepath.Base(filepath.ToSlash(fileQueryRaw))
-			for _, rf := range doc.RelatedFiles {
-				n := docResolver.Normalize(rf.Path)
-				if paths.MatchPaths(fileQueryNorm, n) ||
-					(strings.TrimSpace(baseQuery) != "" && (filepath.Base(filepath.ToSlash(rf.Path)) == baseQuery)) ||
-					(strings.TrimSpace(baseQuery) != "" && strings.HasSuffix(filepath.ToSlash(rf.Path), "/"+baseQuery)) {
-					matchedFiles = append(matchedFiles, bestDisplay(n, rf.Path))
-					if strings.TrimSpace(rf.Note) != "" {
-						matchedNotes = append(matchedNotes, rf.Note)
-					}
-				}
-			}
-		}
-
-		results = append(results, searchResult{
-			relPath:      relPath,
-			doc:          doc,
-			snippet:      snippet,
-			matchedFiles: matchedFiles,
-			matchedNotes: matchedNotes,
-		})
+		return err
 	}
 
 	// Print human output
-	for _, result := range results {
-		if settings.File != "" {
+	for _, result := range resp.Results {
+		if strings.TrimSpace(settings.File) != "" {
 			extra := ""
-			if len(result.matchedFiles) > 0 {
-				extra += " file=" + strings.Join(result.matchedFiles, ", ")
+			if len(result.MatchedFiles) > 0 {
+				extra += " file=" + strings.Join(result.MatchedFiles, ", ")
 			}
-			if len(result.matchedNotes) > 0 {
-				extra += " note=" + strings.Join(result.matchedNotes, " | ")
+			if len(result.MatchedNotes) > 0 {
+				extra += " note=" + strings.Join(result.MatchedNotes, " | ")
 			}
-			fmt.Printf("%s — %s [%s] :: %s%s\n", result.relPath, result.doc.Title, result.doc.Ticket, result.snippet, extra)
+			fmt.Printf("%s — %s [%s] :: %s%s\n", result.Path, result.Title, result.Ticket, result.Snippet, extra)
 		} else {
-			fmt.Printf("%s — %s [%s] :: %s\n", result.relPath, result.doc.Title, result.doc.Ticket, result.snippet)
+			fmt.Printf("%s — %s [%s] :: %s\n", result.Path, result.Title, result.Ticket, result.Snippet)
 		}
 	}
 
@@ -1372,26 +491,26 @@ func (c *SearchCommand) Run(
 		Snippet string
 	}
 
-	searchResults := make([]SearchResult, 0, len(results))
-	for _, result := range results {
-		topics := result.doc.Topics
+	searchResults := make([]SearchResult, 0, len(resp.Results))
+	for _, result := range resp.Results {
+		topics := result.Topics
 		if topics == nil {
 			topics = []string{}
 		}
 		searchResults = append(searchResults, SearchResult{
-			Ticket:  result.doc.Ticket,
-			Title:   result.doc.Title,
-			DocType: result.doc.DocType,
-			Status:  result.doc.Status,
+			Ticket:  result.Ticket,
+			Title:   result.Title,
+			DocType: result.DocType,
+			Status:  result.Status,
 			Topics:  topics,
-			Path:    result.relPath,
-			Snippet: result.snippet,
+			Path:    result.Path,
+			Snippet: result.Snippet,
 		})
 	}
 
 	templateData := map[string]interface{}{
 		"Query":        settings.Query,
-		"TotalResults": len(results),
+		"TotalResults": resp.Total,
 		"Results":      searchResults,
 	}
 

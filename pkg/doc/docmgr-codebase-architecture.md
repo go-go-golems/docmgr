@@ -781,7 +781,7 @@ documents.WithSkipDir(func(path string, d fs.DirEntry) bool {
 
 ## Query System
 
-The query system provides a flexible API for filtering documents by ticket, status, doc-type, topics, and related files. Queries use the SQLite index for performance and support scoping to repository-wide or ticket-specific searches.
+The query system provides a flexible API for filtering documents by ticket, status, doc-type, topics, related files, and (when available) full-text content. Queries use the SQLite index for performance and support scoping to repository-wide or ticket-specific searches.
 
 **Why this matters:** Once documents are indexed, you need a way to find them. The query system lets you filter by any combination of metadata fields, making it easy to find exactly what you're looking for. Think of it like a database query: you specify what you want, and it returns matching documents instantly.
 
@@ -790,28 +790,29 @@ The query system provides a flexible API for filtering documents by ticket, stat
 A query consists of three parts: scope, filters, and options:
 
 ```go
-res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-    Scope: workspace.Scope{
-        Kind: workspace.ScopeRepo,  // or ScopeTicket with TicketID
-    },
-    Filters: workspace.DocFilters{
-        Ticket:    "MEN-3475",
-        Status:    "active",
-        DocType:   "design-doc",
-        TopicsAny: []string{"api", "backend"},
-        RelatedFile: []string{"backend/api/user.go"},
-    },
-    Options: workspace.DocQueryOptions{
-        IncludeBody:         false,
-        IncludeErrors:       false,
-        IncludeArchivedPath: true,
-        IncludeScriptsPath:  true,
-        IncludeControlDocs:  true,
-        OrderBy:             workspace.OrderByLastUpdated,
-        Reverse:             true,
-    },
-})
-```
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+	    Scope: workspace.Scope{
+	        Kind: workspace.ScopeRepo,  // or ScopeTicket with TicketID
+	    },
+	    Filters: workspace.DocFilters{
+	        Ticket:    "MEN-3475",
+	        Status:    "active",
+	        DocType:   "design-doc",
+	        TopicsAny: []string{"api", "backend"},
+	        RelatedFile: []string{"backend/api/user.go"},
+	        TextQuery: "websocket", // SQLite FTS5 MATCH query string (when available)
+	    },
+	    Options: workspace.DocQueryOptions{
+	        IncludeBody:         false,
+	        IncludeErrors:       false,
+	        IncludeArchivedPath: true,
+	        IncludeScriptsPath:  true,
+	        IncludeControlDocs:  true,
+	        OrderBy:             workspace.OrderByRank, // bm25(docs_fts), requires TextQuery
+	        Reverse:             true,
+	    },
+	})
+	```
 
 **Query components:**
 
@@ -832,6 +833,7 @@ res, err := ws.QueryDocs(ctx, workspace.DocQuery{
 - **`DocType`**: Exact doc type match (design-doc, reference, etc.)
 - **`TopicsAny`**: Match if document has ANY of these topics (OR logic)
 - **`RelatedFile`**: Match if document references this file
+- **`TextQuery`**: Full-text query (SQLite FTS5 `MATCH` syntax; no substring/contains compatibility guarantees)
 
 **3. Options** - How to return results:
 
@@ -840,8 +842,18 @@ res, err := ws.QueryDocs(ctx, workspace.DocQuery{
 - **`IncludeArchivedPath`**: Include documents in `archive/` directories
 - **`IncludeScriptsPath`**: Include documents in `scripts/` directories
 - **`IncludeControlDocs`**: Include control files (tasks.md, changelog.md)
-- **`OrderBy`**: Sort by path, last_updated, etc.
+- **`OrderBy`**: Sort by path, last_updated, rank, etc.
 - **`Reverse`**: Reverse sort order (newest first, etc.)
+
+### Full-text search (FTS5)
+
+Full-text search is backed by an FTS5 virtual table (`docs_fts`) created alongside the in-memory SQLite index.
+
+- Implementation: `internal/workspace/sqlite_schema.go` (`ensureDocsFTS5`) and `internal/workspace/index_builder.go` (populate `docs_fts` with `rowid = doc_id`).
+- Querying: `internal/workspace/query_docs_sql.go` uses `docs_fts MATCH ?` and `bm25(docs_fts)` for ranking (`workspace.OrderByRank`).
+- Availability: building without `-tags sqlite_fts5` typically yields `workspace.ErrFTSNotAvailable` and `Workspace.FTSAvailable() == false`; in that mode `TextQuery` queries error, but metadata-only queries still work.
+
+docmgr also exposes a higher-level search engine in `internal/searchsvc` (`SearchDocs`) which converts CLI-like inputs into a `workspace.DocQuery` and handles snippets, date parsing, and file suggestion heuristics.
 
 **Query result:**
 

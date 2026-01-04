@@ -1,7 +1,7 @@
 ---
 Title: Add ticket graph command (Mermaid)
 Ticket: 002-ADD-TICKET-GRAPH
-Status: active
+Status: complete
 Topics:
     - docmgr
     - cli
@@ -27,8 +27,11 @@ RelatedFiles:
       Note: New ticket graph command implementation
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-03T15:01:44.555086045-05:00
+LastUpdated: 2026-01-03T21:15:05.559840731-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 

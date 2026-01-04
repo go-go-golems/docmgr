@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
+	"github.com/go-go-golems/docmgr/internal/searchsvc"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -268,7 +269,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 
 		if settings.FromGit {
 			// Only from git status (changed files)
-			if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
+			if modified, staged, untracked, err := searchsvc.SuggestFilesFromGitStatus(searchRoot); err == nil {
 				for _, f := range modified {
 					addSuggestion(suggestions, resolver, f, "working tree modified")
 				}
@@ -351,18 +352,18 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 				terms = append(terms, settings.Query)
 			}
 			terms = append(terms, settings.Topics...)
-			if files, err := suggestFilesFromGit(searchRoot, terms); err == nil {
+			if files, err := searchsvc.SuggestFilesFromGit(searchRoot); err == nil {
 				for _, f := range files {
 					addSuggestion(suggestions, resolver, f, "recent commit activity")
 				}
 			}
-			if files, err := suggestFilesFromRipgrep(searchRoot, terms); err == nil {
-				label := fmt.Sprintf("content match: %s", firstTerm(terms))
+			if files, err := searchsvc.SuggestFilesFromRipgrep(searchRoot, terms); err == nil {
+				label := fmt.Sprintf("content match: %s", searchsvc.FirstTerm(terms))
 				for _, f := range files {
 					addSuggestion(suggestions, resolver, f, label)
 				}
 			}
-			if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
+			if modified, staged, untracked, err := searchsvc.SuggestFilesFromGitStatus(searchRoot); err == nil {
 				for _, f := range modified {
 					addSuggestion(suggestions, resolver, f, "working tree modified")
 				}

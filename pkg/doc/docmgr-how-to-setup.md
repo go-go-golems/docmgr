@@ -573,7 +573,7 @@ validate-docs:
   steps:
     - uses: actions/checkout@v3
     - name: Install docmgr
-      run: go install github.com/go-go-golems/docmgr@latest
+      run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
     - name: Validate
       run: docmgr doctor --all --stale-after 30 --fail-on error
 ```
@@ -610,7 +610,7 @@ doc-report:
   steps:
     - uses: actions/checkout@v3
     - name: Install docmgr
-      run: go install github.com/go-go-golems/docmgr@latest
+      run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
     
     - name: Generate report
       run: |

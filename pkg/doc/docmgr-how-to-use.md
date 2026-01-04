@@ -328,6 +328,7 @@ Find docs by content or metadata:
 ```bash
 # Full-text search
 docmgr doc search --query "WebSocket"
+docmgr doc search --query "WebSocket" --order-by rank
 
 # Filter by metadata
 docmgr doc search --query "API" --topics backend --doc-type design-doc
@@ -339,21 +340,25 @@ docmgr doc search --file backend/api/register.go
 docmgr doc search --dir backend/api/
 ```
 
+**Ordering:** `--order-by path|last_updated|rank` (rank ordering is most useful with `--query`).
+
 **Common usecases:**
 - **Discovery:** "What have we documented about authentication?"
 - **Code review:** "What's the design for this file I'm reviewing?"
 - **Refactoring:** "Which docs mention this directory I'm changing?"
 
-Search is designed to be fast and is case-insensitive.
+Search is designed to be fast. Full-text search (`--query`) is powered by SQLite FTS5 when available, and `--order-by rank` uses `bm25` scoring to put the most relevant hits first. The query string follows SQLite FTS5 `MATCH` semantics (no substring/contains compatibility guarantees).
 
 ### Unified index-backed behavior (what makes results consistent)
 
-`docmgr doc search` is powered by the same unified backend used by other core commands: docmgr discovers the workspace, builds a temporary in-memory index of docs, and queries it. This is why reverse lookup and metadata filters behave consistently across:
+`docmgr doc search` is powered by the same unified backend used by other core commands: docmgr discovers the workspace, builds a temporary in-memory SQLite index of docs (optionally including an FTS5 virtual table), and queries it. This is why reverse lookup and metadata filters behave consistently across:
 
 - `docmgr doc search`
 - `docmgr doc list`
 - `docmgr doctor`
 - `docmgr doc relate`
+
+**Build note:** When building from source, use `-tags sqlite_fts5` if you want `docmgr doc search --query` to work. Without it, docmgr still supports metadata filters and reverse lookup, but `--query` will error because FTS isn't available.
 
 ### Reverse lookup matching rules (`--file` / `--dir`)
 

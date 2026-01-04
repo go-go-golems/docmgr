@@ -160,6 +160,50 @@ CREATE TABLE IF NOT EXISTS related_files (
 	return nil
 }
 
+var ErrFTSNotAvailable = errors.New("fts5 not available (docs_fts missing)")
+
+func ensureDocsFTS5(ctx context.Context, db *sql.DB) (bool, error) {
+	// Best-effort: some sqlite builds omit fts5. We treat that as a supported degraded mode.
+	stmt := `
+CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
+    title,
+    body,
+    topics,
+    doc_type,
+    ticket_id,
+    tokenize = 'unicode61'
+);`
+	_, err := db.ExecContext(ctx, stmt)
+	if err == nil {
+		return true, nil
+	}
+	if isFTS5Unavailable(err) {
+		return false, nil
+	}
+	return false, errors.Wrap(err, "ensure docs_fts fts5 table")
+}
+
+func isFTS5Unavailable(err error) bool {
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "no such module: fts5")
+}
+
+func sqliteTableExists(ctx context.Context, db *sql.DB, name string) (bool, error) {
+	if db == nil {
+		return false, errors.New("nil db")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return false, errors.New("empty table name")
+	}
+	var cnt int
+	// #nosec G202 -- table name is bound as a parameter, not interpolated.
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(1) FROM sqlite_master WHERE type='table' AND name=?;`, name).Scan(&cnt); err != nil {
+		return false, errors.Wrap(err, "query sqlite_master")
+	}
+	return cnt > 0, nil
+}
+
 func sqliteQuoteStringLiteral(s string) (string, error) {
 	// SQLite string literals are single-quoted. Escape by doubling single quotes.
 	// Disallow NUL which sqlite treats oddly in some contexts.

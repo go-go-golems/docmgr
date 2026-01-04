@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-go-golems/docmgr/internal/searchsvc"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -191,7 +192,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 			terms = append(terms, s.Query)
 		}
 		terms = append(terms, s.Topics...)
-		if files, err := suggestFilesFromGit(searchRoot, terms); err == nil {
+		if files, err := searchsvc.SuggestFilesFromGit(searchRoot); err == nil {
 			for _, f := range files {
 				if _, ok := suggestions[f]; !ok {
 					suggestions[f] = reasonSet{}
@@ -201,17 +202,17 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		}
 
 		// ripgrep / grep
-		if files, err := suggestFilesFromRipgrep(searchRoot, terms); err == nil {
+		if files, err := searchsvc.SuggestFilesFromRipgrep(searchRoot, terms); err == nil {
 			for _, f := range files {
 				if _, ok := suggestions[f]; !ok {
 					suggestions[f] = reasonSet{}
 				}
-				suggestions[f][fmt.Sprintf("content match: %s", firstTerm(terms))] = true
+				suggestions[f][fmt.Sprintf("content match: %s", searchsvc.FirstTerm(terms))] = true
 			}
 		}
 
 		// git status
-		if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
+		if modified, staged, untracked, err := searchsvc.SuggestFilesFromGitStatus(searchRoot); err == nil {
 			for _, f := range modified {
 				if _, ok := suggestions[f]; !ok {
 					suggestions[f] = reasonSet{}
@@ -435,7 +436,7 @@ func (c *ChangelogUpdateCommand) Run(
 			}
 		}
 		// Minimal suggestion pass: from git status only to keep output concise
-		if modified, staged, untracked, err := suggestFilesFromGitStatus(searchRoot); err == nil {
+		if modified, staged, untracked, err := searchsvc.SuggestFilesFromGitStatus(searchRoot); err == nil {
 			for _, f := range modified {
 				if _, ok := suggestions[f]; !ok {
 					suggestions[f] = reasonSet{}

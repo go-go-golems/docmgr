@@ -486,3 +486,8 @@ Comparison: ran common scenario subset against system vs local docmgr with scena
 
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/12/REFACTOR-TICKET-REPOSITORY-HANDLING--refactor-ticket-repository-handling/analysis/11-comparison-suite-report-system-vs-local.md — Comparison results and analysis
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-12 19:31; tasks_open 1)
+

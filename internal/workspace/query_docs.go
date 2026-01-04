@@ -33,6 +33,10 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 		return DocQueryResult{}, err
 	}
 
+	if strings.TrimSpace(q.Filters.TextQuery) != "" && !w.ftsAvailable {
+		return DocQueryResult{}, ErrFTSNotAvailable
+	}
+
 	var diags []core.Taxonomy
 	if q.Options.IncludeDiagnostics {
 		// Reverse-lookup normalization diagnostics (best-effort).
@@ -298,6 +302,9 @@ type DocFilters struct {
 	DocType string
 	Status  string
 
+	// TextQuery is an FTS5 query string matched against docs_fts.
+	TextQuery string
+
 	RelatedFile []string
 	RelatedDir  []string
 
@@ -309,6 +316,7 @@ type OrderBy string
 const (
 	OrderByPath        OrderBy = "path"
 	OrderByLastUpdated OrderBy = "last_updated"
+	OrderByRank        OrderBy = "rank"
 )
 
 type DocQueryOptions struct {

@@ -5,6 +5,7 @@ This directory contains an end-to-end scenario to validate the `docmgr` CLI agai
 ## Prerequisites
 
 - **Required**: pin the binary under test via `DOCMGR_PATH` (do not rely on `docmgr` from `PATH`).
+- **Required**: build the pinned `docmgr` binary with `-tags sqlite_fts5` (full-text search is FTS-backed).
 - Optional (recommended): `scenariolog` (scenario logging flight recorder). If unset, `run-all.sh` will build it from the repo into `/tmp/scenariolog-local`.
 - `git` installed
 - `bash` (POSIX shell compatible)
@@ -40,7 +41,7 @@ cd test-scenarios/testing-doc-manager/
 chmod +x 00-reset.sh 01-create-mock-codebase.sh 02-init-ticket.sh 03-create-docs-and-meta.sh 04-relate-and-doctor.sh 05-search-scenarios.sh 06-doctor-advanced.sh run-all.sh
 
 # Build repo binary and pin it (recommended)
-go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
+go build -tags sqlite_fts5 -o /tmp/docmgr-scenario-local ./cmd/docmgr
 export DOCMGR_PATH=/tmp/docmgr-scenario-local
 
 # Optional: pin scenariolog explicitly (otherwise run-all.sh will build it)

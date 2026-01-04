@@ -1,7 +1,7 @@
 ---
 Title: Analyze Superpowers Repository
 Ticket: 002-ANALYZE-SUPERPOWERS
-Status: active
+Status: archived
 Topics:
     - analysis
     - skills
@@ -20,8 +20,11 @@ RelatedFiles:
       Note: Core skill that establishes how to find and use skills
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-19T14:06:07.636144208-05:00
+LastUpdated: 2026-01-03T21:12:49.864097218-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # Analyze Superpowers Repository

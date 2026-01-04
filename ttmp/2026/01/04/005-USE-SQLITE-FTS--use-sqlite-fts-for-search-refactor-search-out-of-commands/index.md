@@ -1,7 +1,7 @@
 ---
 Title: Use SQLite FTS for search; refactor search out of commands
 Ticket: 005-USE-SQLITE-FTS
-Status: active
+Status: complete
 Topics:
     - backend
     - docmgr
@@ -51,10 +51,11 @@ RelatedFiles:
       Note: Reference implementation for best-effort FTS5 creation and degraded mode
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-04T14:09:58.944641048-05:00
+LastUpdated: 2026-01-04T17:00:21.028135653-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

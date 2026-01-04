@@ -37,3 +37,8 @@ Update analysis doc note: parity-first superseded; no-backcompat plan lives in d
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/04/005-USE-SQLITE-FTS--use-sqlite-fts-for-search-refactor-search-out-of-commands/analysis/01-analysis-fts-backed-search-refactor-search-packages.md — Clarify superseded parity-first assumptions
 
+
+## 2026-01-04
+
+FTS5-backed search engine refactor complete; docs and smoke scenario updated.
+

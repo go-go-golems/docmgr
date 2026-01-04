@@ -58,7 +58,7 @@ jobs:
           go-version: '1.21'
       
       - name: Install docmgr
-        run: go install github.com/go-go-golems/docmgr@latest
+        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
       
       - name: Validate documentation
         run: |
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Install docmgr
-        run: go install github.com/go-go-golems/docmgr@latest
+        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
       
       - name: Validate documentation
         run: |
@@ -139,7 +139,7 @@ validate-docs:
   stage: test
   image: golang:1.21
   script:
-    - go install github.com/go-go-golems/docmgr@latest
+    - go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
     - docmgr doctor --all --stale-after 30 --fail-on error
   only:
     changes:
@@ -155,7 +155,7 @@ validate-docs:
   stage: test
   image: golang:1.21
   script:
-    - go install github.com/go-go-golems/docmgr@latest
+    - go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
     - docmgr doctor --all --stale-after 30 --fail-on error || EXIT_CODE=$?
     - |
       if [ $EXIT_CODE -ne 0 ]; then
@@ -439,7 +439,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install docmgr
-        run: go install github.com/go-go-golems/docmgr@latest
+        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
       - name: Generate report
         run: bash scripts/weekly-docs-report.sh
 ```
@@ -802,7 +802,7 @@ exit ${EXIT_CODE:-0}
 - name: Install docmgr
   run: |
     if [ ! -f ~/go/bin/docmgr ]; then
-      go install github.com/go-go-golems/docmgr@latest
+      go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
     fi
 ```
 

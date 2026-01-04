@@ -140,15 +140,17 @@ Several docmgr commands share a single “unified” backend behavior: they buil
 In practice, these commands do the same high-level steps internally:
 
 - Discover workspace configuration and roots (docs root, repo root, config dir)
-- Build an ephemeral in-memory index of markdown docs under the docs root
-- Query the index for docs, topics, and related files (including reverse lookup)
+- Build an ephemeral in-memory SQLite index of markdown docs under the docs root
+- Query the index for docs, topics, and related files (including reverse lookup and full-text)
 
 Commands that use this unified behavior include:
 
-- `docmgr doc search` (metadata filters + reverse lookup; content search is still best-effort post-filtering)
+- `docmgr doc search` (metadata filters + reverse lookup; full-text search is SQLite FTS5-backed when available)
 - `docmgr doc list`
 - `docmgr doctor`
 - `docmgr doc relate` (doc selection + normalization uses the same resolver logic as the index)
+
+**Full-text search note:** `docmgr doc search --query` is a SQLite FTS5 `MATCH` query string (no substring/contains compatibility guarantees). Build from source with `-tags sqlite_fts5` to enable FTS; otherwise `--query` errors while metadata-only searches still work.
 
 **Reverse lookup note:** `docmgr doc search --file/--dir` matches using a path normalization pipeline (repo/doc/root-aware) with small compatibility fallbacks (for example, basename/suffix matching like `register.go`) so common workflows keep working.
 
@@ -299,6 +301,7 @@ Search supports both content queries and metadata filters. Reverse lookups (`--f
 ```bash
 # Content search
 docmgr doc search --query "WebSocket" --ticket MEN-4242
+docmgr doc search --query "WebSocket" --ticket MEN-4242 --order-by rank
 
 # Metadata filters
 docmgr doc search --ticket MEN-4242 --topics websocket,backend --doc-type design-doc
@@ -325,6 +328,8 @@ docmgr doc relate --ticket MEN-4242 --suggest --from-git --apply-suggestions
 ```
 
 Relative date formats supported include: `today`, `yesterday`, `last week`, `this month`, `last month`, `2 weeks ago`, as well as ISO-like absolute dates (for example, `2025-01-01`).
+
+**Ordering:** `--order-by path|last_updated|rank` (rank ordering is most useful with `--query` and requires FTS5).
 
 ### 4.9 Relate Files
 

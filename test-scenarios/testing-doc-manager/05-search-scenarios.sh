@@ -9,6 +9,7 @@ DOCMGR="${DOCMGR_PATH:-docmgr}"
 
 # Content search with snippet
 ${DOCMGR} doc search --query "WebSocket" --ticket MEN-4242
+${DOCMGR} doc search --query "WebSocket" --ticket MEN-4242 --order-by rank
 
 # Content search for second ticket
 ${DOCMGR} doc search --query "WebSocket" --ticket MEN-5678

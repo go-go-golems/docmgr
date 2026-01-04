@@ -44,7 +44,7 @@ This suite must run against an explicitly pinned `docmgr` binary via `DOCMGR_PAT
 - **Recommended (run repo code)**:
 
 ```bash
-go build -o /tmp/docmgr-scenario-local ./cmd/docmgr
+go build -tags sqlite_fts5 -o /tmp/docmgr-scenario-local ./cmd/docmgr
 DOCMGR_PATH=/tmp/docmgr-scenario-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
 ```
 

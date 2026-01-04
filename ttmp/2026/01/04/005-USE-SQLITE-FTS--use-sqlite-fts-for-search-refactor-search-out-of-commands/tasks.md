@@ -4,6 +4,9 @@
 
 - [ ] Add tasks here
 
+- [x] Update smoke scenario docs/scripts to build with `-tags sqlite_fts5`
+- [x] Exercise `--order-by rank` in the scenario suite
+
 - [x] Add docs_fts (FTS5) table to workspace schema (option C: title/body/topics/doc_type/ticket_id), best-effort create
 - [x] Populate docs_fts during workspace ingest (rowid=doc_id); decide topics serialization
 - [x] Extend workspace query model: DocFilters.TextQuery + OrderByRank (bm25)

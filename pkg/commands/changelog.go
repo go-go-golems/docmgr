@@ -50,7 +50,7 @@ Examples:
     --file-note "web/src/store/api/chatApi.ts=Frontend integration"
 
   # Use suggestions (git + ripgrep + existing docs); print suggestions only
-  docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
+  docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket --topics chat,backend,websocket
 
   # Apply suggestions and write them into the entry
   docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket

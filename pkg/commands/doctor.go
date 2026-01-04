@@ -84,6 +84,9 @@ Examples:
   # Tighten staleness and fail CI on warnings
   docmgr doctor --all --stale-after 14 --fail-on warning
 
+  # Ignore multiple dirs/globs (repeat the flags)
+  docmgr doctor --all --ignore-dir archive --ignore-dir sources --ignore-glob "*.bak" --ignore-glob "*.tmp"
+
   # Emit diagnostics JSON for scripts/CI
   docmgr doctor --ticket MEN-3475 --diagnostics-json - --with-glaze-output --output json
 `),

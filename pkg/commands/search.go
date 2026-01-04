@@ -70,6 +70,7 @@ Examples:
 
   # Filter by metadata
   docmgr search --query "database" --topics backend --doc-type design-doc
+  docmgr search --query "database" --topics backend,storage --doc-type design-doc --status review
 
   # Reverse lookup: find docs that reference a file or directory
   docmgr search --file pkg/commands/add.go

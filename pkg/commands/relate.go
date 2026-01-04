@@ -76,6 +76,9 @@ Examples:
   docmgr doc relate --doc ttmp/YYYY/MM/DD/MEN-4242--.../design/path-normalization-strategy.md \
     --file-note "backend/chat/ws/manager.go:WebSocket lifecycle management" \
     --file-note "backend/chat/ws/heartbeat.go:Ping/pong behavior and timeouts"
+
+  # Remove multiple related files (comma-separated)
+  docmgr doc relate --ticket MEN-4242 --remove-files "backend/chat/ws/heartbeat.go,web/src/store/api/chatApi.ts"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

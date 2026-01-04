@@ -57,6 +57,9 @@ Examples:
   # Create a ticket (default root + default date-based path template)
   docmgr ticket create-ticket --ticket MEN-3475 --title "Chat API cleanup" --topics chat,llm-workflow
 
+  # Create with multiple topics
+  docmgr ticket create-ticket --ticket MEN-8888 --title "WebSocket reconnection plan" --topics chat,backend,websocket
+
   # Create under a custom path template (relative to --root)
   docmgr ticket create-ticket --ticket MEN-9999 --title "Scratch ticket for experiments" \
     --root ttmp --path-template "examples/{{TICKET}}--{{SLUG}}"

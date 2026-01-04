@@ -55,6 +55,7 @@ Examples:
   docmgr list docs --ticket MEN-3475
   docmgr list docs --doc-type design-doc
   docmgr list docs --topics chat,backend
+  docmgr list docs --topics chat,backend,websocket --status active
 
   # Scriptable (paths only)
   docmgr list docs --ticket MEN-3475 --with-glaze-output --select path

@@ -70,6 +70,11 @@ Examples:
   # Override ticket defaults (topics/owners) for this one doc
   docmgr doc add --ticket MEN-3475 --doc-type reference --title "API Contracts" \
     --topics api,backend --owners manuel,alice
+
+  # Seed multiple external sources + related files in frontmatter
+  docmgr doc add --ticket MEN-3475 --doc-type reference --title "Trace Links" \
+    --external-sources "https://example.com/spec,https://github.com/org/repo/issues/123" \
+    --related-files "pkg/commands/add.go,pkg/commands/relate.go"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

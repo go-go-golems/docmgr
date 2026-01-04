@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>docmgr Search UI - MVP Mock</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .search-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .result-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            transition: box-shadow 0.2s;
+            cursor: pointer;
+        }
+        
+        .result-card:hover, .result-card.focused {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: #0d6efd;
+        }
+        
+        .result-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 8px;
+        }
+        
+        .result-meta {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        
+        .result-snippet {
+            font-size: 0.9rem;
+            color: #495057;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .result-path {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #6c757d;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .topic-badge {
+            font-size: 0.75rem;
+            margin-right: 4px;
+        }
+        
+        .refresh-btn {
+            font-size: 0.9rem;
+        }
+        
+        .search-input {
+            font-size: 1rem;
+        }
+        
+        .filter-row {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .keyboard-hint {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-top: 8px;
+        }
+        
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .copy-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .result-card:hover .copy-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Mock API data
+        const MOCK_RESULTS = [
+            {
+                id: 1,
+                ticket: "MEN-4242",
+                title: "Chat WebSocket Lifecycle",
+                docType: "reference",
+                status: "active",
+                topics: ["chat", "backend", "websocket"],
+                snippet: "WebSocket connection lifecycle management in the chat backend. Covers initialization, message handling, reconnection logic, and graceful shutdown procedures.",
+                path: "2026/01/04/MEN-4242--normalize-chat-api/reference/01-chat-websocket-lifecycle.md"
+            },
+            {
+                id: 2,
+                ticket: "MEN-4242",
+                title: "Path Normalization Strategy",
+                docType: "design-doc",
+                status: "active",
+                topics: ["chat", "backend"],
+                snippet: "API path normalization includes WebSocket upgrade paths. Ensures consistent routing for both HTTP and WebSocket connections across the entire backend.",
+                path: "2026/01/04/MEN-4242--normalize-chat-api/design-doc/01-path-normalization-strategy.md"
+            },
+            {
+                id: 3,
+                ticket: "MEN-5100",
+                title: "WebSocket Protocol Updates",
+                docType: "reference",
+                status: "review",
+                topics: ["websocket", "protocol"],
+                snippet: "Changes to WebSocket message framing and heartbeat logic. New ping/pong mechanism reduces bandwidth and improves connection stability for mobile clients.",
+                path: "2026/01/02/MEN-5100--ws-protocol-updates/reference/02-protocol-changes.md"
+            },
+            {
+                id: 4,
+                ticket: "MEN-4300",
+                title: "Chat Authentication Flow",
+                docType: "design-doc",
+                status: "active",
+                topics: ["chat", "auth", "backend"],
+                snippet: "Authentication and authorization patterns for chat endpoints. Covers JWT validation, session management, and WebSocket connection authentication.",
+                path: "2025/12/15/MEN-4300--chat-auth/design-doc/01-auth-flow.md"
+            },
+            {
+                id: 5,
+                ticket: "MEN-5200",
+                title: "Message Queue Architecture",
+                docType: "design-doc",
+                status: "complete",
+                topics: ["chat", "backend", "infrastructure"],
+                snippet: "Message queuing system for chat message delivery. Ensures reliable message ordering and delivery even during high load or temporary disconnections.",
+                path: "2025/12/20/MEN-5200--message-queue/design-doc/01-queue-architecture.md"
+            },
+            {
+                id: 6,
+                ticket: "MEN-4242",
+                title: "Chat API Testing Playbook",
+                docType: "playbook",
+                status: "active",
+                topics: ["chat", "testing"],
+                snippet: "Comprehensive testing procedures for chat API endpoints. Includes smoke tests, integration tests, and WebSocket connection testing scenarios.",
+                path: "2026/01/04/MEN-4242--normalize-chat-api/playbook/01-testing-procedures.md"
+            }
+        ];
+
+        // Toast Component
+        function Toast({ message, show, onClose }) {
+            useEffect(() => {
+                if (show) {
+                    const timer = setTimeout(onClose, 2000);
+                    return () => clearTimeout(timer);
+                }
+            }, [show, onClose]);
+
+            if (!show) return null;
+
+            return (
+                <div className="toast-container">
+                    <div className="toast show" role="alert">
+                        <div className="toast-header bg-success text-white">
+                            <strong className="me-auto">✓ Success</strong>
+                            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
+                        </div>
+                        <div className="toast-body">
+                            {message}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Result Card Component
+        function ResultCard({ result, focused, onClick, onCopy }) {
+            const getStatusBadge = (status) => {
+                const variants = {
+                    active: "primary",
+                    review: "warning",
+                    complete: "success",
+                    draft: "secondary"
+                };
+                return variants[status] || "secondary";
+            };
+
+            return (
+                <div 
+                    className={`result-card ${focused ? 'focused' : ''}`}
+                    onClick={onClick}
+                    tabIndex={0}
+                >
+                    <div className="d-flex justify-content-between align-items-start">
+                        <div className="flex-grow-1">
+                            <div className="result-title">{result.title}</div>
+                            <div className="result-meta">
+                                {result.ticket} • {result.docType} • 
+                                <span className={`badge bg-${getStatusBadge(result.status)} ms-1`}>
+                                    {result.status}
+                                </span>
+                            </div>
+                            <div className="mb-2">
+                                {result.topics.map(topic => (
+                                    <span key={topic} className="badge bg-secondary topic-badge">
+                                        {topic}
+                                    </span>
+                                ))}
+                            </div>
+                            <div className="result-snippet">
+                                "{result.snippet}"
+                            </div>
+                            <div className="result-path">
+                                {result.path}
+                            </div>
+                        </div>
+                        <button 
+                            className="btn btn-sm btn-outline-primary copy-btn ms-2"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onCopy(result.path);
+                            }}
+                        >
+                            📋 Copy
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App Component
+        function App() {
+            const [query, setQuery] = useState("");
+            const [ticket, setTicket] = useState("");
+            const [topic, setTopic] = useState("");
+            const [docType, setDocType] = useState("");
+            const [status, setStatus] = useState("");
+            const [results, setResults] = useState([]);
+            const [loading, setLoading] = useState(false);
+            const [hasSearched, setHasSearched] = useState(false);
+            const [focusedIndex, setFocusedIndex] = useState(-1);
+            const [showToast, setShowToast] = useState(false);
+            const [toastMessage, setToastMessage] = useState("");
+            const [lastRefreshed, setLastRefreshed] = useState(new Date());
+            const [refreshing, setRefreshing] = useState(false);
+
+            const searchInputRef = useRef(null);
+
+            // Mock search function
+            const performSearch = () => {
+                setLoading(true);
+                setHasSearched(true);
+                setFocusedIndex(-1);
+
+                // Simulate API delay
+                setTimeout(() => {
+                    let filtered = MOCK_RESULTS;
+
+                    if (query) {
+                        const lowerQuery = query.toLowerCase();
+                        filtered = filtered.filter(r => 
+                            r.title.toLowerCase().includes(lowerQuery) ||
+                            r.snippet.toLowerCase().includes(lowerQuery) ||
+                            r.topics.some(t => t.toLowerCase().includes(lowerQuery))
+                        );
+                    }
+
+                    if (ticket) {
+                        filtered = filtered.filter(r => r.ticket.toLowerCase().includes(ticket.toLowerCase()));
+                    }
+
+                    if (topic) {
+                        filtered = filtered.filter(r => r.topics.includes(topic));
+                    }
+
+                    if (docType) {
+                        filtered = filtered.filter(r => r.docType === docType);
+                    }
+
+                    if (status) {
+                        filtered = filtered.filter(r => r.status === status);
+                    }
+
+                    setResults(filtered);
+                    setLoading(false);
+                }, 300);
+            };
+
+            const handleRefresh = () => {
+                setRefreshing(true);
+                setTimeout(() => {
+                    setLastRefreshed(new Date());
+                    setRefreshing(false);
+                    showToastMessage("Index refreshed successfully!");
+                }, 800);
+            };
+
+            const clearFilters = () => {
+                setQuery("");
+                setTicket("");
+                setTopic("");
+                setDocType("");
+                setStatus("");
+                setResults([]);
+                setHasSearched(false);
+                setFocusedIndex(-1);
+            };
+
+            const copyToClipboard = (text) => {
+                navigator.clipboard.writeText(text);
+                showToastMessage(`Path copied: ${text}`);
+            };
+
+            const showToastMessage = (message) => {
+                setToastMessage(message);
+                setShowToast(true);
+            };
+
+            // Keyboard shortcuts
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    // "/" to focus search
+                    if (e.key === "/" && document.activeElement !== searchInputRef.current) {
+                        e.preventDefault();
+                        searchInputRef.current?.focus();
+                    }
+
+                    // Escape to clear
+                    if (e.key === "Escape") {
+                        clearFilters();
+                        searchInputRef.current?.blur();
+                    }
+
+                    // Arrow navigation
+                    if (results.length > 0) {
+                        if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setFocusedIndex(prev => Math.min(prev + 1, results.length - 1));
+                        }
+                        if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setFocusedIndex(prev => Math.max(prev - 1, -1));
+                        }
+
+                        // Enter to copy
+                        if (e.key === "Enter" && focusedIndex >= 0) {
+                            e.preventDefault();
+                            copyToClipboard(results[focusedIndex].path);
+                        }
+                    }
+                };
+
+                document.addEventListener("keydown", handleKeyDown);
+                return () => document.removeEventListener("keydown", handleKeyDown);
+            }, [results, focusedIndex]);
+
+            const getTimeAgo = (date) => {
+                const seconds = Math.floor((new Date() - date) / 1000);
+                if (seconds < 60) return "Just now";
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return `${minutes}m ago`;
+                const hours = Math.floor(minutes / 60);
+                return `${hours}h ago`;
+            };
+
+            const uniqueTopics = [...new Set(MOCK_RESULTS.flatMap(r => r.topics))].sort();
+            const uniqueDocTypes = [...new Set(MOCK_RESULTS.map(r => r.docType))].sort();
+            const uniqueStatuses = [...new Set(MOCK_RESULTS.map(r => r.status))].sort();
+
+            return (
+                <div className="search-container">
+                    <Toast 
+                        message={toastMessage} 
+                        show={showToast} 
+                        onClose={() => setShowToast(false)} 
+                    />
+
+                    {/* Header */}
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h1 className="h3 mb-0">docmgr Search</h1>
+                        <button 
+                            className="btn btn-outline-secondary refresh-btn"
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                        >
+                            {refreshing ? (
+                                <>⏳ Refreshing...</>
+                            ) : (
+                                <>🔄 Refresh ({getTimeAgo(lastRefreshed)})</>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Search Input */}
+                    <div className="mb-3">
+                        <div className="input-group input-group-lg">
+                            <span className="input-group-text">🔍</span>
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                className="form-control search-input"
+                                placeholder="Search docs..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        performSearch();
+                                    }
+                                }}
+                            />
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={performSearch}
+                            >
+                                Search
+                            </button>
+                        </div>
+                        <div className="keyboard-hint">
+                            Press <kbd>/</kbd> to focus • <kbd>↑↓</kbd> navigate • <kbd>Enter</kbd> copy • <kbd>Esc</kbd> clear
+                        </div>
+                    </div>
+
+                    {/* Filters */}
+                    <div className="filter-row">
+                        <div className="row g-2 align-items-end">
+                            <div className="col-md-3">
+                                <label className="form-label small mb-1">Ticket</label>
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    placeholder="e.g. MEN-4242"
+                                    value={ticket}
+                                    onChange={(e) => setTicket(e.target.value)}
+                                />
+                            </div>
+                            <div className="col-md-3">
+                                <label className="form-label small mb-1">Topic</label>
+                                <select 
+                                    className="form-select form-select-sm"
+                                    value={topic}
+                                    onChange={(e) => setTopic(e.target.value)}
+                                >
+                                    <option value="">All</option>
+                                    {uniqueTopics.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-2">
+                                <label className="form-label small mb-1">Type</label>
+                                <select 
+                                    className="form-select form-select-sm"
+                                    value={docType}
+                                    onChange={(e) => setDocType(e.target.value)}
+                                >
+                                    <option value="">All</option>
+                                    {uniqueDocTypes.map(t => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-2">
+                                <label className="form-label small mb-1">Status</label>
+                                <select 
+                                    className="form-select form-select-sm"
+                                    value={status}
+                                    onChange={(e) => setStatus(e.target.value)}
+                                >
+                                    <option value="">All</option>
+                                    {uniqueStatuses.map(s => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="col-md-2">
+                                <button 
+                                    className="btn btn-sm btn-outline-secondary w-100"
+                                    onClick={clearFilters}
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Results */}
+                    {loading ? (
+                        <div className="loading-spinner">
+                            <div className="spinner-border text-primary" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    ) : hasSearched ? (
+                        <>
+                            <div className="mb-3">
+                                <strong>{results.length}</strong> results
+                            </div>
+                            {results.length > 0 ? (
+                                <>
+                                    {results.map((result, index) => (
+                                        <ResultCard
+                                            key={result.id}
+                                            result={result}
+                                            focused={index === focusedIndex}
+                                            onClick={() => setFocusedIndex(index)}
+                                            onCopy={copyToClipboard}
+                                        />
+                                    ))}
+                                    {results.length >= 6 && (
+                                        <div className="text-center mt-3">
+                                            <button className="btn btn-outline-primary">
+                                                Load More
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="empty-state">
+                                    <div className="mb-3" style={{fontSize: '3rem'}}>🔍</div>
+                                    <h4>No results found</h4>
+                                    <p>Try adjusting your search query or filters</p>
+                                </div>
+                            )}
+                        </>
+                    ) : (
+                        <div className="empty-state">
+                            <div className="mb-3" style={{fontSize: '3rem'}}>📚</div>
+                            <h4>Search docmgr documentation</h4>
+                            <p className="text-muted">
+                                Enter a search query or use filters to browse documentation
+                            </p>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

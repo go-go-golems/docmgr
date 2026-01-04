@@ -37,6 +37,7 @@ LastUpdated: 2026-01-03T13:38:20.372344818-05:00
 
 - **Related Files**: See frontmatter RelatedFiles field
 - **External Sources**: See frontmatter ExternalSources field
+- **Design**: `design/01-design-docmgr-search-web-ui.md`
 
 ## Status
 

@@ -45,16 +45,34 @@ func (w *Workspace) InitIndex(ctx context.Context, opts BuildIndexOptions) error
 		_ = db.Close()
 		return err
 	}
-	if err := ingestWorkspaceDocs(ctx, db, w.ctx, opts); err != nil {
+
+	ftsOK, err := ensureDocsFTS5(ctx, db)
+	if err != nil {
+		_ = db.Close()
+		return err
+	}
+	// Defensive: verify table existence in sqlite_master in case CREATE VIRTUAL TABLE
+	// succeeded partially or was silently ignored in some environments.
+	if ftsOK {
+		if exists, err := sqliteTableExists(ctx, db, "docs_fts"); err == nil {
+			ftsOK = exists
+		} else {
+			_ = db.Close()
+			return err
+		}
+	}
+
+	if err := ingestWorkspaceDocs(ctx, db, w.ctx, opts, ftsOK); err != nil {
 		_ = db.Close()
 		return err
 	}
 
 	w.db = db
+	w.ftsAvailable = ftsOK
 	return nil
 }
 
-func ingestWorkspaceDocs(ctx context.Context, db *sql.DB, wctx WorkspaceContext, opts BuildIndexOptions) error {
+func ingestWorkspaceDocs(ctx context.Context, db *sql.DB, wctx WorkspaceContext, opts BuildIndexOptions, ftsOK bool) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "begin ingest tx")
@@ -96,6 +114,18 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		return errors.Wrap(err, "prepare insert related_files")
 	}
 	defer func() { _ = insertRFStmt.Close() }()
+
+	var insertFTSStmt *sql.Stmt
+	if ftsOK {
+		insertFTSStmt, err = tx.PrepareContext(ctx, `
+INSERT INTO docs_fts (rowid, title, body, topics, doc_type, ticket_id)
+VALUES (?, ?, ?, ?, ?, ?)
+`)
+		if err != nil {
+			return errors.Wrap(err, "prepare insert docs_fts")
+		}
+		defer func() { _ = insertFTSStmt.Close() }()
+	}
 
 	walkErr := documents.WalkDocuments(wctx.Root, func(path string, doc *models.Document, body string, readErr error) error {
 		if err := ctx.Err(); err != nil {
@@ -168,6 +198,22 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 
 		if parseOK == 0 || doc == nil {
 			return nil
+		}
+
+		if insertFTSStmt != nil {
+			topicsText := strings.TrimSpace(strings.Join(doc.Topics, " "))
+			_, err := insertFTSStmt.ExecContext(
+				ctx,
+				docID,
+				nullString(doc.Title),
+				nullString(body),
+				nullString(topicsText),
+				nullString(doc.DocType),
+				nullString(doc.Ticket),
+			)
+			if err != nil {
+				return errors.Wrap(err, "insert docs_fts row")
+			}
 		}
 
 		for _, topic := range doc.Topics {

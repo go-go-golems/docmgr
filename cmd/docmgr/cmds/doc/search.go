@@ -33,6 +33,7 @@ func NewSearchCommand() (*cobra.Command, error) {
 		"topics":   completion.ActionTopics(),
 		"doc-type": completion.ActionDocTypes(),
 		"status":   completion.ActionStatus(),
+		"order-by": carapace.ActionValues("path", "last_updated", "rank"),
 		"file":     completion.ActionFiles(),
 		"dir":      completion.ActionDirectories(),
 	})

@@ -50,7 +50,7 @@ Examples:
     --file-note "web/src/store/api/chatApi.ts=Frontend integration"
 
   # Use suggestions (git + ripgrep + existing docs); print suggestions only
-  docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket
+  docmgr changelog update --ticket MEN-4242 --suggest --query WebSocket --topics chat,backend,websocket
 
   # Apply suggestions and write them into the entry
   docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
@@ -552,7 +552,7 @@ func (c *ChangelogUpdateCommand) Run(
 	}
 
 	fmt.Printf("Changelog updated: %s\n", changelogPath)
-	fmt.Println("Reminder: update the ticket index (docmgr relate/meta) and refresh file relationships in any impacted docs if needed.")
+	fmt.Println("Reminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.")
 	return nil
 }
 

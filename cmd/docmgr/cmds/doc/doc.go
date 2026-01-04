@@ -9,6 +9,15 @@ func Attach(root *cobra.Command) error {
 	docCmd := &cobra.Command{
 		Use:   "doc",
 		Short: "Document workspace operations",
+		Long: `Document workspace operations: create docs, list/search, and maintain relationships to code.
+
+Examples:
+  # Create a doc in a ticket
+  docmgr doc add --ticket MEN-4242 --doc-type reference --title "Diary"
+
+  # Search docs by content
+  docmgr doc search --query "WebSocket"
+`,
 	}
 
 	addCmd, err := newAddCommand()

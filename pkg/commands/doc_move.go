@@ -57,7 +57,18 @@ Behavior:
 
 Use --dest-dir to override the relative subdirectory under the destination ticket.
 By default the original relative path is preserved. Use --overwrite to replace an
-existing file at the destination.`),
+existing file at the destination.
+
+Examples:
+  # Move a doc to another ticket (preserve relative path)
+  docmgr doc move --doc ttmp/YYYY/MM/DD/MEN-1234--.../reference/01-diary.md --dest-ticket MEN-5678
+
+  # Move and force the destination subdirectory
+  docmgr doc move --doc ttmp/YYYY/MM/DD/MEN-1234--.../reference/01-diary.md --dest-ticket MEN-5678 --dest-dir reference
+
+  # Overwrite if destination exists
+  docmgr doc move --doc ttmp/.../reference/01-diary.md --dest-ticket MEN-5678 --overwrite
+`),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
 					"doc",

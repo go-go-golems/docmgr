@@ -36,9 +36,13 @@ The exported DB includes:
   - README table containing docmgr embedded documentation (pkg/doc/*.md)
 
 Examples:
+  # Root-level command (recommended)
+  docmgr export-sqlite --out /tmp/docmgr-index.sqlite
+  docmgr export-sqlite --out /tmp/docmgr-index.sqlite --force
+  docmgr export-sqlite --out /tmp/docmgr-index.sqlite --include-body
+
+  # Equivalent namespaced form
   docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite
-  docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite --force
-  docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite --include-body
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

@@ -39,8 +39,8 @@ func NewRenameTicketCommand() (*RenameTicketCommand, error) {
 moves the ticket directory from <oldTicket>-<slug> to <newTicket>-<slug>.
 
 Examples:
-  docmgr rename-ticket --ticket MEN-1234 --new-ticket MEN-5678
-  docmgr rename-ticket --ticket DOCMGR-1 --new-ticket DOCMGR-101 --dry-run
+  docmgr ticket rename-ticket --ticket MEN-1234 --new-ticket MEN-5678
+  docmgr ticket rename-ticket --ticket DOCMGR-1 --new-ticket DOCMGR-101 --dry-run
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

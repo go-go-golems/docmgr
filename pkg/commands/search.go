@@ -64,14 +64,19 @@ The search command supports:
 - External source search (--external-source)
 - Date range filtering (--since, --until, --created-since, --updated-since)
 
-Example:
-  docmgr search "authentication"
-  docmgr search "API" --ticket MEN-3475
-  docmgr search "database" --topics backend --doc-type design-doc
-  docmgr search --ticket MEN-3475 --topics chat --files
+Examples:
+  # Full-text search
+  docmgr search --query "authentication"
+
+  # Filter by metadata
+  docmgr search --query "database" --topics backend --doc-type design-doc
+  docmgr search --query "database" --topics backend,storage --doc-type design-doc --status review
+
+  # Reverse lookup: find docs that reference a file or directory
   docmgr search --file pkg/commands/add.go
   docmgr search --dir pkg/commands/
-  docmgr search --external-source "https://github.com/..."
+
+  # Time-based filters (relative or absolute)
   docmgr search --updated-since "2 weeks ago"
   docmgr search --created-since "2025-01-01" --until "2025-01-31"
 `),

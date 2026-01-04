@@ -8,6 +8,15 @@ func Attach(root *cobra.Command) error {
 	workspaceCmd := &cobra.Command{
 		Use:   "workspace",
 		Short: "Workspace initialization and configuration commands",
+		Long: `Workspace-wide commands, also available at the root for convenience (init/status/doctor/configure/export-sqlite).
+
+Examples:
+  # Initialize the docs root
+  docmgr workspace init
+
+  # Show workspace status (namespaced form)
+  docmgr workspace status --summary-only
+`,
 	}
 
 	builders := []func() (*cobra.Command, error){

@@ -46,9 +46,12 @@ func NewImportFileCommand() (*ImportFileCommand, error) {
 			cmds.WithShort("Import a file into the document workspace"),
 			cmds.WithLong(`Imports a local file into the sources directory of a document workspace.
 
-Example:
+Examples:
   docmgr import file --ticket MEN-3475 --file /path/to/doc.md
   docmgr import file --ticket MEN-3475 --file /path/to/spec.pdf --name "API Spec"
+
+  # Scriptable output (JSON)
+  docmgr import file --ticket MEN-3475 --file /path/to/spec.pdf --with-glaze-output --output json
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

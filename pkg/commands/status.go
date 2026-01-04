@@ -43,6 +43,7 @@ Examples:
   docmgr status
   docmgr status --stale-after 30
   docmgr status --ticket MEN-4242
+  docmgr status --with-glaze-output --output json
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

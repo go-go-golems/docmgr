@@ -42,7 +42,15 @@ func NewRenumberCommand() (*RenumberCommand, error) {
 			cmds.WithShort("Resequence numeric prefixes within a ticket and update references"),
 			cmds.WithLong(`Renames .md files in all subdirectories of a ticket to enforce
 sequential 2-digit prefixes (01-, 02-, ...; switches to 3 digits past 99) and updates
-links within the ticket to reflect new paths.`),
+links within the ticket to reflect new paths.
+
+Examples:
+  # Renumber docs inside a ticket
+  docmgr doc renumber --ticket MEN-4242
+
+  # Scriptable output
+  docmgr doc renumber --ticket MEN-4242 --with-glaze-output --output json
+`),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(
 					"ticket",

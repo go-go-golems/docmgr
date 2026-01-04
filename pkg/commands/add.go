@@ -63,10 +63,18 @@ func NewAddCommand() (*AddCommand, error) {
 			cmds.WithShort("Add a new document to a workspace"),
 			cmds.WithLong(`Creates a new document in the subdirectory named after its doc-type.
 
-Example:
-  docmgr add --ticket MEN-3475 --doc-type design-doc --title "Draft Architecture"
-  docmgr add --ticket MEN-3475 --doc-type reference --title "API Contracts"
-  docmgr add --ticket MEN-3475 --doc-type til       --title "Today I Learned — Hydration"
+Examples:
+  # Create a design doc in a ticket workspace
+  docmgr doc add --ticket MEN-3475 --doc-type design-doc --title "Draft Architecture"
+
+  # Override ticket defaults (topics/owners) for this one doc
+  docmgr doc add --ticket MEN-3475 --doc-type reference --title "API Contracts" \
+    --topics api,backend --owners manuel,alice
+
+  # Seed multiple external sources + related files in frontmatter
+  docmgr doc add --ticket MEN-3475 --doc-type reference --title "Trace Links" \
+    --external-sources "https://example.com/spec,https://github.com/org/repo/issues/123" \
+    --related-files "pkg/commands/add.go,pkg/commands/relate.go"
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

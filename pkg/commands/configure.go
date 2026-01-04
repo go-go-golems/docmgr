@@ -50,6 +50,9 @@ Examples:
 
   # Explicit values
   docmgr configure --root ttmp --owners manuel,alice --intent long-term --vocabulary ttmp/vocabulary.yaml
+
+  # Overwrite an existing .ttmp.yaml
+  docmgr configure --force --root ttmp
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

@@ -8,7 +8,14 @@ func Attach(root *cobra.Command) error {
 		Use:   "skill",
 		Short: "List and show skills",
 		Long: `Manage skills documentation. Skills are documents with DocType=skill
-that provide structured information about what a skill is for and when to use it.`,
+that provide structured information about what a skill is for and when to use it.
+
+Examples:
+ 
+    docmgr skill list --topics tooling
+
+    docmgr skill show "Test-Driven Development"
+`,
 	}
 
 	listCmd, err := newListCommand()

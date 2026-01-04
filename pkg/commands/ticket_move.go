@@ -52,6 +52,16 @@ Behavior:
   - Renders destination path using the provided or configured path template
   - Moves the directory (rename) unless destination exists
   - Updates LastUpdated in index.md to now (best effort)
+
+Examples:
+  # Migrate a legacy ticket to the current date-based path template
+  docmgr ticket move --ticket MEN-4242
+
+  # Explicitly override the destination template
+  docmgr ticket move --ticket MEN-4242 --path-template "legacy/{{TICKET}}--{{SLUG}}"
+
+  # Overwrite destination if it already exists (use with care)
+  docmgr ticket move --ticket MEN-4242 --overwrite
 `),
 			cmds.WithFlags(
 				parameters.NewParameterDefinition(

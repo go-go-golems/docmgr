@@ -10,4 +10,4 @@
 - [x] Add endpoint: `GET /api/v1/search/docs` (shared engine + cursor pagination)
 - [x] Add endpoint: `GET /api/v1/search/files` (optional; maps to `--files`)
 - [x] Add smoke tests (cursor + index-not-ready)
-- [ ] Update embedded docs / help text for server mode
+- [x] Update embedded docs / help text for server mode

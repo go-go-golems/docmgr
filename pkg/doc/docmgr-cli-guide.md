@@ -331,6 +331,22 @@ Relative date formats supported include: `today`, `yesterday`, `last week`, `thi
 
 **Ordering:** `--order-by path|last_updated|rank` (rank ordering is most useful with `--query` and requires FTS5).
 
+### 4.8.1 HTTP API Server (Search REST API)
+
+For UIs and integrations, docmgr can run a local HTTP server that exposes a versioned JSON API (v1) backed by the same search engine as the CLI.
+
+```bash
+# Build and run locally (recommended)
+go build -tags sqlite_fts5 -o /tmp/docmgr ./cmd/docmgr
+/tmp/docmgr api serve --addr 127.0.0.1:8787 --root ttmp
+```
+
+Key endpoints:
+
+- `GET /api/v1/healthz`
+- `GET /api/v1/search/docs` (cursor pagination via `pageSize` + `cursor`)
+- `POST /api/v1/index/refresh` (explicit refresh)
+
 ### 4.9 Relate Files
 
 Link code files to documentation for bidirectional navigation. Relating files enables powerful reverse lookup: find design docs from code files during review.

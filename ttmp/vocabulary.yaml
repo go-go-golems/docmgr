@@ -34,6 +34,8 @@ topics:
 docTypes:
     - slug: index
       description: Ticket index
+    - slug: analysis
+      description: Analysis / discovery notes
     - slug: design-doc
       description: Design document
     - slug: reference

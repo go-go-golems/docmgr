@@ -68,3 +68,8 @@ Created comprehensive documentation following glazed style guide. Created verb-t
 - docmgr/pkg/doc/templates-and-guidelines.md — Complete rewrite following glazed style guide
 - docmgr/pkg/doc/verb-templates-and-schema.md — New comprehensive guide for verb templates
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-01 20:01; tasks_open 0)
+

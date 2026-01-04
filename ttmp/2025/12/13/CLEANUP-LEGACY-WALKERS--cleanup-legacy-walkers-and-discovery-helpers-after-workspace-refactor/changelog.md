@@ -235,3 +235,8 @@ Wrap-up: final Phase 4 validation completed (unit tests + scenario suite + smoke
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/reference/01-diary.md — Added final validation section
 - /home/manuel/workspaces/2025-12-11/improve-yaml-frontmatter-handling-docmgr/docmgr/ttmp/2025/12/13/CLEANUP-LEGACY-WALKERS--cleanup-legacy-walkers-and-discovery-helpers-after-workspace-refactor/tasks.md — Mark final validation tasks complete
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-13 15:29; tasks_open 0)
+

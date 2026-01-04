@@ -1,7 +1,7 @@
 ---
 Title: Add Claude Skills Support
 Ticket: 001-ADD-CLAUDE-SKILLS
-Status: active
+Status: archived
 Topics:
     - features
     - skills
@@ -41,8 +41,11 @@ RelatedFiles:
       Note: Document model definition
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-19T12:39:33.38089524-05:00
+LastUpdated: 2026-01-03T21:12:49.73755553-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 

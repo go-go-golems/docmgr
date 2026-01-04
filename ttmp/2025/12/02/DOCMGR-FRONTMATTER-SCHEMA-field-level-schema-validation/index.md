@@ -1,7 +1,7 @@
 ---
 Title: Add field-level schema validation and frontmatter schema taxonomies
 Ticket: DOCMGR-FRONTMATTER-SCHEMA
-Status: active
+Status: archived
 Topics:
     - yaml
     - validation
@@ -14,8 +14,11 @@ RelatedFiles:
       Note: onboarding for field-level schema validation
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-02T12:22:57.814323268-05:00
+LastUpdated: 2026-01-03T21:12:48.969053977-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # Add field-level schema validation and frontmatter schema taxonomies

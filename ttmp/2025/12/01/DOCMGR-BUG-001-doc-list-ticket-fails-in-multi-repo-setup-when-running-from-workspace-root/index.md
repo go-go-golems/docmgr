@@ -1,7 +1,7 @@
 ---
 Title: doc list --ticket fails in multi-repo setup and silently skips broken documents
 Ticket: DOCMGR-BUG-001
-Status: active
+Status: archived
 Topics:
     - bug
     - multi-repo
@@ -11,8 +11,11 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: 'doc list command has two issues: 1) may fail in multi-repo setups due to root resolution, 2) silently skips documents with broken frontmatter without warnings'
-LastUpdated: 2025-12-01T15:45:32.21490823-05:00
+LastUpdated: 2026-01-03T21:12:48.714067336-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # doc list --ticket fails in multi-repo setup and silently skips broken documents

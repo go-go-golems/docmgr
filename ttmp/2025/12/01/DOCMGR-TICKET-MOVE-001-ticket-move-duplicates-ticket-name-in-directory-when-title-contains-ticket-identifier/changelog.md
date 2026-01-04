@@ -24,3 +24,8 @@ Fixed ticket name duplication bug: (1) Added SlugifyTitleForTicket helper to str
 
 Fix implemented and verified: ticket name duplication bug resolved with SlugifyTitleForTicket helper and double-dash separator in path template
 
+
+## 2026-01-03
+
+Auto-close: inactive >14d (last_updated 2025-12-01 22:59; tasks_open 0)
+

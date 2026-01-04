@@ -1,7 +1,7 @@
 ---
 Title: Ticket move duplicates ticket name in directory when title contains ticket identifier
 Ticket: DOCMGR-TICKET-MOVE-001
-Status: active
+Status: complete
 Topics:
     - bug
     - ticket-move
@@ -12,8 +12,11 @@ Owners: []
 RelatedFiles: []
 ExternalSources: []
 Summary: When ticket title contains the ticket identifier, ticket move command creates directory names with duplicate ticket identifiers (e.g., TEST-9999-test-9999-...)
-LastUpdated: 2025-12-01T17:59:16.503048347-05:00
+LastUpdated: 2026-01-03T21:12:48.836862271-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # Ticket move duplicates ticket name in directory when title contains ticket identifier

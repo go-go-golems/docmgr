@@ -1,7 +1,7 @@
 ---
 Title: Jury-driven AST instrumentation via YAML DSL + Go build overlay
 Ticket: JURY-AST-INSTRUMENTATION
-Status: active
+Status: archived
 Topics:
     - refactor
     - tooling
@@ -15,8 +15,11 @@ RelatedFiles:
       Note: Design spec for YAML DSL + overlay-based jury build pipeline
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-12T19:53:57.068641257-05:00
+LastUpdated: 2026-01-03T21:12:49.348943608-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 # Jury-driven AST instrumentation via YAML DSL + Go build overlay

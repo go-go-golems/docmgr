@@ -1,7 +1,7 @@
 ---
 Title: Cleanup legacy walkers and discovery helpers after Workspace refactor
 Ticket: CLEANUP-LEGACY-WALKERS
-Status: active
+Status: complete
 Topics:
     - refactor
     - tickets
@@ -59,8 +59,11 @@ RelatedFiles:
       Note: Intern/reviewer verification questionnaire with experiments
 ExternalSources: []
 Summary: ""
-LastUpdated: 2025-12-13T10:29:17.671599467-05:00
+LastUpdated: 2026-01-03T21:12:49.492302401-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 

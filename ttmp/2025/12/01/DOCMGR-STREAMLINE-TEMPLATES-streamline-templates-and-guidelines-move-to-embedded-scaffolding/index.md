@@ -1,7 +1,7 @@
 ---
 Title: Streamline templates and guidelines - move to embedded scaffolding
 Ticket: DOCMGR-STREAMLINE-TEMPLATES
-Status: active
+Status: complete
 Topics:
     - docmgr
     - templates
@@ -30,8 +30,11 @@ RelatedFiles:
       Note: Comprehensive analysis identifying useful vs slop templates
 ExternalSources: []
 Summary: 'Streamlined templates and guidelines system: moved to embedded FS for scaffolding only, removed legacy fallbacks, moved verb templates to examples/, and created comprehensive documentation following glazed style guide'
-LastUpdated: 2025-12-01T15:01:32.400651902-05:00
+LastUpdated: 2026-01-03T21:12:48.58572402-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 
 

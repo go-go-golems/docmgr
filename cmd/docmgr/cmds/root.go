@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/api"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/changelog"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/configcmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/doc"
@@ -41,6 +42,9 @@ Helpful docs (built-in):
 	// Enable carapace dynamic completion (adds hidden `_carapace` and bridges cobra)
 	completion.Attach(rootCmd)
 
+	if err := api.Attach(rootCmd); err != nil {
+		return nil, err
+	}
 	if err := workspace.Attach(rootCmd); err != nil {
 		return nil, err
 	}

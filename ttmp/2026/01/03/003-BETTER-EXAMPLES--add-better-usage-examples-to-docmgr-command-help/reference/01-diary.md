@@ -15,6 +15,10 @@ RelatedFiles:
       Note: Adjust reminder text to canonical verbs
     - Path: pkg/commands/relate.go
       Note: Doc relate example changes verified by running relate
+    - Path: pkg/commands/search.go
+      Note: Verified --query behavior (commit 8ec1c61)
+    - Path: pkg/commands/ticket_move.go
+      Note: Verified ticket move example + underscore skip (commit 8ec1c61)
     - Path: ttmp/2026/01/03/003-BETTER-EXAMPLES--add-better-usage-examples-to-docmgr-command-help/index.md
       Note: Define ticket overview
     - Path: ttmp/2026/01/03/003-BETTER-EXAMPLES--add-better-usage-examples-to-docmgr-command-help/reference/01-diary.md
@@ -27,6 +31,7 @@ LastUpdated: 2026-01-03T18:14:20.549352964-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -119,3 +124,52 @@ This step started the actual “better examples” work by updating a first slic
 - Validate the examples by running:
   - `GOWORK=off go run ./cmd/docmgr doc relate --help`
   - `GOWORK=off go run ./cmd/docmgr ticket create-ticket --help`
+
+## Step 3: Add examples across remaining commands + run real example workflows
+
+This step expanded help examples broadly: group commands (like `docmgr doc`, `docmgr ticket`, etc.) now include an Examples section, and a larger set of leaf commands gained additional, copy/paste-ready examples. The emphasis stayed on “commands that actually work” (correct cobra paths, correct flags, and realistic workflows).
+
+I also ran a battery of real CLI commands against scratch tickets to verify examples end-to-end, including a migration-style `ticket move` and a safe `vocab add` that was reverted immediately after proving the command path and flags.
+
+**Commit (code):** 8ec1c61 — "CLI: add more help examples"
+
+### What I did
+- Added/expanded `Examples:` sections across many commands in `pkg/commands/*` (search, doctor, tasks, ticket move/doc move/layout-fix/renumber, import/vocab, etc.).
+- Added `Long` + Examples to cobra group commands in `cmd/docmgr/cmds/*` so `docmgr <group> --help` is immediately usable.
+- Verified a representative set of examples “for real” using scratch tickets under `ttmp/examples/` and `ttmp/legacy/`.
+
+### Why
+- The CLI surface area is large; the fastest way to reduce usage friction is to provide executable examples directly in `--help`.
+- Group commands are often where users start; without examples there, discovery is slower.
+
+### What worked
+- `docmgr search --query "Scratch Doc" --ticket 003-BETTER-EXAMPLES-SCRATCH2-A` works (positional args do not).
+- `docmgr ticket move --ticket 003-BETTER-EXAMPLES-LEGACY2` correctly migrates a ticket from `ttmp/legacy/` into the date-based template.
+- `docmgr template validate` works when `<root>/templates/*.templ` exists (validated a throwaway `ttmp/templates/demo.templ`).
+- `docmgr validate frontmatter --doc <abs-path> --with-glaze-output --output json` works and returns status `ok`.
+- `docmgr vocab add ... --with-glaze-output --output json` works; vocabulary changes were reverted after confirming behavior.
+
+### What didn't work
+- Running `docmgr validate frontmatter --doc ttmp/...` while also relying on the default `--root ttmp` produced a bogus `ttmp/ttmp/...` path. The example is now tested using an absolute path to avoid the ambiguity.
+- Running `docmgr configure` in this nested repo created an untracked `.ttmp.yaml` (expected behavior when none exists); it should be cleaned up after testing.
+
+### What I learned
+- Underscore-prefixed directories under `ttmp/` are intentionally skipped during ingest/indexing; examples should avoid path templates that begin with `_`.
+
+### What was tricky to build
+- Keeping examples accurate across commands that run in different modes:
+  - some support `--with-glaze-output`,
+  - some always emit structured output.
+
+### What warrants a second pair of eyes
+- Confirm the intended convention for examples where both root-level and namespaced forms exist (e.g., `docmgr status` vs `docmgr workspace status`), and whether we want to standardize on one in help text.
+
+### What should be done in the future
+- Consider adding a lightweight test that asserts every registered command has an `Examples:` section in its long help (including group commands).
+
+### Code review instructions
+- Start with `pkg/commands/search.go`, `pkg/commands/tasks.go`, `pkg/commands/ticket_move.go`, and the cobra group defs in `cmd/docmgr/cmds/*`.
+- Validate quickly with:
+  - `GOWORK=off go run ./cmd/docmgr --help`
+  - `GOWORK=off go run ./cmd/docmgr doc --help`
+  - `GOWORK=off go run ./cmd/docmgr ticket --help`

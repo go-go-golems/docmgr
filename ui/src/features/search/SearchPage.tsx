@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FormEvent, ReactElement, ReactNode } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { clearFilters, setFilter, setMode, setQuery } from './searchSlice'
@@ -54,6 +57,102 @@ function useIsMobile(breakpointPx = 992): boolean {
   }, [breakpointPx])
 
   return isMobile
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function extractHighlightTerms(raw: string): string[] {
+  const q = raw.trim()
+  if (!q) return []
+
+  const terms: string[] = []
+  const used = new Set<string>()
+
+  const quoted = q.matchAll(/"([^"]+)"/g)
+  for (const m of quoted) {
+    const v = (m[1] ?? '').trim()
+    if (!v) continue
+    const key = v.toLowerCase()
+    if (used.has(key)) continue
+    used.add(key)
+    terms.push(v)
+  }
+
+  const cleaned = q.replace(/"[^"]*"/g, ' ')
+  for (const tok of cleaned.split(/\s+/g)) {
+    const t = tok.trim().replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, '')
+    if (!t) continue
+    const lower = t.toLowerCase()
+    if (lower === 'and' || lower === 'or' || lower === 'not') continue
+    if (used.has(lower)) continue
+    used.add(lower)
+    terms.push(t)
+  }
+
+  return terms.slice(0, 8)
+}
+
+function highlightReactNode(node: ReactNode, re: RegExp | null, inCode = false): ReactNode {
+  if (!re) return node
+
+  if (typeof node === 'string' || typeof node === 'number') {
+    if (inCode) return node
+    const parts = String(node).split(re)
+    if (parts.length <= 1) return node
+    return parts.map((p, idx) => (idx % 2 === 1 ? <mark key={idx}>{p}</mark> : p))
+  }
+
+  if (isValidElement(node)) {
+    const el = node as ReactElement
+    const type = el.type
+    const nextInCode = inCode || type === 'code' || type === 'pre'
+    const props = el.props as { children?: ReactNode }
+    const nextChildren = highlightReactNode(props.children, re, nextInCode)
+    return cloneElement(el, undefined, nextChildren)
+  }
+
+  return node
+}
+
+function MarkdownSnippet({ markdown, query }: { markdown: string; query: string }) {
+  const terms = useMemo(() => extractHighlightTerms(query), [query])
+  const re = useMemo(() => {
+    if (terms.length === 0) return null
+    const pattern = `(${terms.map(escapeRegExp).join('|')})`
+    return new RegExp(pattern, 'gi')
+  }, [terms])
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const components: any = useMemo(
+    () => ({
+      p: ({ children, ...props }: any) => (
+        <p {...props} className={props.className} style={{ marginBottom: 0 }}>
+          {highlightReactNode(children, re)}
+        </p>
+      ),
+      li: ({ children, ...props }: any) => <li {...props}>{highlightReactNode(children, re)}</li>,
+      h1: ({ children, ...props }: any) => <h1 {...props}>{highlightReactNode(children, re)}</h1>,
+      h2: ({ children, ...props }: any) => <h2 {...props}>{highlightReactNode(children, re)}</h2>,
+      h3: ({ children, ...props }: any) => <h3 {...props}>{highlightReactNode(children, re)}</h3>,
+      h4: ({ children, ...props }: any) => <h4 {...props}>{highlightReactNode(children, re)}</h4>,
+      h5: ({ children, ...props }: any) => <h5 {...props}>{highlightReactNode(children, re)}</h5>,
+      h6: ({ children, ...props }: any) => <h6 {...props}>{highlightReactNode(children, re)}</h6>,
+      blockquote: ({ children, ...props }: any) => (
+        <blockquote {...props}>{highlightReactNode(children, re)}</blockquote>
+      ),
+    }),
+    [re],
+  )
+
+  return (
+    <div className="snippet-markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+        {markdown}
+      </ReactMarkdown>
+    </div>
+  )
 }
 
 function timeAgo(iso?: string): string {
@@ -184,11 +283,13 @@ function ResultCard({
   selected,
   onCopyPath,
   onSelect,
+  snippetQuery,
 }: {
   result: SearchDocResult
   selected: boolean
   onCopyPath: (path: string) => void
   onSelect: (r: SearchDocResult) => void
+  snippetQuery: string
 }) {
   return (
     <div
@@ -214,7 +315,9 @@ function ResultCard({
               </span>
             ))}
           </div>
-          <div className="result-snippet">“{result.snippet}”</div>
+          <div className="result-snippet">
+            <MarkdownSnippet markdown={result.snippet} query={snippetQuery} />
+          </div>
           <div className="result-path">{result.path}</div>
           {result.relatedFiles && result.relatedFiles.length > 0 ? (
             <div className="mt-2">
@@ -657,9 +760,13 @@ export function SearchPage() {
     else dispatch(setQuery(v))
   }
 
+  const [desiredSelectedPath, setDesiredSelectedPath] = useState<string>('')
+  const [desiredPreviewOpen, setDesiredPreviewOpen] = useState<boolean>(false)
+
   // URL sync (mode/q/filters) – no cursor/pagination state in URL.
   const urlWriteTimerRef = useRef<number | null>(null)
   const autoSearchedRef = useRef(false)
+  const selectionAppliedRef = useRef(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -694,6 +801,9 @@ export function SearchPage() {
       }),
     )
 
+    setDesiredSelectedPath((params.get('sel') || '').trim())
+    setDesiredPreviewOpen(parseBoolParam(params.get('preview'), false))
+
     setURLSyncReady(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -720,6 +830,9 @@ export function SearchPage() {
       if (filters.includeControlDocs !== true)
         params.set('includeControlDocs', String(filters.includeControlDocs))
 
+      if (selected && selected.path.trim() !== '') params.set('sel', selected.path.trim())
+      if (isMobile && showPreviewModal) params.set('preview', 'true')
+
       const next = params.toString()
       const url = next === '' ? window.location.pathname : `${window.location.pathname}?${next}`
       window.history.replaceState({}, '', url)
@@ -728,7 +841,25 @@ export function SearchPage() {
     return () => {
       if (urlWriteTimerRef.current != null) window.clearTimeout(urlWriteTimerRef.current)
     }
-  }, [filters, mode, query])
+  }, [filters, isMobile, mode, query, selected, showPreviewModal, urlSyncReady])
+
+  useEffect(() => {
+    if (!urlSyncReady) return
+    if (selectionAppliedRef.current) return
+    if (desiredSelectedPath.trim() === '') return
+    if (docsResults.length === 0) return
+
+    const idx = docsResults.findIndex((d) => d.path === desiredSelectedPath.trim())
+    if (idx < 0) {
+      selectionAppliedRef.current = true
+      return
+    }
+
+    selectionAppliedRef.current = true
+    setSelected(docsResults[idx])
+    setSelectedIndex(idx)
+    if (isMobile && desiredPreviewOpen) setShowPreviewModal(true)
+  }, [desiredPreviewOpen, desiredSelectedPath, docsResults, isMobile, urlSyncReady])
 
   useEffect(() => {
     if (!urlSyncReady) return
@@ -1263,26 +1394,22 @@ export function SearchPage() {
                   <div className="mb-2">
                     <span className="text-muted small">Path</span>
                     <div className="result-path">{selected.path}</div>
-                    <div className="mt-2 d-flex gap-2 flex-wrap">
-                      <button
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => void onCopyPath(selected.path)}
-                      >
+	                  <div className="mt-2 d-flex gap-2 flex-wrap">
+                      <button className="btn btn-sm btn-outline-primary" onClick={() => void onCopyPath(selected.path)}>
                         Copy path
                       </button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => navigate(`/doc?path=${encodeURIComponent(selected.path)}`)}
-                      >
+                      <Link className="btn btn-sm btn-primary" to={`/doc?path=${encodeURIComponent(selected.path)}`}>
                         Open doc
-                      </button>
-                    </div>
-                  </div>
+                      </Link>
+	                  </div>
+	                </div>
 
-                  <div className="mb-3">
-                    <div className="text-muted small mb-1">Snippet</div>
-                    <div className="small">{selected.snippet}</div>
-                  </div>
+	                <div className="mb-3">
+	                  <div className="text-muted small mb-1">Snippet</div>
+                    <div className="small">
+                      <MarkdownSnippet markdown={selected.snippet} query={mode === 'docs' ? query : ''} />
+                    </div>
+	                </div>
 
                   {selected.relatedFiles && selected.relatedFiles.length > 0 ? (
                     <div>
@@ -1301,16 +1428,13 @@ export function SearchPage() {
                               >
                                 Copy
                               </button>
-                              <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() => navigate(`/file?root=repo&path=${encodeURIComponent(rf.path)}`)}
-                              >
+                              <Link className="btn btn-sm btn-outline-primary" to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}>
                                 Open
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
+                              </Link>
+	                          </div>
+	                        </li>
+	                      ))}
+	                    </ul>
                     </div>
                   ) : null}
                 </div>
@@ -1442,14 +1566,15 @@ export function SearchPage() {
             <div className={`results-grid ${selected ? 'split' : ''}`}>
               <div>
                 {docsResults.map((r) => (
-                  <ResultCard
-                    key={`${r.path}:${r.ticket}`}
-                    result={r}
-                    selected={selected?.path === r.path && selected?.ticket === r.ticket}
-                    onCopyPath={(p) => void onCopyPath(p)}
-                    onSelect={(res) => {
-                      const idx = docsResults.findIndex(
-                        (d) => d.path === res.path && d.ticket === res.ticket,
+	                  <ResultCard
+	                    key={`${r.path}:${r.ticket}`}
+	                    result={r}
+	                    selected={selected?.path === r.path && selected?.ticket === r.ticket}
+	                    snippetQuery={mode === 'docs' ? query : ''}
+	                    onCopyPath={(p) => void onCopyPath(p)}
+	                    onSelect={(res) => {
+	                      const idx = docsResults.findIndex(
+	                        (d) => d.path === res.path && d.ticket === res.ticket,
                       )
                       setSelected(res)
                       setSelectedIndex(idx >= 0 ? idx : null)
@@ -1491,25 +1616,27 @@ export function SearchPage() {
                   <div className="mb-2">
                     <span className="text-muted small">Path</span>
                     <div className="result-path">{selected.path}</div>
-                    <div className="mt-2 d-flex gap-2">
-                      <button
-                        className="btn btn-sm btn-outline-primary"
-                        onClick={() => void onCopyPath(selected.path)}
-                      >
-                        Copy path
-                      </button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => navigate(`/doc?path=${encodeURIComponent(selected.path)}`)}
-                      >
-                        Open doc
-                      </button>
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <div className="text-muted small mb-1">Snippet</div>
-                    <div className="small">{selected.snippet}</div>
-                  </div>
+	                  <div className="mt-2 d-flex gap-2">
+	                    <button
+	                      className="btn btn-sm btn-outline-primary"
+	                      onClick={() => void onCopyPath(selected.path)}
+	                    >
+	                      Copy path
+	                    </button>
+	                    <Link
+	                      className="btn btn-sm btn-primary"
+	                      to={`/doc?path=${encodeURIComponent(selected.path)}`}
+	                    >
+	                      Open doc
+	                    </Link>
+	                  </div>
+	                </div>
+	                <div className="mb-3">
+	                  <div className="text-muted small mb-1">Snippet</div>
+	                  <div className="small">
+	                    <MarkdownSnippet markdown={selected.snippet} query={mode === 'docs' ? query : ''} />
+	                  </div>
+	                </div>
                   {selected.relatedFiles && selected.relatedFiles.length > 0 ? (
                     <div>
                       <div className="text-muted small mb-1">Related files</div>
@@ -1527,17 +1654,15 @@ export function SearchPage() {
                               >
                                 Copy
                               </button>
-                              <button
-                                className="btn btn-sm btn-outline-primary"
-                                onClick={() =>
-                                  navigate(`/file?root=repo&path=${encodeURIComponent(rf.path)}`)
-                                }
-                              >
-                                Open
-                              </button>
-                            </div>
-                          </li>
-                        ))}
+	                              <Link
+	                                className="btn btn-sm btn-outline-primary"
+	                                to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
+	                              >
+	                                Open
+	                              </Link>
+	                            </div>
+	                          </li>
+	                        ))}
                       </ul>
                     </div>
                   ) : null}

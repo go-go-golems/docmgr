@@ -33,6 +33,10 @@ UI routes:
 - `/doc?path=...` document viewer (markdown rendering)
 - `/file?root=repo|docs&path=...` file viewer (syntax highlighted)
 
+Search URL parameters (useful for sharing links):
+- `sel=<docRelPath>` selects a result (opens the desktop preview sidebar)
+- `preview=true` opens the preview modal on mobile
+
 ## 2. Development mode (recommended)
 
 Two-process loop:

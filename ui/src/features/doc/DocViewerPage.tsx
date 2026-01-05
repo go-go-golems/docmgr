@@ -216,12 +216,12 @@ export function DocViewerPage() {
                     <button className="btn btn-sm btn-outline-secondary" onClick={() => void onCopy(rf.path)}>
                       Copy
                     </button>
-                    <button
+                    <Link
                       className="btn btn-sm btn-outline-primary"
-                      onClick={() => navigate(`/file?root=repo&path=${encodeURIComponent(rf.path)}`)}
+                      to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
                     >
                       Open
-                    </button>
+                    </Link>
                   </div>
                 </li>
               ))}
@@ -250,4 +250,3 @@ export function DocViewerPage() {
     </div>
   )
 }
-

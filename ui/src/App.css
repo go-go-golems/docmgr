@@ -65,6 +65,11 @@
   line-height: 1.5;
 }
 
+.snippet-markdown mark {
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
 .result-path {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;

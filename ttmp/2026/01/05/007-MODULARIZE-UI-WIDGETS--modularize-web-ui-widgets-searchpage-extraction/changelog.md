@@ -105,3 +105,15 @@ TicketPage: split into tabs (overview/documents/tasks/graph/changelog) + extract
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/tabs/TicketDocumentsTab.tsx — Documents tab list + preview; uses PathHeader and RelatedFilesList
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/tabs/TicketTasksTab.tsx — Tasks tab; keeps newTaskText local
 
+
+## 2026-01-05
+
+Retrofit DocViewer/FileViewer to use shared primitives (PageHeader, ApiErrorAlert, LoadingSpinner, copyToClipboard, RelatedFilesList); DocCard uses shared timeAgo
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/DocCard.tsx — Use shared timeAgo helper
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/PageHeader.tsx — New shared page header (title/subtitle/actions)
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/doc/DocViewerPage.tsx — Uses shared header/error/spinner/clipboard + RelatedFilesList
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/file/FileViewerPage.tsx — Uses shared header/error/spinner/clipboard
+

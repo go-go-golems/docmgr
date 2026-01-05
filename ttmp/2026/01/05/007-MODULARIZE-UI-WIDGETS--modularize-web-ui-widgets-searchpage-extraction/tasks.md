@@ -103,7 +103,7 @@ Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becom
 - [x] Extract `TicketTasksTab` (sections list + add task form; keep `newTaskText` local)
 - [x] Extract `TicketGraphTab` (Mermaid graph + debug details)
 - [x] Extract `TicketChangelogTab` (changelog link + rendering as applicable)
-- [ ] Identify shared “Doc list + preview” patterns between Search and Ticket and factor shared pieces into `ui/src/components/`
+- [x] Identify shared “Doc list + preview” patterns between Search and Ticket and factor shared pieces into `ui/src/components/`
 
 ### Design system coherence (incremental, avoid churn)
 - [ ] Ensure new primitives/widgets use `ui/src/styles/design-system.css` patterns first (avoid adding new ad-hoc CSS)

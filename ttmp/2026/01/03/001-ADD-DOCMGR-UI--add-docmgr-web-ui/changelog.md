@@ -34,3 +34,12 @@ Implement URL sync + structured diagnostics + inline API errors in Web UI
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/SearchPage.tsx — URL sync
 
+
+## 2026-01-04
+
+Add analysis for doc serving API + document viewer UI (markdown + code highlighting)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md — Proposed endpoints and UI plan
+

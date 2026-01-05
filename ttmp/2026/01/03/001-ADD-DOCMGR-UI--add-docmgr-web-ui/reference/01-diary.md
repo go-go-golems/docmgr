@@ -23,6 +23,16 @@ RelatedFiles:
       Note: SPA fallback handler (never shadow /api)
     - Path: pkg/doc/docmgr-web-ui.md
       Note: User docs for running the UI (dev + embedded)
+    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md
+      Note: Doc serving API + viewer research and plan
+    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/02-single-doc.md
+      Note: UX snapshot (terminal-style doc view)
+    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/03-single-doc.html
+      Note: Mock doc viewer UI spec
+    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/single-doc.html
+      Note: Mock doc viewer UI spec
+    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/single-doc.md
+      Note: UX snapshot (terminal-style doc view)
     - Path: ui/src/features/search/SearchPage.tsx
       Note: MVP search UI (modes
     - Path: ui/src/services/docmgrApi.ts
@@ -33,6 +43,8 @@ LastUpdated: 2026-01-04T19:22:44-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
+
 
 
 # Diary
@@ -391,3 +403,63 @@ The key behavior goals for the MVP were: (1) browse all docs with empty query, (
 
 ### What I'd do differently next time
 - Start by locking down “reverse lookup UX” and “empty query browse semantics” in the API contract before building the UI, because those two behaviors shape a surprising amount of UI control flow.
+
+## Step 7: Analyze doc serving API + doc viewer UI (markdown + code highlighting)
+
+This step scoped the next big UX leap: turning a search hit into a fully readable document view (title/metadata/related files + rendered markdown) and making `RelatedFiles` actionable by serving and syntax-highlighting source files.
+
+I used the provided mockups (`single-doc.html` / `single-doc.md`) as the “pixel-level” spec, then worked backwards to identify the minimal backend endpoints and frontend libraries we’d need to ship an MVP safely (path traversal protection, binary detection, size limits).
+
+### What I did
+- Read the target mock UI and UX snapshot:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/03-single-doc.html`
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/02-single-doc.md`
+- Reviewed the existing backend surfaces we can extend:
+  - `internal/httpapi/server.go` (route registration + error format)
+  - `internal/documents` parsing helpers (frontmatter + body)
+  - `internal/workspace.Context` roots (`root`, `repoRoot`) from `GET /api/v1/workspace/status`
+- Wrote an analysis document with:
+  - endpoint proposals (`/api/v1/docs/get`, `/api/v1/files/get`, optional assets)
+  - security constraints (root restrictions, traversal/symlink, binary/size checks)
+  - UI route design (`/doc?path=...`, `/file?path=...`)
+  - markdown rendering options + recommended libs
+
+### Why
+- The search UI is useful, but snippets aren’t enough; developers need a first-class “read the document” flow with the same metadata/context cues docmgr is built around.
+- `RelatedFiles` is central to docmgr’s value prop; without a way to open/view related code, the UI leaves a lot of power on the table.
+
+### What worked
+- The mock demonstrates a clear layout and interaction model that maps cleanly to our existing UI components + Bootstrap styling.
+- The backend already has reliable primitives for reading markdown bodies and parsing frontmatter.
+
+### What didn't work
+- N/A (research/design step).
+
+### What I learned
+- Bootstrap helps with layout/styling, but markdown rendering and syntax highlighting need dedicated libraries.
+- The safest v1 approach is “serve markdown as text + render on client without raw HTML” to avoid introducing an XSS surface.
+
+### What was tricky to build
+- Designing file serving endpoints that are ergonomic for the UI but still safe:
+  - must not allow reading arbitrary files outside docs root / repo root,
+  - must reject binary blobs and avoid memory blowups from huge files.
+
+### What warrants a second pair of eyes
+- Security boundary choices:
+  - whether absolute paths should ever be accepted (even if inside root),
+  - whether we should `EvalSymlinks` to prevent symlink-escape reads.
+- Library choices for markdown/highlighting (bundle size vs simplicity).
+
+### What should be done in the future
+- Implement the proposed endpoints + doc/file viewer routes.
+- Add optional doc asset serving (images) once there’s a concrete example needing it.
+
+### Code review instructions
+- Read the analysis doc:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md`
+
+### Technical details
+- Candidate frontend libs (client-side rendering):
+  - `react-markdown`
+  - `remark-gfm`
+  - `rehype-highlight` + `highlight.js` CSS theme

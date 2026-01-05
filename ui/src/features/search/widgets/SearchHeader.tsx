@@ -1,6 +1,7 @@
 import { timeAgo } from '../../../lib/time'
 import type { WorkspaceStatus } from '../../../services/docmgrApi'
 import { PageHeader } from '../../../components/PageHeader'
+import { Link } from 'react-router-dom'
 
 export function SearchHeader({
   wsStatus,
@@ -20,13 +21,18 @@ export function SearchHeader({
         titleClassName="h3"
         mb={4}
         actions={
-          <button
-            className="btn btn-outline-secondary refresh-btn"
-            onClick={onRefresh}
-            disabled={refreshLoading}
-          >
-            {refreshLoading ? 'Refreshing…' : `Refresh (${timeAgo(wsStatus?.indexedAt)})`}
-          </button>
+          <>
+            <Link className="btn btn-outline-primary" to="/workspace">
+              Workspace
+            </Link>
+            <button
+              className="btn btn-outline-secondary refresh-btn"
+              onClick={onRefresh}
+              disabled={refreshLoading}
+            >
+              {refreshLoading ? 'Refreshing…' : `Refresh (${timeAgo(wsStatus?.indexedAt)})`}
+            </button>
+          </>
         }
       />
 

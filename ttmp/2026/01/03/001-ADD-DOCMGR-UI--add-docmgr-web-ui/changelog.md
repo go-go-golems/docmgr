@@ -111,3 +111,14 @@ Diary: backfilled SearchPage modularization work (ticket 007) and the TicketPage
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/01-diary.md — Added Steps 24–33
 
+
+## 2026-01-05
+
+Design + scaffold Workspace navigation UI (AppShell + /workspace pages) (commit b1900d1)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/App.tsx — Add /workspace nested routes
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchHeader.tsx — Add Workspace entry link
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceLayout.tsx — Workspace shell with TopBar + SideNav
+

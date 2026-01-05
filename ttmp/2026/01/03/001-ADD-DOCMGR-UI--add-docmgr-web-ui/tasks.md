@@ -82,3 +82,13 @@
 - [x] Upload diary + guide PDFs to reMarkable
 - [x] Render diagnostics as a structured list (severity/message/suggestion) instead of raw JSON
 - [x] Show API error details inline (code/message/details) for search failures
+- [x] UI: add /workspace route group + AppShell (TopBar + SideNav)
+- [x] UI: Workspace Home page MVP (WorkspaceOverviewCard from workspace status)
+- [x] UI: Workspace Tickets page skeleton (filters + placeholder until API exists)
+- [x] UI: Workspace Topics page skeleton + Topic detail route skeleton
+- [x] UI: Workspace Recent activity page skeleton
+- [x] UI: Add Workspace entry link from Search (and/or header actions)
+- [ ] API: implement workspace summary endpoint per design/03-workspace-rest-api.md
+- [ ] API: implement tickets list endpoint (filters/sort/pagination) for Workspace Tickets
+- [ ] API: implement topics list + topic detail endpoints for Workspace Topics
+- [ ] API: implement recent activity endpoint for Workspace Recent

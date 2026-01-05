@@ -11,10 +11,6 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: internal/httpapi/tickets.go
-      Note: Ticket API endpoints (/tickets/get/docs/tasks/graph) (commits 522e678,4a82f9d)
-    - Path: internal/httpapi/tickets_test.go
-      Note: Basic handler test coverage for ticket endpoints (commit 522e678)
     - Path: .goreleaser.yaml
       Note: Release tags sqlite_fts5
     - Path: Makefile
@@ -27,14 +23,18 @@ RelatedFiles:
       Note: Safe path resolution + symlink escape protection (commit bacf9f9)
     - Path: internal/httpapi/server.go
       Note: Allow empty browse; reverse query->file; orderBy guards
+    - Path: internal/httpapi/tickets.go
+      Note: Ticket API endpoints (/tickets/get/docs/tasks/graph) (commits 522e678,4a82f9d)
+    - Path: internal/httpapi/tickets_test.go
+      Note: Basic handler test coverage for ticket endpoints (commit 522e678)
+    - Path: internal/searchsvc/search.go
+      Note: Add lastUpdated+relatedFiles to search results for UI
     - Path: internal/tasksmd/tasksmd.go
       Note: Parse/mutate tasks.md for ticket tasks API (commit 522e678)
     - Path: internal/ticketgraph/ticketgraph.go
       Note: Mermaid builder for ticket graph API (commit 522e678)
     - Path: internal/tickets/resolve.go
       Note: Resolve ticket dir/index.md from workspace index (commit 522e678)
-    - Path: internal/searchsvc/search.go
-      Note: Add lastUpdated+relatedFiles to search results for UI
     - Path: internal/web/generate_build.go
       Note: go generate bridge to build/copy Vite assets
     - Path: internal/web/spa.go
@@ -48,6 +48,8 @@ RelatedFiles:
         URL params docs for selection restore (Step 11)
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md
       Note: Doc serving API + viewer research and plan
+    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design-doc/01-design-workspace-navigation-ui-post-refactor.md
+      Note: Workspace UI design doc
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/02-single-doc.md
       Note: UX snapshot (terminal-style doc view)
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/03-single-doc.html
@@ -58,6 +60,10 @@ RelatedFiles:
       Note: UX snapshot (terminal-style doc view)
     - Path: ui/src/App.css
       Note: Responsive tweaks + selected result styling (Step 10)
+    - Path: ui/src/App.tsx
+      Note: Workspace route wiring
+    - Path: ui/src/components/MermaidDiagram.tsx
+      Note: Client-side Mermaid rendering for ticket graph (commit 4a82f9d)
     - Path: ui/src/features/doc/DocViewerPage.tsx
       Note: Doc viewer route + markdown rendering (commit bacf9f9)
     - Path: ui/src/features/file/FileViewerPage.tsx
@@ -71,8 +77,8 @@ RelatedFiles:
         Ticket badge links to /ticket/:ticket (commit 522e678)
     - Path: ui/src/features/ticket/TicketPage.tsx
       Note: Ticket page tabs (overview/docs/tasks/graph/changelog) (commits 522e678,4a82f9d)
-    - Path: ui/src/components/MermaidDiagram.tsx
-      Note: Client-side Mermaid rendering for ticket graph (commit 4a82f9d)
+    - Path: ui/src/features/workspace/WorkspaceLayout.tsx
+      Note: Workspace shell implementation
     - Path: ui/src/services/docmgrApi.ts
       Note: |-
         RTK Query client for docmgr HTTP API
@@ -91,11 +97,64 @@ WhenToUse: ""
 
 
 
+
 # Diary
 
 ## Goal
 
 This diary captures the research and writing process for documenting `docmgr` search: how it’s implemented, what the CLI/API surface is, and how it can be extended. It’s meant to preserve the “how I found it” trail (commands, files, sharp edges), not just the final guide.
+
+## Step 34: Design Workspace navigation UI and scaffold /workspace pages
+
+With the big Search/Ticket refactor work complete (ticket 007), I returned to the Workspace navigation designs in `sources/workspace-page.md` and wrote a post-refactor Workspace UI design doc that explicitly leverages the new widget/primitives architecture (shared headers, global toasts, reusable domain cards, and RTK Query state ownership).
+
+The key outcome is that Workspace navigation can now be implemented incrementally: we add a shared shell (`TopBar` + `SideNav`) as a nested route under `/workspace/*` and create placeholder pages for Home/Tickets/Topics/Recent without breaking existing `/` Search flows. This gives us a stable place to land future widgets and to wire the workspace REST endpoints when they exist.
+
+**Commit (code):** b1900d1 — "UI: add Workspace shell and route scaffolding"
+
+### What I did
+- Read `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/workspace-page.md` and mapped each ASCII design to a route/page/widget inventory.
+- Wrote `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design-doc/01-design-workspace-navigation-ui-post-refactor.md` (post-refactor design).
+- Implemented a first-pass UI scaffold:
+  - Added `/workspace/*` nested routes in `ui/src/App.tsx`
+  - Added `ui/src/features/workspace/WorkspaceLayout.tsx` (TopBar + SideNav + content outlet)
+  - Added placeholder pages for Home/Tickets/Topics/Topic Detail/Recent
+  - Added a “Workspace” entry link in Search header (`ui/src/features/search/widgets/SearchHeader.tsx`)
+- Ran:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- Avoid duplicating page chrome (headers/nav/refresh) across every new Workspace page.
+- Keep risk low: introduce Workspace as additive routes, not a replacement for Search.
+- Create a stable place to wire future Workspace endpoints from `design/03-workspace-rest-api.md`.
+
+### What worked
+- Nested routing (`/workspace` + `<Outlet/>`) gives a clean separation between shell chrome and page widgets.
+- `ToastHost` + `useToast` made the Refresh action UX consistent without page-local timers.
+
+### What didn't work
+- N/A (this was a scaffold step; most “real” widgets depend on missing workspace endpoints).
+
+### What I learned
+- After the refactor, the “shape” of Workspace pages is straightforward: orchestrator pages can stay small because shell + primitives already exist.
+
+### What was tricky to build
+- Keeping the nav highlight sensible given that Search is still `/` (outside the `/workspace` route group).
+
+### What warrants a second pair of eyes
+- UX review: does keeping Search at `/` and Workspace at `/workspace` feel coherent, or should we plan an eventual redirect once Workspace is complete?
+
+### What should be done in the future
+- Implement the workspace REST endpoints (summary, tickets list, topics, activity) so the placeholder widgets can render real data.
+
+### Code review instructions
+- Start with `ui/src/features/workspace/WorkspaceLayout.tsx` and `ui/src/App.tsx` route wiring.
+- Click through `/workspace`, `/workspace/tickets`, `/workspace/topics`, `/workspace/recent` and confirm nav + refresh work.
+- Validate with `pnpm -C ui lint` and `pnpm -C ui build`.
+
+### Technical details
+- The Home/Dashboard currently uses existing workspace status data (`useGetWorkspaceStatusQuery`) for the “Workspace overview” card.
 
 ## Step 1: Create the ticket and make docmgr runnable locally
 

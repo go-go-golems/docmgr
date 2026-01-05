@@ -1,3 +1,21 @@
+---
+Title: "Source: Claude session design"
+Ticket: 001-ADD-DOCMGR-UI
+Status: active
+Topics:
+    - docmgr
+    - ux
+    - web
+    - search
+DocType: reference
+Intent: long-term
+Owners: []
+RelatedFiles: []
+ExternalSources: []
+Summary: "Imported design session notes: ASCII wireframes + YAML DSL for the Search Web UI."
+LastUpdated: 2026-01-04T19:22:44-05:00
+---
+
 docmgr Search UI Wireframes (ASCII)
 
 1. Main Search View (Default State)

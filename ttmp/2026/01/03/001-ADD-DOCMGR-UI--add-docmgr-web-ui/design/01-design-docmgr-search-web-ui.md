@@ -22,10 +22,8 @@ RelatedFiles:
     - Path: pkg/doc/docmgr-http-api.md
       Note: Existing user-facing HTTP API doc (keep in sync as UI evolves)
 ExternalSources:
-    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/claude-session-design.md
-      Note: ASCII wireframes + YAML DSL (store/components/hooks)
-    - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/test-design.html
-      Note: Concrete widget mock (refresh, filters, result cards, toast, keyboard hints)
+    - ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/01-claude-session-design.md
+    - ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/test-design.html
 Summary: "Design for a developer-centric search web UI that exercises docmgr’s local HTTP API (search docs, reverse lookup, file suggestions, cursor pagination, and explicit index refresh)."
 LastUpdated: 2026-01-04T00:00:00Z
 WhatFor: "Implement a production-embeddable SPA served by `docmgr api serve`, with a Vite dev loop and RTK Query integration."
@@ -50,7 +48,7 @@ Build a small, fast, developer-centric Search UI for `docmgr` that:
 
 This document is the implementation design spec and includes:
 
-- all screens + widgets (from `sources/claude-session-design.md` and `sources/test-design.html`),
+- all screens + widgets (from `sources/01-claude-session-design.md` and `sources/test-design.html`),
 - ASCII wireframes,
 - a concrete mapping from the YAML DSL → React/Redux/RTK Query structure (no code),
 - a packaging/build plan for the Go binary.
@@ -87,9 +85,9 @@ The UI relies on these existing endpoints (all relative to same origin in produc
 
 ### Response shapes (current server)
 
-The UI should be implemented against the current JSON shapes to avoid accidental “UI-only” fields that the backend doesn’t return.
+The UI should be implemented against explicit JSON shapes. For v1 we will extend the API to include the fields required by the UI (see below).
 
-#### `GET /api/v1/search/docs` (shape)
+#### `GET /api/v1/search/docs` (target v1 shape)
 
 ```json
 {
@@ -120,9 +118,13 @@ The UI should be implemented against the current JSON shapes to avoid accidental
       "status": "active",
       "topics": ["chat", "backend", "websocket"],
       "path": "2026/01/04/MEN-4242--normalize.../reference/01-chat-websocket-lifecycle.md",
+      "lastUpdated": "2026-01-04T15:04:05Z",
       "snippet": "WebSocket connection lifecycle management…",
-      "matchedFiles": [],
-      "matchedNotes": []
+      "relatedFiles": [
+        { "path": "backend/chat/ws/manager.go", "note": "WebSocket lifecycle mgmt" }
+      ],
+      "matchedFiles": ["backend/chat/ws/manager.go"],
+      "matchedNotes": ["WebSocket lifecycle mgmt"]
     }
   ],
   "diagnostics": [],
@@ -134,6 +136,8 @@ Notes:
 
 - `results[*].matchedFiles/matchedNotes` are populated primarily for reverse-lookup scenarios (when `file` is set); in normal docs search they can be empty.
 - `diagnostics` are emitted by the backend; UI treats them as opaque, display-only items (no custom inference).
+- `lastUpdated` should come from doc frontmatter (`LastUpdated`) when available.
+- `relatedFiles` is the full doc related-files list (frontmatter `RelatedFiles`) and is returned for all docs (not only reverse lookup).
 
 #### `GET /api/v1/search/files` (shape)
 
@@ -162,18 +166,15 @@ Notes:
 
 UI must treat the response as the single source of truth for result ordering, ranking, and snippet behavior.
 
-### Desired UI fields that are not currently returned
+### “Open Full Doc →” (no file serving in v1)
 
-The wireframes show a few fields that the current API does not return:
+v1 does not implement any file serving or markdown rendering endpoint.
 
-- Result “Updated 2d / 1w ago” timestamps.
-- A full “Related Files” list for every doc (not just `matchedFiles` for reverse lookup).
-- “Open Full Doc →” in-app rendering (would require a content endpoint or some file-serving strategy).
+UI behavior:
 
-Implementation guidance:
-
-- v1 UI should hide these fields when absent (do not fake them).
-- If we decide these are required for v1, add explicit backend tasks to extend `searchsvc.SearchResult` + HTTP JSON response.
+- Keep a visible “Copy path” action (button + shortcut).
+- Optionally include “Open full doc” as a *disabled* or “coming soon” affordance, but do not route anywhere.
+- If we want “open in editor” later, that’s a separate integration feature (not a web concern).
 
 ### Search: Files
 
@@ -215,7 +216,7 @@ From sources, v1 shortcuts:
 
 - `/`: focus search input
 - `↑/↓`: move focus across results
-- `Enter`: open preview / select result (or copy path if in “quick copy” mode; see below)
+- `Enter`: select focused result (preview behavior optional in MVP)
 - `Esc`: close preview (if open), otherwise clear search
 - `Alt+1/2/3`: switch Docs / Reverse / Files
 - `Cmd/Ctrl+R`: refresh index
@@ -253,7 +254,7 @@ The following screens are required for v1 and must include all widgets shown in 
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  [🔍 Search docs...                                              ] [Search] │
-│  Hint:  / focus • ↑↓ navigate • Enter preview/copy • Esc clear • ? help    │
+│  Hint:  / focus • ↑↓ navigate • Enter select • Esc clear • ? help          │
 │                                                                             │
 │  [●] Docs    [ ] Reverse Lookup    [ ] Files                                │
 │                                                                             │
@@ -374,10 +375,10 @@ From source wireframes (adapted; v1 preview is snippet-only):
 
 Preview behaviors:
 
-- Click a result card (or press Enter) to open preview.
+- Click a result card to open preview (keyboard selection behavior is optional in MVP).
 - Esc closes preview.
 - Preview shows metadata + snippet + related files list.
-- “Open Full Doc →” is v1 a “copy path + guidance” action (until a content endpoint exists).
+- “Open Full Doc →” is not implemented in v1 (no file serving); provide “Copy path” instead.
 
 ### 5) Diagnostics Panel (expanded)
 
@@ -715,10 +716,8 @@ CI requirements:
 
 ## Open Questions (to settle during implementation)
 
-- Should “Enter” on a focused result card open preview or copy path?
-  - Wireframes imply “Enter opens preview”, but HTML mock uses Enter to copy.
-  - Proposal: Enter opens preview; Cmd/Ctrl+K copies path (and the copy button is always available).
+- Enter/copy-path semantics are explicitly deferred in v1 (click + copy button are sufficient; keyboard support can be expanded later).
 - Default ordering:
   - Proposal: docs mode defaults to `orderBy=rank` when query is non-empty; otherwise `path`.
 - How to represent multi-topic selection:
-  - v1 can be a free-text CSV input (fast) or a multi-select with suggestions (polish).
+  - v1 uses a multi-select *without suggestions*: selected topic tokens + an “Add topic” input (no autocomplete list).

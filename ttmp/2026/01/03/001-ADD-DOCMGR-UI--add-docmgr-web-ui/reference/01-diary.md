@@ -10,11 +10,30 @@ Topics:
 DocType: reference
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: cmd/docmgr/cmds/api/serve.go
+      Note: Serve API + SPA from one process
+    - Path: internal/httpapi/server.go
+      Note: Allow empty browse; reverse query->file; orderBy guards
+    - Path: internal/searchsvc/search.go
+      Note: Add lastUpdated+relatedFiles to search results for UI
+    - Path: internal/web/generate_build.go
+      Note: go generate bridge to build/copy Vite assets
+    - Path: internal/web/spa.go
+      Note: SPA fallback handler (never shadow /api)
+    - Path: pkg/doc/docmgr-web-ui.md
+      Note: User docs for running the UI (dev + embedded)
+    - Path: ui/src/features/search/SearchPage.tsx
+      Note: MVP search UI (modes
+    - Path: ui/src/services/docmgrApi.ts
+      Note: RTK Query client for docmgr HTTP API
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-03T13:38:26.077894931-05:00
+LastUpdated: 2026-01-04T19:22:44-05:00
+WhatFor: ""
+WhenToUse: ""
 ---
+
 
 # Diary
 
@@ -280,3 +299,95 @@ This step published the two primary docs (the diary and the search guide) to my 
     - `python3 /home/manuel/.local/bin/remarkable_upload.py --ticket-dir /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui --mirror-ticket-structure /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/01-diary.md /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/02-doc-search-implementation-and-api-guide.md`
 - Remote destination:
   - `ai/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/`
+
+## Step 6: Implement a first usable Search Web UI + embedded serving
+
+This step turns the earlier “search implementation research” into something you can actually use: a React/Vite Search UI that calls the local `docmgr` HTTP API, plus the Go plumbing to serve the SPA from `docmgr api serve` for a single-binary “just run it” mode.
+
+The key behavior goals for the MVP were: (1) browse all docs with empty query, (2) docs search ordered by rank when a text query exists, (3) reverse lookup mode that searches by related file paths, and (4) cursor “load more” pagination. I also wired a minimal preview panel and basic diagnostics visibility to make the UI practically useful during development.
+
+**Commit (code):** 04a4d52 — "web-ui: add React SPA, HTTP search tweaks, and embedded serving"
+
+### What I did
+- Implemented API tweaks so a UI can work naturally:
+  - allow empty query to “browse all docs”
+  - prevent `orderBy=rank` from erroring when `query` is empty (fallback to `path`)
+  - when `reverse=true` and `file/dir` are empty, treat `query` as `file` for reverse lookup convenience
+- Added UI-field backfill to the search response:
+  - `lastUpdated`
+  - `relatedFiles[]` (full list)
+  - always-present `matchedFiles[]/matchedNotes[]` arrays
+- Scaffolded `ui/` (React+Vite+TS), styled with Bootstrap, and implemented the `SearchPage`:
+  - Docs / Reverse / Files modes
+  - filter bar + toggles + topics multi-select (no suggestions)
+  - results list with “Load more” (cursor pagination)
+  - copy path + simple toast
+  - minimal preview panel (desktop split view)
+- Implemented Go SPA serving + embed pipeline:
+  - `internal/web` provides SPA fallback handler + `go generate` build/copy bridge
+  - `docmgr api serve` serves `/api/*` and, if assets exist, serves `/` + SPA fallback
+- Added docs:
+  - `pkg/doc/docmgr-web-ui.md` (“how to run dev and embedded mode”)
+  - updated `pkg/doc/docmgr-http-api.md` for new response fields + reverse convenience semantics
+
+### Why
+- A web UI should not need to re-implement docmgr search semantics; the server/API should be the single source of truth.
+- The MVP UI needs a “browse” workflow (empty query) because it’s a common way to discover docs by ticket/type/status/topics without knowing exact terms.
+- Serving the SPA from Go makes it easy to ship one binary and avoids needing a separate “frontend deployment” concept for a local-first tool.
+
+### What worked
+- The UI can be run in a two-process loop (Vite `:3000` with `/api` proxy → backend `:3001`).
+- The same UI can be served directly from `docmgr api serve` (embedded/disk-backed assets) at `http://127.0.0.1:3001/`.
+- Cursor pagination works via the API’s `nextCursor` contract.
+
+### What didn't work
+- Initial Vite scaffolding created a non-React template due to a CLI invocation mistake; regenerated using `pnpm create vite@latest ui -t react-ts`.
+- pnpm initially refused to run `esbuild` postinstall scripts; resolved by allowing `esbuild` in `ui/package.json` via `pnpm.onlyBuiltDependencies`.
+
+### What I learned
+- Reverse lookup is easiest to use when the “main search box” in Reverse mode edits the file path filter (not the text query).
+- `OrderByRank` is a “text-query-only” concept at the SQL layer; it should be treated as a UI convenience, not a hard requirement.
+
+### What was tricky to build
+- Getting “serve SPA + serve API” routing correct so `/api/*` is never shadowed by the SPA fallback.
+- Balancing “API correctness” with “UI ergonomics”:
+  - empty query should be allowed for browsing,
+  - rank ordering shouldn’t explode on empty query,
+  - reverse lookup should be strict but ergonomic (query→file mapping).
+
+### What warrants a second pair of eyes
+- The API semantics changes:
+  - confirm allowing empty query is acceptable and doesn’t cause surprising performance regressions
+  - confirm the `reverse=true` query→file mapping is the right contract (and doesn’t mask accidental client bugs)
+- The Go SPA handler:
+  - confirm fallback logic never intercepts `/api/*`
+  - confirm embed/disk modes behave as intended (especially around missing assets)
+
+### What should be done in the future
+- Implement URL sync (`mode`, `q`, filters) so searches are shareable.
+- Replace the diagnostics JSON blob with a structured diagnostic list.
+- Implement the keyboard shortcuts modal and richer navigation (arrow selection, etc).
+- Add mobile preview modal/drawer behavior (right now it’s a desktop-first split panel).
+
+### Code review instructions
+- Start in:
+  - `ui/src/features/search/SearchPage.tsx`
+  - `internal/httpapi/server.go`
+  - `internal/searchsvc/search.go`
+  - `internal/web/spa.go`
+  - `cmd/docmgr/cmds/api/serve.go`
+- Validate:
+  - `make dev-backend` and `make dev-frontend` → open `http://localhost:3000/`
+  - `curl http://127.0.0.1:3001/api/v1/search/docs?query=&orderBy=rank&pageSize=10`
+  - `curl http://127.0.0.1:3001/api/v1/search/docs?reverse=true&file=pkg/commands/skill_list.go&pageSize=10`
+
+### Technical details
+- Dev topology:
+  - Vite: `http://localhost:3000/` (proxy `/api` → `http://127.0.0.1:3001`)
+  - Backend: `go run -tags sqlite_fts5 ./cmd/docmgr api serve --addr 127.0.0.1:3001 --root ttmp`
+- Embedded build:
+  - `go generate ./internal/web`
+  - `go build -tags \"sqlite_fts5,embed\" ./cmd/docmgr`
+
+### What I'd do differently next time
+- Start by locking down “reverse lookup UX” and “empty query browse semantics” in the API contract before building the UI, because those two behaviors shape a surprising amount of UI control flow.

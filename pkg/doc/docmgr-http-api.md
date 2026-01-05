@@ -33,9 +33,13 @@ Security note: the server is **local-first**. Bind to `127.0.0.1` by default and
 Build and run the server:
 
 ```bash
-go build -tags sqlite_fts5 -o /tmp/docmgr ./cmd/docmgr
+go build -tags "sqlite_fts5,embed" -o /tmp/docmgr ./cmd/docmgr
 /tmp/docmgr api serve --addr 127.0.0.1:8787 --root ttmp
 ```
+
+Notes:
+- `sqlite_fts5` enables full-text search.
+- `embed` bundles the web UI assets into the binary (optional for API-only usage).
 
 Check health:
 
@@ -238,6 +242,71 @@ Response (shape):
   ]
 }
 ```
+
+### 5.6. Get Document (markdown + frontmatter)
+
+`GET /api/v1/docs/get`
+
+Query parameters:
+- `path` (string, required): doc-relative path under the docs root (same value as `SearchDocResult.path`)
+
+Response (shape):
+
+```json
+{
+  "path": "2026/01/03/TICKET--slug/design/01-doc.md",
+  "doc": {
+    "title": "...",
+    "ticket": "...",
+    "status": "...",
+    "topics": ["..."],
+    "docType": "...",
+    "intent": "...",
+    "owners": ["..."],
+    "relatedFiles": [{ "path": "internal/foo.go", "note": "..." }],
+    "externalSources": [],
+    "summary": "",
+    "lastUpdated": "2026-01-04T19:22:44-05:00",
+    "whatFor": "",
+    "whenToUse": ""
+  },
+  "relatedFiles": [{ "path": "internal/foo.go", "note": "..." }],
+  "body": "# Markdown…",
+  "stats": { "sizeBytes": 12345, "modTime": "2026-01-04T19:22:44-05:00" },
+  "diagnostic": null
+}
+```
+
+Notes:
+- If the document frontmatter fails to parse, `doc` will be omitted and `diagnostic` may be present; `body` still returns the markdown body (best-effort).
+
+### 5.7. Get File (text-only)
+
+`GET /api/v1/files/get`
+
+Query parameters:
+- `path` (string, required): a file path (repo-relative is recommended; absolute paths are only accepted if they resolve inside the allowed root)
+- `root` (string, optional): `repo|docs` (default `repo`)
+
+Response (shape):
+
+```json
+{
+  "path": "internal/httpapi/server.go",
+  "root": "repo",
+  "language": "go",
+  "contentType": "text/x-go; charset=utf-8",
+  "truncated": false,
+  "content": "package httpapi\n...",
+  "stats": { "sizeBytes": 12345, "modTime": "2026-01-04T19:22:44-05:00" }
+}
+```
+
+Safety behavior:
+- Requests are constrained to repo root or docs root.
+- Path traversal and symlink-escape reads are rejected.
+- Binary files and non-UTF8 are rejected (`unsupported_media_type`).
+- Large files may be truncated (see `truncated`).
 
 ## 6. Error Handling
 

@@ -19,18 +19,18 @@
 - [x] Cursor pagination (“Load more results” → append + nextCursor)
 - [x] Implement reverse lookup mode (sets `reverse=true` and emphasizes matched file + note)
 - [x] Implement diagnostics badge + expandable diagnostics panel (server-provided items)
-- [ ] Implement preview panel:
+- [x] Implement preview panel:
 - [x] Desktop split pane (select result → show metadata + snippet + related files)
-  - [ ] Mobile modal/page variant (“View →”)
+- [x] Mobile modal/page variant (“View →”)
 - [x] Copy path (no file serving / no in-app full doc rendering)
-- [ ] Implement keyboard shortcuts overlay modal (`?`) + core shortcuts:
-  - [ ] `/` focus input, ↑/↓ navigation, Enter select/open, Esc close/clear
-  - [ ] Alt+1/2/3 mode switching
+- [x] Implement keyboard shortcuts overlay modal (`?`) + core shortcuts:
+- [x] `/` focus input, ↑/↓ navigation, Enter select/open, Esc close/clear
+- [x] Alt+1/2/3 mode switching
 - [x] Cmd/Ctrl+R refresh index
-  - [ ] Cmd/Ctrl+K copy selected path
+- [x] Cmd/Ctrl+K copy selected path
 - [x] Implement files suggestions mode (`/api/v1/search/files`) + file cards
 - [x] Implement URL sync (`mode`, `q`, filters) and restore state on reload
-- [ ] Add responsive styling (compact layout, filter drawer, preview modal)
+- [x] Add responsive styling (compact layout, filter drawer, preview modal)
 - [x] Add doc viewer + file viewer (doc serving MVP):
 - [x] Backend: implement `GET /api/v1/docs/get?path=...` (doc metadata + body)
 - [x] Backend: implement `GET /api/v1/files/get?path=...&root=repo|docs` (safe text-only)

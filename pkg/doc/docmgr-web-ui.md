@@ -23,8 +23,15 @@ It talks to the same HTTP API as other clients:
 
 - `GET /api/v1/search/docs` (cursor pagination)
 - `GET /api/v1/search/files`
+- `GET /api/v1/docs/get` (doc viewer: frontmatter + markdown body)
+- `GET /api/v1/files/get` (file viewer: text-only, safe roots)
 - `POST /api/v1/index/refresh`
 - `GET /api/v1/workspace/status`
+
+UI routes:
+- `/` search
+- `/doc?path=...` document viewer (markdown rendering)
+- `/file?root=repo|docs&path=...` file viewer (syntax highlighted)
 
 ## 2. Development mode (recommended)
 
@@ -85,3 +92,13 @@ Open:
 
 - If `/` returns 404: run `go generate ./internal/web` (dev disk-serving) or build with `-tags embed` (embedded).
 - If search returns `fts_not_available`: build/run with `-tags sqlite_fts5`.
+
+## 5. Keyboard shortcuts (MVP)
+
+- `/` focus search
+- `?` open shortcuts modal
+- `↑/↓` select result
+- `Enter` open selected doc
+- `Alt+1/2/3` switch Docs/Reverse/Files mode
+- `Ctrl/Cmd+R` refresh index
+- `Ctrl/Cmd+K` copy selected doc path

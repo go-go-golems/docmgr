@@ -53,3 +53,15 @@ Add doc/file serving endpoints and doc/file viewer routes with frontend markdown
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/docs_files.go — Doc/file serving endpoints
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/doc/DocViewerPage.tsx — Doc viewer route
 
+
+## 2026-01-04
+
+Finish UI MVP (shortcuts + mobile preview/filters), update API/UI docs, and set release builds to sqlite_fts5+embed
+
+### Related Files
+
+- .goreleaser.yaml — Release tags + UI generate
+- Makefile — Build/install tags
+- pkg/doc/docmgr-http-api.md — Document/file endpoints
+- ui/src/features/search/SearchPage.tsx — Shortcuts + mobile preview/filter drawer
+

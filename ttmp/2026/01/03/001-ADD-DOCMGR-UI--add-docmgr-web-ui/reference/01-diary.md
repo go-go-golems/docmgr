@@ -11,6 +11,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: .goreleaser.yaml
+      Note: Release tags sqlite_fts5
+    - Path: Makefile
+      Note: Default build/install tags sqlite_fts5
     - Path: cmd/docmgr/cmds/api/serve.go
       Note: Serve API + SPA from one process
     - Path: internal/httpapi/docs_files.go
@@ -25,8 +29,12 @@ RelatedFiles:
       Note: go generate bridge to build/copy Vite assets
     - Path: internal/web/spa.go
       Note: SPA fallback handler (never shadow /api)
+    - Path: pkg/doc/docmgr-http-api.md
+      Note: Document/file endpoints docs (Step 10)
     - Path: pkg/doc/docmgr-web-ui.md
-      Note: User docs for running the UI (dev + embedded)
+      Note: |-
+        User docs for running the UI (dev + embedded)
+        Viewer routes + shortcuts docs (Step 10)
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md
       Note: Doc serving API + viewer research and plan
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/02-single-doc.md
@@ -37,6 +45,8 @@ RelatedFiles:
       Note: Mock doc viewer UI spec
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/single-doc.md
       Note: UX snapshot (terminal-style doc view)
+    - Path: ui/src/App.css
+      Note: Responsive tweaks + selected result styling (Step 10)
     - Path: ui/src/features/doc/DocViewerPage.tsx
       Note: Doc viewer route + markdown rendering (commit bacf9f9)
     - Path: ui/src/features/file/FileViewerPage.tsx
@@ -45,6 +55,7 @@ RelatedFiles:
       Note: |-
         MVP search UI (modes
         Wire Open doc/Open file navigation (commit bacf9f9)
+        Mobile preview modal + filter drawer + keyboard shortcuts (Step 10)
     - Path: ui/src/services/docmgrApi.ts
       Note: |-
         RTK Query client for docmgr HTTP API
@@ -55,6 +66,7 @@ LastUpdated: 2026-01-04T19:22:44-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -590,3 +602,41 @@ This step made the doc-serving endpoints usable by the UI: new SPA routes for vi
   - `ui/src/services/docmgrApi.ts`
   - `ui/src/features/search/SearchPage.tsx`
   - `internal/httpapi/docs_files.go`
+
+## Step 10: Finish remaining UI MVP tasks + update docs/build configs
+
+This step closed out the remaining “MVP” tasks in ticket 001 for the search UI: keyboard shortcuts, mobile-friendly preview and filters, and basic responsive polish. It also updates the public docs and build/release configs to reflect that the default build should include both FTS and embedded UI assets.
+
+### What I did
+- UI:
+  - Added a real shortcuts modal (`?`) and implemented the MVP shortcut set:
+    - `↑/↓` selection, `Enter` open selected doc, `Esc` close preview/modal, `Alt+1/2/3` mode switching, `Ctrl/Cmd+K` copy selected path.
+  - Added mobile preview modal (instead of the desktop split pane).
+  - Added a mobile filter drawer (modal) and responsive spacing tweaks.
+  - Added “selected” styling for the active result.
+- Docs:
+  - Updated `pkg/doc/docmgr-http-api.md` with `/api/v1/docs/get` and `/api/v1/files/get`.
+  - Updated `pkg/doc/docmgr-web-ui.md` with viewer routes and shortcuts.
+- Build configs:
+  - Updated `Makefile` default build/install tags to `sqlite_fts5,embed`.
+  - Updated `.goreleaser.yaml` to build with `sqlite_fts5,embed` and generate UI assets.
+- Checked off ticket tasks `18,20,22,23,24,26,29`.
+
+### Commands
+- `pnpm -C ui build`
+- `go test ./... -count=1`
+- `docmgr task check --tasks-file ttmp/.../tasks.md --id 18,20,22,23,24,26,29`
+
+### What worked
+- Mobile UX is now usable: tap a result → preview modal; filters open in a drawer modal.
+- Keyboard navigation is good enough for daily driving.
+
+### What was tricky to build
+- Making keyboard shortcuts not interfere with typing into inputs (`isEditableTarget` gate).
+
+### What warrants a second pair of eyes
+- Confirm the keyboard handler dependency list in `SearchPage.tsx` doesn’t cause performance issues (it currently rebinds the listener when relevant state changes).
+- Confirm the GoReleaser `flags` syntax is correct for your CI setup.
+
+### What should be done in the future
+- Consider code-splitting the UI bundle if size becomes a concern (highlight/markdown libs add weight).

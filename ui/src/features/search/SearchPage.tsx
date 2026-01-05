@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -27,6 +27,33 @@ type ErrorBanner = {
   code?: string
   message: string
   details?: unknown
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null
+  if (!el) return false
+  const tag = el.tagName.toLowerCase()
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return true
+  if (el.isContentEditable) return true
+  return false
+}
+
+function useIsMobile(breakpointPx = 992): boolean {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    return window.matchMedia(`(max-width: ${breakpointPx}px)`).matches
+  })
+
+  useEffect(() => {
+    if (!window.matchMedia) return
+    const m = window.matchMedia(`(max-width: ${breakpointPx}px)`)
+    const onChange = () => setIsMobile(m.matches)
+    onChange()
+    m.addEventListener('change', onChange)
+    return () => m.removeEventListener('change', onChange)
+  }, [breakpointPx])
+
+  return isMobile
 }
 
 function timeAgo(iso?: string): string {
@@ -154,15 +181,22 @@ function StatusBadge({ status }: { status: string }) {
 
 function ResultCard({
   result,
+  selected,
   onCopyPath,
   onSelect,
 }: {
   result: SearchDocResult
+  selected: boolean
   onCopyPath: (path: string) => void
   onSelect: (r: SearchDocResult) => void
 }) {
   return (
-    <div className="result-card" onClick={() => onSelect(result)} role="button" tabIndex={0}>
+    <div
+      className={`result-card ${selected ? 'selected' : ''}`}
+      onClick={() => onSelect(result)}
+      role="button"
+      tabIndex={0}
+    >
       <div className="d-flex justify-content-between align-items-start">
         <div className="flex-grow-1">
           <div className="result-title">{result.title}</div>
@@ -276,6 +310,7 @@ export function SearchPage() {
   const dispatch = useAppDispatch()
   const { mode, query, filters } = useAppSelector((s) => s.search)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const isMobile = useIsMobile(992)
 
   const { data: wsStatus, isError: wsError, refetch: refetchWs } = useGetWorkspaceStatusQuery()
   const [refreshIndex, refreshState] = useRefreshIndexMutation()
@@ -288,6 +323,9 @@ export function SearchPage() {
   const [showFilters, setShowFilters] = useState(true)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [urlSyncReady, setURLSyncReady] = useState(false)
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
 
   const [hasSearched, setHasSearched] = useState(false)
 
@@ -297,6 +335,41 @@ export function SearchPage() {
   const [docsDiagnostics, setDocsDiagnostics] = useState<DiagnosticTaxonomy[]>([])
 
   const [selected, setSelected] = useState<SearchDocResult | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  const onCopyPath = useCallback(
+    async (path: string) => {
+      try {
+        await navigator.clipboard.writeText(path)
+        setToast({ kind: 'success', message: `Copied path: ${path}` })
+      } catch {
+        setToast({ kind: 'error', message: 'Failed to copy path (clipboard not available)' })
+      }
+    },
+    [setToast],
+  )
+
+  const onRefresh = useCallback(async () => {
+    try {
+      await refreshIndex().unwrap()
+      await refetchWs()
+      setToast({ kind: 'success', message: 'Index refreshed successfully' })
+    } catch (e) {
+      setToast({ kind: 'error', message: `Index refresh failed: ${String(e)}` })
+    }
+  }, [refreshIndex, refetchWs])
+
+  const selectDocByIndex = useCallback(
+    (idx: number, opts?: { openModal?: boolean }) => {
+      if (idx < 0 || idx >= docsResults.length) return
+      setSelected(docsResults[idx])
+      setSelectedIndex(idx)
+      if (isMobile && (opts?.openModal ?? true)) {
+        setShowPreviewModal(true)
+      }
+    },
+    [docsResults, isMobile],
+  )
 
   const effectiveOrderBy = useMemo(() => {
     if (filters.orderBy) return filters.orderBy
@@ -312,55 +385,147 @@ export function SearchPage() {
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement !== searchInputRef.current) {
+      if (e.key === 'Escape') {
+        if (showShortcuts) {
+          e.preventDefault()
+          setShowShortcuts(false)
+          return
+        }
+        if (showPreviewModal) {
+          e.preventDefault()
+          setShowPreviewModal(false)
+          return
+        }
+      }
+
+      if (e.key === '/' && document.activeElement !== searchInputRef.current && !isEditableTarget(e.target)) {
         e.preventDefault()
         searchInputRef.current?.focus()
       }
-      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !isEditableTarget(e.target)) {
         e.preventDefault()
-        setToast({
-          kind: 'success',
-          message:
-            'Shortcuts: / focus search • Ctrl/Cmd+R refresh index • Esc clear selection',
-        })
+        setShowShortcuts(true)
       }
-      if (e.key === 'Escape') {
-        setSelected(null)
+
+      if (e.altKey && !e.ctrlKey && !e.metaKey && !isEditableTarget(e.target)) {
+        if (e.key === '1') {
+          e.preventDefault()
+          dispatch(setMode('docs'))
+          setSelected(null)
+          setSelectedIndex(null)
+          setShowPreviewModal(false)
+          searchInputRef.current?.focus()
+          return
+        }
+        if (e.key === '2') {
+          e.preventDefault()
+          dispatch(setMode('reverse'))
+          setSelected(null)
+          setSelectedIndex(null)
+          setShowPreviewModal(false)
+          searchInputRef.current?.focus()
+          return
+        }
+        if (e.key === '3') {
+          e.preventDefault()
+          dispatch(setMode('files'))
+          setSelected(null)
+          setSelectedIndex(null)
+          setShowPreviewModal(false)
+          searchInputRef.current?.focus()
+          return
+        }
       }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && !isEditableTarget(e.target)) {
+        if (!selected) return
+        e.preventDefault()
+        void onCopyPath(selected.path)
+        return
+      }
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r') {
         e.preventDefault()
         void onRefresh()
+        return
+      }
+
+      if (mode !== 'files' && docsResults.length > 0 && !isEditableTarget(e.target)) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          const idx =
+            selectedIndex != null
+              ? selectedIndex
+              : selected
+                ? docsResults.findIndex((d) => d.path === selected.path && d.ticket === selected.ticket)
+                : -1
+          const next = Math.min(docsResults.length - 1, idx + 1)
+          selectDocByIndex(next)
+          return
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          const idx =
+            selectedIndex != null
+              ? selectedIndex
+              : selected
+                ? docsResults.findIndex((d) => d.path === selected.path && d.ticket === selected.ticket)
+                : docsResults.length
+          const prev = Math.max(0, idx - 1)
+          selectDocByIndex(prev)
+          return
+        }
+        if (e.key === 'Enter') {
+          if (!selected) {
+            e.preventDefault()
+            selectDocByIndex(0)
+            return
+          }
+          e.preventDefault()
+          navigate(`/doc?path=${encodeURIComponent(selected.path)}`)
+          return
+        }
+        if (e.key === 'Escape') {
+          if (selected) {
+            e.preventDefault()
+            setSelected(null)
+            setSelectedIndex(null)
+            setShowPreviewModal(false)
+            return
+          }
+        }
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshState.isLoading, wsStatus?.indexedAt])
+  }, [
+    dispatch,
+    docsResults,
+    isMobile,
+    mode,
+    navigate,
+    onCopyPath,
+    onRefresh,
+    selectDocByIndex,
+    selected,
+    selectedIndex,
+    showPreviewModal,
+    showShortcuts,
+  ])
+
+  useEffect(() => {
+    // If we exit mobile sizing, close the modal and keep the selection in the desktop preview panel.
+    if (!isMobile) {
+      setShowPreviewModal(false)
+      return
+    }
+  }, [isMobile])
 
   useEffect(() => {
     if (!toast) return
     const t = window.setTimeout(() => setToast(null), 2000)
     return () => window.clearTimeout(t)
   }, [toast])
-
-  const onCopyPath = async (path: string) => {
-    try {
-      await navigator.clipboard.writeText(path)
-      setToast({ kind: 'success', message: `Copied path: ${path}` })
-    } catch {
-      setToast({ kind: 'error', message: 'Failed to copy path (clipboard not available)' })
-    }
-  }
-
-  const onRefresh = async () => {
-    try {
-      await refreshIndex().unwrap()
-      await refetchWs()
-      setToast({ kind: 'success', message: 'Index refreshed successfully' })
-    } catch (e) {
-      setToast({ kind: 'error', message: `Index refresh failed: ${String(e)}` })
-    }
-  }
 
   const doSearchDocs = async (cursor: string, append: boolean) => {
     const textQuery = mode === 'reverse' ? '' : query
@@ -676,8 +841,8 @@ export function SearchPage() {
             </button>
           </div>
           <div className="keyboard-hint">
-            Press <kbd>/</kbd> to focus • <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> refresh • <kbd>Esc</kbd>{' '}
-            close preview
+            Press <kbd>/</kbd> focus • <kbd>?</kbd> shortcuts • <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> refresh •{' '}
+            <kbd>Esc</kbd> close
           </div>
         </div>
 
@@ -704,17 +869,27 @@ export function SearchPage() {
             Files
           </button>
           <div className="ms-auto">
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-secondary"
-              onClick={() => setShowFilters((v) => !v)}
-            >
-              {showFilters ? 'Hide filters' : 'Show filters'}
-            </button>
+            {isMobile ? (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => setShowFilterDrawer(true)}
+              >
+                Filters
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                onClick={() => setShowFilters((v) => !v)}
+              >
+                {showFilters ? 'Hide filters' : 'Show filters'}
+              </button>
+            )}
           </div>
         </div>
 
-        {showFilters ? (
+        {!isMobile && showFilters ? (
           <div className="filter-row mb-3">
             <div className="row g-2 align-items-end">
               <div className="col-md-3">
@@ -858,6 +1033,306 @@ export function SearchPage() {
         ) : null}
       </form>
 
+      {isMobile && showFilterDrawer ? (
+        <>
+          <div className="modal-backdrop show" />
+          <div className="modal show d-block" tabIndex={-1} role="dialog" aria-modal="true">
+            <div className="modal-dialog modal-fullscreen-sm-down modal-dialog-scrollable" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Filters</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowFilterDrawer(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="filter-row mb-0 border-0 p-0">
+                    <div className="row g-2 align-items-end">
+                      <div className="col-12">
+                        <label className="form-label small mb-1">Ticket</label>
+                        <input
+                          className="form-control form-control-sm"
+                          placeholder="e.g. MEN-4242"
+                          value={filters.ticket}
+                          onChange={(e) => dispatch(setFilter({ key: 'ticket', value: e.target.value }))}
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label small mb-1">Topics</label>
+                        <TopicMultiSelect
+                          topics={filters.topics}
+                          onChange={(topics) => dispatch(setFilter({ key: 'topics', value: topics }))}
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label small mb-1">Type</label>
+                        <input
+                          className="form-control form-control-sm"
+                          placeholder="e.g. reference"
+                          value={filters.docType}
+                          onChange={(e) => dispatch(setFilter({ key: 'docType', value: e.target.value }))}
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label small mb-1">Status</label>
+                        <select
+                          className="form-select form-select-sm"
+                          value={filters.status}
+                          onChange={(e) => dispatch(setFilter({ key: 'status', value: e.target.value }))}
+                        >
+                          <option value="">All</option>
+                          <option value="active">active</option>
+                          <option value="review">review</option>
+                          <option value="complete">complete</option>
+                          <option value="draft">draft</option>
+                        </select>
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label small mb-1">Sort</label>
+                        <select
+                          className="form-select form-select-sm"
+                          value={filters.orderBy}
+                          onChange={(e) => dispatch(setFilter({ key: 'orderBy', value: e.target.value }))}
+                        >
+                          <option value="rank">Relevance</option>
+                          <option value="path">Path</option>
+                          <option value="last_updated">Last updated</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {mode === 'reverse' ? (
+                      <div className="row g-2 mt-2">
+                        <div className="col-12">
+                          <label className="form-label small mb-1">File</label>
+                          <input
+                            className="form-control form-control-sm"
+                            placeholder="backend/api/register.go or register.go"
+                            value={filters.file}
+                            onChange={(e) => dispatch(setFilter({ key: 'file', value: e.target.value }))}
+                          />
+                        </div>
+                        <div className="col-12">
+                          <label className="form-label small mb-1">Dir</label>
+                          <input
+                            className="form-control form-control-sm"
+                            placeholder="backend/chat/ws/"
+                            value={filters.dir}
+                            onChange={(e) => dispatch(setFilter({ key: 'dir', value: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="d-flex flex-wrap gap-3 mt-3 align-items-center">
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={filters.includeArchived}
+                          onChange={(e) =>
+                            dispatch(setFilter({ key: 'includeArchived', value: e.target.checked }))
+                          }
+                          id="includeArchivedMobile"
+                        />
+                        <label className="form-check-label" htmlFor="includeArchivedMobile">
+                          Include archived
+                        </label>
+                      </div>
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={filters.includeScripts}
+                          onChange={(e) =>
+                            dispatch(setFilter({ key: 'includeScripts', value: e.target.checked }))
+                          }
+                          id="includeScriptsMobile"
+                        />
+                        <label className="form-check-label" htmlFor="includeScriptsMobile">
+                          Include scripts
+                        </label>
+                      </div>
+                      <div className="form-check">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          checked={filters.includeControlDocs}
+                          onChange={(e) =>
+                            dispatch(setFilter({ key: 'includeControlDocs', value: e.target.checked }))
+                          }
+                          id="includeControlDocsMobile"
+                        />
+                        <label className="form-check-label" htmlFor="includeControlDocsMobile">
+                          Control docs
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => {
+                      dispatch(clearFilters())
+                      setSelected(null)
+                      setSelectedIndex(null)
+                      setHasSearched(false)
+                      setDocsResults([])
+                      setDocsTotal(0)
+                      setDocsNextCursor('')
+                      setDocsDiagnostics([])
+                      setShowFilterDrawer(false)
+                    }}
+                  >
+                    Clear
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={() => setShowFilterDrawer(false)}>
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {showShortcuts ? (
+        <>
+          <div className="modal-backdrop show" />
+          <div className="modal show d-block" tabIndex={-1} role="dialog" aria-modal="true">
+            <div className="modal-dialog" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Keyboard shortcuts</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowShortcuts(false)} />
+                </div>
+                <div className="modal-body">
+                  <ul className="mb-0">
+                    <li>
+                      <kbd>/</kbd> focus search
+                    </li>
+                    <li>
+                      <kbd>↑</kbd>/<kbd>↓</kbd> select result
+                    </li>
+                    <li>
+                      <kbd>Enter</kbd> open selected doc
+                    </li>
+                    <li>
+                      <kbd>Esc</kbd> close modal/preview
+                    </li>
+                    <li>
+                      <kbd>Alt</kbd>+<kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> switch modes
+                    </li>
+                    <li>
+                      <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> refresh index
+                    </li>
+                    <li>
+                      <kbd>Ctrl/Cmd</kbd>+<kbd>K</kbd> copy selected doc path
+                    </li>
+                  </ul>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-primary" onClick={() => setShowShortcuts(false)}>
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {isMobile && selected && showPreviewModal ? (
+        <>
+          <div className="modal-backdrop show" />
+          <div className="modal show d-block" tabIndex={-1} role="dialog" aria-modal="true">
+            <div className="modal-dialog modal-fullscreen-sm-down modal-dialog-scrollable" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">{selected.title}</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowPreviewModal(false)} />
+                </div>
+                <div className="modal-body">
+                  <div className="text-muted small mb-2">
+                    {selected.ticket} • {selected.docType} • {selected.status}
+                    {selected.lastUpdated ? (
+                      <span className="ms-2">Updated {timeAgo(selected.lastUpdated)}</span>
+                    ) : null}
+                  </div>
+
+                  <div className="mb-2">
+                    <span className="text-muted small">Path</span>
+                    <div className="result-path">{selected.path}</div>
+                    <div className="mt-2 d-flex gap-2 flex-wrap">
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => void onCopyPath(selected.path)}
+                      >
+                        Copy path
+                      </button>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => navigate(`/doc?path=${encodeURIComponent(selected.path)}`)}
+                      >
+                        Open doc
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <div className="text-muted small mb-1">Snippet</div>
+                    <div className="small">{selected.snippet}</div>
+                  </div>
+
+                  {selected.relatedFiles && selected.relatedFiles.length > 0 ? (
+                    <div>
+                      <div className="text-muted small mb-1">Related files</div>
+                      <ul className="small mb-0 list-unstyled vstack gap-2">
+                        {selected.relatedFiles.map((rf) => (
+                          <li key={`${rf.path}:${rf.note ?? ''}`} className="d-flex gap-2 align-items-start">
+                            <div className="flex-grow-1">
+                              <div className="font-monospace">{rf.path}</div>
+                              {rf.note ? <div className="text-muted">{rf.note}</div> : null}
+                            </div>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => void onCopyPath(rf.path)}
+                              >
+                                Copy
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => navigate(`/file?root=repo&path=${encodeURIComponent(rf.path)}`)}
+                              >
+                                Open
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </div>
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary"
+                    onClick={() => {
+                      setShowPreviewModal(false)
+                      setSelected(null)
+                      setSelectedIndex(null)
+                    }}
+                  >
+                    Close preview
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
+
       {activeChips.length > 0 ? (
         <div className="mb-3 d-flex flex-wrap gap-2 align-items-center">
           <div className="text-muted small">Active:</div>
@@ -970,8 +1445,16 @@ export function SearchPage() {
                   <ResultCard
                     key={`${r.path}:${r.ticket}`}
                     result={r}
+                    selected={selected?.path === r.path && selected?.ticket === r.ticket}
                     onCopyPath={(p) => void onCopyPath(p)}
-                    onSelect={(res) => setSelected(res)}
+                    onSelect={(res) => {
+                      const idx = docsResults.findIndex(
+                        (d) => d.path === res.path && d.ticket === res.ticket,
+                      )
+                      setSelected(res)
+                      setSelectedIndex(idx >= 0 ? idx : null)
+                      if (isMobile) setShowPreviewModal(true)
+                    }}
                   />
                 ))}
                 {docsNextCursor ? (
@@ -983,7 +1466,7 @@ export function SearchPage() {
                 ) : null}
               </div>
 
-              {selected ? (
+              {selected && !isMobile ? (
                 <div className="preview-panel">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div>
@@ -995,7 +1478,13 @@ export function SearchPage() {
                         ) : null}
                       </div>
                     </div>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => setSelected(null)}>
+                    <button
+                      className="btn btn-sm btn-outline-secondary"
+                      onClick={() => {
+                        setSelected(null)
+                        setSelectedIndex(null)
+                      }}
+                    >
                       Close
                     </button>
                   </div>

@@ -5,13 +5,15 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
+    - pnpm -C ui install
+    - go generate ./internal/web
 builds:
   - env:
       - CGO_ENABLED=0
     main: ./cmd/docmgr
     binary: docmgr
+    flags:
+      - -tags=sqlite_fts5,embed
     goos:
       - linux
 # I am not able to test windows at the time

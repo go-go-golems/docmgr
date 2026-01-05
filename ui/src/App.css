@@ -40,6 +40,11 @@
   border-color: #0d6efd;
 }
 
+.result-card.selected {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
+}
+
 .result-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -123,6 +128,18 @@
   .preview-panel {
     position: relative;
     top: auto;
+  }
+}
+
+@media (max-width: 576px) {
+  .search-container {
+    padding: 12px;
+  }
+  .result-card {
+    padding: 12px;
+  }
+  .result-snippet {
+    font-size: 0.85rem;
   }
 }
 

@@ -22,11 +22,17 @@ RelatedFiles:
     - Path: internal/httpapi/path_safety.go
       Note: Safe path resolution + symlink escape protection (commit bacf9f9)
     - Path: internal/httpapi/server.go
-      Note: Allow empty browse; reverse query->file; orderBy guards
+      Note: |-
+        Allow empty browse; reverse query->file; orderBy guards
+        Mount new /api/v1/workspace/* routes
     - Path: internal/httpapi/tickets.go
       Note: Ticket API endpoints (/tickets/get/docs/tasks/graph) (commits 522e678,4a82f9d)
     - Path: internal/httpapi/tickets_test.go
       Note: Basic handler test coverage for ticket endpoints (commit 522e678)
+    - Path: internal/httpapi/workspace.go
+      Note: Add /workspace/* endpoints (summary/tickets/facets/recent/topics) and shared helpers
+    - Path: internal/httpapi/workspace_test.go
+      Note: Handler tests for workspace endpoints
     - Path: internal/searchsvc/search.go
       Note: Add lastUpdated+relatedFiles to search results for UI
     - Path: internal/tasksmd/tasksmd.go
@@ -39,8 +45,18 @@ RelatedFiles:
       Note: go generate bridge to build/copy Vite assets
     - Path: internal/web/spa.go
       Note: SPA fallback handler (never shadow /api)
+    - Path: internal/workspace/index_builder.go
+      Note: Ingest Owners into doc_owners
+    - Path: internal/workspace/query_docs.go
+      Note: Hydrate Owners and add Intent/OwnersAny filters
+    - Path: internal/workspace/query_docs_sql.go
+      Note: SQL clauses for Intent and OwnersAny
+    - Path: internal/workspace/sqlite_schema.go
+      Note: Add doc_owners table for owner facets/filtering
     - Path: pkg/doc/docmgr-http-api.md
-      Note: Document/file endpoints docs (Step 10)
+      Note: |-
+        Document/file endpoints docs (Step 10)
+        Document new /api/v1/workspace/* endpoints
     - Path: pkg/doc/docmgr-web-ui.md
       Note: |-
         User docs for running the UI (dev + embedded)
@@ -90,6 +106,8 @@ LastUpdated: 2026-01-05T00:20:58-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
+
 
 
 
@@ -1818,3 +1836,70 @@ This reduces duplicated state and eliminates a subtle mismatch where the UI coul
   - `docmgr task check --ticket 007-MODULARIZE-UI-WIDGETS --id 33,34,35,36`
 - Changelog update:
   - `docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS --entry \"... (commit 0cd16e6)\" --file-note ...`
+
+## Step 36: Implement Workspace REST API endpoints (summary/tickets/facets/recent/topics)
+
+I implemented the initial Workspace-level browse API from `design/03-workspace-rest-api.md` so the Workspace pages can stop being placeholders and start loading real data. This adds the core “navigation primitives” (summary, ticket listing, facets, recents, topics) while keeping the existing `/workspace/status` and `/index/refresh` model intact.
+
+To make facets and ticket filtering actually useful, I extended the in-memory workspace index to store and query `Owners`. That required a small schema addition (`doc_owners`), ingesting owners during indexing, and hydrating owners onto query results so the API can return them consistently.
+
+**Commit (code):** N/A (not committed)
+
+### What I did
+- Implemented new HTTP endpoints:
+  - `GET /api/v1/workspace/summary`
+  - `GET /api/v1/workspace/tickets`
+  - `GET /api/v1/workspace/facets`
+  - `GET /api/v1/workspace/recent`
+  - `GET /api/v1/workspace/topics`
+  - `GET /api/v1/workspace/topics/get?topic=...` (topic detail)
+- Extended `internal/workspace` index/query to support owners:
+  - Added `doc_owners` table to SQLite schema.
+  - Ingested `Owners` into `doc_owners` in `InitIndex`.
+  - Added `DocFilters.Intent` and `DocFilters.OwnersAny` + SQL compilation support.
+  - Hydrated `Owners` for query results (like Topics/RelatedFiles).
+- Added handler tests covering the new `/workspace/*` endpoints.
+- Documented the new endpoints in `pkg/doc/docmgr-http-api.md`.
+- Checked ticket tasks: `docmgr task check --ticket 001-ADD-DOCMGR-UI --id 84,85,86,87,88,89,94`
+- Checked docs task: `docmgr task check --ticket 001-ADD-DOCMGR-UI --id 95`
+- Updated changelog:
+  - `docmgr changelog update --ticket 001-ADD-DOCMGR-UI --entry \"...\" --file-note ...`
+
+### Why
+- The Workspace route group in the UI is already scaffolded; it needs server endpoints to move past “Not implemented yet”.
+- Facets and filters (especially Owners/Intent) are foundational for a usable Tickets page and for building consistent navigation controls.
+
+### What worked
+- Reusing `workspace.QueryDocs` for index docs (DocType=`index`) made it straightforward to build `/workspace/tickets` without inventing a new query layer.
+- Adding owners as a dedicated table kept query semantics consistent with `TopicsAny` and avoided brittle string parsing.
+
+### What didn't work
+- When running in the earlier sandboxed environment, `go test ./...` failed with a go build cache permission error:
+  - `open /home/manuel/.cache/go-build/...: permission denied`
+  - Fixed by running tests with a workspace-local cache: `GOCACHE=$PWD/.cache/go-build go test ./... -count=1`
+
+### What I learned
+- “Facets” wants both sources of truth: vocabulary first (nice for controlled vocab), but distinct-from-index fallback is necessary for ad-hoc data.
+- If we want a clean `/workspace/topics/:topic` REST shape, `net/http`’s `ServeMux` makes query-param based “get” endpoints simpler unless we introduce a path router.
+
+### What was tricky to build
+- Ordering semantics: `/workspace/tickets` needs a consistent story for `orderBy` + `reverse` when `LastUpdated` is missing (fallback to file modtime).
+- Keeping index hydration consistent: introducing `Owners` required mirroring the existing “batch hydrate topics/related_files” pattern to avoid regressions.
+
+### What warrants a second pair of eyes
+- Validate that the `/workspace/topics/get` endpoint shape is acceptable (vs path-param) for the intended UI wiring.
+- Sanity-check the sort/reverse behavior for `/workspace/tickets` and `/workspace/recent` against the design doc expectations.
+
+### What should be done in the future
+- Update `pkg/doc/docmgr-http-api.md` with `/workspace/*` endpoints (ticket task 95).
+- Wire the Workspace UI pages to these endpoints (`ui/src/services/docmgrApi.ts` + workspace feature pages).
+
+### Code review instructions
+- Start with `internal/httpapi/workspace.go` (handlers + response shapes).
+- Then review `internal/workspace/sqlite_schema.go`, `internal/workspace/index_builder.go`, `internal/workspace/query_docs.go`, `internal/workspace/query_docs_sql.go` (owners/intents support).
+- Validate with:
+  - `rm -rf .cache/go-build && mkdir -p .cache/go-build && GOCACHE=$PWD/.cache/go-build go test ./... -count=1`
+
+### Technical details
+- Endpoints are registered in `internal/httpapi/server.go`.
+- Topics detail currently uses `GET /api/v1/workspace/topics/get?topic=...` to avoid introducing a new router dependency.

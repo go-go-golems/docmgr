@@ -140,3 +140,40 @@ Design doc: embed Workspace ASCII screenshots verbatim (from sources/workspace-p
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design-doc/01-design-workspace-navigation-ui-post-refactor.md — Appendix includes ASCII designs for quick reference
 
+
+## 2026-01-05
+
+Add remaining Workspace page tasks (API endpoints + UI wiring + tests/docs)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/tasks.md — Workspace tasks 88–95 cover facets/recent and wiring
+
+
+## 2026-01-05
+
+API: implement /api/v1/workspace/{summary,tickets,facets,recent,topics} + owner-based filtering (doc_owners index)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/workspace.go — Workspace browse endpoints
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/workspace/sqlite_schema.go — Owners indexing for facets/filters
+
+
+## 2026-01-05
+
+Docs: document /api/v1/workspace/* endpoints in pkg/doc/docmgr-http-api.md
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/pkg/doc/docmgr-http-api.md — Workspace endpoint reference
+
+
+## 2026-01-05
+
+API: add handler tests for /api/v1/workspace/* endpoints
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/workspace_test.go — Workspace endpoint coverage
+

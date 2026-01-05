@@ -88,7 +88,15 @@
 - [x] UI: Workspace Topics page skeleton + Topic detail route skeleton
 - [x] UI: Workspace Recent activity page skeleton
 - [x] UI: Add Workspace entry link from Search (and/or header actions)
-- [ ] API: implement workspace summary endpoint per design/03-workspace-rest-api.md
-- [ ] API: implement tickets list endpoint (filters/sort/pagination) for Workspace Tickets
-- [ ] API: implement topics list + topic detail endpoints for Workspace Topics
-- [ ] API: implement recent activity endpoint for Workspace Recent
+- [x] API: implement workspace summary endpoint per design/03-workspace-rest-api.md
+- [x] API: implement tickets list endpoint (filters/sort/pagination) for Workspace Tickets
+- [x] API: implement topics list + topic detail endpoints for Workspace Topics
+- [x] API: implement recent activity endpoint for Workspace Recent
+- [x] API: implement /api/v1/workspace/facets (topics/owners/status/intents/docTypes)
+- [x] API: implement /api/v1/workspace/recent (recent tickets + docs)
+- [ ] UI: wire Workspace Home to /workspace/summary + /workspace/recent (replace placeholders)
+- [ ] UI: wire Workspace Tickets page to /workspace/tickets + /workspace/facets (table view MVP)
+- [ ] UI: wire Workspace Topics pages to /workspace/topics endpoints (grid + topic detail)
+- [ ] UI: wire Workspace Recent page to /workspace/recent or /workspace/activity endpoint
+- [x] API: add handler tests for /workspace endpoints
+- [x] Docs: update pkg/doc/docmgr-http-api.md with /workspace/* endpoints

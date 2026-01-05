@@ -35,6 +35,7 @@ RelatedFiles:
       Note: |-
         User docs for running the UI (dev + embedded)
         Viewer routes + shortcuts docs (Step 10)
+        URL params docs for selection restore (Step 11)
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md
       Note: Doc serving API + viewer research and plan
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/02-single-doc.md
@@ -56,6 +57,7 @@ RelatedFiles:
         MVP search UI (modes
         Wire Open doc/Open file navigation (commit bacf9f9)
         Mobile preview modal + filter drawer + keyboard shortcuts (Step 10)
+        URL sel/preview state + Link opens + markdown snippets (Step 11)
     - Path: ui/src/services/docmgrApi.ts
       Note: |-
         RTK Query client for docmgr HTTP API
@@ -66,6 +68,7 @@ LastUpdated: 2026-01-04T19:22:44-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -640,3 +643,29 @@ This step closed out the remaining “MVP” tasks in ticket 001 for the search 
 
 ### What should be done in the future
 - Consider code-splitting the UI bundle if size becomes a concern (highlight/markdown libs add weight).
+
+## Step 11: Persist selection in URL, enable ctrl-click Open, and render snippet markdown
+
+This step improves navigation ergonomics: selecting a result is now reflected in the URL so returning from `/doc` or `/file` restores the preview/selection state. The “Open” actions are real links so you can ctrl-click / middle-click to open in a new tab. Finally, snippets render as markdown and highlight the matching query terms.
+
+### What I did
+- Search UI:
+  - Persist selection in URL via `sel=<docRelPath>` and restore it after search.
+  - Persist mobile preview state via `preview=true`.
+  - Convert “Open doc” / “Open” buttons to links (`<Link>`) so browsers can open new tabs.
+  - Render snippets with `react-markdown` + `remark-gfm` and highlight query terms using `<mark>`.
+- Doc viewer:
+  - Convert related file “Open” to a real link (ctrl-click / new tab).
+- Docs:
+  - Documented `sel`/`preview` URL params in `pkg/doc/docmgr-web-ui.md`.
+- Checked off ticket tasks `46–48`.
+
+### Commands
+- `pnpm -C ui build`
+- `docmgr task check --tasks-file ttmp/.../tasks.md --id 46,47,48`
+
+### What was tricky to build
+- Highlighting matches without enabling raw HTML in markdown rendering (kept XSS surface low by transforming React nodes).
+
+### What warrants a second pair of eyes
+- Confirm URL restore logic for `sel` doesn’t fight with the existing filter URL-sync loop.

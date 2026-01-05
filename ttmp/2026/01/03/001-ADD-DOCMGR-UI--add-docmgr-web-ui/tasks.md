@@ -47,6 +47,9 @@
 - [x] Add Makefile targets for `dev-frontend`, `dev-backend`, and embed build
 - [x] Add minimal regression test: `GET /` serves `index.html` when embed assets exist
 - [x] Update `pkg/doc` docs for “Web UI” (how to run dev, how to run embedded)
+- [x] Persist selected doc in URL (restore preview/sidebar on navigation)
+- [x] Use real links for “Open” actions (ctrl-click / new tab)
+- [x] Render search snippets as markdown with match highlighting
 
 ## Done
 

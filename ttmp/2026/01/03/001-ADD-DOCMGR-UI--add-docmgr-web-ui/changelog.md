@@ -65,3 +65,13 @@ Finish UI MVP (shortcuts + mobile preview/filters), update API/UI docs, and set 
 - pkg/doc/docmgr-http-api.md — Document/file endpoints
 - ui/src/features/search/SearchPage.tsx — Shortcuts + mobile preview/filter drawer
 
+
+## 2026-01-04
+
+UI: persist selected doc in URL, allow ctrl-click Open links, and render snippet markdown with match highlighting
+
+### Related Files
+
+- pkg/doc/docmgr-web-ui.md — Document sel/preview params
+- ui/src/features/search/SearchPage.tsx — sel/preview URL sync
+

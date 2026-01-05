@@ -102,3 +102,12 @@ Fix: Ticket UI tolerates malformed tasks response where sections[].items is null
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/TicketPage.tsx — Defensive asArray() wrapper for section items
 
+
+## 2026-01-05
+
+Diary: backfilled SearchPage modularization work (ticket 007) and the TicketPage tasks null crash fix steps.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/01-diary.md — Added Steps 24–33
+

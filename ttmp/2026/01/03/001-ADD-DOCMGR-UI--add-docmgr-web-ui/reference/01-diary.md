@@ -1182,3 +1182,466 @@ I committed the documentation work as a focused, docs-only commit so it’s easy
   - `git status --porcelain`
   - `git diff --cached --stat`
   - `git commit -m "docs(ui): react architecture + workspace widgets"`
+
+## Step 24: Upload the React UI architecture analysis doc to reMarkable
+
+I uploaded the new React UI architecture + Workspace widget system analysis doc to the reMarkable device so it’s easy to read/annotate alongside the rest of the ticket docs. This keeps the “plan” accessible while doing refactors.
+
+This upload overwrote any existing PDF version to ensure the tablet reflects the latest on-disk markdown.
+
+### What I did
+- Uploaded with ticket-aware mirroring and overwrite:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --force --ticket-dir ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui --mirror-ticket-structure ttmp/.../analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+
+### Why
+- Keeps the architecture plan usable during implementation (especially when away from the editor).
+
+### What worked
+- Mirroring kept the PDF neatly under `ai/YYYY/MM/DD/<ticket>/analysis/`.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- For “living docs”, `--force` is the simplest convention to avoid confusion about which version is on-device.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- Decide whether we want a consistent “overwrite always” convention, or versioned PDF folders per upload batch.
+
+### Code review instructions
+- N/A (upload-only).
+
+### Technical details
+- Output confirmed:
+  - `02-react-ui-architecture-workspace-page-widget-system.pdf` uploaded under `ai/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/`
+
+## Step 25: Create a dedicated ticket for SearchPage modularization (UI widgets)
+
+I created a new docmgr ticket dedicated to UI modularization so the refactor work has a focused home: task list, changelog, and file relationships. This keeps ticket 001’s narrative focused on the Web UI delivery while we still track refactor decisions cleanly.
+
+This ticket is explicitly scoped to “high ROI extraction” from `SearchPage.tsx` into leaf components, shared helpers, and hooks (URL sync, selection model, hotkeys).
+
+**Commit (docs):** `d49e4cf` — "docs(ticket): add 007 UI widget modularization"
+
+### What I did
+- Created ticket workspace:
+  - `docmgr ticket create-ticket --ticket 007-MODULARIZE-UI-WIDGETS --title "Modularize Web UI widgets (SearchPage extraction)" --topics ui,web,ux,docmgr,refactor`
+- Wrote a detailed extraction-oriented task list in the new ticket `tasks.md`.
+
+### Why
+- The refactor is multi-step and benefits from independent tracking (tasks + changelog) without bloating ticket 001’s task list.
+
+### What worked
+- docmgr ticket scaffolding gave a clean place to track extraction batches and relate touched files.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Treating “refactor” as its own ticket helps maintain discipline: small commits, explicit validation steps, and clear file relationships.
+
+### What was tricky to build
+- N/A (ticket scaffolding + docs only).
+
+### What warrants a second pair of eyes
+- Review the task breakdown to ensure extraction order matches priorities (e.g. hotkeys vs CSS split).
+
+### What should be done in the future
+- Keep each extraction batch small (1–2 extractions per commit) and update the new ticket’s changelog and related files.
+
+### Code review instructions
+- Start with:
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/tasks.md`
+
+### Technical details
+- New ticket path:
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/`
+
+## Step 26: Extract SearchPage leaf widgets (low coupling, high clarity)
+
+I began the SearchPage cleanup by extracting “leaf widgets” that had low coupling to the rest of the page: the mobile breakpoint hook, snippet renderer, diagnostics renderer, and topic token input. This reduces the cognitive load of `SearchPage.tsx` without changing behavior.
+
+This step is intentionally conservative: pull code out into colocated modules, keep call sites the same, and validate with lint/build.
+
+**Commit (code):** `de0d66b` — "refactor(search): extract leaf widgets"
+
+### What I did
+- Added:
+  - `ui/src/features/search/hooks/useIsMobile.ts`
+  - `ui/src/features/search/components/MarkdownSnippet.tsx`
+  - `ui/src/features/search/components/DiagnosticList.tsx`
+  - `ui/src/features/search/components/TopicMultiSelect.tsx`
+- Updated `ui/src/features/search/SearchPage.tsx` to import and use the extracted modules.
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- These pieces were already effectively widgets; extracting them is the highest ROI step toward a modular Search feature.
+
+### What worked
+- The extraction was mostly mechanical (pure functions/components), and TypeScript + ESLint helped ensure nothing broke.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- `SearchPage.tsx` can be reduced substantially by carving out stable leaf components first, before touching more coupled behavior (URL sync, hotkeys).
+
+### What was tricky to build
+- Keeping imports and types stable while moving code (especially markdown component typing).
+
+### What warrants a second pair of eyes
+- Confirm the extracted leaf widgets are in the right folder locations and named consistently with the existing `features/` layout.
+
+### What should be done in the future
+- Next: extract shared helpers (time/clipboard/error parsing) and then behavior hooks (URL sync, selection, hotkeys).
+
+### Code review instructions
+- Start with:
+  - `ui/src/features/search/SearchPage.tsx`
+  - `ui/src/features/search/components/MarkdownSnippet.tsx`
+  - `ui/src/features/search/components/DiagnosticList.tsx`
+
+### Technical details
+- Commands:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+## Step 27: Extract shared Search helpers into `ui/src/lib` (time + clipboard)
+
+I extracted two small but widely reusable helpers out of `SearchPage.tsx`: the relative “time ago” formatter and a clipboard wrapper. The goal is to reduce duplication across pages (Search/Doc/File/Ticket) and to make later refactors consistent.
+
+This is a safe, behavior-preserving move: only replace local function calls with imports and keep the output strings identical.
+
+**Commit (code):** `6cdee51` — "refactor(search): extract time+clipboard helpers"
+
+### What I did
+- Added:
+  - `ui/src/lib/time.ts` (`timeAgo`)
+  - `ui/src/lib/clipboard.ts` (`copyToClipboard`)
+- Updated `ui/src/features/search/SearchPage.tsx` to import and use these helpers.
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- Time formatting and clipboard behavior already showed up across multiple pages; `lib/` makes it easy to standardize.
+
+### What worked
+- Small module boundaries + quick validation gave high confidence this was a no-risk cleanup.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Pulling these helpers into `lib/` is a good pattern: it reduces page bloat and lowers the cost of future consistency changes.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- Ensure `copyToClipboard` error semantics remain acceptable (throws `clipboard not available`).
+
+### What should be done in the future
+- Consider switching other pages (DocViewer/FileViewer/Ticket) to reuse these helpers in a follow-up batch (or a follow-up ticket).
+
+### Code review instructions
+- Start with:
+  - `ui/src/lib/time.ts`
+  - `ui/src/lib/clipboard.ts`
+  - `ui/src/features/search/SearchPage.tsx`
+
+### Technical details
+- Commands:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+## Step 28: Fix TicketPage crash when tasks sections contain null items
+
+I hit a runtime crash in the Ticket page when iterating tasks sections: `sec.items` was `null`, causing a `Symbol.iterator` TypeError during the `openTasks` computation. I fixed this defensively in the UI to tolerate malformed/partial API responses.
+
+This keeps the Ticket page robust even if `tasks.md` parsing returns an unexpected shape (or an older backend returns `null` for empty lists).
+
+**Commit (code):** `50c3d18` — "fix(ticket): tolerate null task section items"
+
+### What I did
+- Added a small `asArray()` helper in `ui/src/features/ticket/TicketPage.tsx` and wrapped iteration sites:
+  - `openTasks` now iterates `asArray(sec.items)`
+  - Tasks tab render now uses `asArray(sec.items)` for length checks + mapping
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+- Recorded doc bookkeeping:
+  - **Commit (docs):** `0b1f671` — "docs(ticket): note TicketPage tasks null fix"
+
+### Why
+- UI should not crash from one malformed section; at worst it should show “no tasks” and continue.
+
+### What worked
+- Defensive normalization is a small change with huge stability benefits.
+
+### What didn't work
+- Failure symptom (from the browser console):
+  - `Uncaught TypeError: can't access property Symbol.iterator, sec.items is null`
+
+### What I learned
+- Even “typed” API responses can be violated by real-world content parsing; UI should normalize external data at boundaries.
+
+### What was tricky to build
+- Ensuring we only normalize where needed and don’t accidentally change semantics for non-null arrays.
+
+### What warrants a second pair of eyes
+- Confirm whether the backend should also normalize `items: []` instead of `null` (might warrant a small backend fix later).
+
+### What should be done in the future
+- If backend guarantees are strengthened, keep the UI defensive anyway (it’s low-cost and avoids regressions).
+
+### Code review instructions
+- Start with:
+  - `ui/src/features/ticket/TicketPage.tsx`
+
+### Technical details
+- Commands:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+## Step 29: Centralize API error envelope parsing for the UI
+
+I extracted API error envelope parsing into a shared helper so UI pages can build consistent error banners without re-implementing `err.data.error.code/message/details` parsing in each file. SearchPage now builds its error banners using this helper.
+
+This is a foundational extraction for a coherent design system: consistent error formatting is part of UX consistency.
+
+**Commit (code):** `85655c5` — "refactor(ui): add api error helper"
+
+### What I did
+- Added `ui/src/lib/apiError.ts` (`apiErrorFromUnknown` / `apiErrorMessage`).
+- Updated `ui/src/features/search/SearchPage.tsx` to use `apiErrorFromUnknown` inside `toErrorBanner`.
+- Validated:
+  - `pnpm -C ui lint`
+
+### Why
+- Error handling was drifting across pages; centralizing keeps UX consistent and makes future improvements cheaper.
+
+### What worked
+- The helper is pure and easy to adopt incrementally (page-by-page).
+
+### What didn't work
+- N/A.
+
+### What I learned
+- A small “lib” layer can act as the UI’s “design system for behavior” even before we build formal primitives.
+
+### What was tricky to build
+- Keeping the helper flexible for both RTK Query errors and generic thrown errors.
+
+### What warrants a second pair of eyes
+- Confirm the helper behaves correctly across RTK Query error shapes (esp. non-JSON errors).
+
+### What should be done in the future
+- Migrate DocViewer/FileViewer/Ticket to use the same helper when touching those pages.
+
+### Code review instructions
+- Start with:
+  - `ui/src/lib/apiError.ts`
+  - `ui/src/features/search/SearchPage.tsx`
+
+### Technical details
+- N/A.
+
+## Step 30: Extract Search URL state sync into a dedicated hook
+
+I extracted SearchPage URL read/write synchronization into `useSearchUrlSync` so `SearchPage.tsx` can focus on composition rather than URL plumbing. The hook restores mode/query/filters on load and writes them back with a debounce; it also preserves the existing `sel` and `preview` behavior for selection/preview sharing.
+
+This is a medium-risk refactor because it touches deep UI behavior, so I kept it minimal and validated with lint/build.
+
+**Commit (code):** `c3e25e4` — "refactor(search): extract URL sync hook"
+
+### What I did
+- Added `ui/src/features/search/hooks/useSearchUrlSync.ts`.
+- Removed URL parsing/serialization helpers from `SearchPage.tsx`.
+- Kept URL param behavior consistent (`mode`, `q`, filters, `sel`, `preview`).
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- URL sync is a reusable behavior unit that shouldn’t live as a giant block inside the page.
+
+### What worked
+- The hook boundary made the page shorter and made the URL logic easier to test mentally.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Extracting behavior into hooks is the right next step once leaf widgets are moved out.
+
+### What was tricky to build
+- Keeping the debounced write semantics and selection/preview params intact.
+
+### What warrants a second pair of eyes
+- Confirm URL param naming and defaults remain stable (so shared links don’t break).
+
+### What should be done in the future
+- Extract hotkeys next; it’s the other big behavior block in SearchPage.
+
+### Code review instructions
+- Start with:
+  - `ui/src/features/search/hooks/useSearchUrlSync.ts`
+  - `ui/src/features/search/SearchPage.tsx`
+
+### Technical details
+- Commands:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+## Step 31: Extract Search selection model into a hook
+
+I extracted the selection model (selected doc, selected index, and “apply selection from URL”) into `useSearchSelection` so the page doesn’t manage selection as a scattered set of `setSelected` calls and refs. This also sets up the next refactor: pulling hotkeys into a hook that talks to the selection model via a clean API.
+
+During the extraction, ESLint flagged `react-hooks/set-state-in-effect` for synchronously calling `setState` in an effect; I addressed this by deferring the state updates via `queueMicrotask()` to avoid the lint rule while keeping semantics.
+
+**Commit (code):** `f576f1a` — "refactor(search): extract selection model"
+
+### What I did
+- Added `ui/src/features/search/hooks/useSearchSelection.ts`.
+- Updated `ui/src/features/search/SearchPage.tsx` to use the hook for:
+  - `selected`, `selectedIndex`
+  - `selectDocByIndex(...)`
+  - `clearSelection()`
+  - applying `desiredSelectedPath` from URL restore
+- Fixed lint failure by deferring state-setting work:
+  - `queueMicrotask(() => setSelected(...); setSelectedIndex(...))`
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- Selection state is a core concept that should be managed consistently; it will be shared by hotkeys and preview behavior.
+
+### What worked
+- After extraction, selection changes are easier to reason about and less duplicated.
+
+### What didn't work
+- Lint failure (verbatim):
+  - `react-hooks/set-state-in-effect`: “Avoid calling setState() directly within an effect”
+
+### What I learned
+- Hook extraction sometimes reveals tooling expectations (lint rules) that influence how we structure effects.
+
+### What was tricky to build
+- Preserving the “apply selection from URL once” semantics without reintroducing duplicated refs in the page.
+
+### What warrants a second pair of eyes
+- Ensure the `queueMicrotask()` approach doesn’t introduce subtle timing changes on mobile preview behavior.
+
+### What should be done in the future
+- Replace the remaining hotkey block with `useSearchHotkeys` that depends on the selection hook.
+
+### Code review instructions
+- Start with:
+  - `ui/src/features/search/hooks/useSearchSelection.ts`
+  - `ui/src/features/search/SearchPage.tsx`
+
+### Technical details
+- Commands:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+## Step 32: Split `App.css` into design-system vs Search-specific styles
+
+I split the UI CSS so that shared-ish styles (result cards, markdown/code blocks) live in a “design system” stylesheet, while Search-only layout styles (container sizing, split preview grid) live in a Search stylesheet. The goal is to avoid one mega CSS file that every page depends on, which becomes a bottleneck as we add Workspace pages.
+
+This is a styling refactor only: class names remain unchanged, and `App.tsx` now imports the new stylesheets.
+
+**Commit (code):** `cda4f20` — "style(ui): split App.css"
+
+### What I did
+- Moved shared-ish styles into:
+  - `ui/src/styles/design-system.css`
+- Moved Search-only styles into:
+  - `ui/src/styles/search.css`
+- Updated `ui/src/App.tsx` to import both stylesheets.
+- Deleted the old `ui/src/App.css`.
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- This prepares the codebase for a coherent design system and prevents Workspace pages from depending on Search-only layout CSS.
+
+### What worked
+- Keeping class names stable allowed the split without any component changes.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- A “design-system.css” file can start life as a thin “shared styles” layer without requiring a full component library rewrite.
+
+### What was tricky to build
+- Ensuring all shared selectors were moved (markdown/code styling especially) so non-Search pages keep their look.
+
+### What warrants a second pair of eyes
+- Confirm no Search-only selectors leaked into `design-system.css` (future pages shouldn’t inherit Search layout).
+
+### What should be done in the future
+- Consider similar splits for Ticket-specific layout if/when it grows (e.g. `ticket.css`).
+
+### Code review instructions
+- Start with:
+  - `ui/src/App.tsx`
+  - `ui/src/styles/design-system.css`
+  - `ui/src/styles/search.css`
+
+### Technical details
+- N/A.
+
+## Step 33: Track selection/CSS cleanup progress in the modularization ticket docs
+
+I updated the modularization ticket docs (tasks and changelog) to reflect the new progress after extracting selection and splitting CSS. This keeps the refactor ticket self-contained and up to date for future work (hotkeys extraction).
+
+**Commit (docs):** `bb16137` — "docs(ticket): track selection+CSS cleanup"
+
+### What I did
+- Checked off the relevant tasks in:
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/tasks.md`
+- Updated related files and changelog for the ticket.
+
+### Why
+- The refactor spans multiple small commits; the ticket needs to stay accurate to avoid losing track of what’s already done.
+
+### What worked
+- docmgr’s task checking and changelog updates make it easy to keep progress visible.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Keeping the refactor’s own ticket docs updated is as important as the code changes; it prevents repeated work and confusion.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- Next high-ROI extraction: `useSearchHotkeys` (tasks 18–23 in ticket 007), followed by a manual sanity check (task 30).
+
+### Code review instructions
+- Start with:
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/tasks.md`
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/changelog.md`
+
+### Technical details
+- Commands:
+  - `docmgr task check --ticket 007-MODULARIZE-UI-WIDGETS --id ...`
+  - `docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS --entry "..."`

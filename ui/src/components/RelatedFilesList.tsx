@@ -5,9 +5,15 @@ import type { RelatedFile } from '../services/docmgrApi'
 export function RelatedFilesList({
   files,
   onCopyPath,
+  showCopy = true,
+  showOpen = true,
+  openLabel = 'Open',
 }: {
   files: RelatedFile[]
   onCopyPath: (path: string) => void
+  showCopy?: boolean
+  showOpen?: boolean
+  openLabel?: string
 }) {
   if (files.length === 0) return null
 
@@ -20,19 +26,22 @@ export function RelatedFilesList({
             {rf.note ? <div className="text-muted">{rf.note}</div> : null}
           </div>
           <div className="d-flex gap-2">
-            <button className="btn btn-sm btn-outline-secondary" onClick={() => onCopyPath(rf.path)}>
-              Copy
-            </button>
-            <Link
-              className="btn btn-sm btn-outline-primary"
-              to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
-            >
-              Open
-            </Link>
+            {showCopy ? (
+              <button className="btn btn-sm btn-outline-secondary" onClick={() => onCopyPath(rf.path)}>
+                Copy
+              </button>
+            ) : null}
+            {showOpen ? (
+              <Link
+                className="btn btn-sm btn-outline-primary"
+                to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
+              >
+                {openLabel}
+              </Link>
+            ) : null}
           </div>
         </li>
       ))}
     </ul>
   )
 }
-

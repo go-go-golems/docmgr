@@ -1,8 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 import {
   useAddTicketTaskMutation,
@@ -14,12 +11,20 @@ import {
   useGetTicketTasksQuery,
   type TicketDocItem,
 } from '../../services/docmgrApi'
-import { DocCard } from '../../components/DocCard'
-import { MermaidDiagram } from '../../components/MermaidDiagram'
 
-type TabKey = 'overview' | 'documents' | 'tasks' | 'graph' | 'changelog'
+import { ApiErrorAlert } from '../../components/ApiErrorAlert'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { copyToClipboard } from '../../lib/clipboard'
 
-function normalizeTab(raw: string | null): TabKey {
+import { TicketHeader } from './components/TicketHeader'
+import { TicketTabs, type TicketTabKey } from './components/TicketTabs'
+import { TicketChangelogTab } from './tabs/TicketChangelogTab'
+import { TicketDocumentsTab } from './tabs/TicketDocumentsTab'
+import { TicketGraphTab } from './tabs/TicketGraphTab'
+import { TicketOverviewTab } from './tabs/TicketOverviewTab'
+import { TicketTasksTab } from './tabs/TicketTasksTab'
+
+function normalizeTab(raw: string | null): TicketTabKey {
   const t = (raw ?? '').trim().toLowerCase()
   if (t === 'documents' || t === 'tasks' || t === 'graph' || t === 'changelog') return t
   return 'overview'
@@ -32,23 +37,8 @@ function formatDate(iso: string | undefined): string {
   return d.toLocaleString()
 }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
-}
-
 function asArray<T>(v: T[] | null | undefined): T[] {
   return Array.isArray(v) ? v : []
-}
-
-function apiErrorMessage(err: unknown): string {
-  const maybe = err as { data?: unknown } | undefined
-  const data = isRecord(maybe?.data) ? maybe?.data : undefined
-  const e = data && isRecord(data['error']) ? (data['error'] as Record<string, unknown>) : undefined
-  const msg = e && typeof e['message'] === 'string' ? (e['message'] as string) : undefined
-  if (msg && msg.trim() !== '') return msg
-  if (err instanceof Error) return err.message
-  if (typeof err === 'string') return err
-  return String(err)
 }
 
 function groupByDocType(items: TicketDocItem[]): Record<string, TicketDocItem[]> {
@@ -98,12 +88,10 @@ export function TicketPage() {
 
   const [checkTask, checkTaskState] = useCheckTicketTasksMutation()
   const [addTask, addTaskState] = useAddTicketTaskMutation()
-  const [newTaskText, setNewTaskText] = useState('')
 
   async function onCopyPath(text: string) {
     try {
-      if (!navigator.clipboard) throw new Error('clipboard not available')
-      await navigator.clipboard.writeText(text)
+      await copyToClipboard(text)
       setToast({ kind: 'success', message: 'Copied' })
       setTimeout(() => setToast(null), 1200)
     } catch (e) {
@@ -137,7 +125,7 @@ export function TicketPage() {
     return out.slice(0, 10)
   }, [tasksData])
 
-  function setTab(next: TabKey) {
+  function setTab(next: TicketTabKey) {
     const sp = new URLSearchParams(searchParams)
     sp.set('tab', next)
     if (next !== 'documents') sp.delete('doc')
@@ -159,20 +147,7 @@ export function TicketPage() {
 
   return (
     <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-        <div className="flex-grow-1">
-          <div className="h4 mb-0">
-            Ticket: <span className="font-monospace">{ticket || '—'}</span>
-          </div>
-          {t?.title ? <div className="text-muted">{t.title}</div> : null}
-          {t?.ticketDir ? <div className="small text-muted font-monospace">{t.ticketDir}</div> : null}
-        </div>
-        <div className="d-flex gap-2">
-          <Link className="btn btn-outline-primary" to="/">
-            Search
-          </Link>
-        </div>
-      </div>
+      <TicketHeader ticket={ticket} title={t?.title} ticketDir={t?.ticketDir} />
 
       {toast ? (
         <div className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} py-2`}>
@@ -181,477 +156,67 @@ export function TicketPage() {
       ) : null}
 
       {ticket === '' ? <div className="alert alert-info">Missing ticket id.</div> : null}
+      {ticketError ? <ApiErrorAlert title="Failed to load ticket" error={ticketError} /> : null}
+      {ticketLoading ? <LoadingSpinner /> : null}
 
-      {ticketError ? (
-        <div className="alert alert-danger">
-          Failed to load ticket: {apiErrorMessage(ticketError)}
-        </div>
-      ) : null}
-      {ticketLoading ? (
-        <div className="text-center my-4">
-          <div className="spinner-border text-primary" role="status" />
-        </div>
-      ) : null}
-
-      <div className="d-flex flex-wrap gap-2 mb-3">
-        <button
-          className={`btn btn-sm ${tab === 'overview' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setTab('overview')}
-        >
-          Overview
-        </button>
-        <button
-          className={`btn btn-sm ${tab === 'documents' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setTab('documents')}
-        >
-          Documents
-        </button>
-        <button
-          className={`btn btn-sm ${tab === 'tasks' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setTab('tasks')}
-        >
-          Tasks
-        </button>
-        <button
-          className={`btn btn-sm ${tab === 'graph' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setTab('graph')}
-        >
-          Graph
-        </button>
-        <button
-          className={`btn btn-sm ${tab === 'changelog' ? 'btn-primary' : 'btn-outline-primary'}`}
-          onClick={() => setTab('changelog')}
-        >
-          Changelog
-        </button>
-      </div>
+      <TicketTabs tab={tab} onTabChange={setTab} />
 
       {tab === 'overview' ? (
-        <div className="row g-3">
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-header fw-semibold">Metadata</div>
-              <div className="card-body">
-                <div className="table-responsive">
-                  <table className="table table-sm mb-0">
-                    <tbody>
-                      <tr>
-                        <th className="text-muted">Status</th>
-                        <td>{t?.status || '—'}</td>
-                        <th className="text-muted">Intent</th>
-                        <td>{t?.intent || '—'}</td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Created</th>
-                        <td>{t?.createdAt || '—'}</td>
-                        <th className="text-muted">Updated</th>
-                        <td>{formatDate(t?.updatedAt)}</td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Topics</th>
-                        <td colSpan={3}>{t?.topics?.length ? t.topics.join(', ') : '—'}</td>
-                      </tr>
-                      <tr>
-                        <th className="text-muted">Owners</th>
-                        <td colSpan={3}>{t?.owners?.length ? t.owners.join(', ') : '—'}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-header fw-semibold">Quick stats</div>
-              <div className="card-body">
-                <div className="d-flex flex-wrap gap-2">
-                  <span className="badge text-bg-light text-dark">
-                    Docs: <span className="fw-semibold">{t?.stats?.docsTotal ?? 0}</span>
-                  </span>
-                  <span className="badge text-bg-light text-dark">
-                    Tasks:{' '}
-                    <span className="fw-semibold">
-                      {t?.stats?.tasksDone ?? 0}/{t?.stats?.tasksTotal ?? 0}
-                    </span>
-                  </span>
-                  <span className="badge text-bg-light text-dark">
-                    Files: <span className="fw-semibold">{t?.stats?.relatedFilesTotal ?? 0}</span>
-                  </span>
-                </div>
-                <div className="mt-3 d-flex flex-wrap gap-2">
-                  {t?.indexPath ? (
-                    <Link className="btn btn-sm btn-outline-primary" to={`/doc?path=${encodeURIComponent(t.indexPath)}`}>
-                      Open index.md
-                    </Link>
-                  ) : null}
-                  <button className="btn btn-sm btn-outline-secondary" onClick={() => setTab('documents')}>
-                    Documents
-                  </button>
-                  <button className="btn btn-sm btn-outline-secondary" onClick={() => setTab('tasks')}>
-                    Tasks
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-header fw-semibold">Key documents</div>
-              <div className="card-body">
-                {docsLoading ? (
-                  <div className="text-muted">Loading…</div>
-                ) : docsError ? (
-                  <div className="alert alert-danger mb-0">Failed to load docs: {apiErrorMessage(docsError)}</div>
-                ) : keyDocs.length === 0 ? (
-                  <div className="text-muted">No documents found.</div>
-                ) : (
-                  <ul className="list-unstyled mb-0 vstack gap-2">
-                    {keyDocs.map((d) => (
-                      <li key={d.path} className="d-flex justify-content-between align-items-start gap-2">
-                        <div className="flex-grow-1">
-                          <div className="fw-semibold">{d.title || d.path}</div>
-                          <div className="small text-muted font-monospace">{d.path}</div>
-                        </div>
-                        <Link className="btn btn-sm btn-outline-primary" to={`/doc?path=${encodeURIComponent(d.path)}`}>
-                          Open
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="col-12 col-lg-6">
-            <div className="card">
-              <div className="card-header fw-semibold">Open tasks</div>
-              <div className="card-body">
-                {tasksLoading ? (
-                  <div className="text-muted">Loading…</div>
-                ) : tasksError ? (
-                  <div className="alert alert-danger mb-0">Failed to load tasks: {apiErrorMessage(tasksError)}</div>
-                ) : openTasks.length === 0 ? (
-                  <div className="text-muted">No open tasks.</div>
-                ) : (
-                  <div className="vstack gap-2">
-                    {openTasks.map((it) => (
-                      <label key={it.id} className="d-flex gap-2 align-items-start">
-                        <input
-                          type="checkbox"
-                          checked={it.checked}
-                          onChange={(e) => void checkTask({ ticket, ids: [it.id], checked: e.target.checked })}
-                          disabled={checkTaskState.isLoading}
-                        />
-                        <span>
-                          <span className="text-muted me-2">#{it.id}</span>
-                          {it.text}
-                        </span>
-                      </label>
-                    ))}
-                    <button className="btn btn-sm btn-outline-secondary align-self-start" onClick={() => setTab('tasks')}>
-                      View all tasks
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header fw-semibold">index.md</div>
-              <div className="card-body docmgr-markdown">
-                {indexDocError ? (
-                  <div className="alert alert-danger mb-0">Failed to load index.md: {apiErrorMessage(indexDocError)}</div>
-                ) : indexDocData?.body ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{indexDocData.body}</ReactMarkdown>
-                ) : (
-                  <div className="text-muted">No content.</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+        <TicketOverviewTab
+          ticket={ticket}
+          ticketData={t}
+          docsLoading={docsLoading}
+          docsError={docsError}
+          keyDocs={keyDocs}
+          tasksLoading={tasksLoading}
+          tasksError={tasksError}
+          openTasks={openTasks}
+          indexDocError={indexDocError}
+          indexBody={indexDocData?.body}
+          onSetTab={setTab}
+          onCheckTask={(args) => checkTask(args).unwrap()}
+          checkTaskLoading={checkTaskState.isLoading}
+          formatDate={formatDate}
+        />
       ) : null}
 
       {tab === 'documents' ? (
-        <div className="row g-3">
-          <div className={selectedDocItem ? 'col-12 col-lg-7' : 'col-12'}>
-            {docsError ? (
-              <div className="alert alert-danger">
-                Failed to load docs: {apiErrorMessage(docsError)}
-              </div>
-            ) : null}
-            {docsLoading ? (
-              <div className="text-center my-4">
-                <div className="spinner-border text-primary" role="status" />
-              </div>
-            ) : null}
-            {!docsLoading && docsData ? (
-              <div className="vstack gap-3">
-                {docTypeKeys.map((k) => (
-                  <div key={k} className="card">
-                    <div className="card-header fw-semibold d-flex justify-content-between align-items-center">
-                      <span className="text-uppercase">{k}</span>
-                      <span className="text-muted small">{docsByType[k].length}</span>
-                    </div>
-                    <div className="card-body">
-                      <div className="vstack gap-2">
-                        {docsByType[k].map((d) => (
-                          <DocCard
-                            key={d.path}
-                            title={d.title || d.path}
-                            ticket={ticket}
-                            docType={d.docType}
-                            status={d.status}
-                            topics={d.topics}
-                            path={d.path}
-                            lastUpdated={d.lastUpdated}
-                            relatedFiles={d.relatedFiles}
-                            selected={selectedDoc === d.path}
-                            snippet={d.summary ? <span className="text-muted">{d.summary}</span> : null}
-                            onSelect={() => selectDoc(d.path)}
-                            actions={
-                              <>
-                                <Link
-                                  className="btn btn-sm btn-outline-primary"
-                                  to={`/doc?path=${encodeURIComponent(d.path)}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Open
-                                </Link>
-                                <button
-                                  className="btn btn-sm btn-outline-secondary"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    void onCopyPath(d.path)
-                                  }}
-                                >
-                                  Copy
-                                </button>
-                              </>
-                            }
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          {selectedDocItem ? (
-            <div className="col-12 col-lg-5">
-              <div className="card">
-                <div className="card-header d-flex justify-content-between align-items-center">
-                  <span className="fw-semibold">Preview</span>
-                  <button className="btn btn-sm btn-outline-secondary" onClick={clearSelectedDoc}>
-                    Close
-                  </button>
-                </div>
-                <div className="card-body">
-                  <div className="fw-semibold mb-1">{selectedDocItem.title || selectedDocItem.path}</div>
-                  <div className="small text-muted font-monospace mb-2">{selectedDocItem.path}</div>
-                  <div className="d-flex flex-wrap gap-2 mb-2">
-                    <span className="badge text-bg-light text-dark">{selectedDocItem.docType}</span>
-                    {selectedDocItem.status ? (
-                      <span className="badge text-bg-primary">{selectedDocItem.status}</span>
-                    ) : null}
-                    {selectedDocItem.lastUpdated ? (
-                      <span className="badge text-bg-light text-dark">
-                        Updated: {formatDate(selectedDocItem.lastUpdated)}
-                      </span>
-                    ) : null}
-                  </div>
-                  {selectedDocItem.summary ? <div className="text-muted small mb-3">{selectedDocItem.summary}</div> : null}
-
-                  {selectedDocItem.relatedFiles?.length ? (
-                    <div>
-                      <div className="fw-semibold mb-2">Related files</div>
-                      <ul className="list-unstyled mb-0 vstack gap-2">
-                        {selectedDocItem.relatedFiles.slice(0, 12).map((rf) => (
-                          <li key={`${rf.path}:${rf.note ?? ''}`}>
-                            <div className="font-monospace">{rf.path}</div>
-                            {rf.note ? <div className="small text-muted">{rf.note}</div> : null}
-                            <div className="mt-1">
-                              <Link
-                                className="btn btn-sm btn-outline-primary"
-                                to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
-                              >
-                                Open file
-                              </Link>
-                            </div>
-                          </li>
-                        ))}
-                        {selectedDocItem.relatedFiles.length > 12 ? (
-                          <li className="text-muted small">… {selectedDocItem.relatedFiles.length - 12} more</li>
-                        ) : null}
-                      </ul>
-                    </div>
-                  ) : (
-                    <div className="text-muted small">No related files.</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <TicketDocumentsTab
+          ticket={ticket}
+          docsError={docsError}
+          docsLoading={docsLoading}
+          docTypeKeys={docTypeKeys}
+          docsByType={docsByType}
+          selectedDoc={selectedDoc}
+          selectedDocItem={selectedDocItem}
+          onSelectDoc={selectDoc}
+          onClearSelectedDoc={clearSelectedDoc}
+          onCopyPath={(p) => void onCopyPath(p)}
+          formatDate={formatDate}
+        />
       ) : null}
 
       {tab === 'tasks' ? (
-        <div className="row g-3">
-          <div className="col-12 col-lg-7">
-            {tasksError ? (
-              <div className="alert alert-danger">
-                Failed to load tasks: {apiErrorMessage(tasksError)}
-              </div>
-            ) : null}
-            {tasksLoading ? (
-              <div className="text-center my-4">
-                <div className="spinner-border text-primary" role="status" />
-              </div>
-            ) : null}
-            {!tasksLoading && tasksData ? (
-              <div className="vstack gap-3">
-                <div className="card">
-                  <div className="card-body d-flex flex-wrap gap-2 justify-content-between align-items-center">
-                    <div>
-                      <span className="fw-semibold">Progress:</span>{' '}
-                      {tasksData.stats.done}/{tasksData.stats.total}
-                      {!tasksData.exists ? <span className="text-muted ms-2">(no tasks.md)</span> : null}
-                    </div>
-                    {tasksData.tasksPath ? (
-                      <Link className="btn btn-sm btn-outline-secondary" to={`/doc?path=${encodeURIComponent(tasksData.tasksPath)}`}>
-                        Open tasks.md
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-
-                {tasksData.sections.map((sec) => (
-                  <div key={sec.title} className="card">
-                    <div className="card-header fw-semibold">{sec.title}</div>
-                    <div className="card-body">
-                      {asArray(sec.items).length === 0 ? (
-                        <div className="text-muted small">No tasks in this section.</div>
-                      ) : (
-                        <div className="vstack gap-2">
-                          {asArray(sec.items).map((it) => (
-                            <label key={it.id} className="d-flex gap-2 align-items-start">
-                              <input
-                                type="checkbox"
-                                checked={it.checked}
-                                onChange={(e) => void checkTask({ ticket, ids: [it.id], checked: e.target.checked })}
-                                disabled={checkTaskState.isLoading}
-                              />
-                              <span>
-                                <span className="text-muted me-2">#{it.id}</span>
-                                {it.text}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="col-12 col-lg-5">
-            <div className="card">
-              <div className="card-header fw-semibold">Add task</div>
-              <div className="card-body">
-                <div className="mb-2 text-muted small">Adds to section “TODO”.</div>
-                <div className="input-group">
-                  <input
-                    className="form-control"
-                    value={newTaskText}
-                    onChange={(e) => setNewTaskText(e.target.value)}
-                    placeholder="New task…"
-                  />
-                  <button
-                    className="btn btn-primary"
-                    disabled={addTaskState.isLoading || newTaskText.trim() === ''}
-                    onClick={() => {
-                      const text = newTaskText.trim()
-                      if (!text) return
-                      void addTask({ ticket, section: 'TODO', text }).then(() => setNewTaskText(''))
-                    }}
-                  >
-                    Add
-                  </button>
-                </div>
-                {addTaskState.error ? (
-                  <div className="alert alert-danger mt-3 py-2">
-                    Add failed: {apiErrorMessage(addTaskState.error)}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
+        <TicketTasksTab
+          ticket={ticket}
+          tasksData={tasksData}
+          tasksError={tasksError}
+          tasksLoading={tasksLoading}
+          checkTask={(args) => checkTask(args).unwrap()}
+          checkTaskLoading={checkTaskState.isLoading}
+          addTask={(args) => addTask(args).unwrap()}
+          addTaskLoading={addTaskState.isLoading}
+          addTaskError={addTaskState.error}
+        />
       ) : null}
 
       {tab === 'graph' ? (
-        <div className="card">
-          <div className="card-header fw-semibold d-flex justify-content-between align-items-center">
-            <span>Graph</span>
-            <span className="text-muted small">
-              {graphData ? `${graphData.stats.nodes} nodes • ${graphData.stats.edges} edges` : ''}
-            </span>
-          </div>
-          <div className="card-body">
-            {graphError ? (
-              <div className="alert alert-danger">
-                Failed to load graph: {apiErrorMessage(graphError)}
-              </div>
-            ) : null}
-            {graphLoading ? (
-              <div className="text-center my-4">
-                <div className="spinner-border text-primary" role="status" />
-              </div>
-            ) : null}
-            {graphData ? (
-              <div>
-                <div className="overflow-auto border rounded p-2" style={{ maxHeight: 650 }}>
-                  <MermaidDiagram code={graphData.mermaid} />
-                </div>
-                <details className="mt-3">
-                  <summary className="text-muted small">Mermaid DSL</summary>
-                  <pre className="bg-light p-2 rounded small overflow-auto" style={{ maxHeight: 500 }}>
-                    {graphData.mermaid}
-                  </pre>
-                </details>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <TicketGraphTab graphData={graphData} graphError={graphError} graphLoading={graphLoading} />
       ) : null}
 
-      {tab === 'changelog' ? (
-        <div className="card">
-          <div className="card-header fw-semibold">Changelog</div>
-          <div className="card-body">
-            {t?.ticketDir ? (
-              <Link
-                className="btn btn-outline-primary"
-                to={`/doc?path=${encodeURIComponent(`${t.ticketDir}/changelog.md`)}`}
-              >
-                Open changelog.md
-              </Link>
-            ) : (
-              <div className="text-muted">Missing ticketDir.</div>
-            )}
-          </div>
-        </div>
-      ) : null}
+      {tab === 'changelog' ? <TicketChangelogTab ticketDir={t?.ticketDir} /> : null}
+
+      {/* TODO: Tab errors are rendered inline per tab; toast is page-scoped for now. */}
     </div>
   )
 }

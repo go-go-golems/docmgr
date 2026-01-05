@@ -68,12 +68,12 @@ Notes:
 - Keep behavior stable and commit in small batches (1–2 extractions per commit) to keep reviews manageable.
 
 ### Shared primitives (to support Workspace pages + shrink page files)
-- [ ] Add `PageHeader` primitive (title/subtitle + right-side actions)
+- [x] Add `PageHeader` primitive (title/subtitle + right-side actions)
 - [x] Add `LoadingSpinner` primitive (Bootstrap wrapper used across pages)
 - [x] Add `EmptyState` primitive (title + body + optional actions)
 - [x] Add `ApiErrorAlert` primitive (render `apiErrorFromUnknown` output + details disclosure)
 - [x] Add `RelatedFilesList` widget (copy/open actions; used by DocViewer + Search preview + Ticket)
-- [ ] Replace page-local `toErrorBanner` duplication with `ApiErrorAlert` where applicable (start with Search/Ticket)
+- [x] Replace page-local `toErrorBanner` duplication with `ApiErrorAlert` where applicable (start with Search/Ticket)
 
 ### Search page: split into widgets (hotkeys remain in-page for now)
 Goal: make `ui/src/features/search/SearchPage.tsx` a thin orchestrator (~200–350 LOC) by extracting UI composition into dedicated widgets.
@@ -114,3 +114,18 @@ Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becom
 - [ ] After each extraction batch: `pnpm -C ui lint` + `pnpm -C ui build`
 - [ ] After each batch: `docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS --entry \"...\" --file-note ...`
 - [ ] After each batch: `docmgr doc relate --ticket 007-MODULARIZE-UI-WIDGETS --file-note \"/abs/path:reason\"`
+- [x] Retrofit TicketHeader to use shared PageHeader (reduce header layout duplication)
+- [x] Retrofit SearchHeader to use shared PageHeader where it fits (keep Refresh button behavior)
+- [x] Add CodeBlock primitive and use it in FileViewer (wrap docmgr-code + highlight HTML)
+- [x] Add MarkdownBlock primitive (ReactMarkdown+remarkGfm+rehypeHighlight) and use it in DocViewer + TicketOverview index.md
+- [ ] Add ToastHost + useToast (global queue) and replace page-local toast timers (Search/Ticket/Doc/File)
+- [x] Unify formatDate into ui/src/lib/time.ts and replace ad-hoc date formatting in Ticket/Doc pages
+- [x] Extract DiagnosticCard from DocViewer and reuse for any diagnostics rendering (DocViewer/Search)
+- [ ] DocCard styling: introduce dm-* classnames (dm-card, dm-path) or a Card primitive to decouple from Search-specific result-*
+- [ ] ToastHost/useToast: add Redux ui/toast slice + provider
+- [ ] ToastHost/useToast: retrofit DocViewerPage + FileViewerPage (remove local setTimeout)
+- [ ] ToastHost/useToast: retrofit Search widgets + TicketPage tabs (remove page-local toast state)
+- [ ] Design system: add minimal dm-* utilities (dm-card, dm-path, spacing) in ui/src/styles/design-system.css
+- [ ] DocCard styling: replace result-* classes with dm-* (or Card primitive) without Search-only coupling
+- [ ] Audit useState/useEffect across ui/src and classify per state strategy doc (local vs slice vs RTK Query)
+- [ ] Workspace pages (follow-up): add route + skeleton widgets directory layout aligned with workspace-page.md

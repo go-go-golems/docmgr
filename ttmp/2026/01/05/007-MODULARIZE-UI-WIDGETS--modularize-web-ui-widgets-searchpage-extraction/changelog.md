@@ -117,3 +117,33 @@ Retrofit DocViewer/FileViewer to use shared primitives (PageHeader, ApiErrorAler
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/doc/DocViewerPage.tsx — Uses shared header/error/spinner/clipboard + RelatedFilesList
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/file/FileViewerPage.tsx — Uses shared header/error/spinner/clipboard
 
+
+## 2026-01-05
+
+UI: retrofit headers + date formatting (d80c73f); add MarkdownBlock primitive (866399f)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/MarkdownBlock.tsx — Shared markdown rendering
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/PageHeader.tsx — Standardize page headers
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/time.ts — Shared formatDate helper
+
+
+## 2026-01-05
+
+UI: extract CodeBlock + DiagnosticCard primitives (a832d20)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/CodeBlock.tsx — Share FileViewer code rendering
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/DiagnosticCard.tsx — Share doc parse diagnostic rendering
+
+
+## 2026-01-05
+
+Add follow-up tasks for toast system, dm-* utilities, DocCard restyle, and state audit
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/tasks.md — Track next refactor phases
+

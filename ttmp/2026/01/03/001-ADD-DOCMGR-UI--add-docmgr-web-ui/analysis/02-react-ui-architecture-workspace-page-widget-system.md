@@ -26,6 +26,8 @@ RelatedFiles:
       Note: Second-largest page; tab widgets model maps to Workspace dashboard composition.
     - Path: ui/src/services/docmgrApi.ts
       Note: RTK Query API layer and hook exports; impacts all widget data dependencies.
+    - Path: ui/src/styles/design-system.css
+      Note: Shared design-system stylesheet; new primitives should prefer patterns here over page-local CSS.
 ExternalSources: []
 Summary: Audit of the current React SPA architecture and a proposed widget/design-system structure for the upcoming Workspace navigation pages.
 LastUpdated: 2026-01-05T08:18:56.392823046-05:00
@@ -102,6 +104,7 @@ This file currently contains:
 Status update (2026-01-05):
 - Leaf widgets extracted into `ui/src/features/search/components/` (`MarkdownSnippet`, `DiagnosticList`, `TopicMultiSelect`) and small hooks extracted into `ui/src/features/search/hooks/` (`useIsMobile`, `useSearchUrlSync`, `useSearchSelection`).
 - Search docs server state is now owned by RTK Query cache (no local copies in `SearchPage.tsx`); pagination uses RTK Query `merge` to accumulate pages.
+- `SearchPage.tsx` is now split into widget files under `ui/src/features/search/widgets/` and uses shared primitives for empty states, spinners, error alerts, and path headers.
 - CSS split into `ui/src/styles/design-system.css` (shared patterns) and `ui/src/styles/search.css` (Search-only layout).
 
 **Biggest maintainability risks**
@@ -139,6 +142,9 @@ Extraction candidates:
 - `RelatedFilesList` (render list with copy/open actions)
 - Shared `ApiErrorAlert` + `useClipboard` + `useToast`
 
+Status update (2026-01-05):
+- `DocViewerPage.tsx` now uses shared primitives: `PageHeader`, `ApiErrorAlert`, `LoadingSpinner`, `RelatedFilesList`, `copyToClipboard`, `formatDate`, `MarkdownBlock`, and `DiagnosticCard`.
+
 ### File viewer (`ui/src/features/file/FileViewerPage.tsx`, ~154 LOC)
 
 This page is small but also repeats:
@@ -149,6 +155,9 @@ This page is small but also repeats:
 
 This page is a good example of where “design system primitives” will pay off: a shared `CodeBlock` component could unify the code styling and avoid each page doing the same `pre` boilerplate.
 
+Status update (2026-01-05):
+- `FileViewerPage.tsx` now uses shared primitives: `PageHeader`, `ApiErrorAlert`, `LoadingSpinner`, `copyToClipboard`, and `CodeBlock`.
+
 ### Ticket page (`ui/src/features/ticket/TicketPage.tsx`, ~653 LOC)
 
 The Ticket page is already structured around a tab model, but it contains multiple “tab bodies” inline:
@@ -157,6 +166,10 @@ The Ticket page is already structured around a tab model, but it contains multip
 - Tasks tab = progress, sections, checkboxes, add task
 - Graph tab = Mermaid diagram + DSL `<details>`
 - Changelog tab = link to `changelog.md`
+
+Status update (2026-01-05):
+- `TicketPage.tsx` is now a thin orchestrator (~200 LOC) and tab bodies are extracted into `ui/src/features/ticket/tabs/`.
+- `TicketDocumentsTab` preview uses shared `PathHeader` and `RelatedFilesList`.
 
 Extraction candidates (each can be a widget):
 - `TicketHeader`
@@ -171,14 +184,19 @@ Extraction candidates (each can be a widget):
 - Shared “doc card” concept:
   - `DocCard` is already a shared component, but it still carries Search-specific naming/styling (`result-card`, etc) which suggests we should separate *design system card* vs *domain card*.
 
+Follow-up tasks (tracked in ticket 007):
+- Add a global `ToastHost`/`useToast` to remove per-page toast timers.
+- Decouple `DocCard` styling from Search-specific classes (introduce `dm-*` utilities or a neutral Card primitive).
+- Continue design-system consolidation: keep Search-only layout in `search.css`, and prefer patterns in `design-system.css`.
+
 ## Existing widgets/components to reorganize (specific callouts)
 
 ### `DocCard` (`ui/src/components/DocCard.tsx`)
 - **What it is today**: a domain card (doc result) + some design-system concerns (layout, spacing) + Search-derived CSS classes (`result-card`, `result-title`, etc).
 - **What to change over time**:
   - Keep `DocCard` as a domain component, but move generic styling primitives into a shared `Card` primitive (or rename the CSS to be domain-neutral, e.g. `.dm-card`).
-  - Move `timeAgo()` into a shared `lib/time.ts` so the same formatting is used everywhere (Search and other future pages will want this too).
-- **Why it matters for Workspace pages**: Recent documents and topic pages will likely want a “document list item” that is a smaller variant of the same component.
+  - `timeAgo()` has been moved into `ui/src/lib/time.ts` and reused (no page-local copies).
+  - **Why it matters for Workspace pages**: Recent documents and topic pages will likely want a “document list item” that is a smaller variant of the same component.
 
 ### Inline “widgets” inside `SearchPage.tsx`
 These are effectively widgets already; they just don’t have a file boundary yet:

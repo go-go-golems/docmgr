@@ -49,14 +49,7 @@ export function SearchDocsResults({
       {docsResults.map((r, idx) => (
         <DocCard
           key={`${r.path}:${r.ticket}`}
-          title={r.title}
-          ticket={r.ticket}
-          docType={r.docType}
-          status={r.status}
-          topics={r.topics}
-          path={r.path}
-          lastUpdated={r.lastUpdated}
-          relatedFiles={r.relatedFiles}
+          doc={r}
           snippet={<MarkdownSnippet markdown={r.snippet} query={highlightQuery} />}
           selected={selected?.path === r.path && selected?.ticket === r.ticket}
           onCopyPath={onCopyPath}
@@ -74,4 +67,3 @@ export function SearchDocsResults({
     </>
   )
 }
-

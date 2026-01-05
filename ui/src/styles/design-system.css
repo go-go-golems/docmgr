@@ -1,8 +1,10 @@
+.dm-topic-badge,
 .topic-badge {
   font-size: 0.75rem;
   margin-right: 4px;
 }
 
+.dm-card,
 .result-card {
   background: #fff;
   border: 1px solid #dee2e6;
@@ -12,16 +14,19 @@
   transition: box-shadow 0.2s, border-color 0.2s;
 }
 
+.dm-card:hover,
 .result-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: #0d6efd;
 }
 
+.dm-card.dm-card--selected,
 .result-card.selected {
   border-color: #0d6efd;
   box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
 }
 
+.dm-card-title,
 .result-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -29,12 +34,14 @@
   margin-bottom: 6px;
 }
 
+.dm-card-meta,
 .result-meta {
   font-size: 0.875rem;
   color: #6c757d;
   margin-bottom: 8px;
 }
 
+.dm-card-snippet,
 .result-snippet {
   font-size: 0.9rem;
   color: #495057;
@@ -47,6 +54,7 @@
   border-radius: 3px;
 }
 
+.dm-path-pill,
 .result-path {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
@@ -58,11 +66,13 @@
   display: inline-block;
 }
 
+.dm-copy-btn,
 .copy-btn {
   opacity: 0;
   transition: opacity 0.2s;
 }
 
+.dm-card:hover .dm-copy-btn,
 .result-card:hover .copy-btn {
   opacity: 1;
 }
@@ -77,14 +87,6 @@
   display: flex;
   justify-content: center;
   padding: 40px;
-}
-
-.toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-  min-width: min(520px, calc(100vw - 40px));
 }
 
 .docmgr-markdown :first-child {
@@ -114,11 +116,12 @@
 }
 
 @media (max-width: 576px) {
+  .dm-card,
   .result-card {
     padding: 12px;
   }
+  .dm-card-snippet,
   .result-snippet {
     font-size: 0.85rem;
   }
 }
-

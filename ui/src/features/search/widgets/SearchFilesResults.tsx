@@ -35,15 +35,15 @@ export function SearchFilesResults({
       {results.length > 0 ? (
         <div className="vstack gap-2">
           {results.map((s) => (
-            <div key={`${s.file}:${s.source}:${s.reason}`} className="result-card">
+            <div key={`${s.file}:${s.source}:${s.reason}`} className="dm-card">
               <div className="d-flex justify-content-between">
                 <div className="flex-grow-1">
-                  <div className="result-title font-monospace">{s.file}</div>
-                  <div className="result-meta">
+                  <div className="dm-card-title font-monospace">{s.file}</div>
+                  <div className="dm-card-meta">
                     {s.source} • <span className="text-muted">{s.reason}</span>
                   </div>
                 </div>
-                <button className="btn btn-sm btn-outline-primary copy-btn ms-2" onClick={() => onCopyPath(s.file)}>
+                <button className="btn btn-sm btn-outline-primary dm-copy-btn ms-2" onClick={() => onCopyPath(s.file)}>
                   Copy
                 </button>
               </div>
@@ -58,4 +58,3 @@ export function SearchFilesResults({
     </>
   )
 }
-

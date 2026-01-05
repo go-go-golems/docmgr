@@ -52,14 +52,7 @@ export function TicketDocumentsTab({
                     {docsByType[k].map((d) => (
                       <DocCard
                         key={d.path}
-                        title={d.title || d.path}
-                        ticket={ticket}
-                        docType={d.docType}
-                        status={d.status}
-                        topics={d.topics}
-                        path={d.path}
-                        lastUpdated={d.lastUpdated}
-                        relatedFiles={d.relatedFiles}
+                        doc={{ ...d, ticket }}
                         selected={selectedDoc === d.path}
                         snippet={d.summary ? <span className="text-muted">{d.summary}</span> : null}
                         onSelect={() => onSelectDoc(d.path)}
@@ -153,4 +146,3 @@ export function TicketDocumentsTab({
     </div>
   )
 }
-

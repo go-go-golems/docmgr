@@ -12,9 +12,8 @@ export function PathHeader({
   return (
     <div className="mb-2">
       <span className="text-muted small">{label}</span>
-      <div className="result-path">{path}</div>
+      <div className="dm-path-pill">{path}</div>
       {actions ? <div className="mt-2 d-flex gap-2 flex-wrap">{actions}</div> : null}
     </div>
   )
 }
-

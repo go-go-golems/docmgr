@@ -5,6 +5,17 @@ import { Link } from 'react-router-dom'
 import type { RelatedFile } from '../services/docmgrApi'
 import { timeAgo } from '../lib/time'
 
+export type DocCardDoc = {
+  ticket: string
+  path: string
+  title?: string
+  docType?: string
+  status?: string
+  topics?: string[]
+  lastUpdated?: string
+  relatedFiles?: RelatedFile[]
+}
+
 function StatusBadge({ status }: { status: string }) {
   const variant =
     status === 'active'
@@ -24,72 +35,80 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function DocCard({
-  title,
-  ticket,
-  docType,
-  status,
-  topics,
-  path,
-  lastUpdated,
-  relatedFiles,
+  doc,
   selected,
   snippet,
   onSelect,
   onCopyPath,
   actions,
+  showRelatedFiles,
 }: {
-  title: string
-  ticket: string
-  docType: string
-  status: string
-  topics: string[]
-  path: string
-  lastUpdated?: string
-  relatedFiles?: RelatedFile[]
+  doc: DocCardDoc
   selected: boolean
   snippet?: ReactNode
   onSelect: () => void
   onCopyPath?: (path: string) => void
   actions?: ReactNode
+  showRelatedFiles?: boolean
 }) {
-  const topRelated = useMemo(() => (relatedFiles ?? []).slice(0, 3), [relatedFiles])
-  const moreCount = (relatedFiles?.length ?? 0) - topRelated.length
+  const title = doc.title?.trim() ? doc.title : doc.path
+  const topics = doc.topics ?? []
+
+  const topRelated = useMemo(() => (doc.relatedFiles ?? []).slice(0, 3), [doc.relatedFiles])
+  const moreCount = (doc.relatedFiles?.length ?? 0) - topRelated.length
+  const shouldShowRelated = (showRelatedFiles ?? true) && topRelated.length > 0
 
   return (
-    <div className={`result-card ${selected ? 'selected' : ''}`} onClick={onSelect} role="button" tabIndex={0}>
+    <div
+      className={`dm-card ${selected ? 'dm-card--selected' : ''}`.trim()}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
       <div className="d-flex justify-content-between align-items-start">
         <div className="flex-grow-1">
-          <div className="result-title">{title}</div>
-          <div className="result-meta">
+          <div className="dm-card-title">{title}</div>
+          <div className="dm-card-meta">
             <Link
-              to={`/ticket/${encodeURIComponent(ticket)}`}
+              to={`/ticket/${encodeURIComponent(doc.ticket)}`}
               onClick={(e) => e.stopPropagation()}
               className="text-decoration-none"
             >
-              {ticket}
-            </Link>{' '}
-            • {docType}
-            <StatusBadge status={status} />
-            {lastUpdated ? <span className="ms-2 text-muted">Updated {timeAgo(lastUpdated)}</span> : null}
+              {doc.ticket}
+            </Link>
+            {doc.docType ? (
+              <>
+                {' '}
+                • {doc.docType}
+              </>
+            ) : null}
+            {doc.status ? <StatusBadge status={doc.status} /> : null}
+            {doc.lastUpdated ? <span className="ms-2 text-muted">Updated {timeAgo(doc.lastUpdated)}</span> : null}
           </div>
 
           <div className="mb-2">
-            {(topics ?? []).map((topic) => (
-              <span key={topic} className="badge text-bg-secondary topic-badge">
+            {topics.map((topic) => (
+              <span key={topic} className="badge text-bg-secondary dm-topic-badge">
                 {topic}
               </span>
             ))}
           </div>
 
           {snippet ? (
-            <div className="result-snippet">
+            <div className="dm-card-snippet">
               <div className="small">{snippet}</div>
             </div>
           ) : null}
 
-          <div className="result-path">{path}</div>
+          <div className="dm-path-pill">{doc.path}</div>
 
-          {topRelated.length > 0 ? (
+          {shouldShowRelated ? (
             <div className="mt-2">
               <div className="small text-muted mb-1">Related files</div>
               <ul className="mb-0 small">
@@ -109,10 +128,10 @@ export function DocCard({
           <div className="ms-2 d-flex flex-column gap-2 align-items-end">{actions}</div>
         ) : onCopyPath ? (
           <button
-            className="btn btn-sm btn-outline-primary copy-btn ms-2"
+            className="btn btn-sm btn-outline-primary dm-copy-btn ms-2"
             onClick={(e) => {
               e.stopPropagation()
-              onCopyPath(path)
+              onCopyPath(doc.path)
             }}
           >
             Copy

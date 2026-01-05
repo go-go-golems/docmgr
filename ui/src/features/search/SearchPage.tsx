@@ -1,19 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
-import { DocCard } from '../../components/DocCard'
-import { apiErrorFromUnknown } from '../../lib/apiError'
+import { ApiErrorAlert } from '../../components/ApiErrorAlert'
 import { copyToClipboard } from '../../lib/clipboard'
-import { timeAgo } from '../../lib/time'
-import { DiagnosticList } from './components/DiagnosticList'
-import { MarkdownSnippet } from './components/MarkdownSnippet'
-import { TopicMultiSelect } from './components/TopicMultiSelect'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useSearchSelection } from './hooks/useSearchSelection'
 import { useSearchUrlSync } from './hooks/useSearchUrlSync'
+import type { SearchFilters } from './searchSlice'
 import { clearFilters, setFilter, setMode, setQuery } from './searchSlice'
+import { SearchActiveChips } from './widgets/SearchActiveChips'
+import { SearchBar } from './widgets/SearchBar'
+import { SearchDiagnosticsPanel } from './widgets/SearchDiagnosticsPanel'
+import { SearchDocsResults } from './widgets/SearchDocsResults'
+import { SearchFilesResults } from './widgets/SearchFilesResults'
+import { SearchFiltersDesktop } from './widgets/SearchFiltersDesktop'
+import { SearchFiltersDrawer } from './widgets/SearchFiltersDrawer'
+import { SearchHeader } from './widgets/SearchHeader'
+import { SearchModeToggle } from './widgets/SearchModeToggle'
+import { SearchPreviewModal } from './widgets/SearchPreviewModal'
+import { SearchPreviewPanel } from './widgets/SearchPreviewPanel'
 import {
   useGetWorkspaceStatusQuery,
   useLazySearchDocsQuery,
@@ -22,13 +29,7 @@ import {
 } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
-
-type ErrorBanner = {
-  title: string
-  code?: string
-  message: string
-  details?: unknown
-}
+type ErrorState = { title: string; error: unknown } | null
 
 function isEditableTarget(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
@@ -37,11 +38,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return true
   if (el.isContentEditable) return true
   return false
-}
-
-function toErrorBanner(err: unknown, title: string): ErrorBanner {
-  const parsed = apiErrorFromUnknown(err)
-  return { title, code: parsed.code, message: parsed.message, details: parsed.details }
 }
 
 export function SearchPage() {
@@ -58,7 +54,7 @@ export function SearchPage() {
   const [triggerSearchFiles, searchFilesState] = useLazySearchFilesQuery()
 
   const [toast, setToast] = useState<ToastState>(null)
-  const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
+  const [errorState, setErrorState] = useState<ErrorState>(null)
   const [showFilters, setShowFilters] = useState(true)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -299,7 +295,7 @@ export function SearchPage() {
     e.preventDefault()
     setSelected(null)
     setShowDiagnostics(false)
-    setErrorBanner(null)
+    setErrorState(null)
 
     if (mode === 'files') {
       try {
@@ -313,7 +309,7 @@ export function SearchPage() {
           false,
         ).unwrap()
       } catch (err) {
-        setErrorBanner(toErrorBanner(err, 'Files search failed'))
+        setErrorState({ title: 'Files search failed', error: err })
       }
       return
     }
@@ -321,7 +317,7 @@ export function SearchPage() {
     try {
       await doSearchDocs('')
     } catch (err) {
-      setErrorBanner(toErrorBanner(err, 'Search failed'))
+      setErrorState({ title: 'Search failed', error: err })
     }
   }
 
@@ -330,7 +326,7 @@ export function SearchPage() {
     try {
       await doSearchDocs(docsNextCursor)
     } catch (err) {
-      setErrorBanner(toErrorBanner(err, 'Load more failed'))
+      setErrorState({ title: 'Load more failed', error: err })
     }
   }
 
@@ -419,7 +415,7 @@ export function SearchPage() {
     // Auto-run search once after URL restore so shared links "just work".
     void (async () => {
       try {
-        setErrorBanner(null)
+        setErrorState(null)
         setSelected(null)
         setShowDiagnostics(false)
         if (mode === 'files') {
@@ -436,11 +432,31 @@ export function SearchPage() {
         }
         await doSearchDocs('')
       } catch (err) {
-        setErrorBanner(toErrorBanner(err, 'Search failed'))
+        setErrorState({ title: 'Search failed', error: err })
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlSyncReady])
+
+  const onFilterChange = <K extends keyof SearchFilters,>(key: K, value: SearchFilters[K]) => {
+    dispatch(setFilter({ key, value } as never))
+  }
+
+  const clearAll = (opts?: { closeFilterDrawer?: boolean }) => {
+    dispatch(clearFilters())
+    clearSelection()
+    setErrorState(null)
+    setShowDiagnostics(false)
+    setShowPreviewModal(false)
+    searchDocsState.reset?.()
+    searchFilesState.reset?.()
+    autoSearchedRef.current = false
+    if (opts?.closeFilterDrawer) setShowFilterDrawer(false)
+  }
+
+  const filesTotal = searchFilesState.data?.total ?? 0
+  const filesResults = searchFilesState.data?.results ?? []
+  const showDocsGrid = hasSearched && docsResults.length > 0 && !docsLoading
 
   return (
     <div className="search-container container">
@@ -455,419 +471,50 @@ export function SearchPage() {
         </div>
       ) : null}
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h3 mb-0">docmgr Search</h1>
-        <button
-          className="btn btn-outline-secondary refresh-btn"
-          onClick={() => void onRefresh()}
-          disabled={refreshState.isLoading}
-        >
-          {refreshState.isLoading
-            ? 'Refreshing…'
-            : `Refresh (${timeAgo(wsStatus?.indexedAt)})`}
-        </button>
-      </div>
+      <SearchHeader
+        wsStatus={wsStatus}
+        wsError={wsError}
+        refreshLoading={refreshState.isLoading}
+        onRefresh={() => void onRefresh()}
+      />
 
-      {wsError ? (
-        <div className="alert alert-warning">
-          Workspace status unavailable. Is the server running on <code>127.0.0.1:3001</code>?
-        </div>
-      ) : null}
-
-      {errorBanner ? (
-        <div className="alert alert-danger">
-          <div className="fw-semibold">{errorBanner.title}</div>
-          <div className="small">
-            {errorBanner.code ? <span className="me-2">({errorBanner.code})</span> : null}
-            {errorBanner.message}
-          </div>
-          {errorBanner.details ? (
-            <details className="mt-2">
-              <summary className="small">Details</summary>
-              <pre className="small mb-0">{JSON.stringify(errorBanner.details, null, 2)}</pre>
-            </details>
-          ) : null}
-        </div>
-      ) : null}
+      {errorState ? <ApiErrorAlert title={errorState.title} error={errorState.error} /> : null}
 
       <form onSubmit={onSubmit}>
-        <div className="mb-3">
-          <div className="input-group input-group-lg">
-            <span className="input-group-text">Search</span>
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="form-control search-input"
-              placeholder={
-                mode === 'reverse'
-                  ? 'Search by file path (e.g. backend/api/register.go)'
-                  : mode === 'files'
-                    ? 'Search for related files…'
-                    : 'Search docs…'
-              }
-              value={searchBarValue}
-              onChange={(e) => setSearchBarValue(e.target.value)}
-            />
-            <button className="btn btn-primary" type="submit">
-              Search
-            </button>
-          </div>
-          <div className="keyboard-hint">
-            Press <kbd>/</kbd> focus • <kbd>?</kbd> shortcuts • <kbd>Ctrl/Cmd</kbd>+<kbd>R</kbd> refresh •{' '}
-            <kbd>Esc</kbd> close
-          </div>
-        </div>
+        <SearchBar
+          mode={mode}
+          value={searchBarValue}
+          onChange={setSearchBarValue}
+          inputRef={searchInputRef}
+        />
 
-        <div className="d-flex gap-2 mb-3">
-          <button
-            type="button"
-            className={`btn btn-sm ${mode === 'docs' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => dispatch(setMode('docs'))}
-          >
-            Docs
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${mode === 'reverse' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => dispatch(setMode('reverse'))}
-          >
-            Reverse Lookup
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${mode === 'files' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => dispatch(setMode('files'))}
-          >
-            Files
-          </button>
-          <div className="ms-auto">
-            {isMobile ? (
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={() => setShowFilterDrawer(true)}
-              >
-                Filters
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={() => setShowFilters((v) => !v)}
-              >
-                {showFilters ? 'Hide filters' : 'Show filters'}
-              </button>
-            )}
-          </div>
-        </div>
+        <SearchModeToggle
+          mode={mode}
+          onModeChange={(m) => dispatch(setMode(m))}
+          isMobile={isMobile}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((v) => !v)}
+          onOpenFilterDrawer={() => setShowFilterDrawer(true)}
+        />
 
         {!isMobile && showFilters ? (
-          <div className="filter-row mb-3">
-            <div className="row g-2 align-items-end">
-              <div className="col-md-3">
-                <label className="form-label small mb-1">Ticket</label>
-                <input
-                  className="form-control form-control-sm"
-                  placeholder="e.g. MEN-4242"
-                  value={filters.ticket}
-                  onChange={(e) => dispatch(setFilter({ key: 'ticket', value: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-3">
-                <label className="form-label small mb-1">Topics</label>
-                <TopicMultiSelect
-                  topics={filters.topics}
-                  onChange={(topics) => dispatch(setFilter({ key: 'topics', value: topics }))}
-                />
-              </div>
-              <div className="col-md-2">
-                <label className="form-label small mb-1">Type</label>
-                <input
-                  className="form-control form-control-sm"
-                  placeholder="e.g. reference"
-                  value={filters.docType}
-                  onChange={(e) => dispatch(setFilter({ key: 'docType', value: e.target.value }))}
-                />
-              </div>
-              <div className="col-md-2">
-                <label className="form-label small mb-1">Status</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={filters.status}
-                  onChange={(e) => dispatch(setFilter({ key: 'status', value: e.target.value }))}
-                >
-                  <option value="">All</option>
-                  <option value="active">active</option>
-                  <option value="review">review</option>
-                  <option value="complete">complete</option>
-                  <option value="draft">draft</option>
-                </select>
-              </div>
-              <div className="col-md-2">
-                <label className="form-label small mb-1">Sort</label>
-                <select
-                  className="form-select form-select-sm"
-                  value={filters.orderBy}
-                  onChange={(e) => dispatch(setFilter({ key: 'orderBy', value: e.target.value }))}
-                >
-                  <option value="rank">Relevance</option>
-                  <option value="path">Path</option>
-                  <option value="last_updated">Last updated</option>
-                </select>
-              </div>
-            </div>
-
-            {mode === 'reverse' ? (
-              <div className="row g-2 mt-2">
-                <div className="col-md-6">
-                  <label className="form-label small mb-1">File</label>
-                  <input
-                    className="form-control form-control-sm"
-                    placeholder="backend/api/register.go or register.go"
-                    value={filters.file}
-                    onChange={(e) => dispatch(setFilter({ key: 'file', value: e.target.value }))}
-                  />
-                </div>
-                <div className="col-md-6">
-                  <label className="form-label small mb-1">Dir</label>
-                  <input
-                    className="form-control form-control-sm"
-                    placeholder="backend/chat/ws/"
-                    value={filters.dir}
-                    onChange={(e) => dispatch(setFilter({ key: 'dir', value: e.target.value }))}
-                  />
-                </div>
-              </div>
-            ) : null}
-
-            <div className="d-flex flex-wrap gap-3 mt-3 align-items-center">
-              <div className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  checked={filters.includeArchived}
-                  onChange={(e) =>
-                    dispatch(setFilter({ key: 'includeArchived', value: e.target.checked }))
-                  }
-                  id="includeArchived"
-                />
-                <label className="form-check-label" htmlFor="includeArchived">
-                  Include archived
-                </label>
-              </div>
-              <div className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  checked={filters.includeScripts}
-                  onChange={(e) =>
-                    dispatch(setFilter({ key: 'includeScripts', value: e.target.checked }))
-                  }
-                  id="includeScripts"
-                />
-                <label className="form-check-label" htmlFor="includeScripts">
-                  Include scripts
-                </label>
-              </div>
-              <div className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  checked={filters.includeControlDocs}
-                  onChange={(e) =>
-                    dispatch(setFilter({ key: 'includeControlDocs', value: e.target.checked }))
-                  }
-                  id="includeControlDocs"
-                />
-                <label className="form-check-label" htmlFor="includeControlDocs">
-                  Control docs
-                </label>
-              </div>
-              <div className="ms-auto">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-secondary"
-                  onClick={() => {
-                    dispatch(clearFilters())
-                    clearSelection()
-                    setErrorBanner(null)
-                    setShowDiagnostics(false)
-                    setShowPreviewModal(false)
-                    searchDocsState.reset?.()
-                    searchFilesState.reset?.()
-                    autoSearchedRef.current = false
-                  }}
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          </div>
+          <SearchFiltersDesktop
+            mode={mode}
+            filters={filters}
+            onFilterChange={onFilterChange}
+            onClear={() => clearAll()}
+          />
         ) : null}
       </form>
 
-      {isMobile && showFilterDrawer ? (
-        <>
-          <div className="modal-backdrop show" />
-          <div className="modal show d-block" tabIndex={-1} role="dialog" aria-modal="true">
-            <div className="modal-dialog modal-fullscreen-sm-down modal-dialog-scrollable" role="document">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">Filters</h5>
-                  <button type="button" className="btn-close" onClick={() => setShowFilterDrawer(false)} />
-                </div>
-                <div className="modal-body">
-                  <div className="filter-row mb-0 border-0 p-0">
-                    <div className="row g-2 align-items-end">
-                      <div className="col-12">
-                        <label className="form-label small mb-1">Ticket</label>
-                        <input
-                          className="form-control form-control-sm"
-                          placeholder="e.g. MEN-4242"
-                          value={filters.ticket}
-                          onChange={(e) => dispatch(setFilter({ key: 'ticket', value: e.target.value }))}
-                        />
-                      </div>
-                      <div className="col-12">
-                        <label className="form-label small mb-1">Topics</label>
-                        <TopicMultiSelect
-                          topics={filters.topics}
-                          onChange={(topics) => dispatch(setFilter({ key: 'topics', value: topics }))}
-                        />
-                      </div>
-                      <div className="col-12">
-                        <label className="form-label small mb-1">Type</label>
-                        <input
-                          className="form-control form-control-sm"
-                          placeholder="e.g. reference"
-                          value={filters.docType}
-                          onChange={(e) => dispatch(setFilter({ key: 'docType', value: e.target.value }))}
-                        />
-                      </div>
-                      <div className="col-12">
-                        <label className="form-label small mb-1">Status</label>
-                        <select
-                          className="form-select form-select-sm"
-                          value={filters.status}
-                          onChange={(e) => dispatch(setFilter({ key: 'status', value: e.target.value }))}
-                        >
-                          <option value="">All</option>
-                          <option value="active">active</option>
-                          <option value="review">review</option>
-                          <option value="complete">complete</option>
-                          <option value="draft">draft</option>
-                        </select>
-                      </div>
-                      <div className="col-12">
-                        <label className="form-label small mb-1">Sort</label>
-                        <select
-                          className="form-select form-select-sm"
-                          value={filters.orderBy}
-                          onChange={(e) => dispatch(setFilter({ key: 'orderBy', value: e.target.value }))}
-                        >
-                          <option value="rank">Relevance</option>
-                          <option value="path">Path</option>
-                          <option value="last_updated">Last updated</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {mode === 'reverse' ? (
-                      <div className="row g-2 mt-2">
-                        <div className="col-12">
-                          <label className="form-label small mb-1">File</label>
-                          <input
-                            className="form-control form-control-sm"
-                            placeholder="backend/api/register.go or register.go"
-                            value={filters.file}
-                            onChange={(e) => dispatch(setFilter({ key: 'file', value: e.target.value }))}
-                          />
-                        </div>
-                        <div className="col-12">
-                          <label className="form-label small mb-1">Dir</label>
-                          <input
-                            className="form-control form-control-sm"
-                            placeholder="backend/chat/ws/"
-                            value={filters.dir}
-                            onChange={(e) => dispatch(setFilter({ key: 'dir', value: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="d-flex flex-wrap gap-3 mt-3 align-items-center">
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          checked={filters.includeArchived}
-                          onChange={(e) =>
-                            dispatch(setFilter({ key: 'includeArchived', value: e.target.checked }))
-                          }
-                          id="includeArchivedMobile"
-                        />
-                        <label className="form-check-label" htmlFor="includeArchivedMobile">
-                          Include archived
-                        </label>
-                      </div>
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          checked={filters.includeScripts}
-                          onChange={(e) =>
-                            dispatch(setFilter({ key: 'includeScripts', value: e.target.checked }))
-                          }
-                          id="includeScriptsMobile"
-                        />
-                        <label className="form-check-label" htmlFor="includeScriptsMobile">
-                          Include scripts
-                        </label>
-                      </div>
-                      <div className="form-check">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          checked={filters.includeControlDocs}
-                          onChange={(e) =>
-                            dispatch(setFilter({ key: 'includeControlDocs', value: e.target.checked }))
-                          }
-                          id="includeControlDocsMobile"
-                        />
-                        <label className="form-check-label" htmlFor="includeControlDocsMobile">
-                          Control docs
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => {
-                      dispatch(clearFilters())
-                      clearSelection()
-                      setErrorBanner(null)
-                      setShowDiagnostics(false)
-                      setShowPreviewModal(false)
-                      searchDocsState.reset?.()
-                      searchFilesState.reset?.()
-                      autoSearchedRef.current = false
-                      setShowFilterDrawer(false)
-                    }}
-                  >
-                    Clear
-                  </button>
-                  <button type="button" className="btn btn-primary" onClick={() => setShowFilterDrawer(false)}>
-                    Done
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : null}
+      <SearchFiltersDrawer
+        open={isMobile && showFilterDrawer}
+        mode={mode}
+        filters={filters}
+        onFilterChange={onFilterChange}
+        onClose={() => setShowFilterDrawer(false)}
+        onClear={() => clearAll({ closeFilterDrawer: true })}
+      />
 
       {showShortcuts ? (
         <>
@@ -915,327 +562,79 @@ export function SearchPage() {
         </>
       ) : null}
 
-      {isMobile && selected && showPreviewModal ? (
-        <>
-          <div className="modal-backdrop show" />
-          <div className="modal show d-block" tabIndex={-1} role="dialog" aria-modal="true">
-            <div className="modal-dialog modal-fullscreen-sm-down modal-dialog-scrollable" role="document">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">{selected.title}</h5>
-                  <button type="button" className="btn-close" onClick={() => setShowPreviewModal(false)} />
-                </div>
-                <div className="modal-body">
-                  <div className="text-muted small mb-2">
-                    <Link to={`/ticket/${encodeURIComponent(selected.ticket)}`} className="text-decoration-none">
-                      {selected.ticket}
-                    </Link>{' '}
-                    • {selected.docType} • {selected.status}
-                    {selected.lastUpdated ? (
-                      <span className="ms-2">Updated {timeAgo(selected.lastUpdated)}</span>
-                    ) : null}
-                  </div>
+      <SearchPreviewModal
+        open={isMobile && showPreviewModal}
+        selected={selected}
+        highlightQuery={docsHighlightQuery}
+        onCopyPath={(p) => void onCopyPath(p)}
+        onDismiss={() => setShowPreviewModal(false)}
+        onClosePreview={() => {
+          setShowPreviewModal(false)
+          setSelected(null)
+          setSelectedIndex(null)
+        }}
+      />
 
-                  <div className="mb-2">
-                    <span className="text-muted small">Path</span>
-                    <div className="result-path">{selected.path}</div>
-	                  <div className="mt-2 d-flex gap-2 flex-wrap">
-                      <button className="btn btn-sm btn-outline-primary" onClick={() => void onCopyPath(selected.path)}>
-                        Copy path
-                      </button>
-                      <Link className="btn btn-sm btn-primary" to={`/doc?path=${encodeURIComponent(selected.path)}`}>
-                        Open doc
-                      </Link>
-	                  </div>
-	                </div>
-
-	                <div className="mb-3">
-	                  <div className="text-muted small mb-1">Snippet</div>
-                    <div className="small">
-                      <MarkdownSnippet markdown={selected.snippet} query={docsHighlightQuery} />
-                    </div>
-	                </div>
-
-                  {selected.relatedFiles && selected.relatedFiles.length > 0 ? (
-                    <div>
-                      <div className="text-muted small mb-1">Related files</div>
-                      <ul className="small mb-0 list-unstyled vstack gap-2">
-                        {selected.relatedFiles.map((rf) => (
-                          <li key={`${rf.path}:${rf.note ?? ''}`} className="d-flex gap-2 align-items-start">
-                            <div className="flex-grow-1">
-                              <div className="font-monospace">{rf.path}</div>
-                              {rf.note ? <div className="text-muted">{rf.note}</div> : null}
-                            </div>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-outline-secondary"
-                                onClick={() => void onCopyPath(rf.path)}
-                              >
-                                Copy
-                              </button>
-                              <Link className="btn btn-sm btn-outline-primary" to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}>
-                                Open
-                              </Link>
-	                          </div>
-	                        </li>
-	                      ))}
-	                    </ul>
-                    </div>
-                  ) : null}
-                </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => {
-                      setShowPreviewModal(false)
-                      setSelected(null)
-                      setSelectedIndex(null)
-                    }}
-                  >
-                    Close preview
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : null}
-
-      {activeChips.length > 0 ? (
-        <div className="mb-3 d-flex flex-wrap gap-2 align-items-center">
-          <div className="text-muted small">Active:</div>
-          {activeChips.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className="btn btn-sm btn-outline-secondary"
-              onClick={c.onRemove}
-            >
-              {c.label} ×
-            </button>
-          ))}
-        </div>
-      ) : null}
+      <SearchActiveChips chips={activeChips} />
 
       {mode !== 'files' ? (
-        <div className="d-flex align-items-center mb-3">
-          <div>
-            {hasSearched ? (
-              <>
-                <strong>{docsTotal}</strong> results
-              </>
-            ) : (
-              <span className="text-muted">No search performed yet</span>
-            )}
-          </div>
-          {docsDiagnostics.length > 0 ? (
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-warning ms-3"
-              onClick={() => setShowDiagnostics((v) => !v)}
-            >
-              {docsDiagnostics.length} diagnostics {showDiagnostics ? '▲' : '▼'}
-            </button>
-          ) : null}
-          <div className="ms-auto">
-            {wsStatus ? (
-              <span className="text-muted small">
-                Indexed {timeAgo(wsStatus.indexedAt)} • {wsStatus.docsIndexed} docs
-              </span>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {mode !== 'files' && showDiagnostics && docsDiagnostics.length > 0 ? (
-        <div className="alert alert-warning">
-          <div className="fw-semibold mb-2">Diagnostics</div>
-          <DiagnosticList diagnostics={docsDiagnostics} />
-        </div>
+        <SearchDiagnosticsPanel
+          hasSearched={hasSearched}
+          docsTotal={docsTotal}
+          diagnostics={docsDiagnostics}
+          showDiagnostics={showDiagnostics}
+          onToggleDiagnostics={() => setShowDiagnostics((v) => !v)}
+          wsStatus={wsStatus}
+        />
       ) : null}
 
       {mode === 'files' ? (
-        <>
-          {filesLoading ? (
-            <div className="loading-spinner">
-              <div className="spinner-border text-primary" role="status" />
-            </div>
-          ) : hasSearched ? (
-            <>
-              <div className="mb-3">
-                <strong>{searchFilesState.data?.total ?? 0}</strong> files
-              </div>
-              {searchFilesState.data && searchFilesState.data.results.length > 0 ? (
-                <div className="vstack gap-2">
-                  {searchFilesState.data.results.map((s) => (
-                    <div key={`${s.file}:${s.source}:${s.reason}`} className="result-card">
-                      <div className="d-flex justify-content-between">
-                        <div className="flex-grow-1">
-                          <div className="result-title font-monospace">{s.file}</div>
-                          <div className="result-meta">
-                            {s.source} • <span className="text-muted">{s.reason}</span>
-                          </div>
-                        </div>
-                        <button
-                          className="btn btn-sm btn-outline-primary copy-btn ms-2"
-                          onClick={() => void onCopyPath(s.file)}
-                        >
-                          Copy
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <h4>No files found</h4>
-                  <p>Try adjusting your query or context filters.</p>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="empty-state">
-              <h4>Find related files</h4>
-              <p className="text-muted">Use query + ticket/topics context.</p>
-            </div>
-          )}
-        </>
-      ) : docsLoading ? (
-        <div className="loading-spinner">
-          <div className="spinner-border text-primary" role="status" />
-        </div>
-      ) : hasSearched ? (
-        docsResults.length > 0 ? (
-          <>
-            <div className={`results-grid ${selected ? 'split' : ''}`}>
-              <div>
-                {docsResults.map((r) => (
-                  <DocCard
-                    key={`${r.path}:${r.ticket}`}
-                    title={r.title}
-                    ticket={r.ticket}
-                    docType={r.docType}
-                    status={r.status}
-                    topics={r.topics}
-                    path={r.path}
-                    lastUpdated={r.lastUpdated}
-                    relatedFiles={r.relatedFiles}
-                    snippet={<MarkdownSnippet markdown={r.snippet} query={docsHighlightQuery} />}
-                    selected={selected?.path === r.path && selected?.ticket === r.ticket}
-                    onCopyPath={(p) => void onCopyPath(p)}
-                    onSelect={() => {
-                      const idx = docsResults.findIndex(
-                        (d) => d.path === r.path && d.ticket === r.ticket,
-                      )
-                      setSelected(r)
-                      setSelectedIndex(idx >= 0 ? idx : null)
-                      if (isMobile) setShowPreviewModal(true)
-                    }}
-                  />
-                ))}
-                {docsNextCursor ? (
-                  <div className="text-center mt-3">
-                    <button className="btn btn-outline-primary" onClick={() => void onLoadMore()}>
-                      Load more
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              {selected && !isMobile ? (
-                <div className="preview-panel">
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <div className="h5 mb-1">{selected.title}</div>
-                      <div className="text-muted small">
-                        <Link to={`/ticket/${encodeURIComponent(selected.ticket)}`} className="text-decoration-none">
-                          {selected.ticket}
-                        </Link>{' '}
-                        • {selected.docType} • {selected.status}
-                        {selected.lastUpdated ? (
-                          <span className="ms-2">Updated {timeAgo(selected.lastUpdated)}</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <button
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={() => {
-                        setSelected(null)
-                        setSelectedIndex(null)
-                      }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div className="mb-2">
-                    <span className="text-muted small">Path</span>
-                    <div className="result-path">{selected.path}</div>
-	                  <div className="mt-2 d-flex gap-2">
-	                    <button
-	                      className="btn btn-sm btn-outline-primary"
-	                      onClick={() => void onCopyPath(selected.path)}
-	                    >
-	                      Copy path
-	                    </button>
-	                    <Link
-	                      className="btn btn-sm btn-primary"
-	                      to={`/doc?path=${encodeURIComponent(selected.path)}`}
-	                    >
-	                      Open doc
-	                    </Link>
-	                  </div>
-	                </div>
-	                <div className="mb-3">
-	                  <div className="text-muted small mb-1">Snippet</div>
-	                  <div className="small">
-	                    <MarkdownSnippet markdown={selected.snippet} query={docsHighlightQuery} />
-	                  </div>
-	                </div>
-                  {selected.relatedFiles && selected.relatedFiles.length > 0 ? (
-                    <div>
-                      <div className="text-muted small mb-1">Related files</div>
-                      <ul className="small mb-0 list-unstyled vstack gap-2">
-                        {selected.relatedFiles.map((rf) => (
-                          <li key={`${rf.path}:${rf.note ?? ''}`} className="d-flex gap-2 align-items-start">
-                            <div className="flex-grow-1">
-                              <div className="font-monospace">{rf.path}</div>
-                              {rf.note ? <div className="text-muted">{rf.note}</div> : null}
-                            </div>
-                            <div className="d-flex gap-2">
-                              <button
-                                className="btn btn-sm btn-outline-secondary"
-                                onClick={() => void onCopyPath(rf.path)}
-                              >
-                                Copy
-                              </button>
-	                              <Link
-	                                className="btn btn-sm btn-outline-primary"
-	                                to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
-	                              >
-	                                Open
-	                              </Link>
-	                            </div>
-	                          </li>
-	                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </>
-        ) : (
-          <div className="empty-state">
-            <h4>No results found</h4>
-            <p>Try adjusting your query or filters.</p>
+        <SearchFilesResults
+          loading={filesLoading}
+          hasSearched={hasSearched}
+          total={filesTotal}
+          results={filesResults}
+          onCopyPath={(p) => void onCopyPath(p)}
+        />
+      ) : showDocsGrid ? (
+        <div className={`results-grid ${selected ? 'split' : ''}`}>
+          <div>
+            <SearchDocsResults
+              loading={docsLoading}
+              hasSearched={hasSearched}
+              docsResults={docsResults}
+              selected={selected}
+              onSelectIndex={(idx) => selectDocByIndex(idx)}
+              onCopyPath={(p) => void onCopyPath(p)}
+              highlightQuery={docsHighlightQuery}
+              hasMore={docsNextCursor !== ''}
+              onLoadMore={() => void onLoadMore()}
+            />
           </div>
-        )
-      ) : (
-        <div className="empty-state">
-          <h4>Search docmgr documentation</h4>
-          <p className="text-muted">Enter a query or use filters to browse documentation.</p>
+          {selected && !isMobile ? (
+            <SearchPreviewPanel
+              selected={selected}
+              highlightQuery={docsHighlightQuery}
+              onCopyPath={(p) => void onCopyPath(p)}
+              onClose={() => {
+                setSelected(null)
+                setSelectedIndex(null)
+              }}
+            />
+          ) : null}
         </div>
+      ) : (
+        <SearchDocsResults
+          loading={docsLoading}
+          hasSearched={hasSearched}
+          docsResults={docsResults}
+          selected={selected}
+          onSelectIndex={(idx) => selectDocByIndex(idx)}
+          onCopyPath={(p) => void onCopyPath(p)}
+          highlightQuery={docsHighlightQuery}
+          hasMore={docsNextCursor !== ''}
+          onLoadMore={() => void onLoadMore()}
+        />
       )}
 
       {/* Errors are rendered via the main error banner near the top. */}

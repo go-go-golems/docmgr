@@ -1,0 +1,56 @@
+import { Link } from 'react-router-dom'
+
+import { RelatedFilesList } from '../../../components/RelatedFilesList'
+import { timeAgo } from '../../../lib/time'
+import type { SearchDocResult } from '../../../services/docmgrApi'
+import { MarkdownSnippet } from '../components/MarkdownSnippet'
+
+export function SearchPreviewContent({
+  doc,
+  highlightQuery,
+  onCopyPath,
+}: {
+  doc: SearchDocResult
+  highlightQuery: string
+  onCopyPath: (path: string) => void
+}) {
+  return (
+    <>
+      <div className="text-muted small mb-2">
+        <Link to={`/ticket/${encodeURIComponent(doc.ticket)}`} className="text-decoration-none">
+          {doc.ticket}
+        </Link>{' '}
+        • {doc.docType} • {doc.status}
+        {doc.lastUpdated ? <span className="ms-2">Updated {timeAgo(doc.lastUpdated)}</span> : null}
+      </div>
+
+      <div className="mb-2">
+        <span className="text-muted small">Path</span>
+        <div className="result-path">{doc.path}</div>
+        <div className="mt-2 d-flex gap-2 flex-wrap">
+          <button className="btn btn-sm btn-outline-primary" onClick={() => onCopyPath(doc.path)}>
+            Copy path
+          </button>
+          <Link className="btn btn-sm btn-primary" to={`/doc?path=${encodeURIComponent(doc.path)}`}>
+            Open doc
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <div className="text-muted small mb-1">Snippet</div>
+        <div className="small">
+          <MarkdownSnippet markdown={doc.snippet} query={highlightQuery} />
+        </div>
+      </div>
+
+      {doc.relatedFiles && doc.relatedFiles.length > 0 ? (
+        <div>
+          <div className="text-muted small mb-1">Related files</div>
+          <RelatedFilesList files={doc.relatedFiles} onCopyPath={onCopyPath} />
+        </div>
+      ) : null}
+    </>
+  )
+}
+

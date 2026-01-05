@@ -177,3 +177,17 @@ API: add handler tests for /api/v1/workspace/* endpoints
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/workspace_test.go — Workspace endpoint coverage
 
+
+## 2026-01-05
+
+UI: wire Workspace pages to /api/v1/workspace/* endpoints (commit 79f9182)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceHomePage.tsx — Workspace Home dashboard
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceRecentPage.tsx — Recent page
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceTicketsPage.tsx — Tickets list + filters
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceTopicDetailPage.tsx — Topic detail
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceTopicsPage.tsx — Topics grid
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/services/docmgrApi.ts — Add RTK Query workspace endpoints
+

@@ -94,9 +94,9 @@
 - [x] API: implement recent activity endpoint for Workspace Recent
 - [x] API: implement /api/v1/workspace/facets (topics/owners/status/intents/docTypes)
 - [x] API: implement /api/v1/workspace/recent (recent tickets + docs)
-- [ ] UI: wire Workspace Home to /workspace/summary + /workspace/recent (replace placeholders)
-- [ ] UI: wire Workspace Tickets page to /workspace/tickets + /workspace/facets (table view MVP)
-- [ ] UI: wire Workspace Topics pages to /workspace/topics endpoints (grid + topic detail)
-- [ ] UI: wire Workspace Recent page to /workspace/recent or /workspace/activity endpoint
+- [x] UI: wire Workspace Home to /workspace/summary + /workspace/recent (replace placeholders)
+- [x] UI: wire Workspace Tickets page to /workspace/tickets + /workspace/facets (table view MVP)
+- [x] UI: wire Workspace Topics pages to /workspace/topics endpoints (grid + topic detail)
+- [x] UI: wire Workspace Recent page to /workspace/recent or /workspace/activity endpoint
 - [x] API: add handler tests for /workspace endpoints
 - [x] Docs: update pkg/doc/docmgr-http-api.md with /workspace/* endpoints

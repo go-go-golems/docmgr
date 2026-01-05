@@ -84,3 +84,12 @@ Design ticket page HTTP API + Web UI (overview/docs/tasks/graph/changelog)
 
 - ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design/02-ticket-page-api-and-web-ui.md — Ticket page design spec
 
+
+## 2026-01-05
+
+Docs: audit current React SPA (Search/Doc/File/Ticket) and propose a widget + design-system architecture for upcoming Workspace navigation pages.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md — New analysis doc capturing architecture + widget plan
+

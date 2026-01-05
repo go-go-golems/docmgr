@@ -853,3 +853,287 @@ I hit a confusing failure where the UI and `curl` against `http://localhost:3000
 
 ### What I learned
 - When testing new endpoints with `go run`, a green health check doesn’t guarantee you’re running the latest code; always validate a newly added route explicitly.
+
+## Step 17: Start React UI architecture audit + Workspace page widget planning
+
+I started a focused audit of the current React SPA to understand the architectural “shape” of the existing pages (Search/Doc/File/Ticket) before designing the new Workspace page. The goal is to propose a widget/component hierarchy that stays aligned with the current code, but also nudges us toward a coherent, reusable design system.
+
+In parallel, I created a dedicated analysis document for this audit so that the conclusions (folder layout, reusable widgets, component sizing boundaries, and design-system primitives) are captured in one place and can guide the final set of pages.
+
+### What I did
+- Located the React app entry points and routes:
+  - `ui/src/main.tsx` (bootstrap import + root render)
+  - `ui/src/App.tsx` (react-router routes)
+- Skimmed the shared API client and state setup:
+  - `ui/src/services/docmgrApi.ts` (RTK Query API surface)
+  - `ui/src/app/store.ts` (Redux store wiring)
+- Read the Workspace page source spec:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/workspace-page.md`
+- Created a new ticket analysis doc to write into:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+
+### Why
+- The current pages already contain “proto-widgets” embedded inside large page files; extracting the implicit patterns now should reduce future thrash when adding Workspace/Home/Topics/etc.
+- The Workspace page spec is bigger than the current pages; designing its widget boundaries up front is the easiest way to keep it maintainable.
+
+### What worked
+- The codebase already follows a reasonable high-level split (`app/`, `features/`, `components/`, `services/`), and it’s using RTK Query (good foundation for consistent data access).
+
+### What didn't work
+- Minor workflow footgun: I typed `ls -ლა` (unicode flags) by accident and got `ls: invalid option -- 'á'`. No functional impact, just noise worth avoiding.
+
+### What I learned
+- The SPA is Vite + React Router + Redux Toolkit/RTK Query + Bootstrap, with the route-level “pages” under `ui/src/features/*/*Page.tsx`.
+- Several “page-local components” (helpers, rendering widgets, parsing/highlighting) currently live inside the page files; that’s likely where we’ll find the best extraction candidates for a shared widget library.
+
+### What was tricky to build
+- N/A (this step was research + doc scaffolding).
+
+### What warrants a second pair of eyes
+- The proposed widget/design-system boundaries should be reviewed against the intended future pages (Workspace/Tickets/Topics/Recent) so we don’t overfit to the current Search/Ticket UI.
+
+### What should be done in the future
+- Continue the audit by mapping each page into: layout shell → widgets → smaller components, then design a target folder architecture that supports re-use.
+
+### Code review instructions
+- Start with the analysis doc draft:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+- Then skim the current “page” entry points:
+  - `ui/src/App.tsx`
+  - `ui/src/features/search/SearchPage.tsx`
+  - `ui/src/features/ticket/TicketPage.tsx`
+
+### Technical details
+- Commands I used:
+  - `rg -n "createRoot|BrowserRouter|Routes|rtk-query" ui/src -S`
+  - `docmgr doc add --ticket 001-ADD-DOCMGR-UI --doc-type analysis --title "React UI architecture + Workspace page widget system"`
+
+## Step 18: Map current pages into widgets + draft the Workspace nav widget inventory
+
+I went deeper on the “big page” files (Search and Ticket) to identify concrete widget boundaries and repeatable UI primitives. The emphasis here is to treat the new Workspace navigation experience as a *product surface* with a stable shell and swappable content, rather than accreting more page-specific logic into monolithic route components.
+
+I also walked the `sources/workspace-page.md` ASCII designs and translated them into an initial widget inventory (shell widgets + page-specific widgets), so we can design and implement the Workspace pages by composing reusable parts instead of rewriting the same patterns repeatedly.
+
+### What I did
+- Quantified current “page sizes” to identify the biggest extraction candidates:
+  - `SearchPage.tsx` (~1649 LOC) and `TicketPage.tsx` (~653 LOC)
+- Read through the major sections of:
+  - `ui/src/features/search/SearchPage.tsx` (URL sync, keyboard shortcuts, filters/drawer, results/preview)
+  - `ui/src/features/ticket/TicketPage.tsx` (tab bodies, repeated list/preview patterns)
+  - Shared components and styling:
+    - `ui/src/components/DocCard.tsx`
+    - `ui/src/App.css` and `ui/src/index.css`
+- Read the Workspace navigation page designs:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/workspace-page.md`
+- Drafted the first pass of:
+  - “What’s getting big”
+  - “Extraction candidates”
+  - “Shell widgets”
+  - “Workspace page widget breakdown”
+  into the new analysis doc.
+
+### Why
+- The Workspace pages (Home/Tickets/Topics/Recent) will introduce multiple new large UI surfaces; without a widget/design-system strategy, we’ll end up duplicating toasts/errors/modals/layout logic across pages.
+- The current Search page already contains many implicit widgets; making them explicit now gives us reusable building blocks for Workspace pages.
+
+### What worked
+- Bootstrap + RTK Query already provide strong “defaults”; we can create a coherent design system mostly as thin wrappers + tokenized CSS, rather than inventing a new component library from scratch.
+
+### What didn't work
+- N/A (no implementation yet; this was architecture mapping + doc writing).
+
+### What I learned
+- `DocCard` is already shared between Search and Ticket, but its styling and naming are Search-centric (`result-card`), which is a signal that we should separate:
+  - design-system “Card” primitives vs
+  - domain-specific “DocCard/TicketCard/etc”.
+
+### What was tricky to build
+- N/A (research + documentation).
+
+### What warrants a second pair of eyes
+- The proposed directory/layout reorg (`pages/`, `widgets/`, `ui/shared/`) should be validated against how we want to evolve the codebase (e.g. whether to adopt a formal feature-sliced structure or keep the current `features/*Page.tsx` pattern and only add `widgets/`).
+
+### What should be done in the future
+- Extract shared primitives first (`useToast`, `useClipboard`, `ApiErrorAlert`, `PageHeader`) before moving files around, so refactors stay incremental and low risk.
+
+### Code review instructions
+- Read the analysis doc (new content starts near the top and continues through the widget inventory):
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+- Skim the “big page” files to see the implicit widgets in place today:
+  - `ui/src/features/search/SearchPage.tsx`
+  - `ui/src/features/ticket/TicketPage.tsx`
+
+### Technical details
+- Commands I used:
+  - `wc -l ui/src/features/search/SearchPage.tsx ui/src/features/ticket/TicketPage.tsx`
+  - `rg -n "^## " ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/workspace-page.md`
+
+## Step 19: Specify widget sizing rules + a concrete file tree for a coherent design system
+
+I tightened the analysis doc into something implementable: not just “extract widgets”, but explicit rules of thumb for ownership/sizing, a proposed directory tree, and clear guidance on how to incrementally migrate without a big-bang rewrite. The intent is to make the upcoming Workspace pages (Home/Tickets/Topics/Recent) feel cohesive while still being achievable in small refactor commits.
+
+I also added a “data dependency” section to keep widget boundaries aligned with the Workspace REST API design, so we don’t end up with ad-hoc fetching logic scattered across components.
+
+### What I did
+- Expanded `analysis/02-react-ui-architecture-workspace-page-widget-system.md` with:
+  - widget/page sizing guidance
+  - explicit shell widget mapping to current page headers
+  - data dependency mapping to the Workspace REST API design doc
+  - a concrete proposed `ui/src/` directory tree (pages/widgets/ui/lib)
+  - additional “too-big” refactor triggers (dup helpers, mixed CSS)
+
+### Why
+- The organization and naming conventions are the “design system” as much as the CSS is; if we don’t define these now, each new page will invent its own patterns.
+
+### What worked
+- The existing code already suggests natural boundaries (e.g. Ticket tab bodies, Search’s filter/result/preview areas); the file tree proposal just gives those boundaries a stable home.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Even in a Bootstrap-heavy UI, we benefit from explicit design-system primitives (PageHeader, ApiErrorAlert, EmptyState), because they eliminate duplication and keep interactions consistent across pages.
+
+### What was tricky to build
+- N/A (documentation only).
+
+### What warrants a second pair of eyes
+- Sanity check that the proposed tree doesn’t conflict with team preferences (e.g. keeping everything under `features/` vs introducing `pages/` + `widgets/`).
+
+### What should be done in the future
+- Before moving files, implement the shared primitives and switch existing pages over; once behavior is stable, migrate file locations.
+
+### Code review instructions
+- Review the new “implementable” sections in:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+
+### Technical details
+- No new commands beyond editing the analysis doc.
+
+## Step 20: Link the analysis doc to key code + update the ticket changelog
+
+I finalized the documentation bookkeeping: validated frontmatter, linked the new analysis doc to the most relevant UI/code/spec files, and recorded the work in the ticket changelog. This keeps the “architecture plan” discoverable from both doc search and from the document’s frontmatter relationships.
+
+### What I did
+- Validated doc frontmatter:
+  - `docmgr validate frontmatter --doc /abs/.../analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+  - `docmgr validate frontmatter --doc /abs/.../reference/01-diary.md`
+- Related key files to the analysis doc (kept to 7 total related files):
+  - `ui/src/App.tsx`, `ui/src/services/docmgrApi.ts`
+  - `ui/src/features/search/SearchPage.tsx`, `ui/src/features/ticket/TicketPage.tsx`
+  - `ui/src/components/DocCard.tsx`
+  - `sources/workspace-page.md`, `design/03-workspace-rest-api.md`
+- Updated the ticket changelog with an entry for the new analysis doc.
+
+### Why
+- Relationships and changelog entries make it much easier to find this decision record later (and avoid re-deriving the same conclusions when we start moving code around).
+
+### What worked
+- Using absolute paths for `--file-note` avoids ambiguity and copy/paste errors.
+
+### What didn't work
+- I initially ran `docmgr validate frontmatter --doc ttmp/...` and it resolved as `ttmp/ttmp/...` under the docs root. Using an absolute path fixed it.
+
+### What I learned
+- `docmgr doc relate` supports removals via `--remove-files`, which is useful to keep `RelatedFiles` within the recommended size.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A (bookkeeping only).
+
+### What should be done in the future
+- Once code refactors begin, keep the same discipline: relate the extracted widget/primitives to the focused doc(s) and record the rationale in the changelog per step.
+
+### Code review instructions
+- Review the analysis doc and its `RelatedFiles` section:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+- Review the changelog entry:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/changelog.md`
+
+### Technical details
+- Commands I used:
+  - `docmgr doc relate --doc /abs/.../analysis/02-... --file-note "..."`
+  - `docmgr doc relate --doc /abs/.../analysis/02-... --remove-files "/abs/path/to/file"`
+  - `docmgr changelog update --ticket 001-ADD-DOCMGR-UI --entry "..." --file-note "..."`
+
+## Step 21: Update the new analysis doc (topics + CSS strategy + extraction sequence)
+
+I incorporated follow-up edits into the new analysis doc: updated the frontmatter topics to better reflect the document’s purpose (UI/web/workspace) and expanded the content with a pragmatic CSS strategy and a suggested extraction sequence. This makes the doc more directly actionable as a “playbook” for refactoring Search/Ticket and for building the upcoming Workspace navigation pages.
+
+### What I did
+- Updated analysis doc frontmatter Topics to: `docmgr, ui, web, workspace, ux`.
+- Added:
+  - a CSS strategy section (split design-system utilities from page-specific layout)
+  - a suggested extraction sequence (shared primitives → Search widgets → Ticket tabs → AppShell + Workspace pages)
+- Re-validated frontmatter:
+  - `docmgr validate frontmatter --doc /abs/.../analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+
+### Why
+- The doc is meant to guide the multi-page UI build; it should be tagged and structured so it’s easy to discover and apply later.
+
+### What worked
+- The frontmatter schema accepted the topic updates and the doc remains valid.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- The most important “design system” decision is separating shared utilities/tokens from one-page layout CSS early; it prevents style coupling as more pages are added.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- Confirm the chosen extraction order aligns with implementation priorities (e.g. if Workspace pages must land sooner than Search refactors).
+
+### What should be done in the future
+- When we start implementing the refactors, keep commits scoped to one extraction and update this doc with the “final tree” that actually emerges.
+
+### Code review instructions
+- Review:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+
+### Technical details
+- Commands:
+  - `docmgr validate frontmatter --doc /home/manuel/.../analysis/02-react-ui-architecture-workspace-page-widget-system.md --suggest-fixes`
+
+## Step 22: Upload the diary and Workspace REST API design doc to reMarkable (overwrite)
+
+I uploaded the updated diary and the Workspace REST API design doc to the reMarkable device. The first upload attempt failed because the PDFs already existed on-device; I reran the upload with `--force` to overwrite them with the latest versions.
+
+### What I did
+- Ran a ticket-aware upload with mirrored structure and overwrite enabled:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --force --ticket-dir ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui --mirror-ticket-structure ...`
+- Confirmed successful replacements:
+  - `01-diary.pdf` → `ai/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/`
+  - `03-workspace-rest-api.pdf` → `ai/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design/`
+
+### Why
+- Keeping the reMarkable copies current makes review/annotation easier without needing a browser session.
+
+### What worked
+- `--mirror-ticket-structure` keeps files organized and `--force` resolves conflicts cleanly when PDFs already exist.
+
+### What didn't work
+- Without `--force`, `rmapi put` failed with: `entry already exists (use --force to recreate, --content-only to replace content)`.
+
+### What I learned
+- For iterative docs, it’s better to either (a) overwrite explicitly with `--force`, or (b) upload into a versioned folder via `--remote-ticket-root` to preserve older PDFs.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- Decide on a consistent convention: always overwrite PDFs for “living docs”, or always upload into a new versioned subfolder to preserve history.
+
+### Code review instructions
+- N/A (upload-only).
+
+### Technical details
+- Command:
+  - `python3 /home/manuel/.local/bin/remarkable_upload.py --force --ticket-dir ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui --mirror-ticket-structure ttmp/.../reference/01-diary.md ttmp/.../design/03-workspace-rest-api.md`

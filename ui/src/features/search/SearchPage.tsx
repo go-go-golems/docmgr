@@ -7,6 +7,7 @@ import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { DocCard } from '../../components/DocCard'
 import { clearFilters, setFilter, setMode, setQuery } from './searchSlice'
 import {
   useGetWorkspaceStatusQuery,
@@ -292,103 +293,6 @@ function DiagnosticList({ diagnostics }: { diagnostics: DiagnosticTaxonomy[] }) 
       {diagnostics.length > max ? (
         <div className="text-muted small">… {diagnostics.length - max} more diagnostics</div>
       ) : null}
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'active'
-      ? 'primary'
-      : status === 'review'
-        ? 'warning'
-        : status === 'complete'
-          ? 'success'
-          : status === 'draft'
-            ? 'secondary'
-            : 'secondary'
-  return (
-    <span className={`badge text-bg-${variant} ms-2`} style={{ fontWeight: 600 }}>
-      {status || 'unknown'}
-    </span>
-  )
-}
-
-function ResultCard({
-  result,
-  selected,
-  onCopyPath,
-  onSelect,
-  snippetQuery,
-}: {
-  result: SearchDocResult
-  selected: boolean
-  onCopyPath: (path: string) => void
-  onSelect: (r: SearchDocResult) => void
-  snippetQuery: string
-}) {
-  return (
-    <div
-      className={`result-card ${selected ? 'selected' : ''}`}
-      onClick={() => onSelect(result)}
-      role="button"
-      tabIndex={0}
-    >
-      <div className="d-flex justify-content-between align-items-start">
-        <div className="flex-grow-1">
-          <div className="result-title">{result.title}</div>
-          <div className="result-meta">
-            <Link
-              to={`/ticket/${encodeURIComponent(result.ticket)}`}
-              onClick={(e) => e.stopPropagation()}
-              className="text-decoration-none"
-            >
-              {result.ticket}
-            </Link>{' '}
-            • {result.docType}
-            <StatusBadge status={result.status} />
-            {result.lastUpdated ? (
-              <span className="ms-2 text-muted">Updated {timeAgo(result.lastUpdated)}</span>
-            ) : null}
-          </div>
-          <div className="mb-2">
-            {result.topics.map((topic) => (
-              <span key={topic} className="badge text-bg-secondary topic-badge">
-                {topic}
-              </span>
-            ))}
-          </div>
-          <div className="result-snippet">
-            <MarkdownSnippet markdown={result.snippet} query={snippetQuery} />
-          </div>
-          <div className="result-path">{result.path}</div>
-          {result.relatedFiles && result.relatedFiles.length > 0 ? (
-            <div className="mt-2">
-              <div className="small text-muted mb-1">Related files</div>
-              <ul className="mb-0 small">
-                {result.relatedFiles.slice(0, 3).map((rf) => (
-                  <li key={`${rf.path}:${rf.note ?? ''}`}>
-                    <span className="font-monospace">{rf.path}</span>
-                    {rf.note ? <span className="text-muted ms-2">{rf.note}</span> : null}
-                  </li>
-                ))}
-                {result.relatedFiles.length > 3 ? (
-                  <li className="text-muted">… {result.relatedFiles.length - 3} more</li>
-                ) : null}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-        <button
-          className="btn btn-sm btn-outline-primary copy-btn ms-2"
-          onClick={(e) => {
-            e.stopPropagation()
-            onCopyPath(result.path)
-          }}
-        >
-          Copy
-        </button>
-      </div>
     </div>
   )
 }
@@ -1612,17 +1516,24 @@ export function SearchPage() {
             <div className={`results-grid ${selected ? 'split' : ''}`}>
               <div>
                 {docsResults.map((r) => (
-	                  <ResultCard
-	                    key={`${r.path}:${r.ticket}`}
-	                    result={r}
-	                    selected={selected?.path === r.path && selected?.ticket === r.ticket}
-	                    snippetQuery={mode === 'docs' ? query : ''}
-	                    onCopyPath={(p) => void onCopyPath(p)}
-	                    onSelect={(res) => {
-	                      const idx = docsResults.findIndex(
-	                        (d) => d.path === res.path && d.ticket === res.ticket,
+                  <DocCard
+                    key={`${r.path}:${r.ticket}`}
+                    title={r.title}
+                    ticket={r.ticket}
+                    docType={r.docType}
+                    status={r.status}
+                    topics={r.topics}
+                    path={r.path}
+                    lastUpdated={r.lastUpdated}
+                    relatedFiles={r.relatedFiles}
+                    snippet={<MarkdownSnippet markdown={r.snippet} query={mode === 'docs' ? query : ''} />}
+                    selected={selected?.path === r.path && selected?.ticket === r.ticket}
+                    onCopyPath={(p) => void onCopyPath(p)}
+                    onSelect={() => {
+                      const idx = docsResults.findIndex(
+                        (d) => d.path === r.path && d.ticket === r.ticket,
                       )
-                      setSelected(res)
+                      setSelected(r)
                       setSelectedIndex(idx >= 0 ? idx : null)
                       if (isMobile) setShowPreviewModal(true)
                     }}

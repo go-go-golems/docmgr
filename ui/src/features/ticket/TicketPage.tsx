@@ -14,6 +14,7 @@ import {
   useGetTicketTasksQuery,
   type TicketDocItem,
 } from '../../services/docmgrApi'
+import { DocCard } from '../../components/DocCard'
 import { MermaidDiagram } from '../../components/MermaidDiagram'
 
 type TabKey = 'overview' | 'documents' | 'tasks' | 'graph' | 'changelog'
@@ -60,6 +61,7 @@ export function TicketPage() {
   const params = useParams()
   const ticket = (params.ticket ?? '').trim()
   const [searchParams, setSearchParams] = useSearchParams()
+  const [toast, setToast] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
 
   const tab = normalizeTab(searchParams.get('tab'))
   const selectedDoc = (searchParams.get('doc') ?? '').trim()
@@ -93,6 +95,18 @@ export function TicketPage() {
   const [checkTask, checkTaskState] = useCheckTicketTasksMutation()
   const [addTask, addTaskState] = useAddTicketTaskMutation()
   const [newTaskText, setNewTaskText] = useState('')
+
+  async function onCopyPath(text: string) {
+    try {
+      if (!navigator.clipboard) throw new Error('clipboard not available')
+      await navigator.clipboard.writeText(text)
+      setToast({ kind: 'success', message: 'Copied' })
+      setTimeout(() => setToast(null), 1200)
+    } catch (e) {
+      setToast({ kind: 'error', message: `Copy failed: ${String(e)}` })
+      setTimeout(() => setToast(null), 2500)
+    }
+  }
 
   const selectedDocItem = useMemo(() => {
     const list = docsData?.results ?? []
@@ -155,6 +169,12 @@ export function TicketPage() {
           </Link>
         </div>
       </div>
+
+      {toast ? (
+        <div className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} py-2`}>
+          {toast.message}
+        </div>
+      ) : null}
 
       {ticket === '' ? <div className="alert alert-info">Missing ticket id.</div> : null}
 
@@ -378,27 +398,21 @@ export function TicketPage() {
                     <div className="card-body">
                       <div className="vstack gap-2">
                         {docsByType[k].map((d) => (
-                          <div
+                          <DocCard
                             key={d.path}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => selectDoc(d.path)}
-                            className={`p-2 border rounded ${selectedDoc === d.path ? 'border-primary' : ''}`}
-                          >
-                            <div className="d-flex justify-content-between align-items-start gap-2">
-                              <div className="flex-grow-1">
-                                <div className="fw-semibold">{d.title || d.path}</div>
-                                <div className="small text-muted">
-                                  {d.status ? (
-                                    <span className="me-2">
-                                      <span className="badge text-bg-primary">{d.status}</span>
-                                    </span>
-                                  ) : null}
-                                  <span className="font-monospace">{d.path}</span>
-                                </div>
-                                {d.summary ? <div className="small text-muted mt-1">{d.summary}</div> : null}
-                              </div>
-                              <div className="d-flex gap-2">
+                            title={d.title || d.path}
+                            ticket={ticket}
+                            docType={d.docType}
+                            status={d.status}
+                            topics={d.topics}
+                            path={d.path}
+                            lastUpdated={d.lastUpdated}
+                            relatedFiles={d.relatedFiles}
+                            selected={selectedDoc === d.path}
+                            snippet={d.summary ? <span className="text-muted">{d.summary}</span> : null}
+                            onSelect={() => selectDoc(d.path)}
+                            actions={
+                              <>
                                 <Link
                                   className="btn btn-sm btn-outline-primary"
                                   to={`/doc?path=${encodeURIComponent(d.path)}`}
@@ -406,9 +420,18 @@ export function TicketPage() {
                                 >
                                   Open
                                 </Link>
-                              </div>
-                            </div>
-                          </div>
+                                <button
+                                  className="btn btn-sm btn-outline-secondary"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    void onCopyPath(d.path)
+                                  }}
+                                >
+                                  Copy
+                                </button>
+                              </>
+                            }
+                          />
                         ))}
                       </div>
                     </div>

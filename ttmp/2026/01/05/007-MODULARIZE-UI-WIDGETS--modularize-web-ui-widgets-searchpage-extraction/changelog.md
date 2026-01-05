@@ -94,3 +94,14 @@ Search preview: extract PathHeader (path + action buttons) and reuse in Search p
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/PathHeader.tsx — Shared primitive for path label + monospace path + action row
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchPreviewContent.tsx — Uses PathHeader for Copy/Open actions
 
+
+## 2026-01-05
+
+TicketPage: split into tabs (overview/documents/tasks/graph/changelog) + extract TicketHeader/TicketTabs; reuse shared primitives (ApiErrorAlert/LoadingSpinner/PathHeader/RelatedFilesList)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/TicketPage.tsx — Now orchestrator (~200 LOC) delegating to tab widgets
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/tabs/TicketDocumentsTab.tsx — Documents tab list + preview; uses PathHeader and RelatedFilesList
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/tabs/TicketTasksTab.tsx — Tasks tab; keeps newTaskText local
+

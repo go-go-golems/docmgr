@@ -95,14 +95,14 @@ Goal: make `ui/src/features/search/SearchPage.tsx` a thin orchestrator (~200–3
 ### Ticket page: split into widgets (tab bodies become files)
 Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becomes a router+data orchestrator and establishes the “dashboard of cards” pattern used by Workspace pages.
 
-- [ ] Introduce `ui/src/features/ticket/tabs/` directory (one file per tab body)
-- [ ] Extract `TicketHeader` (title/subtitle + stats + actions)
-- [ ] Extract `TicketTabs` (tab selection UI)
-- [ ] Extract `TicketOverviewTab` (cards + key docs + open tasks + index doc)
-- [ ] Extract `TicketDocumentsTab` (docs list/grouping + preview panel)
-- [ ] Extract `TicketTasksTab` (sections list + add task form; keep `newTaskText` local)
-- [ ] Extract `TicketGraphTab` (Mermaid graph + debug details)
-- [ ] Extract `TicketChangelogTab` (changelog link + rendering as applicable)
+- [x] Introduce `ui/src/features/ticket/tabs/` directory (one file per tab body)
+- [x] Extract `TicketHeader` (title/subtitle + stats + actions)
+- [x] Extract `TicketTabs` (tab selection UI)
+- [x] Extract `TicketOverviewTab` (cards + key docs + open tasks + index doc)
+- [x] Extract `TicketDocumentsTab` (docs list/grouping + preview panel)
+- [x] Extract `TicketTasksTab` (sections list + add task form; keep `newTaskText` local)
+- [x] Extract `TicketGraphTab` (Mermaid graph + debug details)
+- [x] Extract `TicketChangelogTab` (changelog link + rendering as applicable)
 - [ ] Identify shared “Doc list + preview” patterns between Search and Ticket and factor shared pieces into `ui/src/components/`
 
 ### Design system coherence (incremental, avoid churn)

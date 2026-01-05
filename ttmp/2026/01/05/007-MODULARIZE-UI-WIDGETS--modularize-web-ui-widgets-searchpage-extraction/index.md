@@ -42,6 +42,18 @@ RelatedFiles:
       Note: Desktop filter panel widget
     - Path: ui/src/features/search/widgets/SearchPreviewModal.tsx
       Note: Mobile preview modal widget
+    - Path: ui/src/features/ticket/TicketPage.tsx
+      Note: Ticket route now composes tab widgets
+    - Path: ui/src/features/ticket/tabs/TicketChangelogTab.tsx
+      Note: Changelog tab widget
+    - Path: ui/src/features/ticket/tabs/TicketDocumentsTab.tsx
+      Note: Documents tab widget
+    - Path: ui/src/features/ticket/tabs/TicketGraphTab.tsx
+      Note: Graph tab widget
+    - Path: ui/src/features/ticket/tabs/TicketOverviewTab.tsx
+      Note: Overview tab widget
+    - Path: ui/src/features/ticket/tabs/TicketTasksTab.tsx
+      Note: Tasks tab widget
     - Path: ui/src/lib/apiError.ts
       Note: Shared helper for docmgr API error envelope parsing (used by SearchPage error banner).
     - Path: ui/src/lib/clipboard.ts
@@ -58,6 +70,7 @@ LastUpdated: 2026-01-05T08:49:54.386444656-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

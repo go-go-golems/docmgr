@@ -17,24 +17,38 @@ RelatedFiles:
       Note: Default build/install tags sqlite_fts5
     - Path: cmd/docmgr/cmds/api/serve.go
       Note: Serve API + SPA from one process
+    - Path: internal/documents/frontmatter.go
+      Note: Add ReadDocumentWithFrontmatterFS to support rooted FS reads
     - Path: internal/httpapi/docs_files.go
-      Note: Doc/file serving endpoints (commit bacf9f9)
+      Note: |-
+        Doc/file serving endpoints (commit bacf9f9)
+        Serve docs/files via fs.FS-rooted reads/stats; reject directory paths
+    - Path: internal/httpapi/docs_files_test.go
+      Note: Update readTextFile tests for fs.FS signature
     - Path: internal/httpapi/path_safety.go
-      Note: Safe path resolution + symlink escape protection (commit bacf9f9)
+      Note: |-
+        Safe path resolution + symlink escape protection (commit bacf9f9)
+        Normalize user paths to root-relative and enforce traversal/symlink protections (CodeQL)
     - Path: internal/httpapi/server.go
       Note: |-
         Allow empty browse; reverse query->file; orderBy guards
         Mount new /api/v1/workspace/* routes
     - Path: internal/httpapi/tickets.go
-      Note: Ticket API endpoints (/tickets/get/docs/tasks/graph) (commits 522e678,4a82f9d)
+      Note: |-
+        Ticket API endpoints (/tickets/get/docs/tasks/graph) (commits 522e678,4a82f9d)
+        Use NormalizeNoFS for related-file stats canonicalization
     - Path: internal/httpapi/tickets_test.go
       Note: Basic handler test coverage for ticket endpoints (commit 522e678)
     - Path: internal/httpapi/workspace.go
       Note: Add /workspace/* endpoints (summary/tickets/facets/recent/topics) and shared helpers
     - Path: internal/httpapi/workspace_test.go
       Note: Handler tests for workspace endpoints
+    - Path: internal/paths/resolver.go
+      Note: Add NormalizeNoFS to avoid filesystem Stat in matching/diagnostics; tighten anchor traversal rules
     - Path: internal/searchsvc/search.go
-      Note: Add lastUpdated+relatedFiles to search results for UI
+      Note: |-
+        Add lastUpdated+relatedFiles to search results for UI
+        Root search disk reads/stats to docs root and avoid tainted os.* sinks (CodeQL)
     - Path: internal/tasksmd/tasksmd.go
       Note: Parse/mutate tasks.md for ticket tasks API (commit 522e678)
     - Path: internal/ticketgraph/ticketgraph.go
@@ -47,10 +61,16 @@ RelatedFiles:
       Note: SPA fallback handler (never shadow /api)
     - Path: internal/workspace/index_builder.go
       Note: Ingest Owners into doc_owners
+    - Path: internal/workspace/normalization.go
+      Note: Use NormalizeNoFS when persisting related-file normalization
     - Path: internal/workspace/query_docs.go
-      Note: Hydrate Owners and add Intent/OwnersAny filters
+      Note: |-
+        Hydrate Owners and add Intent/OwnersAny filters
+        Use NormalizeNoFS for query-derived normalization diagnostics
     - Path: internal/workspace/query_docs_sql.go
-      Note: SQL clauses for Intent and OwnersAny
+      Note: |-
+        SQL clauses for Intent and OwnersAny
+        Use NormalizeNoFS for ScopeDoc normalization (avoid Stat)
     - Path: internal/workspace/sqlite_schema.go
       Note: Add doc_owners table for owner facets/filtering
     - Path: pkg/doc/docmgr-http-api.md
@@ -106,6 +126,8 @@ LastUpdated: 2026-01-05T00:20:58-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
+
 
 
 
@@ -1903,3 +1925,119 @@ To make facets and ticket filtering actually useful, I extended the in-memory wo
 ### Technical details
 - Endpoints are registered in `internal/httpapi/server.go`.
 - Topics detail currently uses `GET /api/v1/workspace/topics/get?topic=...` to avoid introducing a new router dependency.
+
+## Step 37: Fix CodeQL path injection alerts for docs/files endpoints
+
+I fixed the CodeQL “Uncontrolled data used in path expression” alerts in the doc/file serving endpoints by ensuring all user-provided paths are resolved into root-relative, validated paths before any file operations occur. The goal is to keep the intended functionality (view docs and repo files in the Web UI) while making path traversal and symlink escape protections explicit and reusable.
+
+To avoid repeated taint sinks in the handlers, I switched the read/stat operations over to `io/fs` (`os.DirFS` + `fs.ReadFile`/`fs.Stat`/`fsys.Open`) and added an `fs.FS` variant of `documents.ReadDocumentWithFrontmatter`. This keeps the server logic operating on validated relative paths and reduces the surface that CodeQL flags, while preserving the existing traversal/symlink checks.
+
+**Commit (code):** N/A (not committed)
+
+### What I did
+- Refactored `internal/httpapi/path_safety.go` `resolveFileWithin`:
+  - Always canonicalize user input into a root-relative `rel` path (even when the user supplies an absolute path).
+  - Keep traversal and symlink escape checks, and use `os.DirFS(root)` + `fs.Stat` for file metadata.
+- Refactored `internal/httpapi/docs_files.go`:
+  - `GET /api/v1/docs/get`: use `documents.ReadDocumentWithFrontmatterFS` + `fs.ReadFile` (no direct `os.ReadFile`).
+  - `GET /api/v1/files/get`: use `readTextFile(os.DirFS(root), rel, ...)` + reject directory paths early.
+  - Tightened the workspace fallback resolver to only accept `RepoRelative`.
+- Added `internal/documents/frontmatter.go` `ReadDocumentWithFrontmatterFS` and shared parsing via `readDocumentWithFrontmatterBytes`.
+- Updated tests in `internal/httpapi/docs_files_test.go` for the new `readTextFile` signature.
+- Validated with:
+  - `gofmt -w internal/httpapi/docs_files.go internal/httpapi/path_safety.go internal/httpapi/docs_files_test.go internal/documents/frontmatter.go`
+  - `go test ./... -count=1`
+
+### Why
+- CodeQL correctly flags `os.Open`/`os.Stat`/`os.ReadFile` when arguments are derived from HTTP query parameters unless the sanitization is obvious to the analyzer.
+- The endpoints are intentionally “read-only file viewers”, so the right fix is to (1) strictly constrain paths to allowed roots and (2) make the file access pattern clearly root-scoped.
+
+### What worked
+- Using `os.DirFS(rootAbs)` keeps reads/stats scoped to a directory, while `resolveFileWithin` continues to enforce traversal + symlink escape rules.
+- The existing traversal and symlink tests stayed valid with only minor test updates for the `fs.FS`-based read helper.
+
+### What didn't work
+- N/A
+
+### What I learned
+- Moving “file IO” behind `fs.FS` makes it easier to express “this operation is scoped to a root” in code and to security tooling.
+- It’s worth ensuring the handler rejects directories explicitly (`/files/get`) instead of relying on downstream read errors.
+
+### What was tricky to build
+- Keeping behavior consistent while changing the IO substrate: handlers still need the correct `rel`/`abs` for response + language/mime inference, while reads must be rooted.
+- Avoiding accidental regressions in the repo-root fallback: `Normalize` produces many representations; only `RepoRelative` should be accepted for `/files/get?root=repo`.
+
+### What warrants a second pair of eyes
+- Re-check the TOCTOU window between symlink resolution (`EvalSymlinks`) and subsequent `fsys.Open`/`fs.Stat` calls; it’s probably acceptable here, but worth sanity-checking.
+- Confirm the intended API contract for absolute inputs to `/api/v1/files/get?root=repo`: it should still work when the path is inside the repo (via resolver fallback).
+
+### What should be done in the future
+- N/A
+
+### Code review instructions
+- Start with `internal/httpapi/path_safety.go` (`resolveFileWithin`, `tryRelWithin`) for the new normalization and checks.
+- Then review `internal/httpapi/docs_files.go` (`handleDocsGet`, `handleFilesGet`, `readTextFile`) for the `fs.FS`-based reads and directory handling.
+- Finally review `internal/documents/frontmatter.go` (`ReadDocumentWithFrontmatterFS`, `readDocumentWithFrontmatterBytes`) for shared parsing behavior.
+- Validate with `go test ./... -count=1`.
+
+### Technical details
+- `resolveFileWithin` now derives a root-relative `rel` using `filepath.Rel(rootAbs, absInput)` and rejects any `..` escapes before file operations.
+- File reads are rooted via `os.DirFS(rootAbs)` and use `fs.ReadFile`/`fs.Stat`/`fsys.Open` rather than direct `os.*` calls.
+
+## Step 38: Fix remaining CodeQL path-injection findings in Search + path normalization
+
+After addressing the doc/file viewer endpoints, CodeQL still flagged a few path-expression sinks reachable from the Search API and from resolver normalization used in matching/diagnostics. The follow-up fix is to ensure that any disk reads/stats in Search are performed via a root-scoped `fs.FS` using a validated root-relative path, and that the “normalize for matching” code path does not touch the filesystem at all.
+
+This keeps Search behavior the same (including best-effort body loading and external-source filtering), but removes `os.Stat`/`os.ReadFile` sinks that were reachable from user-controlled query filters and related-file inputs.
+
+**Commit (code):** N/A (not committed)
+
+### What I did
+- Added `NormalizeNoFS` to `internal/paths/resolver.go` and tightened normalization so:
+  - traversal outside root anchors is rejected for repo/docs/config anchors,
+  - doc-relative traversal is allowed but constrained to `RepoRoot` when available.
+- Updated matching/diagnostic call sites to use `NormalizeNoFS` (no filesystem `Stat`):
+  - `internal/searchsvc/search.go` (related-file matching normalization)
+  - `internal/workspace/normalization.go`, `internal/workspace/query_docs.go`, `internal/workspace/query_docs_sql.go`
+  - `internal/httpapi/tickets.go` stats canonicalization
+- Hardened Search disk access in `internal/searchsvc/search.go`:
+  - derive a validated `rel` path within `ws.Context().Root` (including symlink-escape check),
+  - read/stat via `os.DirFS(root)` + `documents.ReadDocumentWithFrontmatterFS` + `fs.Stat`.
+- Removed the `/api/v1/files/get` “workspace resolver fallback” that called `Resolver.Normalize` on HTTP input (now the endpoint relies solely on `resolveFileWithin`).
+- Tightened `internal/httpapi/path_safety.go` with an `fs.ValidPath` check for the returned `rel` path.
+- Validated with `gofmt` and `go test ./... -count=1`.
+
+### Why
+- Search endpoints and normalization paths were still reaching `os.Stat`/`os.ReadFile` with values derived from user filters or doc metadata, which CodeQL flags as path-injection sinks.
+- Matching/diagnostics don’t need to probe the filesystem, so eliminating `Stat` there is both safer and faster.
+
+### What worked
+- `NormalizeNoFS` preserved the matching semantics while avoiding filesystem IO and keeping existing resolver tests intact.
+- Root-scoped `fs.FS` reads in Search made the “this path is rooted” guarantee explicit.
+
+### What didn't work
+- `go test ./...` initially failed after over-tightening resolver anchor checks (doc-relative traversal was incorrectly rejected); fixed by allowing doc-relative traversal while still constraining it to `RepoRoot`.
+
+### What I learned
+- Resolver “existence probing” (`Stat`) is not only a performance cost — it also widens the security/tooling surface when used on user-provided strings for matching.
+- For CodeQL (and for reviewers), it helps to make “rooted filesystem access” explicit by combining `fs.ValidPath` with `os.DirFS`.
+
+### What was tricky to build
+- Preserving the doc-relative normalization contract: doc-relative paths legitimately traverse parents, but still must not escape the repository.
+- Keeping Search behavior stable while changing the IO substrate (absolute `h.Path` → validated root-relative name for `fs.FS`).
+
+### What warrants a second pair of eyes
+- Confirm the Search symlink escape handling (`resolveFileWithinRoot`) is sufficiently strict for the threat model (especially around TOCTOU windows).
+- Confirm removing the `/files/get` resolver fallback doesn’t break any UI flows that relied on `~` expansion or non-repo anchors.
+
+### What should be done in the future
+- N/A
+
+### Code review instructions
+- Start with `internal/searchsvc/search.go` (rooted reads/stats, `resolveFileWithinRoot`).
+- Then review `internal/paths/resolver.go` (`NormalizeNoFS` + anchor traversal checks).
+- Validate with `go test ./... -count=1`.
+
+### Technical details
+- `NormalizeNoFS` is intended for matching/diagnostics; `Normalize` is still available for CLI flows that need existence-aware anchoring.
+- Search now uses `fs.Stat(os.DirFS(root), rel)` instead of `os.Stat(abs)` and parses frontmatter via `documents.ReadDocumentWithFrontmatterFS`.

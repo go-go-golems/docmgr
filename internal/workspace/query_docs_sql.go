@@ -52,7 +52,7 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 		where = append(where, "d.ticket_id = ?")
 		args = append(args, strings.TrimSpace(q.Scope.TicketID))
 	case ScopeDoc:
-		n := w.resolver.Normalize(strings.TrimSpace(q.Scope.DocPath))
+		n := w.resolver.NormalizeNoFS(strings.TrimSpace(q.Scope.DocPath))
 		if strings.TrimSpace(n.Abs) == "" {
 			return compiledSQL{}, errors.Errorf("failed to normalize DocPath: %q", q.Scope.DocPath)
 		}

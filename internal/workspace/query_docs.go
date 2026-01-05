@@ -48,7 +48,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			if raw == "" {
 				continue
 			}
-			n := w.resolver.Normalize(raw)
+			n := w.resolver.NormalizeNoFS(raw)
 			canon := strings.TrimSpace(n.Canonical)
 			repoRel := strings.TrimSpace(n.RepoRelative)
 			abs := strings.TrimSpace(n.Abs)
@@ -64,7 +64,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			if raw == "" {
 				continue
 			}
-			n := w.resolver.Normalize(raw)
+			n := w.resolver.NormalizeNoFS(raw)
 			canon := strings.TrimSpace(n.Canonical)
 			repoRel := strings.TrimSpace(n.RepoRelative)
 			abs := strings.TrimSpace(n.Abs)
@@ -498,7 +498,7 @@ func queryPathKeys(resolver *paths.Resolver, raw string) []string {
 	if raw == "" || resolver == nil {
 		return nil
 	}
-	n := resolver.Normalize(raw)
+	n := resolver.NormalizeNoFS(raw)
 	keys := []string{
 		strings.TrimSpace(n.Canonical),
 		strings.TrimSpace(n.RepoRelative),

@@ -73,7 +73,7 @@ func TestReadTextFile_RejectsBinary(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	_, _, err := readTextFile(path, 100)
+	_, _, err := readTextFile(os.DirFS(root), "bin.dat", 100)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -96,7 +96,7 @@ func TestReadTextFile_TruncatesLargeFiles(t *testing.T) {
 		t.Fatalf("write: %v", err)
 	}
 
-	got, truncated, err := readTextFile(path, 20)
+	got, truncated, err := readTextFile(os.DirFS(root), "big.txt", 20)
 	if err != nil {
 		t.Fatalf("readTextFile: %v", err)
 	}

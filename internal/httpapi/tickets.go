@@ -578,7 +578,7 @@ func canonicalizeForStats(resolver *paths.Resolver, raw string) string {
 	if raw == "" || resolver == nil {
 		return ""
 	}
-	n := resolver.Normalize(raw)
+	n := resolver.NormalizeNoFS(raw)
 	switch {
 	case strings.TrimSpace(n.Canonical) != "":
 		return filepath.ToSlash(strings.TrimSpace(n.Canonical))

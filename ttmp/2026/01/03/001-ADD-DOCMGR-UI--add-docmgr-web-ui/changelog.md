@@ -191,3 +191,23 @@ UI: wire Workspace pages to /api/v1/workspace/* endpoints (commit 79f9182)
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceTopicsPage.tsx — Topics grid
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/services/docmgrApi.ts — Add RTK Query workspace endpoints
 
+
+## 2026-01-05
+
+Security: fix CodeQL path-injection alerts in /api/v1/docs/get and /api/v1/files/get by rooting reads/stats and tightening path resolution
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/docs_files.go — Use fs.FS reads/stats instead of direct os.*
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/path_safety.go — Root-relative resolution + traversal/symlink escape checks
+
+
+## 2026-01-05
+
+Security: harden /api/v1/search/docs disk reads and add NormalizeNoFS to avoid filesystem Stat on user-controlled path strings (CodeQL)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/paths/resolver.go — NormalizeNoFS + tighter anchor traversal
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/searchsvc/search.go — Rooted fs.FS reads/stats for SearchDocs
+

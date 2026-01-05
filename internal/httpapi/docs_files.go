@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"io"
+	"io/fs"
 	"mime"
 	"net/http"
 	"os"
@@ -60,7 +61,7 @@ func (s *Server) handleDocsGet(w http.ResponseWriter, r *http.Request) error {
 	var resp docGetResponse
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
 		ctx := ws.Context()
-		abs, rel, fi, err := resolveFileWithin(ctx.Root, rawPath)
+		_, rel, fi, err := resolveFileWithin(ctx.Root, rawPath)
 		if err != nil {
 			return err
 		}
@@ -71,14 +72,21 @@ func (s *Server) handleDocsGet(w http.ResponseWriter, r *http.Request) error {
 			})
 		}
 
-		doc, body, err := documents.ReadDocumentWithFrontmatter(abs)
+		rootAbs, err := filepath.Abs(ctx.Root)
+		if err != nil {
+			return err
+		}
+		rootAbs = filepath.Clean(rootAbs)
+		fsys := os.DirFS(rootAbs)
+
+		doc, body, err := documents.ReadDocumentWithFrontmatterFS(fsys, rel)
 		var diag *core.Taxonomy
 		if err != nil {
 			if t, ok := core.AsTaxonomy(err); ok {
 				diag = t
 			}
 
-			raw, readErr := os.ReadFile(abs)
+			raw, readErr := fs.ReadFile(fsys, rel)
 			if readErr != nil {
 				return readErr
 			}
@@ -149,29 +157,31 @@ func (s *Server) handleFilesGet(w http.ResponseWriter, r *http.Request) error {
 			rootDir = wctx.RepoRoot
 		}
 
-		abs, rel, _, err := resolveFileWithin(rootDir, rawPath)
+		abs, rel, fi, err := resolveFileWithin(rootDir, rawPath)
 		if err != nil {
-			if rootParam == "repo" {
-				if fallbackAbs, fallbackRel, ok := resolveViaWorkspace(ws, rawPath); ok {
-					abs, rel, err = fallbackAbs, fallbackRel, nil
-				}
-			}
-			if err != nil {
-				return err
-			}
+			return err
 		}
 
-		content, truncated, err := readTextFile(abs, maxServedTextBytes)
+		if fi.IsDir() {
+			return NewHTTPError(http.StatusBadRequest, "invalid_argument", "path is a directory", map[string]any{
+				"field": "path",
+				"value": rawPath,
+			})
+		}
+
+		rootAbs, err := filepath.Abs(rootDir)
+		if err != nil {
+			return err
+		}
+		rootAbs = filepath.Clean(rootAbs)
+		fsys := os.DirFS(rootAbs)
+
+		content, truncated, err := readTextFile(fsys, rel, maxServedTextBytes)
 		if err != nil {
 			var he *HTTPError
 			if errors.As(err, &he) {
 				return he
 			}
-			return err
-		}
-
-		fi, err := os.Stat(abs)
-		if err != nil {
 			return err
 		}
 
@@ -197,22 +207,6 @@ func (s *Server) handleFilesGet(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	return writeJSON(w, http.StatusOK, resp)
-}
-
-func resolveViaWorkspace(ws *workspace.Workspace, raw string) (string, string, bool) {
-	if ws == nil {
-		return "", "", false
-	}
-	n := ws.Resolver().Normalize(raw)
-	if strings.TrimSpace(n.Abs) == "" || !n.Exists {
-		return "", "", false
-	}
-	abs := filepath.FromSlash(n.Abs)
-	resAbs, resRel, _, err := resolveFileWithin(ws.Context().RepoRoot, abs)
-	if err != nil {
-		return "", "", false
-	}
-	return resAbs, resRel, true
 }
 
 func inferLanguage(path string) string {
@@ -257,14 +251,14 @@ func inferLanguage(path string) string {
 	}
 }
 
-func readTextFile(path string, maxBytes int64) (string, bool, error) {
+func readTextFile(fsys fs.FS, path string, maxBytes int64) (string, bool, error) {
 	if maxBytes <= 0 {
 		maxBytes = maxServedTextBytes
 	}
 
-	f, err := os.Open(path)
+	f, err := fsys.Open(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return "", false, NewHTTPError(http.StatusNotFound, "not_found", "file not found", map[string]any{
 				"field": "path",
 			})

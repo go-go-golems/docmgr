@@ -3,6 +3,7 @@ package searchsvc
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -151,6 +152,19 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 		return SearchResponse{}, err
 	}
 
+	rootAbs, err := filepath.Abs(ws.Context().Root)
+	if err != nil {
+		return SearchResponse{}, err
+	}
+	rootAbs = filepath.Clean(rootAbs)
+
+	rootEval := rootAbs
+	if v, err := filepath.EvalSymlinks(rootAbs); err == nil {
+		rootEval = v
+	}
+
+	docsFS := os.DirFS(rootAbs)
+
 	out := make([]SearchResult, 0, len(res.Docs))
 
 	fileQueryRaw := strings.TrimSpace(q.File)
@@ -159,11 +173,16 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 			continue
 		}
 
+		relPath, ok := resolveFileWithinRoot(rootAbs, rootEval, h.Path)
+		if !ok {
+			continue
+		}
+
 		doc := h.Doc
 		content := h.Body
 		if strings.TrimSpace(content) == "" {
 			// Fallback: load body from disk if not included in the index.
-			_, body, rerr := documents.ReadDocumentWithFrontmatter(h.Path)
+			_, body, rerr := documents.ReadDocumentWithFrontmatterFS(docsFS, relPath)
 			if rerr == nil {
 				content = body
 			}
@@ -171,17 +190,17 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 
 		// External source filter (best-effort; re-read frontmatter).
 		if strings.TrimSpace(q.ExternalSource) != "" {
-			fm, ferr := readFrontmatter(h.Path)
+			fm, _, ferr := documents.ReadDocumentWithFrontmatterFS(docsFS, relPath)
 			if ferr != nil {
 				continue
 			}
-			if !externalSourceMatch(fm.ExternalSources, q.ExternalSource) {
+			if fm == nil || !externalSourceMatch(fm.ExternalSources, q.ExternalSource) {
 				continue
 			}
 		}
 
 		// Date filters.
-		if fi, err := os.Stat(h.Path); err == nil {
+		if fi, err := fs.Stat(docsFS, relPath); err == nil {
 			createdTime := fi.ModTime()
 			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
 				continue
@@ -198,12 +217,6 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 				continue
 			}
 		}
-
-		relPath, err := filepath.Rel(ws.Context().Root, h.Path)
-		if err != nil {
-			relPath = h.Path
-		}
-		relPath = filepath.ToSlash(relPath)
 
 		snippet := ExtractSnippet(content, q.TextQuery, 100)
 
@@ -243,11 +256,6 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 	}, nil
 }
 
-func readFrontmatter(path string) (*models.Document, error) {
-	doc, _, err := documents.ReadDocumentWithFrontmatter(path)
-	return doc, err
-}
-
 func externalSourceMatch(externalSources []string, query string) bool {
 	query = strings.TrimSpace(query)
 	if query == "" {
@@ -273,7 +281,7 @@ func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles mod
 		RepoRoot:  ws.Context().RepoRoot,
 	})
 
-	fileQueryNorm := docResolver.Normalize(fileQueryRaw)
+	fileQueryNorm := docResolver.NormalizeNoFS(fileQueryRaw)
 	if fileQueryNorm.Empty() && strings.TrimSpace(fileQueryRaw) != "" {
 		fileQueryNorm = paths.NormalizedPath{
 			Canonical:     filepath.ToSlash(fileQueryRaw),
@@ -285,7 +293,7 @@ func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles mod
 	var matchedFiles []string
 	var matchedNotes []string
 	for _, rf := range relatedFiles {
-		n := docResolver.Normalize(rf.Path)
+		n := docResolver.NormalizeNoFS(rf.Path)
 		if paths.MatchPaths(fileQueryNorm, n) ||
 			(strings.TrimSpace(baseQuery) != "" && (filepath.Base(filepath.ToSlash(rf.Path)) == baseQuery)) ||
 			(strings.TrimSpace(baseQuery) != "" && strings.HasSuffix(filepath.ToSlash(rf.Path), "/"+baseQuery)) {
@@ -300,4 +308,47 @@ func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles mod
 		}
 	}
 	return matchedFiles, matchedNotes
+}
+
+func resolveFileWithinRoot(rootAbs string, rootEval string, rawPath string) (string, bool) {
+	rawPath = strings.TrimSpace(rawPath)
+	if rawPath == "" || strings.ContainsRune(rawPath, 0) {
+		return "", false
+	}
+
+	cleaned := filepath.Clean(filepath.FromSlash(rawPath))
+	absTarget := cleaned
+	if !filepath.IsAbs(absTarget) {
+		absTarget = filepath.Join(rootAbs, absTarget)
+	}
+	absTarget = filepath.Clean(absTarget)
+
+	relOS, err := filepath.Rel(rootAbs, absTarget)
+	if err != nil {
+		return "", false
+	}
+	if relOS == "." {
+		return "", false
+	}
+	if relOS == ".." || strings.HasPrefix(relOS, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	relFS := filepath.ToSlash(relOS)
+	if !fs.ValidPath(relFS) {
+		return "", false
+	}
+
+	absEval, err := filepath.EvalSymlinks(absTarget)
+	if err != nil {
+		return "", false
+	}
+	relEval, err := filepath.Rel(rootEval, absEval)
+	if err != nil {
+		return "", false
+	}
+	if relEval == ".." || strings.HasPrefix(relEval, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+
+	return relFS, true
 }

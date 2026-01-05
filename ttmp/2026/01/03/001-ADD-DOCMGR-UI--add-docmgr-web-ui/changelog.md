@@ -43,3 +43,13 @@ Add analysis for doc serving API + document viewer UI (markdown + code highlight
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/01-doc-serving-api-and-document-viewer-ui.md — Proposed endpoints and UI plan
 
+
+## 2026-01-04
+
+Add doc/file serving endpoints and doc/file viewer routes with frontend markdown rendering (commit bacf9f9)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/httpapi/docs_files.go — Doc/file serving endpoints
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/doc/DocViewerPage.tsx — Doc viewer route
+

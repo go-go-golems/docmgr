@@ -13,6 +13,10 @@ Owners: []
 RelatedFiles:
     - Path: cmd/docmgr/cmds/api/serve.go
       Note: Serve API + SPA from one process
+    - Path: internal/httpapi/docs_files.go
+      Note: Doc/file serving endpoints (commit bacf9f9)
+    - Path: internal/httpapi/path_safety.go
+      Note: Safe path resolution + symlink escape protection (commit bacf9f9)
     - Path: internal/httpapi/server.go
       Note: Allow empty browse; reverse query->file; orderBy guards
     - Path: internal/searchsvc/search.go
@@ -33,16 +37,25 @@ RelatedFiles:
       Note: Mock doc viewer UI spec
     - Path: ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/sources/single-doc.md
       Note: UX snapshot (terminal-style doc view)
+    - Path: ui/src/features/doc/DocViewerPage.tsx
+      Note: Doc viewer route + markdown rendering (commit bacf9f9)
+    - Path: ui/src/features/file/FileViewerPage.tsx
+      Note: File viewer route + syntax highlighting (commit bacf9f9)
     - Path: ui/src/features/search/SearchPage.tsx
-      Note: MVP search UI (modes
+      Note: |-
+        MVP search UI (modes
+        Wire Open doc/Open file navigation (commit bacf9f9)
     - Path: ui/src/services/docmgrApi.ts
-      Note: RTK Query client for docmgr HTTP API
+      Note: |-
+        RTK Query client for docmgr HTTP API
+        RTK Query endpoints getDoc/getFile (commit bacf9f9)
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-04T19:22:44-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -463,3 +476,117 @@ I used the provided mockups (`single-doc.html` / `single-doc.md`) as the “pixe
   - `react-markdown`
   - `remark-gfm`
   - `rehype-highlight` + `highlight.js` CSS theme
+
+## Step 8: Implement doc/file serving endpoints (safe text-only)
+
+This step implemented the minimal backend needed for a real document viewer: endpoints to fetch a doc’s parsed frontmatter + markdown body, and to fetch an arbitrary text file (repo or docs) with strict safety guardrails. This unblocks the UI work for “open document” and “open related file”.
+
+I treated this as a security-sensitive change even though docmgr is local-first: the endpoints must not allow path traversal, symlink escapes, or accidental binary/huge-file reads.
+
+**Commit (code):** bacf9f9 — "web-ui: add doc viewer and safe file serving"
+
+### What I did
+- Added HTTP API routes:
+  - `GET /api/v1/docs/get?path=...`
+  - `GET /api/v1/files/get?path=...&root=repo|docs`
+- Implemented safe root resolution + symlink-escape protection:
+  - `internal/httpapi/path_safety.go` (`resolveFileWithin`, `tryRelWithin`)
+- Implemented text-only file reading with guardrails:
+  - max size cap (`2 MiB`) + `truncated` flag
+  - reject NUL bytes (binary) and non-UTF8
+- Added unit tests for traversal/symlink/binary/truncation:
+  - `internal/httpapi/docs_files_test.go`
+
+### Commands
+- `gofmt -w internal/httpapi/*.go`
+- `go test ./internal/httpapi -count=1`
+
+### What worked
+- Endpoints are wired into `internal/httpapi/server.go` and return the existing structured error shape.
+- Safety checks cover:
+  - `../` traversal (forbidden)
+  - symlink escaping the allowed root (forbidden)
+  - binary payloads (415)
+  - huge files (truncated)
+
+### What didn't work
+- N/A (no blockers in this step).
+
+### What I learned
+- Path safety needs both:
+  - a cheap “clean + rel” check (pre-filesystem), and
+  - an `EvalSymlinks` check (post-filesystem) to block symlink escapes.
+
+### What was tricky to build
+- Keeping “we should support weird stored RelatedFiles paths” in mind without loosening the security boundary:
+  - we still only serve files that ultimately resolve inside repo root or docs root.
+
+### What warrants a second pair of eyes
+- Confirm the root-resolution + `EvalSymlinks` behavior is correct and not overly strict for common RelatedFiles formats.
+- Confirm `2 MiB` is a sensible cap for MVP file rendering.
+
+### What should be done in the future
+- Add doc asset/image serving once a concrete doc needs it.
+
+### Code review instructions
+- Start in:
+  - `internal/httpapi/docs_files.go`
+  - `internal/httpapi/path_safety.go`
+  - `internal/httpapi/server.go`
+  - `internal/httpapi/docs_files_test.go`
+
+## Step 9: Add doc viewer + file viewer pages (frontend markdown rendering)
+
+This step made the doc-serving endpoints usable by the UI: new SPA routes for viewing a document and viewing a file, plus client-side markdown rendering with code highlighting. It also wires “Open doc” and “Open related file” into the existing search preview.
+
+**Commit (code):** bacf9f9 — "web-ui: add doc viewer and safe file serving"
+
+### What I did
+- Added new UI routes:
+  - `/doc?path=...` → `ui/src/features/doc/DocViewerPage.tsx`
+  - `/file?root=repo|docs&path=...` → `ui/src/features/file/FileViewerPage.tsx`
+- Added API client endpoints:
+  - `getDoc` + `getFile` in `ui/src/services/docmgrApi.ts`
+- Added markdown rendering in the doc viewer:
+  - `react-markdown` + `remark-gfm` (tables, etc)
+  - `rehype-highlight` + highlight.js theme CSS
+- Added code viewer highlighting via `highlight.js` (server returns inferred `language`)
+- Wired navigation from search:
+  - Preview pane “Open doc” button
+  - Related files list “Open” button
+- Checked off ticket tasks `30–38` in `tasks.md`.
+
+### Commands
+- `pnpm -C ui add react-markdown remark-gfm rehype-highlight highlight.js`
+- `pnpm -C ui build`
+- `go test ./... -count=1`
+- `docmgr task check --tasks-file ttmp/.../tasks.md --id 30,31,32,33,34,35,36,37,38`
+
+### What worked
+- The UI can now show a full document rendered as markdown, with highlighted fenced code blocks.
+- Related file paths open in a file viewer with highlighting (and remain safe because the server enforces roots + traversal/symlink guardrails).
+
+### What didn't work
+- N/A (no blockers in this step).
+
+### What I learned
+- Even for a local-first tool, “serve arbitrary file by path” endpoints must behave like an untrusted boundary: strict root allowlist + symlink escape checks + size limits.
+
+### What was tricky to build
+- Balancing UX and safety for weird `RelatedFiles` paths: the server primarily serves repo-relative paths, but also tries a resolver-based fallback while still enforcing repo-root containment.
+
+### What warrants a second pair of eyes
+- Confirm the fallback resolver behavior in `/api/v1/files/get` is correct and can’t be used to read outside repo/docs roots.
+- Confirm highlight.js language mapping is acceptable for Go/TS/MD-heavy repos.
+
+### What should be done in the future
+- Add doc asset/image serving once needed by a real doc (to support `![](...)` in markdown).
+- Improve viewer UX (TOC, anchor links, line numbers) if it becomes a daily driver.
+
+### Code review instructions
+- Start in:
+  - `ui/src/features/doc/DocViewerPage.tsx`
+  - `ui/src/features/file/FileViewerPage.tsx`
+  - `ui/src/services/docmgrApi.ts`
+  - `ui/src/features/search/SearchPage.tsx`
+  - `internal/httpapi/docs_files.go`

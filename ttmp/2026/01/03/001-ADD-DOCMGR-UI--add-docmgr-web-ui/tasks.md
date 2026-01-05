@@ -31,6 +31,15 @@
 - [x] Implement files suggestions mode (`/api/v1/search/files`) + file cards
 - [x] Implement URL sync (`mode`, `q`, filters) and restore state on reload
 - [ ] Add responsive styling (compact layout, filter drawer, preview modal)
+- [x] Add doc viewer + file viewer (doc serving MVP):
+- [x] Backend: implement `GET /api/v1/docs/get?path=...` (doc metadata + body)
+- [x] Backend: implement `GET /api/v1/files/get?path=...&root=repo|docs` (safe text-only)
+- [x] Backend: add tests (traversal rejection, symlink escape, binary rejection, size limit/truncation)
+- [x] Frontend: add RTK Query endpoints `getDoc` + `getFile`
+- [x] Frontend: add routes `/doc?path=...` and `/file?path=...&root=...`
+- [x] Frontend: render markdown in doc viewer (client-side) using `react-markdown` + `remark-gfm`
+- [x] Frontend: add code highlighting for fenced blocks using `rehype-highlight` + a highlight.js theme
+- [x] Frontend: wire “Open doc” from search results and “Open related file” from RelatedFiles
 - [x] Embed packaging (per `go-web-frontend-embed`):
 - [x] Add `internal/web` embed + SPA fallback handler
 - [x] Add `go generate` bridge to build/copy `ui/dist/public` into `internal/web/embed/public`

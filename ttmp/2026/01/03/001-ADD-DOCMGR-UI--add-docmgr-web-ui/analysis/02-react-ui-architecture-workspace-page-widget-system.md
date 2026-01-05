@@ -39,7 +39,7 @@ WhenToUse: Before adding new Workspace navigation pages or when reorganizing exi
 
 ## Summary
 
-The current React UI is a Vite SPA using React Router for page routing, Redux Toolkit + RTK Query for API/data, and Bootstrap (plus a small amount of custom CSS in `ui/src/App.css`) for styling. The app is functional and consistent, but some route components have grown into “everything pages” (notably `SearchPage.tsx`), which makes it hard to evolve the UI into a multi-page navigation experience (Workspace/Tickets/Topics/Recent/etc).
+The current React UI is a Vite SPA using React Router for page routing, Redux Toolkit + RTK Query for API/data, and Bootstrap (plus a small amount of custom CSS under `ui/src/styles/`) for styling. The app is functional and consistent, but some route components have grown into “everything pages” (notably `SearchPage.tsx`), which makes it hard to evolve the UI into a multi-page navigation experience (Workspace/Tickets/Topics/Recent/etc).
 
 This document maps the current architecture, identifies the biggest “implicit widgets” inside existing pages, and proposes a widget/page/design-system architecture for the Workspace navigation pages described in `sources/workspace-page.md`.
 
@@ -48,7 +48,7 @@ This document maps the current architecture, identifies the biggest “implicit 
 ### Build/runtime
 - Vite SPA under `ui/` (with `node_modules` checked in for this workspace).
 - Bootstrap is imported globally in `ui/src/main.tsx` (`bootstrap/dist/css/bootstrap.min.css`).
-- Global styles live in `ui/src/index.css` and feature-ish styles (for search/results, markdown/code, etc) currently live in `ui/src/App.css`.
+- Global styles live in `ui/src/index.css`; shared design-system styles live in `ui/src/styles/design-system.css`; Search-specific layout lives in `ui/src/styles/search.css` (imported by `ui/src/App.tsx`).
 
 ### Entry points + routing
 - `ui/src/main.tsx` renders `<App />` into `#root` inside `<StrictMode />`.
@@ -99,6 +99,11 @@ This file currently contains:
   - `TopicMultiSelect`
   - `DiagnosticList`
 
+Status update (2026-01-05):
+- Leaf widgets extracted into `ui/src/features/search/components/` (`MarkdownSnippet`, `DiagnosticList`, `TopicMultiSelect`) and small hooks extracted into `ui/src/features/search/hooks/` (`useIsMobile`, `useSearchUrlSync`, `useSearchSelection`).
+- Search docs server state is now owned by RTK Query cache (no local copies in `SearchPage.tsx`); pagination uses RTK Query `merge` to accumulate pages.
+- CSS split into `ui/src/styles/design-system.css` (shared patterns) and `ui/src/styles/search.css` (Search-only layout).
+
 **Biggest maintainability risks**
 - The file is currently a “kitchen sink”; adding a second large, interactive page (Workspace dashboard) will likely duplicate patterns (header layout, toasts, errors, drawers/modals, cards, list virtualization).
 - Several utilities and UI patterns are duplicated across pages already (`toErrorBanner` and “copy-to-clipboard toast” exist in multiple places with minor differences).
@@ -140,7 +145,7 @@ This page is small but also repeats:
 - Toast + copy patterns
 - Error mapping (`toErrorBanner`)
 - Page header layout
-- Code presentation styling (`docmgr-code` in `ui/src/App.css`)
+- Code presentation styling (`docmgr-code` in `ui/src/styles/design-system.css`)
 
 This page is a good example of where “design system primitives” will pay off: a shared `CodeBlock` component could unify the code styling and avoid each page doing the same `pre` boilerplate.
 
@@ -219,9 +224,8 @@ Even with Bootstrap, it’s worth standardizing a few tokens to keep pages cohes
 
 Current state:
 - `ui/src/index.css` holds global-ish base styles (body background, highlight.js import).
-- `ui/src/App.css` mixes:
-  - Search page layout/styles (`.search-container`, `.results-grid.split`, `.preview-panel`, etc)
-  - shared-ish utilities (`.docmgr-markdown`, `.docmgr-code`)
+- Shared styles live in `ui/src/styles/design-system.css` (card/list patterns, markdown/code blocks).
+- Search-only layout lives in `ui/src/styles/search.css` (split preview grid and layout rules).
 
 Proposed direction:
 - Keep Bootstrap as the “baseline UI kit”.
@@ -235,12 +239,10 @@ Proposed direction:
 This avoids a future where adding Workspace pages requires editing a single mega CSS file with coupled concerns.
 
 ### File organization for design system
-Today, `ui/src/App.css` contains both global-ish styles and Search-specific styles. A clearer split:
-- `ui/src/styles/`:
-  - `globals.css` (body/background, highlight.js theme import)
-  - `design-system.css` (card/list/pill patterns, `.dm-*` utilities)
-  - `search.css` (only Search-specific layout like split preview grid)
-- Or keep CSS collocated by widgets, and only keep tokens/utilities globally.
+Current split (working):
+- `ui/src/index.css` (body/background, highlight.js theme import)
+- `ui/src/styles/design-system.css` (card/list/pill patterns, markdown/code, `.dm-*` utilities)
+- `ui/src/styles/search.css` (Search-only layout like split preview grid)
 
 ## Workspace navigation pages: widget architecture proposal
 
@@ -439,7 +441,7 @@ Use file size as a forcing function:
 
 Additional “too-big” signals (even if LOC is smaller):
 - Multiple copies of the same helper in multiple pages (toast/copy/error) → move to `ui/` or `lib/`.
-- CSS file that mixes global tokens + one-page layout rules (`App.css`) → split tokens/utilities from page-specific layout.
+- CSS that mixes global tokens + one-page layout rules → keep tokens/utilities in `ui/src/styles/design-system.css` and page-specific layout in `ui/src/styles/*.css` (Search already split into `search.css`).
 
 ### 3) Normalize duplicated patterns into shared primitives
 Concrete duplicates to remove over time:

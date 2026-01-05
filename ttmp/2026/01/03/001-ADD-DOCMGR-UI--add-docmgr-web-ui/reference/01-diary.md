@@ -1645,3 +1645,117 @@ I updated the modularization ticket docs (tasks and changelog) to reflect the ne
 - Commands:
   - `docmgr task check --ticket 007-MODULARIZE-UI-WIDGETS --id ...`
   - `docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS --entry "..."`
+
+## Step 34: Write a design doc for Redux/RTK Query state ownership (widget-local state policy)
+
+I wrote a dedicated design document for how we should decide “Redux slice vs RTK Query vs local useState/useEffect” for UI widgets. The goal is to avoid the reflex of “put everything in Redux” while still getting the biggest ROI: moving duplicated server state out of page-local `useState` and into RTK Query cache (already Redux-backed), and keeping ephemeral view state local.
+
+This design doc is scoped to the ongoing modularization work (ticket 007) and includes a concrete migration plan for SearchPage (stop copying search results into local state; make RTK Query the owner).
+
+### What I did
+- Created and filled a new design doc under ticket 007:
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/design-doc/01-design-redux-state-strategy-for-ui-widgets.md`
+- Documented:
+  - 3-bucket model: server state (RTK Query), shared/persistent intent (Redux slices), ephemeral UI (local state)
+  - “single source of truth” rule to avoid duplicated results state
+  - SearchPage migration options for pagination (“RTK Query merge” vs “small results slice”)
+- Validated frontmatter and related key code files to the doc:
+  - `docmgr validate frontmatter --doc /abs/.../01-design-redux-state-strategy-for-ui-widgets.md`
+  - `docmgr doc relate --doc /abs/.../01-design-redux-state-strategy-for-ui-widgets.md --file-note "..."`
+- Updated ticket 007 changelog with an entry for the new design doc.
+
+### Why
+- Without an explicit policy, each new page/widget will invent its own state model and we’ll accumulate duplicated patterns (especially around “server state copied into local state”).
+
+### What worked
+- docmgr guidelines for `design-doc` gave a good structure; the resulting doc is actionable (includes migration phases and open questions).
+
+### What didn't work
+- N/A.
+
+### What I learned
+- The biggest “Redux win” for this app is not moving booleans into a slice; it’s standardizing server state ownership in RTK Query and using slices only for true “intent” state.
+
+### What was tricky to build
+- N/A (documentation + bookkeeping).
+
+### What warrants a second pair of eyes
+- The pagination approach decision (RTK Query merge vs results slice) should be reviewed before implementation to avoid a cache key design mistake.
+
+### What should be done in the future
+- Implement Phase 1 from the design doc: make RTK Query the owner of search results and remove local “server copies” from SearchPage.
+
+### Code review instructions
+- Start with:
+  - `ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/design-doc/01-design-redux-state-strategy-for-ui-widgets.md`
+
+### Technical details
+- Related files added to the design doc include:
+  - `ui/src/features/search/searchSlice.ts`
+  - `ui/src/services/docmgrApi.ts`
+  - `ui/src/features/search/SearchPage.tsx`
+  - `ui/src/features/search/hooks/useSearchUrlSync.ts`
+
+## Step 35: Move Search docs server state into RTK Query cache (pagination merge)
+
+I implemented Phase 1 from the Redux/RTK Query state strategy doc: Search docs results are no longer copied into page-local `useState`. Instead, RTK Query is the single source of truth for docs search results, diagnostics, totals, and pagination cursor, with a cache merge strategy to support “Load more”.
+
+This reduces duplicated state and eliminates a subtle mismatch where the UI could show results for one query while the Redux “draft query” input changed. It also makes the Search page easier to modularize further since widgets can render from selectors/RTK Query state without special plumbing.
+
+**Commit (code):** 0cd16e6 — "Search: keep docs results in RTK Query"
+
+### What I did
+- Implemented RTK Query pagination merge for `searchDocs`:
+  - `serializeQueryArgs` excludes `cursor` so pages share one cache entry per query intent.
+  - `merge` appends new pages and updates `nextCursor/total/diagnostics`.
+  - `forceRefetch` forces a network request when `cursor` changes (pagination).
+- Refactored `ui/src/features/search/SearchPage.tsx`:
+  - Removed local `docsResults/docsTotal/docsNextCursor/docsDiagnostics/hasSearched` server copies.
+  - Rendered docs search results directly from `searchDocsState.data`.
+  - `Clear` now resets the lazy query state (`searchDocsState.reset()` / `searchFilesState.reset()`), selection, and errors.
+  - Snippet highlighting uses the response echo query (`docsData.query.query`) to stay consistent with rendered results.
+- Added/checked ticket tasks for the redux cleanup under ticket 007 (tasks 33–36).
+- Validated:
+  - `pnpm -C ui lint`
+  - `pnpm -C ui build`
+
+### Why
+- RTK Query already caches server state in Redux; copying API responses into local state creates duplication, drift bugs, and refactor friction.
+- Pagination (“Load more”) is a natural fit for RTK Query cache merge and keeps the UI consistent across widgets.
+
+### What worked
+- The merge approach keeps the Search page behavior intact while removing a large chunk of local state.
+- Lint/build validation caught a couple of quick fixes before commit (unused destructured cursor, memoizing derived arrays for stable hook deps).
+
+### What didn't work
+- `pnpm -C ui lint` initially failed due to:
+  - unused `cursor` destructuring in `serializeQueryArgs` (`@typescript-eslint/no-unused-vars`)
+  - an exhaustive-deps warning for `docsResults` being an unstable `[]` default (fixed with `useMemo`).
+
+### What I learned
+- For “infinite scroll / load more” with RTK Query cursor pagination, the trio of `serializeQueryArgs` + `merge` + `forceRefetch` is the critical contract.
+- Using the backend “query echo” is a cheap way to keep UI highlighting aligned with the results, even when the input is a draft value.
+
+### What was tricky to build
+- Cache key design: excluding `cursor` is necessary for merge, but it’s also easy to accidentally merge across *different* logical queries if the remaining args aren’t stable.
+- Reset semantics: “Clear” needs to reset both docs and files lazy queries so the UI returns to the uninitialized state consistently.
+
+### What warrants a second pair of eyes
+- Review `ui/src/services/docmgrApi.ts` `searchDocs.merge` for any edge cases (duplicate keys, diagnostics behavior, replacing vs appending on `cursor=''`).
+- Sanity check “Clear” + URL restore behavior on real navigation (back/forward + reload) since auto-search is intentionally a “run once” effect.
+
+### What should be done in the future
+- Extract hotkeys into `useSearchHotkeys` (ticket 007 tasks 18–23).
+- Do a manual UX pass of Search keyboard shortcuts, selection, and pagination (ticket 007 tasks 30 and 37).
+- Consider a “draft vs submitted” Search intent model if we want inputs to diverge from results without any ambiguity.
+
+### Code review instructions
+- Start with `ui/src/services/docmgrApi.ts` (`searchDocs.serializeQueryArgs`, `merge`, `forceRefetch`).
+- Then review `ui/src/features/search/SearchPage.tsx` for removal of local server state and correct reset behavior.
+- Validate via `pnpm -C ui lint` and `pnpm -C ui build`.
+
+### Technical details
+- Ticket tracking:
+  - `docmgr task check --ticket 007-MODULARIZE-UI-WIDGETS --id 33,34,35,36`
+- Changelog update:
+  - `docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS --entry \"... (commit 0cd16e6)\" --file-note ...`

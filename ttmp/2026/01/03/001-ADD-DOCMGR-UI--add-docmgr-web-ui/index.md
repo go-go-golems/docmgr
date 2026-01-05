@@ -29,12 +29,15 @@ RelatedFiles:
       Note: Doc search command implementation (flags
     - Path: ui/src/features/search/SearchPage.tsx
       Note: Main Search UI page (modes/filters/pagination/preview)
+    - Path: ui/src/features/ticket/TicketPage.tsx
+      Note: Crash fix for sec.items null in tasks response
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-03T13:38:20.372344818-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

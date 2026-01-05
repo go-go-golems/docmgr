@@ -93,3 +93,12 @@ Docs: audit current React SPA (Search/Doc/File/Ticket) and propose a widget + de
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md — New analysis doc capturing architecture + widget plan
 
+
+## 2026-01-05
+
+Fix: Ticket UI tolerates malformed tasks response where sections[].items is null (prevents runtime crash in openTasks and Tasks tab).
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/ticket/TicketPage.tsx — Defensive asArray() wrapper for section items
+

@@ -2,6 +2,7 @@ import { Provider } from 'react-redux'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import { store } from './app/store'
+import { ToastHost } from './components/ToastHost'
 import { DocViewerPage } from './features/doc/DocViewerPage'
 import { FileViewerPage } from './features/file/FileViewerPage'
 import { SearchPage } from './features/search/SearchPage'
@@ -13,6 +14,7 @@ function App() {
   return (
     <Provider store={store}>
       <BrowserRouter>
+        <ToastHost />
         <Routes>
           <Route path="/" element={<SearchPage />} />
           <Route path="/doc" element={<DocViewerPage />} />

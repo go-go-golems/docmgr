@@ -33,3 +33,12 @@ Extract api error envelope parsing into ui/src/lib/apiError.ts and use it in Sea
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/apiError.ts — New
 
+
+## 2026-01-05
+
+Extract SearchPage URL state sync into useSearchUrlSync (restores from URL and debounced writes; preserves sel+preview behavior).
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/hooks/useSearchUrlSync.ts — New
+

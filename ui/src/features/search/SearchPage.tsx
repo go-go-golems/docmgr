@@ -11,6 +11,7 @@ import { DiagnosticList } from './components/DiagnosticList'
 import { MarkdownSnippet } from './components/MarkdownSnippet'
 import { TopicMultiSelect } from './components/TopicMultiSelect'
 import { useIsMobile } from './hooks/useIsMobile'
+import { useSearchUrlSync } from './hooks/useSearchUrlSync'
 import { clearFilters, setFilter, setMode, setQuery } from './searchSlice'
 import {
   useGetWorkspaceStatusQuery,
@@ -38,28 +39,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return false
 }
 
-function parseBoolParam(v: string | null, def: boolean): boolean {
-  if (v == null || v.trim() === '') return def
-  const s = v.trim().toLowerCase()
-  if (['1', 'true', 't', 'yes', 'y', 'on'].includes(s)) return true
-  if (['0', 'false', 'f', 'no', 'n', 'off'].includes(s)) return false
-  return def
-}
-
-function parseCSV(v: string | null): string[] {
-  if (v == null) return []
-  const s = v.trim()
-  if (s === '') return []
-  return s
-    .split(',')
-    .map((p) => p.trim())
-    .filter((p) => p !== '')
-}
-
-function formatCSV(values: string[]): string {
-  return values.map((v) => v.trim()).filter((v) => v !== '').join(',')
-}
-
 function toErrorBanner(err: unknown, title: string): ErrorBanner {
   const parsed = apiErrorFromUnknown(err)
   return { title, code: parsed.code, message: parsed.message, details: parsed.details }
@@ -82,7 +61,6 @@ export function SearchPage() {
   const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [showFilters, setShowFilters] = useState(true)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
-  const [urlSyncReady, setURLSyncReady] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showFilterDrawer, setShowFilterDrawer] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
@@ -417,88 +395,17 @@ export function SearchPage() {
     else dispatch(setQuery(v))
   }
 
-  const [desiredSelectedPath, setDesiredSelectedPath] = useState<string>('')
-  const [desiredPreviewOpen, setDesiredPreviewOpen] = useState<boolean>(false)
+  const { urlSyncReady, desiredSelectedPath, desiredPreviewOpen } = useSearchUrlSync({
+    dispatch,
+    mode,
+    query,
+    filters,
+    selectedPath: selected?.path ?? '',
+    previewOpen: isMobile && showPreviewModal,
+  })
 
-  // URL sync (mode/q/filters) – no cursor/pagination state in URL.
-  const urlWriteTimerRef = useRef<number | null>(null)
   const autoSearchedRef = useRef(false)
   const selectionAppliedRef = useRef(false)
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const modeParam = (params.get('mode') || '').trim()
-    const nextMode = modeParam === 'reverse' || modeParam === 'files' ? modeParam : 'docs'
-
-    dispatch(setMode(nextMode))
-    dispatch(setQuery((params.get('q') || '').trim()))
-    dispatch(setFilter({ key: 'ticket', value: (params.get('ticket') || '').trim() }))
-    dispatch(setFilter({ key: 'topics', value: parseCSV(params.get('topics')) }))
-    dispatch(setFilter({ key: 'docType', value: (params.get('docType') || '').trim() }))
-    dispatch(setFilter({ key: 'status', value: (params.get('status') || '').trim() }))
-    dispatch(setFilter({ key: 'file', value: (params.get('file') || '').trim() }))
-    dispatch(setFilter({ key: 'dir', value: (params.get('dir') || '').trim() }))
-    dispatch(setFilter({ key: 'orderBy', value: (params.get('orderBy') || '').trim() || 'rank' }))
-    dispatch(
-      setFilter({
-        key: 'includeArchived',
-        value: parseBoolParam(params.get('includeArchived'), true),
-      }),
-    )
-    dispatch(
-      setFilter({
-        key: 'includeScripts',
-        value: parseBoolParam(params.get('includeScripts'), true),
-      }),
-    )
-    dispatch(
-      setFilter({
-        key: 'includeControlDocs',
-        value: parseBoolParam(params.get('includeControlDocs'), true),
-      }),
-    )
-
-    setDesiredSelectedPath((params.get('sel') || '').trim())
-    setDesiredPreviewOpen(parseBoolParam(params.get('preview'), false))
-
-    setURLSyncReady(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!urlSyncReady) return
-
-    if (urlWriteTimerRef.current != null) window.clearTimeout(urlWriteTimerRef.current)
-    urlWriteTimerRef.current = window.setTimeout(() => {
-      const params = new URLSearchParams()
-      if (mode !== 'docs') params.set('mode', mode)
-
-      if (query.trim() !== '') params.set('q', query.trim())
-      if (filters.ticket.trim() !== '') params.set('ticket', filters.ticket.trim())
-      if (filters.topics.length > 0) params.set('topics', formatCSV(filters.topics))
-      if (filters.docType.trim() !== '') params.set('docType', filters.docType.trim())
-      if (filters.status.trim() !== '') params.set('status', filters.status.trim())
-      if (filters.file.trim() !== '') params.set('file', filters.file.trim())
-      if (filters.dir.trim() !== '') params.set('dir', filters.dir.trim())
-      if (filters.orderBy.trim() !== '' && filters.orderBy.trim() !== 'rank')
-        params.set('orderBy', filters.orderBy.trim())
-      if (filters.includeArchived !== true) params.set('includeArchived', String(filters.includeArchived))
-      if (filters.includeScripts !== true) params.set('includeScripts', String(filters.includeScripts))
-      if (filters.includeControlDocs !== true)
-        params.set('includeControlDocs', String(filters.includeControlDocs))
-
-      if (selected && selected.path.trim() !== '') params.set('sel', selected.path.trim())
-      if (isMobile && showPreviewModal) params.set('preview', 'true')
-
-      const next = params.toString()
-      const url = next === '' ? window.location.pathname : `${window.location.pathname}?${next}`
-      window.history.replaceState({}, '', url)
-    }, 250)
-
-    return () => {
-      if (urlWriteTimerRef.current != null) window.clearTimeout(urlWriteTimerRef.current)
-    }
-  }, [filters, isMobile, mode, query, selected, showPreviewModal, urlSyncReady])
 
   useEffect(() => {
     if (!urlSyncReady) return

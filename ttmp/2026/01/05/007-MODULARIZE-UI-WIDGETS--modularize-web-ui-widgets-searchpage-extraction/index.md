@@ -22,6 +22,8 @@ RelatedFiles:
       Note: Extracted topics token input widget.
     - Path: ui/src/features/search/hooks/useIsMobile.ts
       Note: Extracted responsive hook from SearchPage (mobile breakpoint logic).
+    - Path: ui/src/features/search/hooks/useSearchUrlSync.ts
+      Note: Extracted URL read/write sync (mode/q/filters/sel/preview) from SearchPage.
     - Path: ui/src/lib/apiError.ts
       Note: Shared helper for docmgr API error envelope parsing (used by SearchPage error banner).
     - Path: ui/src/lib/clipboard.ts
@@ -34,6 +36,7 @@ LastUpdated: 2026-01-05T08:49:54.386444656-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

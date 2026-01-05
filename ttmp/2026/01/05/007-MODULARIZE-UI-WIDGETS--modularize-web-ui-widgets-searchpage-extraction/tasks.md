@@ -28,10 +28,10 @@ Goal: eliminate repeated patterns across Search/Doc/File/Ticket.
 ### High ROI extraction: Search page behavior hooks (highest impact, more risk)
 Goal: make the route component a thin orchestrator by extracting behavior into hooks.
 
-- [ ] Extract URL sync into `ui/src/features/search/hooks/useSearchUrlSync.ts`
-  - [ ] Reads initial mode/query/filters from URL
-  - [ ] Writes mode/query/filters to URL with debounce
-  - [ ] Preserves current behavior for `sel` + `preview` params
+- [x] Extract URL sync into `ui/src/features/search/hooks/useSearchUrlSync.ts`
+- [x] Reads initial mode/query/filters from URL
+- [x] Writes mode/query/filters to URL with debounce
+- [x] Preserves current behavior for `sel` + `preview` params
 - [ ] Extract keyboard shortcuts into `ui/src/features/search/hooks/useSearchHotkeys.ts`
   - [ ] `/` focus search input
   - [ ] `?` open shortcuts modal

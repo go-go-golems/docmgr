@@ -28,7 +28,7 @@ export function TicketHeader({
       }
       subtitle={subtitle}
       actions={
-        <Link className="btn btn-outline-primary" to="/">
+        <Link className="btn btn-outline-primary" to="/search">
           Search
         </Link>
       }

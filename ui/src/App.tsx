@@ -1,5 +1,5 @@
 import { Provider } from 'react-redux'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { store } from './app/store'
 import { ToastHost } from './components/ToastHost'
@@ -22,7 +22,8 @@ function App() {
       <BrowserRouter>
         <ToastHost />
         <Routes>
-          <Route path="/" element={<SearchPage />} />
+          <Route path="/" element={<Navigate to="/workspace" replace />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/workspace" element={<WorkspaceLayout />}>
             <Route index element={<WorkspaceHomePage />} />
             <Route path="tickets" element={<WorkspaceTicketsPage />} />

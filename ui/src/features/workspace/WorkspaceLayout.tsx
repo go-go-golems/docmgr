@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 
 import { PageHeader } from '../../components/PageHeader'
 import { useToast } from '../toast/useToast'
@@ -6,9 +6,6 @@ import { timeAgo } from '../../lib/time'
 import { useGetWorkspaceStatusQuery, useGetWorkspaceSummaryQuery, useRefreshIndexMutation } from '../../services/docmgrApi'
 
 function ShellNav() {
-  const location = useLocation()
-  const inWorkspace = location.pathname.startsWith('/workspace')
-
   const navLink = (to: string, label: string) => (
     <NavLink
       to={to}
@@ -25,13 +22,7 @@ function ShellNav() {
     <div className="list-group">
       {navLink('/workspace', 'Home')}
       {navLink('/workspace/tickets', 'Tickets')}
-      <NavLink
-        to="/"
-        className={['list-group-item list-group-item-action', !inWorkspace ? 'active' : ''].filter(Boolean).join(' ')}
-        end
-      >
-        Search
-      </NavLink>
+      {navLink('/search', 'Search')}
       {navLink('/workspace/topics', 'Topics')}
       {navLink('/workspace/recent', 'Recent')}
     </div>
@@ -61,7 +52,7 @@ export function WorkspaceLayout() {
         titleClassName="h3"
         actions={
           <>
-            <NavLink className="btn btn-outline-primary" to="/" end>
+            <NavLink className="btn btn-outline-primary" to="/search" end>
               Search
             </NavLink>
             <button className="btn btn-outline-secondary" onClick={() => void onRefresh()} disabled={refreshState.isLoading}>

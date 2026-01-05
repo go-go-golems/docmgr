@@ -167,7 +167,7 @@ export function WorkspaceHomePage() {
             <div className="col-12 col-lg-6">
               <div className="d-flex justify-content-between align-items-center mb-2">
                 <div className="fw-semibold">Recently updated documents</div>
-                <Link to="/" className="small text-decoration-none">
+                <Link to="/search" className="small text-decoration-none">
                   Search →
                 </Link>
               </div>

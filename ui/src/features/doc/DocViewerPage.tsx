@@ -50,7 +50,7 @@ export function DocViewerPage() {
             <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
               Back
             </button>
-            <Link className="btn btn-outline-primary" to="/">
+            <Link className="btn btn-outline-primary" to="/search">
               Search
             </Link>
           </>

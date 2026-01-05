@@ -25,9 +25,10 @@ export function ToastHost() {
   }, [dispatch, toasts])
 
   useEffect(() => {
+    const timers = timersRef.current
     return () => {
-      for (const handle of timersRef.current.values()) window.clearTimeout(handle)
-      timersRef.current.clear()
+      for (const handle of timers.values()) window.clearTimeout(handle)
+      timers.clear()
     }
   }, [])
 
@@ -58,4 +59,3 @@ export function ToastHost() {
     </div>
   )
 }
-

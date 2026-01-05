@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+import { PathHeader } from '../../../components/PathHeader'
 import { RelatedFilesList } from '../../../components/RelatedFilesList'
 import { timeAgo } from '../../../lib/time'
 import type { SearchDocResult } from '../../../services/docmgrApi'
@@ -28,18 +29,19 @@ export function SearchPreviewContent({
         </div>
       ) : null}
 
-      <div className="mb-2">
-        <span className="text-muted small">Path</span>
-        <div className="result-path">{doc.path}</div>
-        <div className="mt-2 d-flex gap-2 flex-wrap">
-          <button className="btn btn-sm btn-outline-primary" onClick={() => onCopyPath(doc.path)}>
-            Copy path
-          </button>
-          <Link className="btn btn-sm btn-primary" to={`/doc?path=${encodeURIComponent(doc.path)}`}>
-            Open doc
-          </Link>
-        </div>
-      </div>
+      <PathHeader
+        path={doc.path}
+        actions={
+          <>
+            <button className="btn btn-sm btn-outline-primary" onClick={() => onCopyPath(doc.path)}>
+              Copy path
+            </button>
+            <Link className="btn btn-sm btn-primary" to={`/doc?path=${encodeURIComponent(doc.path)}`}>
+              Open doc
+            </Link>
+          </>
+        }
+      />
 
       <div className="mb-3">
         <div className="text-muted small mb-1">Snippet</div>

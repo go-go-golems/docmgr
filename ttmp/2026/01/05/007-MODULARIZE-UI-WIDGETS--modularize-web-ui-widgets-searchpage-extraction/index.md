@@ -16,6 +16,8 @@ RelatedFiles:
       Note: CSS import split; route entrypoint using shared+search styles.
     - Path: ui/src/components/ApiErrorAlert.tsx
       Note: Shared error alert primitive
+    - Path: ui/src/components/PathHeader.tsx
+      Note: Shared primitive for path+actions; used by Search preview
     - Path: ui/src/components/RelatedFilesList.tsx
       Note: Shared related-files list widget
     - Path: ui/src/features/search/SearchPage.tsx
@@ -56,6 +58,7 @@ LastUpdated: 2026-01-05T08:49:54.386444656-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

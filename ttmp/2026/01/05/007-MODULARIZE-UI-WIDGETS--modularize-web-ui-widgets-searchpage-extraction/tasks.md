@@ -90,7 +90,7 @@ Goal: make `ui/src/features/search/SearchPage.tsx` a thin orchestrator (~200–3
 - [x] Extract `SearchDocsResults` (render docs list, “Load more”, and empty state)
 - [x] Extract `SearchPreviewPanel` (desktop right-side preview)
 - [x] Extract `SearchPreviewModal` (mobile preview modal)
-- [ ] Follow-up: move duplicated “path header + copy/open actions” into shared primitives (`PageHeader`, `RelatedFilesList`) and simplify Search widgets
+- [x] Follow-up: move duplicated “path header + copy/open actions” into shared primitives (`PageHeader`, `RelatedFilesList`) and simplify Search widgets
 
 ### Ticket page: split into widgets (tab bodies become files)
 Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becomes a router+data orchestrator and establishes the “dashboard of cards” pattern used by Workspace pages.

@@ -84,3 +84,13 @@ SearchPage: split into widgets + introduce shared primitives (EmptyState/Loading
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchDocsResults.tsx — Docs results list widget (DocCard rendering + load more)
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchPreviewPanel.tsx — Desktop preview widget; uses shared RelatedFilesList
 
+
+## 2026-01-05
+
+Search preview: extract PathHeader (path + action buttons) and reuse in Search preview content (task 56)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/PathHeader.tsx — Shared primitive for path label + monospace path + action row
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchPreviewContent.tsx — Uses PathHeader for Copy/Open actions
+

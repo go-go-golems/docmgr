@@ -110,6 +110,46 @@ export type SearchFilesArgs = {
   limit?: number
 }
 
+export type DocumentMeta = {
+  title: string
+  ticket: string
+  status: string
+  topics: string[]
+  docType: string
+  intent: string
+  owners: string[]
+  relatedFiles: RelatedFile[]
+  externalSources: string[]
+  summary: string
+  lastUpdated: string
+  whatFor: string
+  whenToUse: string
+}
+
+export type FileStats = {
+  sizeBytes: number
+  modTime: string
+}
+
+export type DocGetResponse = {
+  path: string
+  doc?: DocumentMeta
+  relatedFiles: RelatedFile[]
+  body: string
+  stats: FileStats
+  diagnostic?: DiagnosticTaxonomy
+}
+
+export type FileGetResponse = {
+  path: string
+  root: 'repo' | 'docs'
+  language: string
+  contentType: string
+  truncated: boolean
+  content: string
+  stats: FileStats
+}
+
 export const docmgrApi = createApi({
   reducerPath: 'docmgrApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
@@ -160,6 +200,18 @@ export const docmgrApi = createApi({
         },
       }),
     }),
+    getDoc: builder.query<DocGetResponse, { path: string }>({
+      query: (args) => ({
+        url: '/docs/get',
+        params: { path: args.path },
+      }),
+    }),
+    getFile: builder.query<FileGetResponse, { path: string; root?: 'repo' | 'docs' }>({
+      query: (args) => ({
+        url: '/files/get',
+        params: { path: args.path, root: args.root ?? 'repo' },
+      }),
+    }),
   }),
 })
 
@@ -168,4 +220,6 @@ export const {
   useRefreshIndexMutation,
   useLazySearchDocsQuery,
   useLazySearchFilesQuery,
+  useGetDocQuery,
+  useGetFileQuery,
 } = docmgrApi

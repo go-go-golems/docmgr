@@ -39,6 +39,8 @@ func NewServer(mgr *IndexManager, opts ServerOptions) *Server {
 	s.mux.HandleFunc("/api/v1/index/refresh", s.wrap(s.handleIndexRefresh))
 	s.mux.HandleFunc("/api/v1/search/docs", s.wrap(s.handleSearchDocs))
 	s.mux.HandleFunc("/api/v1/search/files", s.wrap(s.handleSearchFiles))
+	s.mux.HandleFunc("/api/v1/docs/get", s.wrap(s.handleDocsGet))
+	s.mux.HandleFunc("/api/v1/files/get", s.wrap(s.handleFilesGet))
 
 	return s
 }

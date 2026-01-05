@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { clearFilters, setFilter, setMode, setQuery } from './searchSlice'
@@ -271,6 +272,7 @@ function TopicMultiSelect({
 }
 
 export function SearchPage() {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { mode, query, filters } = useAppSelector((s) => s.search)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -1007,6 +1009,12 @@ export function SearchPage() {
                       >
                         Copy path
                       </button>
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => navigate(`/doc?path=${encodeURIComponent(selected.path)}`)}
+                      >
+                        Open doc
+                      </button>
                     </div>
                   </div>
                   <div className="mb-3">
@@ -1016,11 +1024,29 @@ export function SearchPage() {
                   {selected.relatedFiles && selected.relatedFiles.length > 0 ? (
                     <div>
                       <div className="text-muted small mb-1">Related files</div>
-                      <ul className="small mb-0">
+                      <ul className="small mb-0 list-unstyled vstack gap-2">
                         {selected.relatedFiles.map((rf) => (
-                          <li key={`${rf.path}:${rf.note ?? ''}`}>
-                            <span className="font-monospace">{rf.path}</span>
-                            {rf.note ? <span className="text-muted ms-2">{rf.note}</span> : null}
+                          <li key={`${rf.path}:${rf.note ?? ''}`} className="d-flex gap-2 align-items-start">
+                            <div className="flex-grow-1">
+                              <div className="font-monospace">{rf.path}</div>
+                              {rf.note ? <div className="text-muted">{rf.note}</div> : null}
+                            </div>
+                            <div className="d-flex gap-2">
+                              <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => void onCopyPath(rf.path)}
+                              >
+                                Copy
+                              </button>
+                              <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() =>
+                                  navigate(`/file?root=repo&path=${encodeURIComponent(rf.path)}`)
+                                }
+                              >
+                                Open
+                              </button>
+                            </div>
                           </li>
                         ))}
                       </ul>

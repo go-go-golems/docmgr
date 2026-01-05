@@ -150,10 +150,75 @@ export type FileGetResponse = {
   stats: FileStats
 }
 
+export type TicketStats = {
+  docsTotal: number
+  tasksTotal: number
+  tasksDone: number
+  relatedFilesTotal: number
+}
+
+export type TicketGetResponse = {
+  ticket: string
+  title: string
+  status: string
+  intent: string
+  owners: string[]
+  topics: string[]
+  createdAt: string
+  updatedAt: string
+  ticketDir: string
+  indexPath: string
+  stats: TicketStats
+}
+
+export type TicketDocItem = {
+  path: string
+  title: string
+  docType: string
+  status: string
+  topics: string[]
+  summary: string
+  lastUpdated?: string
+  relatedFiles: RelatedFile[]
+}
+
+export type TicketDocsResponse = {
+  ticket: string
+  total: number
+  results: TicketDocItem[]
+  nextCursor: string
+}
+
+export type TicketTasksItem = {
+  id: number
+  checked: boolean
+  text: string
+}
+
+export type TicketTasksSection = {
+  title: string
+  items: TicketTasksItem[]
+}
+
+export type TicketTasksResponse = {
+  ticket: string
+  exists: boolean
+  tasksPath: string
+  stats: { total: number; done: number }
+  sections: TicketTasksSection[]
+}
+
+export type TicketGraphResponse = {
+  ticket: string
+  direction: 'TD' | 'LR'
+  mermaid: string
+  stats: { nodes: number; edges: number }
+}
+
 export const docmgrApi = createApi({
   reducerPath: 'docmgrApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
-  tagTypes: ['Workspace', 'Search'],
+  tagTypes: ['Workspace', 'Search', 'Ticket'],
   endpoints: (builder) => ({
     healthz: builder.query<{ ok: boolean }, void>({
       query: () => '/healthz',
@@ -212,6 +277,84 @@ export const docmgrApi = createApi({
         params: { path: args.path, root: args.root ?? 'repo' },
       }),
     }),
+
+    getTicket: builder.query<TicketGetResponse, { ticket: string }>({
+      query: (args) => ({ url: '/tickets/get', params: { ticket: args.ticket } }),
+      providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    getTicketDocs: builder.query<
+      TicketDocsResponse,
+      {
+        ticket: string
+        pageSize?: number
+        cursor?: string
+        orderBy?: 'path' | 'last_updated'
+        includeArchived?: boolean
+        includeScripts?: boolean
+        includeControlDocs?: boolean
+      }
+    >({
+      query: (args) => ({
+        url: '/tickets/docs',
+        params: {
+          ticket: args.ticket,
+          pageSize: args.pageSize ?? 200,
+          cursor: args.cursor ?? '',
+          orderBy: args.orderBy ?? 'path',
+          includeArchived: args.includeArchived ?? true,
+          includeScripts: args.includeScripts ?? true,
+          includeControlDocs: args.includeControlDocs ?? true,
+        },
+      }),
+      providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    getTicketTasks: builder.query<TicketTasksResponse, { ticket: string }>({
+      query: (args) => ({ url: '/tickets/tasks', params: { ticket: args.ticket } }),
+      providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    checkTicketTasks: builder.mutation<{ ok: boolean }, { ticket: string; ids: number[]; checked: boolean }>({
+      query: (args) => ({
+        url: '/tickets/tasks/check',
+        method: 'POST',
+        body: { ticket: args.ticket, ids: args.ids, checked: args.checked },
+      }),
+      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    addTicketTask: builder.mutation<{ ok: boolean }, { ticket: string; section: string; text: string }>({
+      query: (args) => ({
+        url: '/tickets/tasks/add',
+        method: 'POST',
+        body: { ticket: args.ticket, section: args.section, text: args.text },
+      }),
+      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    getTicketGraph: builder.query<
+      TicketGraphResponse,
+      {
+        ticket: string
+        direction?: 'TD' | 'LR'
+        includeArchived?: boolean
+        includeScripts?: boolean
+        includeControlDocs?: boolean
+      }
+    >({
+      query: (args) => ({
+        url: '/tickets/graph',
+        params: {
+          ticket: args.ticket,
+          direction: args.direction ?? 'TD',
+          includeArchived: args.includeArchived ?? false,
+          includeScripts: args.includeScripts ?? false,
+          includeControlDocs: args.includeControlDocs ?? true,
+        },
+      }),
+      providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
   }),
 })
 
@@ -222,4 +365,10 @@ export const {
   useLazySearchFilesQuery,
   useGetDocQuery,
   useGetFileQuery,
+  useGetTicketQuery,
+  useGetTicketDocsQuery,
+  useGetTicketTasksQuery,
+  useCheckTicketTasksMutation,
+  useAddTicketTaskMutation,
+  useGetTicketGraphQuery,
 } = docmgrApi

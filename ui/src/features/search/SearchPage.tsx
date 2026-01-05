@@ -1,8 +1,9 @@
 import { cloneElement, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FormEvent, ReactElement, ReactNode } from 'react'
+import type { FormEvent, JSX as ReactJSX, ReactElement, ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import ReactMarkdown from 'react-markdown'
+import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
@@ -130,24 +131,53 @@ function MarkdownSnippet({ markdown, query }: { markdown: string; query: string 
     return new RegExp(pattern, 'gi')
   }, [terms])
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const components: any = useMemo(
+  type MarkdownElementProps<T extends keyof ReactJSX.IntrinsicElements> = ReactJSX.IntrinsicElements[T] & {
+    node?: unknown
+    children?: ReactNode
+  }
+
+  const components: Components = useMemo(
     () => ({
-      p: ({ children, node: _node, ...props }: any) => (
-        <p {...props} className={props.className} style={{ marginBottom: 0 }}>
-          {highlightReactNode(children, re)}
-        </p>
-      ),
-      li: ({ children, node: _node, ...props }: any) => <li {...props}>{highlightReactNode(children, re)}</li>,
-      h1: ({ children, node: _node, ...props }: any) => <h1 {...props}>{highlightReactNode(children, re)}</h1>,
-      h2: ({ children, node: _node, ...props }: any) => <h2 {...props}>{highlightReactNode(children, re)}</h2>,
-      h3: ({ children, node: _node, ...props }: any) => <h3 {...props}>{highlightReactNode(children, re)}</h3>,
-      h4: ({ children, node: _node, ...props }: any) => <h4 {...props}>{highlightReactNode(children, re)}</h4>,
-      h5: ({ children, node: _node, ...props }: any) => <h5 {...props}>{highlightReactNode(children, re)}</h5>,
-      h6: ({ children, node: _node, ...props }: any) => <h6 {...props}>{highlightReactNode(children, re)}</h6>,
-      blockquote: ({ children, node: _node, ...props }: any) => (
-        <blockquote {...props}>{highlightReactNode(children, re)}</blockquote>
-      ),
+      p: ({ children, node, ...props }: MarkdownElementProps<'p'>) => {
+        void node
+        return (
+          <p {...props} className={props.className} style={{ marginBottom: 0 }}>
+            {highlightReactNode(children, re)}
+          </p>
+        )
+      },
+      li: ({ children, node, ...props }: MarkdownElementProps<'li'>) => {
+        void node
+        return <li {...props}>{highlightReactNode(children, re)}</li>
+      },
+      h1: ({ children, node, ...props }: MarkdownElementProps<'h1'>) => {
+        void node
+        return <h1 {...props}>{highlightReactNode(children, re)}</h1>
+      },
+      h2: ({ children, node, ...props }: MarkdownElementProps<'h2'>) => {
+        void node
+        return <h2 {...props}>{highlightReactNode(children, re)}</h2>
+      },
+      h3: ({ children, node, ...props }: MarkdownElementProps<'h3'>) => {
+        void node
+        return <h3 {...props}>{highlightReactNode(children, re)}</h3>
+      },
+      h4: ({ children, node, ...props }: MarkdownElementProps<'h4'>) => {
+        void node
+        return <h4 {...props}>{highlightReactNode(children, re)}</h4>
+      },
+      h5: ({ children, node, ...props }: MarkdownElementProps<'h5'>) => {
+        void node
+        return <h5 {...props}>{highlightReactNode(children, re)}</h5>
+      },
+      h6: ({ children, node, ...props }: MarkdownElementProps<'h6'>) => {
+        void node
+        return <h6 {...props}>{highlightReactNode(children, re)}</h6>
+      },
+      blockquote: ({ children, node, ...props }: MarkdownElementProps<'blockquote'>) => {
+        void node
+        return <blockquote {...props}>{highlightReactNode(children, re)}</blockquote>
+      },
     }),
     [re],
   )
@@ -308,7 +338,14 @@ function ResultCard({
         <div className="flex-grow-1">
           <div className="result-title">{result.title}</div>
           <div className="result-meta">
-            {result.ticket} • {result.docType}
+            <Link
+              to={`/ticket/${encodeURIComponent(result.ticket)}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-decoration-none"
+            >
+              {result.ticket}
+            </Link>{' '}
+            • {result.docType}
             <StatusBadge status={result.status} />
             {result.lastUpdated ? (
               <span className="ms-2 text-muted">Updated {timeAgo(result.lastUpdated)}</span>
@@ -1391,7 +1428,10 @@ export function SearchPage() {
                 </div>
                 <div className="modal-body">
                   <div className="text-muted small mb-2">
-                    {selected.ticket} • {selected.docType} • {selected.status}
+                    <Link to={`/ticket/${encodeURIComponent(selected.ticket)}`} className="text-decoration-none">
+                      {selected.ticket}
+                    </Link>{' '}
+                    • {selected.docType} • {selected.status}
                     {selected.lastUpdated ? (
                       <span className="ms-2">Updated {timeAgo(selected.lastUpdated)}</span>
                     ) : null}
@@ -1603,7 +1643,10 @@ export function SearchPage() {
                     <div>
                       <div className="h5 mb-1">{selected.title}</div>
                       <div className="text-muted small">
-                        {selected.ticket} • {selected.docType} • {selected.status}
+                        <Link to={`/ticket/${encodeURIComponent(selected.ticket)}`} className="text-decoration-none">
+                          {selected.ticket}
+                        </Link>{' '}
+                        • {selected.docType} • {selected.status}
                         {selected.lastUpdated ? (
                           <span className="ms-2">Updated {timeAgo(selected.lastUpdated)}</span>
                         ) : null}

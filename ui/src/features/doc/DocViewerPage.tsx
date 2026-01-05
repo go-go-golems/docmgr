@@ -154,7 +154,12 @@ export function DocViewerPage() {
         <div className="card mb-3">
           <div className="card-body">
             <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
-              <span className="badge text-bg-secondary">{doc.ticket}</span>
+              <Link
+                className="badge text-bg-secondary text-decoration-none"
+                to={`/ticket/${encodeURIComponent(doc.ticket)}`}
+              >
+                {doc.ticket}
+              </Link>
               <span className="badge text-bg-light text-dark">{doc.docType}</span>
               {doc.status ? <span className="badge text-bg-primary">{doc.status}</span> : null}
               <span className="ms-auto d-flex gap-2">
@@ -172,7 +177,9 @@ export function DocViewerPage() {
                 <tbody>
                   <tr>
                     <th className="text-muted">Ticket</th>
-                    <td>{doc.ticket}</td>
+                    <td>
+                      <Link to={`/ticket/${encodeURIComponent(doc.ticket)}`}>{doc.ticket}</Link>
+                    </td>
                     <th className="text-muted">Last updated</th>
                     <td>{doc.lastUpdated ? new Date(doc.lastUpdated).toLocaleString() : '—'}</td>
                   </tr>

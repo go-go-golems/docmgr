@@ -1,10 +1,8 @@
 import { Link } from 'react-router-dom'
 
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-
 import { ApiErrorAlert } from '../../../components/ApiErrorAlert'
 import { EmptyState } from '../../../components/EmptyState'
+import { MarkdownBlock } from '../../../components/MarkdownBlock'
 import type { TicketDocItem, TicketGetResponse } from '../../../services/docmgrApi'
 
 type OpenTask = { id: number; text: string; checked: boolean }
@@ -182,7 +180,7 @@ export function TicketOverviewTab({
             {indexDocError ? (
               <ApiErrorAlert title="Failed to load index.md" error={indexDocError} />
             ) : indexBody ? (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{indexBody}</ReactMarkdown>
+              <MarkdownBlock markdown={indexBody} />
             ) : (
               <EmptyState title="No content." />
             )}

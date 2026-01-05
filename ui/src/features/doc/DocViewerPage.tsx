@@ -1,15 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
-
 import { ApiErrorAlert } from '../../components/ApiErrorAlert'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { MarkdownBlock } from '../../components/MarkdownBlock'
 import { PageHeader } from '../../components/PageHeader'
 import { RelatedFilesList } from '../../components/RelatedFilesList'
 import { copyToClipboard } from '../../lib/clipboard'
+import { formatDate } from '../../lib/time'
 import { useGetDocQuery } from '../../services/docmgrApi'
 import type { DiagnosticTaxonomy, RelatedFile } from '../../services/docmgrApi'
 
@@ -142,7 +140,7 @@ export function DocViewerPage() {
                       <Link to={`/ticket/${encodeURIComponent(doc.ticket)}`}>{doc.ticket}</Link>
                     </td>
                     <th className="text-muted">Last updated</th>
-                    <td>{doc.lastUpdated ? new Date(doc.lastUpdated).toLocaleString() : '—'}</td>
+                    <td>{formatDate(doc.lastUpdated)}</td>
                   </tr>
                   <tr>
                     <th className="text-muted">Status</th>
@@ -158,7 +156,7 @@ export function DocViewerPage() {
                   </tr>
                   <tr>
                     <th className="text-muted">File mtime</th>
-                    <td>{data.stats?.modTime ? new Date(data.stats.modTime).toLocaleString() : '—'}</td>
+                    <td>{formatDate(data.stats?.modTime)}</td>
                     <th className="text-muted">Size</th>
                     <td>{data.stats?.sizeBytes ? `${data.stats.sizeBytes} bytes` : '—'}</td>
                   </tr>
@@ -189,9 +187,7 @@ export function DocViewerPage() {
             ) : null}
           </div>
           <div className="card-body docmgr-markdown">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
-              {data.body}
-            </ReactMarkdown>
+            <MarkdownBlock markdown={data.body} />
           </div>
         </div>
       ) : null}

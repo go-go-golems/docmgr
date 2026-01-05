@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { PageHeader } from '../../components/PageHeader'
 import { useToast } from '../toast/useToast'
 import { timeAgo } from '../../lib/time'
-import { useGetWorkspaceStatusQuery, useRefreshIndexMutation } from '../../services/docmgrApi'
+import { useGetWorkspaceStatusQuery, useGetWorkspaceSummaryQuery, useRefreshIndexMutation } from '../../services/docmgrApi'
 
 function ShellNav() {
   const location = useLocation()
@@ -41,6 +41,7 @@ function ShellNav() {
 export function WorkspaceLayout() {
   const toast = useToast()
   const { data: wsStatus, isError: wsError, refetch } = useGetWorkspaceStatusQuery()
+  const { data: summary } = useGetWorkspaceSummaryQuery(undefined, { skip: wsError })
   const [refreshIndex, refreshState] = useRefreshIndexMutation()
 
   async function onRefresh() {
@@ -89,12 +90,40 @@ export function WorkspaceLayout() {
                   <span className="badge text-bg-light text-dark">
                     Docs: <span className="fw-semibold">{wsStatus.docsIndexed}</span>
                   </span>
+                  {summary?.stats ? (
+                    <>
+                      <span className="badge text-bg-light text-dark">
+                        Tickets: <span className="fw-semibold">{summary.stats.ticketsTotal}</span>
+                      </span>
+                      <span className="badge text-bg-primary">
+                        Active: <span className="fw-semibold">{summary.stats.ticketsActive}</span>
+                      </span>
+                      <span className="badge text-bg-warning text-dark">
+                        Review: <span className="fw-semibold">{summary.stats.ticketsReview}</span>
+                      </span>
+                      <span className="badge text-bg-success">
+                        Complete: <span className="fw-semibold">{summary.stats.ticketsComplete}</span>
+                      </span>
+                      <span className="badge text-bg-secondary">
+                        Draft: <span className="fw-semibold">{summary.stats.ticketsDraft}</span>
+                      </span>
+                    </>
+                  ) : null}
                 </div>
               ) : (
                 <div className="text-muted small">Loading…</div>
               )}
-              <div className="text-muted small mt-2">
-                Ticket/topic/activity stats need workspace summary endpoints (see design doc).
+
+              <div className="d-grid gap-2 mt-3">
+                <NavLink className="btn btn-outline-primary btn-sm" to="/workspace/tickets">
+                  All tickets →
+                </NavLink>
+                <NavLink className="btn btn-outline-primary btn-sm" to="/workspace/topics">
+                  Topics →
+                </NavLink>
+                <NavLink className="btn btn-outline-secondary btn-sm" to="/workspace/recent">
+                  Recent →
+                </NavLink>
               </div>
             </div>
           </div>
@@ -107,4 +136,3 @@ export function WorkspaceLayout() {
     </div>
   )
 }
-

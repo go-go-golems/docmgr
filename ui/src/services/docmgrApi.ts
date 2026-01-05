@@ -18,6 +18,127 @@ export type RefreshIndexResponse = {
   ftsAvailable: boolean
 }
 
+export type WorkspaceSummaryStats = {
+  ticketsTotal: number
+  ticketsActive: number
+  ticketsReview: number
+  ticketsComplete: number
+  ticketsDraft: number
+}
+
+export type WorkspaceTicketListItemStats = {
+  docsTotal: number
+  tasksTotal: number
+  tasksDone: number
+  relatedFilesTotal: number
+}
+
+export type WorkspaceTicketListItem = {
+  ticket: string
+  title: string
+  status: string
+  topics: string[]
+  owners: string[]
+  intent: string
+  createdAt: string
+  updatedAt: string
+  ticketDir: string
+  indexPath: string
+  snippet: string
+  stats: WorkspaceTicketListItemStats | null
+}
+
+export type WorkspaceRecentDocItem = {
+  path: string
+  ticket: string
+  title: string
+  docType: string
+  status: string
+  topics: string[]
+  updatedAt: string
+}
+
+export type WorkspaceSummaryResponse = {
+  root: string
+  repoRoot: string
+  indexedAt: string
+  docsIndexed: number
+  stats: WorkspaceSummaryStats
+  recent: {
+    tickets: WorkspaceTicketListItem[]
+    docs: WorkspaceRecentDocItem[]
+  }
+}
+
+export type WorkspaceTicketsQueryEcho = {
+  q: string
+  status: string
+  ticket: string
+  topics: string[]
+  owners: string[]
+  intent: string
+  orderBy: string
+  reverse: boolean
+  includeArchived: boolean
+  includeStats: boolean
+  pageSize: number
+  cursor: string
+}
+
+export type WorkspaceTicketsResponse = {
+  query: WorkspaceTicketsQueryEcho
+  total: number
+  results: WorkspaceTicketListItem[]
+  nextCursor: string
+}
+
+export type WorkspaceTicketsArgs = {
+  q?: string
+  status?: string
+  ticket?: string
+  topics?: string[]
+  owners?: string[]
+  intent?: string
+  orderBy?: 'last_updated' | 'ticket' | 'title'
+  reverse?: boolean
+  includeArchived?: boolean
+  includeStats?: boolean
+  pageSize?: number
+  cursor?: string
+}
+
+export type WorkspaceFacetsResponse = {
+  statuses: string[]
+  docTypes: string[]
+  intents: string[]
+  topics: string[]
+  owners: string[]
+}
+
+export type WorkspaceRecentResponse = {
+  tickets: WorkspaceTicketListItem[]
+  docs: WorkspaceRecentDocItem[]
+}
+
+export type WorkspaceTopicListItem = {
+  topic: string
+  docsTotal: number
+  ticketsTotal: number
+  updatedAt: string
+}
+
+export type WorkspaceTopicsResponse = {
+  total: number
+  results: WorkspaceTopicListItem[]
+}
+
+export type WorkspaceTopicDetailResponse = {
+  topic: string
+  stats: WorkspaceSummaryStats
+  tickets: WorkspaceTicketListItem[]
+  docs: WorkspaceRecentDocItem[]
+}
+
 export type RelatedFile = {
   path: string
   note?: string
@@ -231,6 +352,101 @@ export const docmgrApi = createApi({
       query: () => ({ url: '/index/refresh', method: 'POST' }),
       invalidatesTags: ['Workspace', 'Search'],
     }),
+    getWorkspaceSummary: builder.query<WorkspaceSummaryResponse, void>({
+      query: () => '/workspace/summary',
+      providesTags: ['Workspace'],
+    }),
+    getWorkspaceTickets: builder.query<WorkspaceTicketsResponse, WorkspaceTicketsArgs>({
+      query: (args) => ({
+        url: '/workspace/tickets',
+        params: {
+          q: args.q ?? '',
+          status: args.status ?? '',
+          ticket: args.ticket ?? '',
+          topics: (args.topics ?? []).join(','),
+          owners: (args.owners ?? []).join(','),
+          intent: args.intent ?? '',
+          orderBy: args.orderBy ?? 'last_updated',
+          reverse: args.reverse ?? false,
+          includeArchived: args.includeArchived ?? true,
+          includeStats: args.includeStats ?? false,
+          pageSize: args.pageSize ?? 200,
+          cursor: args.cursor ?? '',
+        },
+      }),
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { cursor, ...rest } = queryArgs ?? {}
+        void cursor
+        return rest
+      },
+      merge: (currentCache, newData, { arg }) => {
+        const cursor = arg?.cursor ?? ''
+
+        if (!cursor) {
+          currentCache.query = newData.query
+          currentCache.total = newData.total
+          currentCache.results = newData.results
+          currentCache.nextCursor = newData.nextCursor
+          return
+        }
+
+        currentCache.query = newData.query
+        currentCache.total = newData.total
+        currentCache.nextCursor = newData.nextCursor
+
+        const seen = new Set(currentCache.results.map((r) => r.ticket))
+        for (const r of newData.results) {
+          if (seen.has(r.ticket)) continue
+          currentCache.results.push(r)
+          seen.add(r.ticket)
+        }
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        (currentArg?.cursor ?? '') !== (previousArg?.cursor ?? ''),
+      providesTags: ['Workspace'],
+    }),
+    getWorkspaceFacets: builder.query<WorkspaceFacetsResponse, { includeArchived?: boolean } | undefined>({
+      query: (args) => ({
+        url: '/workspace/facets',
+        params: { includeArchived: args?.includeArchived ?? true },
+      }),
+      providesTags: ['Workspace'],
+    }),
+    getWorkspaceRecent: builder.query<
+      WorkspaceRecentResponse,
+      { ticketsLimit?: number; docsLimit?: number; includeArchived?: boolean } | undefined
+    >({
+      query: (args) => ({
+        url: '/workspace/recent',
+        params: {
+          ticketsLimit: args?.ticketsLimit ?? 20,
+          docsLimit: args?.docsLimit ?? 20,
+          includeArchived: args?.includeArchived ?? true,
+        },
+      }),
+      providesTags: ['Workspace'],
+    }),
+    getWorkspaceTopics: builder.query<WorkspaceTopicsResponse, { includeArchived?: boolean } | undefined>({
+      query: (args) => ({
+        url: '/workspace/topics',
+        params: { includeArchived: args?.includeArchived ?? true },
+      }),
+      providesTags: ['Workspace'],
+    }),
+    getWorkspaceTopic: builder.query<
+      WorkspaceTopicDetailResponse,
+      { topic: string; includeArchived?: boolean; docsLimit?: number }
+    >({
+      query: (args) => ({
+        url: '/workspace/topics/get',
+        params: {
+          topic: args.topic,
+          includeArchived: args.includeArchived ?? true,
+          docsLimit: args.docsLimit ?? 20,
+        },
+      }),
+      providesTags: ['Workspace'],
+    }),
     searchDocs: builder.query<SearchDocsResponse, SearchDocsArgs>({
       query: (args) => ({
         url: '/search/docs',
@@ -392,6 +608,12 @@ export const docmgrApi = createApi({
 
 export const {
   useGetWorkspaceStatusQuery,
+  useGetWorkspaceSummaryQuery,
+  useGetWorkspaceTicketsQuery,
+  useGetWorkspaceFacetsQuery,
+  useGetWorkspaceRecentQuery,
+  useGetWorkspaceTopicsQuery,
+  useGetWorkspaceTopicQuery,
   useRefreshIndexMutation,
   useLazySearchDocsQuery,
   useLazySearchFilesQuery,

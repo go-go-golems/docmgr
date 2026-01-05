@@ -131,3 +131,12 @@ Add playbook for implementing new UI pages/widgets (post-refactor conventions)
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/playbook/01-playbook-implementing-new-ui-pages-and-widgets-post-refactor.md — Central workflow and conventions
 
+
+## 2026-01-05
+
+Design doc: embed Workspace ASCII screenshots verbatim (from sources/workspace-page.md)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design-doc/01-design-workspace-navigation-ui-post-refactor.md — Appendix includes ASCII designs for quick reference
+

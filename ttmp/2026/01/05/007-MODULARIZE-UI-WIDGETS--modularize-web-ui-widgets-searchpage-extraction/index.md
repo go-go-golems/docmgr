@@ -22,12 +22,17 @@ RelatedFiles:
       Note: Extracted topics token input widget.
     - Path: ui/src/features/search/hooks/useIsMobile.ts
       Note: Extracted responsive hook from SearchPage (mobile breakpoint logic).
+    - Path: ui/src/lib/clipboard.ts
+      Note: Extracted clipboard helper; SearchPage uses for copy-path.
+    - Path: ui/src/lib/time.ts
+      Note: Extracted SearchPage timeAgo helper into shared lib (no behavior change for Search).
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-05T08:49:54.386444656-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 # Modularize Web UI widgets (SearchPage extraction)

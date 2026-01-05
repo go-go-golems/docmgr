@@ -14,3 +14,13 @@ Extract leaf SearchPage widgets/hooks (MarkdownSnippet, DiagnosticList, TopicMul
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/SearchPage.tsx — Now imports extracted widgets
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/components/MarkdownSnippet.tsx — New
 
+
+## 2026-01-05
+
+Extract shared helpers into ui/src/lib (timeAgo + copyToClipboard) and switch SearchPage to import them; lint+build verified.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/clipboard.ts — New
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/time.ts — New
+

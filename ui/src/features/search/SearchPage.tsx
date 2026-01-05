@@ -4,6 +4,8 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { DocCard } from '../../components/DocCard'
+import { copyToClipboard } from '../../lib/clipboard'
+import { timeAgo } from '../../lib/time'
 import { DiagnosticList } from './components/DiagnosticList'
 import { MarkdownSnippet } from './components/MarkdownSnippet'
 import { TopicMultiSelect } from './components/TopicMultiSelect'
@@ -41,22 +43,6 @@ function isEditableTarget(target: EventTarget | null): boolean {
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return true
   if (el.isContentEditable) return true
   return false
-}
-
-function timeAgo(iso?: string): string {
-  if (!iso) return 'unknown'
-  const t = new Date(iso)
-  const deltaMs = Date.now() - t.getTime()
-  if (!Number.isFinite(deltaMs)) return 'unknown'
-  const seconds = Math.floor(deltaMs / 1000)
-  if (seconds < 10) return 'just now'
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 48) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
 }
 
 function parseBoolParam(v: string | null, def: boolean): boolean {
@@ -127,7 +113,7 @@ export function SearchPage() {
   const onCopyPath = useCallback(
     async (path: string) => {
       try {
-        await navigator.clipboard.writeText(path)
+        await copyToClipboard(path)
         setToast({ kind: 'success', message: `Copied path: ${path}` })
       } catch {
         setToast({ kind: 'error', message: 'Failed to copy path (clipboard not available)' })

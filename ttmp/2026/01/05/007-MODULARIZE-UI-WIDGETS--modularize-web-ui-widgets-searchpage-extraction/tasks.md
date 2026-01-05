@@ -3,25 +3,25 @@
 ## TODO
 
 ### Guardrails (keep refactor safe)
-- [ ] Confirm current UI builds before changes (`pnpm -C ui build`)
-- [ ] Confirm current UI lint passes before changes (`pnpm -C ui lint`)
-- [ ] Keep diffs behavior-preserving (no UX changes; extraction-only)
-- [ ] Keep each commit scoped to 1–2 extractions max
+- [x] Confirm current UI builds before changes (`pnpm -C ui build`)
+- [x] Confirm current UI lint passes before changes (`pnpm -C ui lint`)
+- [x] Keep diffs behavior-preserving (no UX changes; extraction-only)
+- [x] Keep each commit scoped to 1–2 extractions max
 
 ### High ROI extraction: Search page “leaf widgets” (low coupling)
 Goal: shrink `ui/src/features/search/SearchPage.tsx` by moving pure subcomponents/helpers into dedicated files.
 
-- [ ] Extract `useIsMobile` into `ui/src/features/search/hooks/useIsMobile.ts`
-- [ ] Extract `MarkdownSnippet` + highlighting helpers into `ui/src/features/search/components/MarkdownSnippet.tsx`
-- [ ] Extract `DiagnosticList` into `ui/src/features/search/components/DiagnosticList.tsx`
-- [ ] Extract `TopicMultiSelect` into `ui/src/features/search/components/TopicMultiSelect.tsx`
-- [ ] Update `SearchPage.tsx` to consume extracted modules (no behavior changes)
+- [x] Extract `useIsMobile` into `ui/src/features/search/hooks/useIsMobile.ts`
+- [x] Extract `MarkdownSnippet` + highlighting helpers into `ui/src/features/search/components/MarkdownSnippet.tsx`
+- [x] Extract `DiagnosticList` into `ui/src/features/search/components/DiagnosticList.tsx`
+- [x] Extract `TopicMultiSelect` into `ui/src/features/search/components/TopicMultiSelect.tsx`
+- [x] Update `SearchPage.tsx` to consume extracted modules (no behavior changes)
 
 ### High ROI extraction: shared utilities (duplication reducer)
 Goal: eliminate repeated patterns across Search/Doc/File/Ticket.
 
-- [ ] Introduce `ui/src/lib/time.ts` (`timeAgo`, `formatDate` as needed)
-- [ ] Introduce `ui/src/lib/clipboard.ts` (`copyToClipboard(text)` wrapper + consistent errors)
+- [x] Introduce `ui/src/lib/time.ts` (`timeAgo`, `formatDate` as needed)
+- [x] Introduce `ui/src/lib/clipboard.ts` (`copyToClipboard(text)` wrapper + consistent errors)
 - [ ] Introduce `ui/src/lib/apiError.ts` (parse error envelope; `apiErrorMessage(err)` helper)
 - [ ] (Optional) Replace page-local duplicates in Search only first; expand to other pages in follow-up ticket
 
@@ -46,12 +46,12 @@ Goal: make the route component a thin orchestrator by extracting behavior into h
 - [ ] Keep classnames stable for now (minimize churn)
 
 ### Validation
-- [ ] `pnpm -C ui lint`
-- [ ] `pnpm -C ui build`
+- [x] `pnpm -C ui lint`
+- [x] `pnpm -C ui build`
 - [ ] Quick manual check: Search page still supports keyboard shortcuts + preview panel + URL restore
 
 ### Docmgr bookkeeping
-- [ ] Relate touched files to `index.md` (`docmgr doc relate --ticket 007-MODULARIZE-UI-WIDGETS ...`)
-- [ ] Update `changelog.md` with each extraction batch (`docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS ...`)
+- [x] Relate touched files to `index.md` (`docmgr doc relate --ticket 007-MODULARIZE-UI-WIDGETS ...`)
+- [x] Update `changelog.md` with each extraction batch (`docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS ...`)
 
 ## Done

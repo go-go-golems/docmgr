@@ -1,0 +1,127 @@
+.search-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.filter-row {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.refresh-btn {
+  font-size: 0.9rem;
+}
+
+.keyboard-hint {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 8px;
+}
+
+.topic-badge {
+  font-size: 0.75rem;
+  margin-right: 4px;
+}
+
+.result-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.result-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #0d6efd;
+}
+
+.result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 6px;
+}
+
+.result-meta {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+.result-snippet {
+  font-size: 0.9rem;
+  color: #495057;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.result-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 0.8rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.copy-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.result-card:hover .copy-btn {
+  opacity: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  min-width: min(520px, calc(100vw - 40px));
+}
+
+.results-grid.split {
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 16px;
+  align-items: start;
+}
+
+.preview-panel {
+  position: sticky;
+  top: 20px;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+@media (max-width: 992px) {
+  .results-grid.split {
+    grid-template-columns: 1fr;
+  }
+  .preview-panel {
+    position: relative;
+    top: auto;
+  }
+}

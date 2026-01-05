@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
@@ -16,7 +17,8 @@ import (
 
 type SearchQuery struct {
 	// TextQuery is an FTS5 query string (no compatibility guarantees).
-	TextQuery string
+	TextQuery  string
+	AllowEmpty bool
 
 	Ticket  string
 	Topics  []string
@@ -43,16 +45,19 @@ type SearchQuery struct {
 }
 
 type SearchResult struct {
-	Ticket  string
-	Title   string
-	DocType string
-	Status  string
-	Topics  []string
-	Path    string
-	Snippet string
+	Ticket      string     `json:"ticket"`
+	Title       string     `json:"title"`
+	DocType     string     `json:"docType"`
+	Status      string     `json:"status"`
+	Topics      []string   `json:"topics"`
+	Path        string     `json:"path"`
+	LastUpdated *time.Time `json:"lastUpdated,omitempty"`
+	Snippet     string     `json:"snippet"`
 
-	MatchedFiles []string
-	MatchedNotes []string
+	RelatedFiles []models.RelatedFile `json:"relatedFiles"`
+
+	MatchedFiles []string `json:"matchedFiles"`
+	MatchedNotes []string `json:"matchedNotes"`
 }
 
 type SearchResponse struct {
@@ -69,19 +74,21 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 		return SearchResponse{}, fmt.Errorf("nil workspace")
 	}
 
-	if strings.TrimSpace(q.TextQuery) == "" &&
-		strings.TrimSpace(q.Ticket) == "" &&
-		len(q.Topics) == 0 &&
-		strings.TrimSpace(q.DocType) == "" &&
-		strings.TrimSpace(q.Status) == "" &&
-		strings.TrimSpace(q.File) == "" &&
-		strings.TrimSpace(q.Dir) == "" &&
-		strings.TrimSpace(q.ExternalSource) == "" &&
-		strings.TrimSpace(q.Since) == "" &&
-		strings.TrimSpace(q.Until) == "" &&
-		strings.TrimSpace(q.CreatedSince) == "" &&
-		strings.TrimSpace(q.UpdatedSince) == "" {
-		return SearchResponse{}, fmt.Errorf("must provide at least a query or filter")
+	if !q.AllowEmpty {
+		if strings.TrimSpace(q.TextQuery) == "" &&
+			strings.TrimSpace(q.Ticket) == "" &&
+			len(q.Topics) == 0 &&
+			strings.TrimSpace(q.DocType) == "" &&
+			strings.TrimSpace(q.Status) == "" &&
+			strings.TrimSpace(q.File) == "" &&
+			strings.TrimSpace(q.Dir) == "" &&
+			strings.TrimSpace(q.ExternalSource) == "" &&
+			strings.TrimSpace(q.Since) == "" &&
+			strings.TrimSpace(q.Until) == "" &&
+			strings.TrimSpace(q.CreatedSince) == "" &&
+			strings.TrimSpace(q.UpdatedSince) == "" {
+			return SearchResponse{}, fmt.Errorf("must provide at least a query or filter")
+		}
 	}
 
 	sinceTime, err := ParseDate(q.Since)
@@ -200,20 +207,30 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 
 		snippet := ExtractSnippet(content, q.TextQuery, 100)
 
-		var matchedFiles []string
-		var matchedNotes []string
+		var lastUpdated *time.Time
+		if !doc.LastUpdated.IsZero() {
+			t := doc.LastUpdated
+			lastUpdated = &t
+		}
+
+		matchedFiles := []string{}
+		matchedNotes := []string{}
 		if fileQueryRaw != "" {
 			matchedFiles, matchedNotes = matchRelatedFiles(ws, h.Path, doc.RelatedFiles, fileQueryRaw)
 		}
 
 		out = append(out, SearchResult{
-			Ticket:       doc.Ticket,
-			Title:        doc.Title,
-			DocType:      doc.DocType,
-			Status:       doc.Status,
-			Topics:       append([]string{}, doc.Topics...),
-			Path:         relPath,
-			Snippet:      snippet,
+			Ticket:      doc.Ticket,
+			Title:       doc.Title,
+			DocType:     doc.DocType,
+			Status:      doc.Status,
+			Topics:      append([]string{}, doc.Topics...),
+			Path:        relPath,
+			LastUpdated: lastUpdated,
+			Snippet:     snippet,
+
+			RelatedFiles: append([]models.RelatedFile{}, doc.RelatedFiles...),
+
 			MatchedFiles: matchedFiles,
 			MatchedNotes: matchedNotes,
 		})

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-go-golems/docmgr/internal/httpapi"
+	"github.com/go-go-golems/docmgr/internal/web"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/spf13/cobra"
 )
@@ -37,8 +38,20 @@ func newServeCommand() *cobra.Command {
 			}
 
 			srv := &http.Server{
-				Addr:    addr,
-				Handler: httpapi.NewServer(mgr, httpapi.ServerOptions{CORSOrigin: corsOrigin}).Handler(),
+				Addr: addr,
+				Handler: func() http.Handler {
+					apiHandler := httpapi.NewServer(mgr, httpapi.ServerOptions{CORSOrigin: corsOrigin}).Handler()
+
+					mux := http.NewServeMux()
+					mux.Handle("/api/", apiHandler)
+
+					public, err := web.PublicFS()
+					if err == nil {
+						mux.Handle("/", web.NewSPAHandler(public, web.SPAOptions{APIPrefixes: []string{"/api"}}))
+					}
+
+					return mux
+				}(),
 			}
 
 			go func() {

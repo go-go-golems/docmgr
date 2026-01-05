@@ -174,11 +174,20 @@ func (s *Server) handleSearchDocs(w http.ResponseWriter, r *http.Request) error 
 	if orderBy == "" {
 		orderBy = workspace.OrderByPath
 	}
+	switch orderBy {
+	case workspace.OrderByPath, workspace.OrderByLastUpdated, workspace.OrderByRank:
+	default:
+		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "invalid orderBy", map[string]any{
+			"field": "orderBy",
+			"value": orderByRaw,
+		})
+	}
 
 	reverse := parseBoolDefault(r.URL.Query().Get("reverse"), false)
 
 	q := searchsvc.SearchQuery{
 		TextQuery:           strings.TrimSpace(r.URL.Query().Get("query")),
+		AllowEmpty:          true,
 		Ticket:              strings.TrimSpace(r.URL.Query().Get("ticket")),
 		Topics:              splitCSV(r.URL.Query().Get("topics")),
 		DocType:             strings.TrimSpace(r.URL.Query().Get("docType")),
@@ -197,6 +206,24 @@ func (s *Server) handleSearchDocs(w http.ResponseWriter, r *http.Request) error 
 		IncludeControlDocs:  parseBoolDefault(r.URL.Query().Get("includeControlDocs"), true),
 		IncludeDiagnostics:  parseBoolDefault(r.URL.Query().Get("includeDiagnostics"), true),
 		IncludeErrors:       parseBoolDefault(r.URL.Query().Get("includeErrors"), false),
+	}
+
+	// Reverse lookup requires file/dir. As a convenience for UIs, treat `query` as `file`
+	// when reverse=true and file/dir are empty.
+	if q.Reverse && strings.TrimSpace(q.File) == "" && strings.TrimSpace(q.Dir) == "" {
+		if strings.TrimSpace(q.TextQuery) != "" {
+			q.File = strings.TrimSpace(q.TextQuery)
+			q.TextQuery = ""
+		} else {
+			return NewHTTPError(http.StatusBadRequest, "invalid_argument", "reverse search requires file or dir", map[string]any{
+				"field": "reverse",
+			})
+		}
+	}
+
+	// Rank ordering only makes sense with a non-empty text query; fall back to a stable default.
+	if q.OrderBy == workspace.OrderByRank && strings.TrimSpace(q.TextQuery) == "" {
+		q.OrderBy = workspace.OrderByPath
 	}
 
 	var resp searchsvc.SearchResponse

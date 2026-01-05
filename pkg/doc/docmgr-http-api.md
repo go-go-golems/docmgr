@@ -24,6 +24,8 @@ This is intended for:
 - Avoiding per-request CLI spawns
 - Reusing docmgr’s reverse lookup + path normalization + diagnostics
 
+See also: `docmgr-web-ui.md` (Slug: `web-ui`) for running the bundled Search Web UI.
+
 Security note: the server is **local-first**. Bind to `127.0.0.1` by default and don’t expose it publicly unless you add authentication and threat-model it.
 
 ## 2. Quick Start
@@ -178,6 +180,12 @@ Sorting:
 - `orderBy`: `path|last_updated|rank` (default `path`)
 - `reverse` (bool, default `false`)
 
+Reverse lookup notes:
+
+- `reverse=true` searches docs by `RelatedFiles` references.
+- It normally requires `file` or `dir`.
+- As a convenience, if `reverse=true` and `file`/`dir` are empty but `query` is set, the server treats `query` as `file`.
+
 Pagination:
 - `pageSize` (int, default `200`, max `1000`)
 - `cursor` (string, optional)
@@ -196,7 +204,11 @@ Response (shape):
       "status": "active",
       "topics": ["chat", "backend", "websocket"],
       "path": "2026/01/04/MEN-4242--.../reference/01-chat-websocket-lifecycle.md",
+      "lastUpdated": "2026-01-04T15:04:05Z",
       "snippet": "...",
+      "relatedFiles": [
+        { "path": "backend/chat/ws/manager.go", "note": "WebSocket lifecycle (scenario)" }
+      ],
       "matchedFiles": ["backend/chat/ws/manager.go"],
       "matchedNotes": ["WebSocket lifecycle (scenario)"]
     }
@@ -265,4 +277,3 @@ Call refresh:
 ```bash
 curl -s -X POST http://127.0.0.1:8787/api/v1/index/refresh
 ```
-

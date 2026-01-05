@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 
 import {
@@ -17,6 +17,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { copyToClipboard } from '../../lib/clipboard'
 
 import { formatDate } from '../../lib/time'
+import { useToast } from '../toast/useToast'
 
 import { TicketHeader } from './components/TicketHeader'
 import { TicketTabs, type TicketTabKey } from './components/TicketTabs'
@@ -50,7 +51,7 @@ export function TicketPage() {
   const params = useParams()
   const ticket = (params.ticket ?? '').trim()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [toast, setToast] = useState<{ kind: 'success' | 'error'; message: string } | null>(null)
+  const toast = useToast()
 
   const tab = normalizeTab(searchParams.get('tab'))
   const selectedDoc = (searchParams.get('doc') ?? '').trim()
@@ -87,11 +88,9 @@ export function TicketPage() {
   async function onCopyPath(text: string) {
     try {
       await copyToClipboard(text)
-      setToast({ kind: 'success', message: 'Copied' })
-      setTimeout(() => setToast(null), 1200)
+      toast.success('Copied', { timeoutMs: 1200 })
     } catch (e) {
-      setToast({ kind: 'error', message: `Copy failed: ${String(e)}` })
-      setTimeout(() => setToast(null), 2500)
+      toast.error(`Copy failed: ${String(e)}`, { timeoutMs: 2500 })
     }
   }
 
@@ -143,12 +142,6 @@ export function TicketPage() {
   return (
     <div className="container py-4">
       <TicketHeader ticket={ticket} title={t?.title} ticketDir={t?.ticketDir} />
-
-      {toast ? (
-        <div className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} py-2`}>
-          {toast.message}
-        </div>
-      ) : null}
 
       {ticket === '' ? <div className="alert alert-info">Missing ticket id.</div> : null}
       {ticketError ? <ApiErrorAlert title="Failed to load ticket" error={ticketError} /> : null}

@@ -1,5 +1,6 @@
 import { timeAgo } from '../../../lib/time'
 import type { WorkspaceStatus } from '../../../services/docmgrApi'
+import { PageHeader } from '../../../components/PageHeader'
 
 export function SearchHeader({
   wsStatus,
@@ -14,16 +15,20 @@ export function SearchHeader({
 }) {
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="h3 mb-0">docmgr Search</h1>
-        <button
-          className="btn btn-outline-secondary refresh-btn"
-          onClick={onRefresh}
-          disabled={refreshLoading}
-        >
-          {refreshLoading ? 'Refreshing…' : `Refresh (${timeAgo(wsStatus?.indexedAt)})`}
-        </button>
-      </div>
+      <PageHeader
+        title="docmgr Search"
+        titleClassName="h3"
+        mb={4}
+        actions={
+          <button
+            className="btn btn-outline-secondary refresh-btn"
+            onClick={onRefresh}
+            disabled={refreshLoading}
+          >
+            {refreshLoading ? 'Refreshing…' : `Refresh (${timeAgo(wsStatus?.indexedAt)})`}
+          </button>
+        }
+      />
 
       {wsError ? (
         <div className="alert alert-warning">
@@ -33,4 +38,3 @@ export function SearchHeader({
     </>
   )
 }
-

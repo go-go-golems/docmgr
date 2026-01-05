@@ -16,6 +16,8 @@ import { ApiErrorAlert } from '../../components/ApiErrorAlert'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { copyToClipboard } from '../../lib/clipboard'
 
+import { formatDate } from '../../lib/time'
+
 import { TicketHeader } from './components/TicketHeader'
 import { TicketTabs, type TicketTabKey } from './components/TicketTabs'
 import { TicketChangelogTab } from './tabs/TicketChangelogTab'
@@ -28,13 +30,6 @@ function normalizeTab(raw: string | null): TicketTabKey {
   const t = (raw ?? '').trim().toLowerCase()
   if (t === 'documents' || t === 'tasks' || t === 'graph' || t === 'changelog') return t
   return 'overview'
-}
-
-function formatDate(iso: string | undefined): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString()
 }
 
 function asArray<T>(v: T[] | null | undefined): T[] {

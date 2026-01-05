@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 
+import { PageHeader } from '../../../components/PageHeader'
+
 export function TicketHeader({
   ticket,
   title,
@@ -9,21 +11,27 @@ export function TicketHeader({
   title?: string
   ticketDir?: string
 }) {
+  const subtitle =
+    title || ticketDir ? (
+      <>
+        {title ? <div>{title}</div> : null}
+        {ticketDir ? <div className="font-monospace">{ticketDir}</div> : null}
+      </>
+    ) : undefined
+
   return (
-    <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
-      <div className="flex-grow-1">
-        <div className="h4 mb-0">
+    <PageHeader
+      title={
+        <>
           Ticket: <span className="font-monospace">{ticket || '—'}</span>
-        </div>
-        {title ? <div className="text-muted">{title}</div> : null}
-        {ticketDir ? <div className="small text-muted font-monospace">{ticketDir}</div> : null}
-      </div>
-      <div className="d-flex gap-2">
+        </>
+      }
+      subtitle={subtitle}
+      actions={
         <Link className="btn btn-outline-primary" to="/">
           Search
         </Link>
-      </div>
-    </div>
+      }
+    />
   )
 }
-

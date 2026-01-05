@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>docmgr Document Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .doc-viewer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .doc-header {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            padding: 20px;
+            border-bottom: 2px solid #0d6efd;
+        }
+        
+        .doc-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 8px;
+        }
+        
+        .doc-meta-line {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        
+        .metadata-section {
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+        }
+        
+        .metadata-table {
+            font-size: 0.9rem;
+        }
+        
+        .metadata-table th {
+            font-weight: 600;
+            color: #495057;
+            width: 140px;
+            padding: 8px 0;
+        }
+        
+        .metadata-table td {
+            color: #212529;
+            padding: 8px 0;
+        }
+        
+        .related-files-section {
+            background: white;
+            border-left: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+            border-bottom: 1px solid #dee2e6;
+            padding: 20px;
+        }
+        
+        .file-item {
+            background: #f8f9fa;
+            border-left: 3px solid #0d6efd;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .file-path {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #212529;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .file-note {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-left: 16px;
+        }
+        
+        .doc-content {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0 0 8px 8px;
+            padding: 30px;
+            margin-top: 1px;
+        }
+        
+        .doc-content h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #212529;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .doc-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .doc-content p {
+            line-height: 1.6;
+            color: #212529;
+            margin-bottom: 12px;
+        }
+        
+        .doc-content ul {
+            line-height: 1.8;
+            margin-bottom: 16px;
+            list-style-type: none;
+            padding-left: 0;
+        }
+        
+        .doc-content ul li {
+            padding-left: 24px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        
+        .doc-content ul li:before {
+            content: "•";
+            position: absolute;
+            left: 8px;
+            color: #6c757d;
+        }
+        
+        .doc-content code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        
+        .doc-content pre {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 16px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+        
+        .doc-content pre code {
+            background: transparent;
+            padding: 0;
+            color: #212529;
+            font-size: 0.85rem;
+        }
+        
+        .section-divider {
+            border-top: 3px double #dee2e6;
+            margin: 30px 0;
+        }
+        
+        .topic-badge {
+            font-size: 0.75rem;
+            margin-right: 4px;
+        }
+        
+        .scroll-indicator {
+            text-align: center;
+            color: #6c757d;
+            font-size: 0.85rem;
+            font-style: italic;
+            margin: 20px 0;
+        }
+        
+        .action-bar {
+            position: sticky;
+            bottom: 0;
+            background: white;
+            border-top: 1px solid #dee2e6;
+            padding: 12px 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .kbd-hint {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        
+        kbd {
+            background-color: #f8f9fa;
+            border: 1px solid #adb5bd;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Mock document data
+        const MOCK_DOCUMENT = {
+            title: "Design: FTS-backed search engine (no compatibility)",
+            ticket: "005-USE-SQLITE-FTS",
+            status: "draft",
+            docType: "design-doc",
+            intent: "long-term",
+            topics: ["backend", "docmgr", "tooling", "testing"],
+            owners: [],
+            lastUpdated: "2026-01-04T15:34:47-05:00",
+            path: "ttmp/2026/01/04/005-USE-SQLITE-FTS--use-sqlite-fts-for-search/design-doc/01-fts-search-engine.md",
+            relatedFiles: [
+                {
+                    path: "internal/searchsvc/search.go",
+                    note: "Engine boundary the design targets"
+                },
+                {
+                    path: "internal/workspace/sqlite_schema.go",
+                    note: "docs_fts schema and FTS availability"
+                },
+                {
+                    path: "pkg/commands/search.go",
+                    note: "Thin CLI wrapper"
+                }
+            ],
+            content: `## Executive Summary
+
+Replace docmgr's \`--query\` search implementation with a **SQLite FTS5-backed** query path (no backwards compatibility guarantees) and refactor the CLI search command so it becomes a thin adapter over a reusable search engine package.
+
+This design explicitly chooses:
+
+- **FTS schema option C**: index \`title\`, \`body\`, \`topics\`, \`doc_type\`, \`ticket_id\`.
+- **Ranking support**: add \`OrderByRank\` using \`bm25(...)\`.
+- **Snippet**: keep the current \`extractSnippet\` behavior for now, but move it into the reusable core package.
+
+## Problem Statement
+
+Today \`docmgr doc search --query\` is implemented as a Go substring scan over bodies after \`Workspace.QueryDocs(...)\` returns candidates. This has three major downsides:
+
+- slow on large workspaces (body scanning is O(total bytes scanned))
+- no ranking (results are typically ordered by path)
+- search logic is embedded in \`pkg/commands/search.go\`, which makes it difficult to reuse for HTTP APIs and increases risk of semantic drift
+
+We do **not** need behavior exact-match compatibility with the current substring semantics. This ticket is allowed to change behavior.
+
+## Proposed Solution
+
+### 1) Add FTS to the in-memory workspace index
+
+Extend the workspace SQLite schema to create a virtual FTS5 table:
+
+- Table name: \`docs_fts\`
+- Model: **contentless** FTS table, populated during ingest
+- Tokenizer: \`unicode61\`
+
+Schema (Option C):
+
+\`\`\`sql
+CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
+  title,
+  body,
+  topics,
+  doc_type,
+  ticket_id,
+  tokenize='unicode61'
+);
+\`\`\`
+
+Populate it by inserting rows with \`rowid = docs.doc_id\` during ingestion:
+
+\`\`\`sql
+INSERT INTO docs_fts(rowid, title, body, topics, doc_type, ticket_id)
+VALUES (?, ?, ?, ?, ?, ?);
+\`\`\`
+
+Where:
+
+- \`title/body/doc_type/ticket_id\` come from the parsed frontmatter and body.
+- \`topics\` is a deterministic string representation derived from \`doc.Topics\` (for example, comma-separated in original order).
+
+FTS availability:
+
+- Best-effort create \`docs_fts\`.
+- If sqlite lacks fts5 (\`no such module: fts5\`), treat it as "FTS unavailable":
+  - metadata-only search stays available
+  - text query (\`--query\`) returns a clear error
+
+### 2) Teach the query engine about text queries and rank ordering
+
+Extend \`internal/workspace\` query types:
+
+- Add \`TextQuery string\` to \`DocFilters\`.
+- Add \`OrderByRank\` to \`OrderBy\`.
+
+Update SQL compilation:
+
+- If \`TextQuery\` is non-empty, join FTS and add \`WHERE docs_fts MATCH ?\`.
+- If \`OrderByRank\`, order by \`bm25(docs_fts)\` (ascending = better).
+
+Notes:
+
+- Because we don't need compatibility, we treat the raw user query string as an FTS query string. If parsing fails, return a useful error.
+
+### 3) Extract a reusable search engine package
+
+Create a package that is not tied to Glaze/Cobra:
+
+- Suggested: \`internal/searchsvc\`
+
+Core types:
+
+- \`type SearchQuery struct { ... }\` (covers all search inputs, including visibility toggles, ordering, pagination later)
+- \`type SearchResult struct { ... }\`
+- \`type SearchResponse struct { Total int; Results []SearchResult; Diagnostics []... }\`
+
+Core entrypoint:
+
+- \`SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (SearchResponse, error)\`
+
+Responsibilities:
+
+- Convert \`SearchQuery\` → \`workspace.DocQuery\`
+- Call \`ws.QueryDocs(...)\`
+- Apply remaining non-indexed filters (external sources, date filters) if still desired
+- Generate snippets using \`extractSnippet\` moved to \`internal/searchsvc/snippet.go\`
+
+### 4) Make the CLI command thin
+
+Refactor \`pkg/commands/search.go\` to:
+
+- parse flags into the existing CLI-only struct
+- map into \`searchsvc.SearchQuery\`
+- call \`searchsvc.SearchDocs\`
+- render results (glaze rows / bare text) without re-implementing search semantics
+
+## Design Decisions
+
+1. **No backwards compatibility**
+   - We do not preserve substring semantics. \`--query\` becomes FTS semantics.
+2. **Option C FTS schema**
+   - Indexing multiple fields is more useful than body-only and enables better UX immediately.
+3. **\`OrderByRank\` with \`bm25\`**
+   - Enables meaningful result ordering when using \`--query\`.
+4. **Keep snippet logic (for now)**
+   - Moving it to core prevents CLI/HTTP duplication; improving snippets can be a follow-up.
+5. **Search engine outside \`pkg/commands\`**
+   - Prevents semantic drift and makes HTTP API work straightforward.
+
+## Alternatives Considered
+
+1. Body-only FTS (schema option B/A)
+   - Rejected: less useful than indexing title/topics/doc_type/ticket_id.
+2. Preserve substring semantics by post-filtering after FTS
+   - Rejected: explicit requirement is no exact-match compatibility.
+3. Implement FTS in \`pkg/commands\` only
+   - Rejected: makes it harder to reuse for HTTP and will drift.
+
+## Implementation Plan
+
+1. Add tasks to the ticket (see \`tasks.md\`).
+2. Implement \`docs_fts\` creation and ingest population.
+3. Extend \`workspace.DocFilters\` with \`TextQuery\`; extend ordering with \`OrderByRank\`.
+4. Add SQL compilation logic for \`MATCH\` and \`bm25\`.
+5. Create \`internal/searchsvc\` and move:
+   - \`extractSnippet\`
+   - date parsing (if still needed)
+   - external source filtering (if still needed)
+6. Refactor \`pkg/commands/search.go\` to call \`internal/searchsvc\`.
+7. Add tests:
+   - \`//go:build sqlite_fts5\` test proving \`MATCH\` returns expected hits and \`OrderByRank\` ordering works.
+8. Update related docs (search implementation guide).
+
+## Open Questions
+
+1. Should we add a \`--query-mode\` (raw FTS vs quoted phrase) or just accept raw FTS syntax?
+2. Should the FTS query always scope by ticket/doc-type before matching (for speed), or rely on SQLite planner?
+
+## References
+
+- Analysis: \`ttmp/2026/01/04/005-USE-SQLITE-FTS--use-sqlite-fts-for-search-refactor-search-out-of-commands/analysis/01-analysis-fts-backed-search-refactor-search-packages.md\`
+- Current CLI search command: \`pkg/commands/search.go\`
+- Workspace schema and query engine:
+  - \`internal/workspace/sqlite_schema.go\`
+  - \`internal/workspace/index_builder.go\`
+  - \`internal/workspace/query_docs.go\`
+  - \`internal/workspace/query_docs_sql.go\``
+        };
+
+        // Toast Component
+        function Toast({ message, show, onClose }) {
+            useEffect(() => {
+                if (show) {
+                    const timer = setTimeout(onClose, 2000);
+                    return () => clearTimeout(timer);
+                }
+            }, [show, onClose]);
+
+            if (!show) return null;
+
+            return (
+                <div className="toast-container">
+                    <div className="toast show" role="alert">
+                        <div className="toast-header bg-success text-white">
+                            <strong className="me-auto">✓ Success</strong>
+                            <button type="button" className="btn-close btn-close-white" onClick={onClose}></button>
+                        </div>
+                        <div className="toast-body">
+                            {message}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Document Viewer Component
+        function DocumentViewer() {
+            const [showToast, setShowToast] = useState(false);
+            const [toastMessage, setToastMessage] = useState("");
+
+            const doc = MOCK_DOCUMENT;
+
+            const copyToClipboard = (text, label) => {
+                navigator.clipboard.writeText(text);
+                setToastMessage(`${label} copied to clipboard`);
+                setShowToast(true);
+            };
+
+            const formatDate = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            const getStatusBadge = (status) => {
+                const variants = {
+                    active: "primary",
+                    review: "warning",
+                    complete: "success",
+                    draft: "secondary",
+                    archived: "dark"
+                };
+                return variants[status] || "secondary";
+            };
+
+            // Keyboard shortcuts
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape') {
+                        window.history.back();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+                        copyToClipboard(doc.content, "Document content");
+                    }
+                };
+                document.addEventListener('keydown', handleKeyDown);
+                return () => document.removeEventListener('keydown', handleKeyDown);
+            }, []);
+
+            // Simple markdown parser
+            const parseMarkdown = (text) => {
+                // Replace inline code
+                text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+                // Bold
+                text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                return text;
+            };
+
+            // Parse content into React elements
+            const renderContent = (content) => {
+                const lines = content.split('\n');
+                const elements = [];
+                let currentParagraph = [];
+                let inCodeBlock = false;
+                let codeBlockLines = [];
+                let inList = false;
+                let listItems = [];
+
+                const flushParagraph = () => {
+                    if (currentParagraph.length > 0) {
+                        const text = parseMarkdown(currentParagraph.join(' '));
+                        elements.push(
+                            <p key={elements.length} dangerouslySetInnerHTML={{ __html: text }} />
+                        );
+                        currentParagraph = [];
+                    }
+                };
+
+                const flushList = () => {
+                    if (listItems.length > 0) {
+                        elements.push(
+                            <ul key={elements.length}>
+                                {listItems.map((item, idx) => (
+                                    <li key={idx} dangerouslySetInnerHTML={{ __html: parseMarkdown(item) }} />
+                                ))}
+                            </ul>
+                        );
+                        listItems = [];
+                        inList = false;
+                    }
+                };
+
+                lines.forEach((line, idx) => {
+                    // Code blocks
+                    if (line.startsWith('```')) {
+                        if (!inCodeBlock) {
+                            flushParagraph();
+                            flushList();
+                            inCodeBlock = true;
+                            codeBlockLines = [];
+                        } else {
+                            elements.push(
+                                <pre key={elements.length}>
+                                    <code>{codeBlockLines.join('\n')}</code>
+                                </pre>
+                            );
+                            inCodeBlock = false;
+                            codeBlockLines = [];
+                        }
+                        return;
+                    }
+
+                    if (inCodeBlock) {
+                        codeBlockLines.push(line);
+                        return;
+                    }
+
+                    // Headers
+                    if (line.startsWith('## ')) {
+                        flushParagraph();
+                        flushList();
+                        elements.push(
+                            <h2 key={elements.length}>{line.substring(3)}</h2>
+                        );
+                        return;
+                    }
+
+                    if (line.startsWith('### ')) {
+                        flushParagraph();
+                        flushList();
+                        elements.push(
+                            <h3 key={elements.length}>{line.substring(4)}</h3>
+                        );
+                        return;
+                    }
+
+                    // Lists
+                    if (line.startsWith('- ')) {
+                        flushParagraph();
+                        inList = true;
+                        listItems.push(line.substring(2));
+                        return;
+                    }
+
+                    // Empty lines
+                    if (line.trim() === '') {
+                        flushParagraph();
+                        flushList();
+                        return;
+                    }
+
+                    // Regular text
+                    if (inList) {
+                        flushList();
+                    }
+                    currentParagraph.push(line);
+                });
+
+                flushParagraph();
+                flushList();
+                return elements;
+            };
+
+            return (
+                <div className="doc-viewer-container">
+                    <Toast 
+                        message={toastMessage} 
+                        show={showToast} 
+                        onClose={() => setShowToast(false)} 
+                    />
+
+                    {/* Header */}
+                    <div className="doc-header">
+                        <div className="doc-title">{doc.title}</div>
+                        <div className="doc-meta-line">
+                            {doc.ticket} • {doc.docType} • 
+                            <span className={`badge bg-${getStatusBadge(doc.status)} ms-1`}>
+                                {doc.status}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Metadata Section */}
+                    <div className="metadata-section">
+                        <h6 className="text-uppercase text-muted mb-3" style={{fontSize: '0.75rem', fontWeight: 600}}>
+                            METADATA
+                        </h6>
+                        <table className="metadata-table w-100">
+                            <tbody>
+                                <tr>
+                                    <th>Ticket:</th>
+                                    <td>
+                                        <span className="font-monospace">{doc.ticket}</span>
+                                        <button 
+                                            className="btn btn-sm btn-link p-0 ms-2"
+                                            onClick={() => copyToClipboard(doc.ticket, "Ticket ID")}
+                                        >
+                                            📋
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Status:</th>
+                                    <td>
+                                        <span className={`badge bg-${getStatusBadge(doc.status)}`}>
+                                            {doc.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Doc Type:</th>
+                                    <td>{doc.docType}</td>
+                                </tr>
+                                <tr>
+                                    <th>Intent:</th>
+                                    <td>{doc.intent}</td>
+                                </tr>
+                                <tr>
+                                    <th>Topics:</th>
+                                    <td>
+                                        {doc.topics.map(topic => (
+                                            <span key={topic} className="badge bg-secondary topic-badge">
+                                                {topic}
+                                            </span>
+                                        ))}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Owners:</th>
+                                    <td>{doc.owners.length > 0 ? doc.owners.join(', ') : '(none)'}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated:</th>
+                                    <td>{formatDate(doc.lastUpdated)}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Related Files Section */}
+                    <div className="related-files-section">
+                        <h6 className="text-uppercase text-muted mb-3" style={{fontSize: '0.75rem', fontWeight: 600}}>
+                            RELATED FILES ({doc.relatedFiles.length})
+                        </h6>
+                        {doc.relatedFiles.map((file, idx) => (
+                            <div key={idx} className="file-item">
+                                <div className="file-path">
+                                    • {file.path}
+                                    <button 
+                                        className="btn btn-sm btn-link p-0 ms-2"
+                                        onClick={() => copyToClipboard(file.path, "File path")}
+                                    >
+                                        📋
+                                    </button>
+                                </div>
+                                <div className="file-note">{file.note}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Document Content */}
+                    <div className="doc-content">
+                        <div className="section-divider"></div>
+                        {renderContent(doc.content)}
+                        <div className="scroll-indicator mt-5">
+                            [scroll down for more...]
+                        </div>
+                    </div>
+
+                    {/* Action Bar */}
+                    <div className="action-bar">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <div className="kbd-hint">
+                                <kbd>↑↓</kbd> Scroll • 
+                                <kbd>Esc</kbd> Close • 
+                                <kbd>Ctrl+C</kbd> Copy all
+                            </div>
+                            <div>
+                                <button 
+                                    className="btn btn-sm btn-outline-secondary me-2"
+                                    onClick={() => copyToClipboard(doc.path, "Document path")}
+                                >
+                                    📋 Copy Path
+                                </button>
+                                <button 
+                                    className="btn btn-sm btn-outline-primary me-2"
+                                    onClick={() => alert('Open related code (not implemented in mock)')}
+                                >
+                                    🔗 Related Code
+                                </button>
+                                <button 
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => window.history.back()}
+                                >
+                                    ← Back to Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Render
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<DocumentViewer />);
+    </script>
+</body>
+</html>

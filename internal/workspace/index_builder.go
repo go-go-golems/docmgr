@@ -102,6 +102,15 @@ VALUES (?, ?, ?)
 	}
 	defer func() { _ = insertTopicStmt.Close() }()
 
+	insertOwnerStmt, err := tx.PrepareContext(ctx, `
+INSERT OR IGNORE INTO doc_owners (doc_id, owner_lower, owner_original)
+VALUES (?, ?, ?)
+`)
+	if err != nil {
+		return errors.Wrap(err, "prepare insert doc_owners")
+	}
+	defer func() { _ = insertOwnerStmt.Close() }()
+
 	insertRFStmt, err := tx.PrepareContext(ctx, `
 INSERT INTO related_files (
   doc_id, note,
@@ -224,6 +233,17 @@ VALUES (?, ?, ?, ?, ?, ?)
 			_, err := insertTopicStmt.ExecContext(ctx, docID, strings.ToLower(topic), topic)
 			if err != nil {
 				return errors.Wrap(err, "insert doc_topics row")
+			}
+		}
+
+		for _, owner := range doc.Owners {
+			owner = strings.TrimSpace(owner)
+			if owner == "" {
+				continue
+			}
+			_, err := insertOwnerStmt.ExecContext(ctx, docID, strings.ToLower(owner), owner)
+			if err != nil {
+				return errors.Wrap(err, "insert doc_owners row")
 			}
 		}
 

@@ -4,8 +4,6 @@ all: build
 
 VERSION=v0.1.14
 
-export GOWORK=off
-
 docker-lint:
 	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run -v
 
@@ -27,8 +25,27 @@ test:
 	go test ./...
 
 build:
-	go generate ./...
-	go build -tags "sqlite_fts5" ./...
+	go build -tags "sqlite_fts5,embed" ./cmd/docmgr
+
+.PHONY: ui-install ui-dev ui-generate build-embed dev-backend dev-frontend
+
+ui-install:
+	pnpm -C ui install
+
+ui-dev:
+	pnpm -C ui dev
+
+ui-generate:
+	go generate ./internal/web
+
+build-embed: ui-generate
+	go build -tags "sqlite_fts5,embed" ./cmd/docmgr
+
+dev-backend:
+	go run -tags sqlite_fts5 ./cmd/docmgr api serve --addr 127.0.0.1:3001 --root ttmp
+
+dev-frontend:
+	pnpm -C ui dev
 
 goreleaser:
 	goreleaser release --skip=sign --snapshot --clean
@@ -53,5 +70,5 @@ bump-glazed:
 
 DOCMGR_BINARY=$(shell which docmgr)
 install:
-	go build -tags "sqlite_fts5" -o ./dist/docmgr ./cmd/docmgr && \
+	go build -tags "sqlite_fts5,embed" -o ./dist/docmgr ./cmd/docmgr && \
 		cp ./dist/docmgr $(DOCMGR_BINARY)

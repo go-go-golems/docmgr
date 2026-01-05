@@ -3,9 +3,11 @@ package searchsvc
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
@@ -16,7 +18,8 @@ import (
 
 type SearchQuery struct {
 	// TextQuery is an FTS5 query string (no compatibility guarantees).
-	TextQuery string
+	TextQuery  string
+	AllowEmpty bool
 
 	Ticket  string
 	Topics  []string
@@ -43,16 +46,19 @@ type SearchQuery struct {
 }
 
 type SearchResult struct {
-	Ticket  string
-	Title   string
-	DocType string
-	Status  string
-	Topics  []string
-	Path    string
-	Snippet string
+	Ticket      string     `json:"ticket"`
+	Title       string     `json:"title"`
+	DocType     string     `json:"docType"`
+	Status      string     `json:"status"`
+	Topics      []string   `json:"topics"`
+	Path        string     `json:"path"`
+	LastUpdated *time.Time `json:"lastUpdated,omitempty"`
+	Snippet     string     `json:"snippet"`
 
-	MatchedFiles []string
-	MatchedNotes []string
+	RelatedFiles []models.RelatedFile `json:"relatedFiles"`
+
+	MatchedFiles []string `json:"matchedFiles"`
+	MatchedNotes []string `json:"matchedNotes"`
 }
 
 type SearchResponse struct {
@@ -69,19 +75,21 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 		return SearchResponse{}, fmt.Errorf("nil workspace")
 	}
 
-	if strings.TrimSpace(q.TextQuery) == "" &&
-		strings.TrimSpace(q.Ticket) == "" &&
-		len(q.Topics) == 0 &&
-		strings.TrimSpace(q.DocType) == "" &&
-		strings.TrimSpace(q.Status) == "" &&
-		strings.TrimSpace(q.File) == "" &&
-		strings.TrimSpace(q.Dir) == "" &&
-		strings.TrimSpace(q.ExternalSource) == "" &&
-		strings.TrimSpace(q.Since) == "" &&
-		strings.TrimSpace(q.Until) == "" &&
-		strings.TrimSpace(q.CreatedSince) == "" &&
-		strings.TrimSpace(q.UpdatedSince) == "" {
-		return SearchResponse{}, fmt.Errorf("must provide at least a query or filter")
+	if !q.AllowEmpty {
+		if strings.TrimSpace(q.TextQuery) == "" &&
+			strings.TrimSpace(q.Ticket) == "" &&
+			len(q.Topics) == 0 &&
+			strings.TrimSpace(q.DocType) == "" &&
+			strings.TrimSpace(q.Status) == "" &&
+			strings.TrimSpace(q.File) == "" &&
+			strings.TrimSpace(q.Dir) == "" &&
+			strings.TrimSpace(q.ExternalSource) == "" &&
+			strings.TrimSpace(q.Since) == "" &&
+			strings.TrimSpace(q.Until) == "" &&
+			strings.TrimSpace(q.CreatedSince) == "" &&
+			strings.TrimSpace(q.UpdatedSince) == "" {
+			return SearchResponse{}, fmt.Errorf("must provide at least a query or filter")
+		}
 	}
 
 	sinceTime, err := ParseDate(q.Since)
@@ -144,6 +152,19 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 		return SearchResponse{}, err
 	}
 
+	rootAbs, err := filepath.Abs(ws.Context().Root)
+	if err != nil {
+		return SearchResponse{}, err
+	}
+	rootAbs = filepath.Clean(rootAbs)
+
+	rootEval := rootAbs
+	if v, err := filepath.EvalSymlinks(rootAbs); err == nil {
+		rootEval = v
+	}
+
+	docsFS := os.DirFS(rootAbs)
+
 	out := make([]SearchResult, 0, len(res.Docs))
 
 	fileQueryRaw := strings.TrimSpace(q.File)
@@ -152,11 +173,16 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 			continue
 		}
 
+		relPath, ok := resolveFileWithinRoot(rootAbs, rootEval, h.Path)
+		if !ok {
+			continue
+		}
+
 		doc := h.Doc
 		content := h.Body
 		if strings.TrimSpace(content) == "" {
 			// Fallback: load body from disk if not included in the index.
-			_, body, rerr := documents.ReadDocumentWithFrontmatter(h.Path)
+			_, body, rerr := documents.ReadDocumentWithFrontmatterFS(docsFS, relPath)
 			if rerr == nil {
 				content = body
 			}
@@ -164,17 +190,17 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 
 		// External source filter (best-effort; re-read frontmatter).
 		if strings.TrimSpace(q.ExternalSource) != "" {
-			fm, ferr := readFrontmatter(h.Path)
+			fm, _, ferr := documents.ReadDocumentWithFrontmatterFS(docsFS, relPath)
 			if ferr != nil {
 				continue
 			}
-			if !externalSourceMatch(fm.ExternalSources, q.ExternalSource) {
+			if fm == nil || !externalSourceMatch(fm.ExternalSources, q.ExternalSource) {
 				continue
 			}
 		}
 
 		// Date filters.
-		if fi, err := os.Stat(h.Path); err == nil {
+		if fi, err := fs.Stat(docsFS, relPath); err == nil {
 			createdTime := fi.ModTime()
 			if !createdSinceTime.IsZero() && createdTime.Before(createdSinceTime) {
 				continue
@@ -192,28 +218,32 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 			}
 		}
 
-		relPath, err := filepath.Rel(ws.Context().Root, h.Path)
-		if err != nil {
-			relPath = h.Path
-		}
-		relPath = filepath.ToSlash(relPath)
-
 		snippet := ExtractSnippet(content, q.TextQuery, 100)
 
-		var matchedFiles []string
-		var matchedNotes []string
+		var lastUpdated *time.Time
+		if !doc.LastUpdated.IsZero() {
+			t := doc.LastUpdated
+			lastUpdated = &t
+		}
+
+		matchedFiles := []string{}
+		matchedNotes := []string{}
 		if fileQueryRaw != "" {
 			matchedFiles, matchedNotes = matchRelatedFiles(ws, h.Path, doc.RelatedFiles, fileQueryRaw)
 		}
 
 		out = append(out, SearchResult{
-			Ticket:       doc.Ticket,
-			Title:        doc.Title,
-			DocType:      doc.DocType,
-			Status:       doc.Status,
-			Topics:       append([]string{}, doc.Topics...),
-			Path:         relPath,
-			Snippet:      snippet,
+			Ticket:      doc.Ticket,
+			Title:       doc.Title,
+			DocType:     doc.DocType,
+			Status:      doc.Status,
+			Topics:      append([]string{}, doc.Topics...),
+			Path:        relPath,
+			LastUpdated: lastUpdated,
+			Snippet:     snippet,
+
+			RelatedFiles: append([]models.RelatedFile{}, doc.RelatedFiles...),
+
 			MatchedFiles: matchedFiles,
 			MatchedNotes: matchedNotes,
 		})
@@ -224,11 +254,6 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 		Results:     out,
 		Diagnostics: res.Diagnostics,
 	}, nil
-}
-
-func readFrontmatter(path string) (*models.Document, error) {
-	doc, _, err := documents.ReadDocumentWithFrontmatter(path)
-	return doc, err
 }
 
 func externalSourceMatch(externalSources []string, query string) bool {
@@ -256,7 +281,7 @@ func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles mod
 		RepoRoot:  ws.Context().RepoRoot,
 	})
 
-	fileQueryNorm := docResolver.Normalize(fileQueryRaw)
+	fileQueryNorm := docResolver.NormalizeNoFS(fileQueryRaw)
 	if fileQueryNorm.Empty() && strings.TrimSpace(fileQueryRaw) != "" {
 		fileQueryNorm = paths.NormalizedPath{
 			Canonical:     filepath.ToSlash(fileQueryRaw),
@@ -268,7 +293,7 @@ func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles mod
 	var matchedFiles []string
 	var matchedNotes []string
 	for _, rf := range relatedFiles {
-		n := docResolver.Normalize(rf.Path)
+		n := docResolver.NormalizeNoFS(rf.Path)
 		if paths.MatchPaths(fileQueryNorm, n) ||
 			(strings.TrimSpace(baseQuery) != "" && (filepath.Base(filepath.ToSlash(rf.Path)) == baseQuery)) ||
 			(strings.TrimSpace(baseQuery) != "" && strings.HasSuffix(filepath.ToSlash(rf.Path), "/"+baseQuery)) {
@@ -283,4 +308,47 @@ func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles mod
 		}
 	}
 	return matchedFiles, matchedNotes
+}
+
+func resolveFileWithinRoot(rootAbs string, rootEval string, rawPath string) (string, bool) {
+	rawPath = strings.TrimSpace(rawPath)
+	if rawPath == "" || strings.ContainsRune(rawPath, 0) {
+		return "", false
+	}
+
+	cleaned := filepath.Clean(filepath.FromSlash(rawPath))
+	absTarget := cleaned
+	if !filepath.IsAbs(absTarget) {
+		absTarget = filepath.Join(rootAbs, absTarget)
+	}
+	absTarget = filepath.Clean(absTarget)
+
+	relOS, err := filepath.Rel(rootAbs, absTarget)
+	if err != nil {
+		return "", false
+	}
+	if relOS == "." {
+		return "", false
+	}
+	if relOS == ".." || strings.HasPrefix(relOS, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	relFS := filepath.ToSlash(relOS)
+	if !fs.ValidPath(relFS) {
+		return "", false
+	}
+
+	absEval, err := filepath.EvalSymlinks(absTarget)
+	if err != nil {
+		return "", false
+	}
+	relEval, err := filepath.Rel(rootEval, absEval)
+	if err != nil {
+		return "", false
+	}
+	if relEval == ".." || strings.HasPrefix(relEval, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+
+	return relFS, true
 }

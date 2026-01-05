@@ -19,7 +19,7 @@ func TestCreateWorkspaceSchema_InMemory(t *testing.T) {
 	}
 
 	// Sanity: ensure key tables exist by querying sqlite_master.
-	for _, table := range []string{"docs", "doc_topics", "related_files"} {
+	for _, table := range []string{"docs", "doc_topics", "doc_owners", "related_files"} {
 		var name string
 		if err := db.QueryRowContext(ctx,
 			`SELECT name FROM sqlite_master WHERE type='table' AND name=?`,

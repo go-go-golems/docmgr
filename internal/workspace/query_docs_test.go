@@ -146,6 +146,45 @@ broken
 		t.Fatalf("expected topic 'b' match to be index.md doc")
 	}
 
+	// OwnersAny: match owner "manuel" => should return index.md and tasks.md (IncludeControlDocs).
+	res, err = ws.QueryDocs(ctx, DocQuery{
+		Scope: Scope{Kind: ScopeTicket, TicketID: "MEN-1"},
+		Filters: DocFilters{
+			OwnersAny: []string{"manuel"},
+		},
+		Options: DocQueryOptions{
+			IncludeControlDocs: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("QueryDocs owners: %v", err)
+	}
+	if len(res.Docs) != 2 {
+		t.Fatalf("expected 2 docs matching owner 'manuel', got %d", len(res.Docs))
+	}
+	for _, h := range res.Docs {
+		if h.Doc == nil || len(h.Doc.Owners) == 0 || h.Doc.Owners[0] != "manuel" {
+			t.Fatalf("expected owners to be hydrated for matching docs")
+		}
+	}
+
+	// Intent: exact match intent "long-term" => should return index.md and tasks.md (IncludeControlDocs).
+	res, err = ws.QueryDocs(ctx, DocQuery{
+		Scope: Scope{Kind: ScopeTicket, TicketID: "MEN-1"},
+		Filters: DocFilters{
+			Intent: "long-term",
+		},
+		Options: DocQueryOptions{
+			IncludeControlDocs: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("QueryDocs intent: %v", err)
+	}
+	if len(res.Docs) != 2 {
+		t.Fatalf("expected 2 docs matching intent 'long-term', got %d", len(res.Docs))
+	}
+
 	// RelatedFile reverse lookup: match index.md by referenced file.
 	res, err = ws.QueryDocs(ctx, DocQuery{
 		Scope: Scope{Kind: ScopeRepo},

@@ -48,7 +48,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			if raw == "" {
 				continue
 			}
-			n := w.resolver.Normalize(raw)
+			n := w.resolver.NormalizeNoFS(raw)
 			canon := strings.TrimSpace(n.Canonical)
 			repoRel := strings.TrimSpace(n.RepoRelative)
 			abs := strings.TrimSpace(n.Abs)
@@ -64,7 +64,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 			if raw == "" {
 				continue
 			}
-			n := w.resolver.Normalize(raw)
+			n := w.resolver.NormalizeNoFS(raw)
 			canon := strings.TrimSpace(n.Canonical)
 			repoRel := strings.TrimSpace(n.RepoRelative)
 			abs := strings.TrimSpace(n.Abs)
@@ -191,11 +191,15 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 
 	// Batch hydrate topics + related_files for parse_ok docs.
 	topicsByDocID := map[int64][]string{}
+	ownersByDocID := map[int64][]string{}
 	rfsByDocID := map[int64]models.RelatedFiles{}
 
 	if len(okDocIDs) > 0 {
 		if topics, err := fetchTopicsByDocIDs(ctx, w.db, okDocIDs); err == nil {
 			topicsByDocID = topics
+		}
+		if owners, err := fetchOwnersByDocIDs(ctx, w.db, okDocIDs); err == nil {
+			ownersByDocID = owners
 		}
 		if rfs, err := fetchRelatedFilesByDocIDs(ctx, w.db, okDocIDs); err == nil {
 			rfsByDocID = rfs
@@ -207,6 +211,9 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 		if p.parseOK && p.handle.Doc != nil {
 			if topics, ok := topicsByDocID[p.docID]; ok {
 				p.handle.Doc.Topics = topics
+			}
+			if owners, ok := ownersByDocID[p.docID]; ok {
+				p.handle.Doc.Owners = owners
 			}
 			if rfs, ok := rfsByDocID[p.docID]; ok {
 				p.handle.Doc.RelatedFiles = rfs
@@ -301,6 +308,7 @@ type DocFilters struct {
 	Ticket  string
 	DocType string
 	Status  string
+	Intent  string
 
 	// TextQuery is an FTS5 query string matched against docs_fts.
 	TextQuery string
@@ -309,6 +317,7 @@ type DocFilters struct {
 	RelatedDir  []string
 
 	TopicsAny []string
+	OwnersAny []string
 }
 
 type OrderBy string
@@ -401,6 +410,40 @@ func fetchTopicsByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) (map[i
 	return out, rows.Err()
 }
 
+func fetchOwnersByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) (map[int64][]string, error) {
+	docIDs = uniqueInt64(docIDs...)
+	if len(docIDs) == 0 || db == nil {
+		return map[int64][]string{}, nil
+	}
+	placeholders := makePlaceholders(len(docIDs))
+	// #nosec G202 -- placeholders are generated ("?,?") and values are bound via args, not string-interpolated.
+	sqlQ := `SELECT doc_id, COALESCE(owner_original,'') FROM doc_owners WHERE doc_id IN (` + placeholders + `) ORDER BY doc_id, owner_lower;`
+	args := make([]any, 0, len(docIDs))
+	for _, id := range docIDs {
+		args = append(args, id)
+	}
+	rows, err := db.QueryContext(ctx, sqlQ, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	out := map[int64][]string{}
+	for rows.Next() {
+		var docID int64
+		var owner string
+		if err := rows.Scan(&docID, &owner); err != nil {
+			return nil, err
+		}
+		owner = strings.TrimSpace(owner)
+		if owner == "" {
+			continue
+		}
+		out[docID] = append(out[docID], owner)
+	}
+	return out, rows.Err()
+}
+
 func fetchRelatedFilesByDocIDs(ctx context.Context, db *sql.DB, docIDs []int64) (map[int64]models.RelatedFiles, error) {
 	docIDs = uniqueInt64(docIDs...)
 	if len(docIDs) == 0 || db == nil {
@@ -455,7 +498,7 @@ func queryPathKeys(resolver *paths.Resolver, raw string) []string {
 	if raw == "" || resolver == nil {
 		return nil
 	}
-	n := resolver.Normalize(raw)
+	n := resolver.NormalizeNoFS(raw)
 	keys := []string{
 		strings.TrimSpace(n.Canonical),
 		strings.TrimSpace(n.RepoRelative),

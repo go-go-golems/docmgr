@@ -84,7 +84,7 @@ func (r *Resolver) Normalize(raw string) NormalizedPath {
 	}
 
 	if filepath.IsAbs(cleaned) {
-		return r.buildResult(cleaned, AnchorUnknown, true)
+		return r.buildResultWithExists(cleaned, AnchorUnknown, true)
 	}
 
 	bases := []struct {
@@ -104,12 +104,21 @@ func (r *Resolver) Normalize(raw string) NormalizedPath {
 			continue
 		}
 		absPath := filepath.Clean(filepath.Join(base.path, cleaned))
-		if base.anchor == AnchorRepo && r.repoRoot != "" {
-			if rel, err := filepath.Rel(r.repoRoot, absPath); err != nil || strings.HasPrefix(rel, "..") {
+		// Ensure the candidate stays within its anchor base (prevents traversal).
+		// Doc-relative paths are allowed to traverse parents, but should still not
+		// escape the repository if we know the repo root.
+		if base.anchor == AnchorDoc {
+			if r.repoRoot != "" {
+				if rel, err := filepath.Rel(r.repoRoot, absPath); err != nil || strings.HasPrefix(rel, "..") {
+					continue
+				}
+			}
+		} else {
+			if rel, err := filepath.Rel(base.path, absPath); err != nil || strings.HasPrefix(rel, "..") {
 				continue
 			}
 		}
-		normalized := r.buildResult(absPath, base.anchor, false)
+		normalized := r.buildResult(absPath, base.anchor)
 		if normalized.Abs == "" {
 			continue
 		}
@@ -126,6 +135,64 @@ func (r *Resolver) Normalize(raw string) NormalizedPath {
 	}
 
 	// Could not resolve against any base; fall back to cleaned relative path.
+	result.Canonical = toSlash(cleaned)
+	return result
+}
+
+// NormalizeNoFS is like Normalize, but does not touch the filesystem (no Stat).
+// This is useful for normalizing user-provided strings for matching and diagnostics
+// without turning them into filesystem reads.
+func (r *Resolver) NormalizeNoFS(raw string) NormalizedPath {
+	result := NormalizedPath{
+		Original:      raw,
+		OriginalClean: toSlash(strings.TrimSpace(raw)),
+	}
+	cleaned := cleanInput(raw)
+	if cleaned == "" {
+		return result
+	}
+
+	if filepath.IsAbs(cleaned) {
+		return r.buildResultWithExists(cleaned, AnchorUnknown, false)
+	}
+
+	bases := []struct {
+		path   string
+		anchor Anchor
+	}{
+		{path: r.repoRoot, anchor: AnchorRepo},
+		{path: r.docDir, anchor: AnchorDoc},
+		{path: r.configDir, anchor: AnchorConfig},
+		{path: r.docsRoot, anchor: AnchorDocsRoot},
+		{path: r.docsParent, anchor: AnchorDocsParent},
+	}
+
+	for _, base := range bases {
+		if base.path == "" {
+			continue
+		}
+		absPath := filepath.Clean(filepath.Join(base.path, cleaned))
+		// Ensure the candidate stays within its anchor base (prevents traversal).
+		// Doc-relative paths are allowed to traverse parents, but should still not
+		// escape the repository if we know the repo root.
+		if base.anchor == AnchorDoc {
+			if r.repoRoot != "" {
+				if rel, err := filepath.Rel(r.repoRoot, absPath); err != nil || strings.HasPrefix(rel, "..") {
+					continue
+				}
+			}
+		} else {
+			if rel, err := filepath.Rel(base.path, absPath); err != nil || strings.HasPrefix(rel, "..") {
+				continue
+			}
+		}
+		normalized := r.buildResultWithExists(absPath, base.anchor, false)
+		if normalized.Abs == "" {
+			continue
+		}
+		return normalized
+	}
+
 	result.Canonical = toSlash(cleaned)
 	return result
 }
@@ -220,13 +287,17 @@ func DirectoryMatch(dir NormalizedPath, target NormalizedPath) bool {
 	return false
 }
 
-func (r *Resolver) buildResult(absPath string, anchor Anchor, forceExists bool) NormalizedPath {
+func (r *Resolver) buildResult(absPath string, anchor Anchor) NormalizedPath {
 	if absPath == "" {
 		return NormalizedPath{}
 	}
-	exists := forceExists
-	if !forceExists {
-		exists = pathExists(absPath)
+	exists := pathExists(absPath)
+	return r.buildResultWithExists(absPath, anchor, exists)
+}
+
+func (r *Resolver) buildResultWithExists(absPath string, anchor Anchor, exists bool) NormalizedPath {
+	if absPath == "" {
+		return NormalizedPath{}
 	}
 
 	absSlash := toSlash(absPath)

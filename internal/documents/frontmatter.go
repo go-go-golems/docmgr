@@ -3,6 +3,7 @@ package documents
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,6 +27,21 @@ func ReadDocumentWithFrontmatter(path string) (*models.Document, string, error) 
 		return nil, "", err
 	}
 
+	return readDocumentWithFrontmatterBytes(path, raw)
+}
+
+// ReadDocumentWithFrontmatterFS is like ReadDocumentWithFrontmatter, but reads from an fs.FS.
+// The path must be valid for the provided filesystem (typically a slash-separated relative path).
+func ReadDocumentWithFrontmatterFS(fsys fs.FS, path string) (*models.Document, string, error) {
+	raw, err := fs.ReadFile(fsys, path)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return readDocumentWithFrontmatterBytes(path, raw)
+}
+
+func readDocumentWithFrontmatterBytes(path string, raw []byte) (*models.Document, string, error) {
 	fm, body, fmStartLine, err := extractFrontmatter(raw)
 	if err != nil {
 		tax := docmgrctx.NewFrontmatterParseTaxonomy(path, 0, 0, "", err.Error(), err)

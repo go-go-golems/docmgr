@@ -184,3 +184,45 @@ This step translated the analysis into an implementable REST API design: endpoin
 
 ### What should be done in the future
 - If/when adding real full-text (FTS), treat it as a versioned semantic change (`/api/v2`) or an explicit query mode parameter.
+
+## Step 5: Update design for FTS + cursor pagination + IndexManager
+
+The codebase now has a shared query engine (`internal/searchsvc`) and FTS-backed `--query`, so the REST API design was updated to match the new reality:
+
+- `query` is a SQLite FTS5 `MATCH` query string (no substring compatibility guarantees)
+- add `orderBy=rank`
+- use cursor-based pagination
+- build index on startup and refresh explicitly via an `IndexManager`
+
+**Commit (code):** N/A
+
+### What I did
+- Updated: `design-doc/01-design-search-rest-api.md`
+- Updated: `tasks.md` to reflect implementation work
+
+### Why
+- The API must track the authoritative search behavior (shared engine + FTS) to avoid UI/CLI drift.
+
+### What worked
+- Mapping REST parameters directly to `internal/searchsvc.SearchQuery` keeps semantics aligned.
+
+### What didn't work
+- N/A
+
+## Step 6: Start implementing the HTTP server and REST API
+
+Implemented a first cut of the HTTP server and endpoints, centered around an `IndexManager` that builds once and refreshes explicitly.
+
+**Commit (code):** pending
+
+### What I did
+- Added: `cmd/docmgr/cmds/api` (`docmgr api serve`)
+- Added: `internal/httpapi` (`IndexManager`, server, handlers)
+- Implemented endpoints: `/api/v1/healthz`, `/api/v1/workspace/status`, `/api/v1/index/refresh`, `/api/v1/search/docs`, `/api/v1/search/files`
+- Added minimal tests for cursor + index-not-ready
+
+### What worked
+- Reusing `internal/searchsvc.SearchDocs` means the server is thin and inherits the same filters/snippets/diagnostics behavior as the CLI.
+
+### What should be done next
+- Add an end-to-end httptest that builds an index from a small fixture workspace and exercises `/search/docs`.

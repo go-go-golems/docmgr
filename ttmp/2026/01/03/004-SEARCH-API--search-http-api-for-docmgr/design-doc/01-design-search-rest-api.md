@@ -26,7 +26,7 @@ WhenToUse: ""
 
 ## Executive Summary
 
-Add a local HTTP server mode to `docmgr` that exposes a versioned JSON REST API for searching docs using the same workspace/index/query engine as the CLI (`workspace.DiscoverWorkspace` → `InitIndex` → `QueryDocs` + the existing search post-filters).
+Add a local HTTP server mode to `docmgr` that exposes a versioned JSON REST API for searching docs using the same workspace/index/query engine as the CLI (now centralized in `internal/searchsvc`).
 
 This enables a web UI (and other tools) to call `docmgr` search without shelling out to the CLI and without re-implementing reverse lookup/path normalization.
 
@@ -36,13 +36,13 @@ This enables a web UI (and other tools) to call `docmgr` search without shelling
 
 - an always-on process (no per-request `go run` / binary spawn),
 - stable JSON contracts (not Glaze rows and not human text),
-- an index that is built once and reused across requests,
+- an index that is built on startup and reused across requests,
 - explicit endpoints for:
   - searching docs (content + metadata + reverse lookup),
   - (optionally) suggesting related files (`--files` mode),
-  - rebuilding the index when docs change.
+  - explicitly refreshing the index when docs change.
 
-We must preserve existing search semantics by default to avoid UI/CLI drift.
+We must avoid UI/CLI drift by reusing the same query engine types and helpers.
 
 ## Proposed Solution
 
@@ -50,12 +50,12 @@ We must preserve existing search semantics by default to avoid UI/CLI drift.
 
 Implement:
 
-1. A new Cobra command to run the server (proposed name: `docmgr api serve`, final bikeshed TBD).
+1. A new Cobra command to run the server: `docmgr api serve` (final bikeshed TBD).
 2. A small internal HTTP package that:
-   - owns workspace discovery and index lifecycle (build once; rebuild on demand),
+   - owns workspace discovery and index lifecycle (build on startup; refresh on demand),
    - exposes REST endpoints for search,
    - serializes results to JSON.
-3. A shared “search engine” function/service so both CLI and HTTP can call the same logic (to prevent divergence).
+3. Reuse `internal/searchsvc` as the shared “query engine” so both CLI and HTTP call the same logic.
 
 ### Server command (CLI)
 
@@ -81,16 +81,17 @@ Default binding should be localhost-only.
 At startup:
 
 1. Discover workspace with `workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: root})`.
-2. Build index with `ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: true})` (body needed for `query` substring scan).
+2. Build index with `ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: true})` (body is needed for snippet extraction; the search engine also falls back to disk reads).
 
 During runtime:
 
 - Search requests query the current index.
-- A rebuild endpoint triggers `InitIndex` again (swap DB safely).
+- A refresh endpoint triggers a rebuild (swap DB safely).
 
 Concurrency:
 
 - Protect `QueryDocs` vs `InitIndex` with an `RWMutex`.
+- Prefer an `IndexManager` that owns the current `*workspace.Workspace` and swaps it on refresh (to keep request handlers simple and avoid partially-mutated state).
 
 ### REST API (v1)
 
@@ -145,19 +146,19 @@ Response (proposed):
 }
 ```
 
-#### Endpoint: Rebuild index
+#### Endpoint: Refresh index
 
-`POST /api/v1/index/rebuild`
+`POST /api/v1/index/refresh`
 
 Semantics:
-- Rebuild the in-memory index from disk.
+- Refresh the in-memory index from disk (discover workspace again + rebuild).
 - Returns metadata about the rebuild.
 
 Response:
 
 ```json
 {
-  "rebuilt": true,
+  "refreshed": true,
   "indexedAt": "2026-01-03T21:40:00Z",
   "docsIndexed": 200
 }
@@ -169,7 +170,7 @@ Response:
 
 Query parameters (mirrors `docmgr doc search` flags as closely as possible):
 
-- `query` (string): content substring query
+- `query` (string): full-text query (SQLite FTS5 `MATCH` query string; no substring/contains compatibility guarantees)
 - `ticket` (string): ticket filter; if set, server also scopes to that ticket
 - `topics` (string): comma-separated list; OR semantics (“any topic”)
 - `docType` (string)
@@ -192,13 +193,18 @@ Visibility toggles (match CLI default behavior):
 
 Sorting:
 
-- `orderBy` = `path` | `last_updated` (default `path`)
+- `orderBy` = `path` | `last_updated` | `rank` (default `path`)
 - `reverse` (bool, default `false`)
 
 Pagination (explicit design choice; recommended to implement in v1):
 
-- `limit` (int, default `200`, max `1000`)
-- `offset` (int, default `0`)
+- `pageSize` (int, default `200`, max `1000`)
+- `cursor` (string, optional): opaque cursor returned by a previous response
+
+Cursor-based pagination:
+
+- The API uses opaque cursors, not explicit offsets, to support UI pagination without exposing internal implementation details.
+- For v1, the cursor is allowed to be a simple offset-based cursor encoded as an opaque string (sufficient for UIs; can later evolve to keyset pagination without breaking clients).
 
 Request validation (match CLI behavior):
 
@@ -223,8 +229,8 @@ Response shape:
     "updatedSince": "",
     "orderBy": "path",
     "reverse": false,
-    "limit": 200,
-    "offset": 0
+    "pageSize": 200,
+    "cursor": ""
   },
   "total": 12,
   "results": [
@@ -238,7 +244,8 @@ Response shape:
       "snippet": "..."
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "nextCursor": "..."
 }
 ```
 
@@ -278,22 +285,19 @@ The goal is to keep HTTP concerns separate from doc indexing/search semantics.
 
 Proposed files/packages (subject to repo conventions):
 
-- `cmd/docmgr/cmds/api/serve.go`
-  - Cobra command wiring
-- `pkg/commands/api_serve.go` (optional)
-  - If following the “commands live in pkg/commands” pattern, but HTTP may be simpler to keep out of Glaze/dual-mode.
+- `cmd/docmgr/cmds/api/*`
+  - Cobra command wiring (`api serve`)
 - `internal/httpapi/server.go`
   - `type Server struct { ... }`
   - routing, JSON helpers, error formatting
 - `internal/httpapi/index_manager.go`
-  - `type IndexManager struct { ws *workspace.Workspace; mu sync.RWMutex; indexedAt time.Time; ... }`
-- `internal/searchsvc/search.go`
-  - `SearchDocs(ctx, ws, params) (results, diagnostics, error)`
-  - `SuggestFiles(...)` (if included)
+  - `type IndexManager struct { ... }` (workspace discovery + index lifecycle)
+- `internal/searchsvc/*`
+  - shared query engine (`SearchDocs`) and file suggestions (`SuggestFiles`)
 
 ### Compatibility goals
 
-- **Parity-first**: v1 REST search should match `docmgr doc search` semantics, especially for reverse lookup.
+- **Single engine**: REST search should reuse the same query engine as the CLI (`internal/searchsvc`) to avoid semantic drift.
 - **Versioned**: breaking changes require `/api/v2` (or explicit feature flags).
 - **Local-first**: bind localhost by default.
 
@@ -301,14 +305,14 @@ Proposed files/packages (subject to repo conventions):
 
 1. **Stdlib `net/http` over a router dependency**
    - Rationale: there is currently no HTTP server stack in this module; keep dependencies minimal unless a UI requires routing features.
-2. **Index built once, rebuilt explicitly**
-   - Rationale: avoids per-request rebuild cost and avoids complex file watcher correctness initially.
-3. **Reuse workspace/query engine**
+2. **Index built on startup, refreshed explicitly**
+   - Rationale: avoids per-request rebuild cost and avoids complex file watcher correctness initially; refresh provides a clear “sync point” for UIs.
+3. **Reuse the existing query engine**
    - Rationale: prevents semantic drift; reverse lookup/path normalization is already battle-tested in the query engine.
-4. **Keep substring search semantics for `query` in v1**
-   - Rationale: matches CLI behavior; switching to FTS is a deliberate future change.
-5. **Add pagination to the API even if CLI doesn’t have it**
-   - Rationale: UIs need incremental loading; we can implement server-side slicing now and later optimize with SQL LIMIT/OFFSET.
+4. **FTS semantics are authoritative**
+   - Rationale: `query` is a SQLite FTS5 `MATCH` string and ordering by rank uses `bm25`; we explicitly do not preserve substring/contains behavior.
+5. **Cursor-based pagination**
+   - Rationale: UIs need incremental loading; cursors avoid coupling clients to a specific pagination strategy.
 
 ## Alternatives Considered
 
@@ -334,15 +338,12 @@ Proposed files/packages (subject to repo conventions):
    - Guard rebuild/query with `RWMutex`.
 4. **Implement `/api/v1/search/docs`**
    - Parse query params into a struct mirroring CLI `SearchSettings`.
-   - Execute `QueryDocs` and apply post-filters matching `pkg/commands/search.go`.
+   - Execute `internal/searchsvc.SearchDocs` (shared engine) and return JSON response.
    - Return JSON response with `results`, `total`, `diagnostics`.
-5. **(Optional) Implement `/api/v1/index/rebuild`**
+5. **Implement `/api/v1/index/refresh`**
 6. **(Optional) Implement `/api/v1/search/files`**
-7. **Refactor for reuse**
-   - Extract snippet + post-filter logic into a shared internal package so CLI and HTTP call the same functions.
 8. **Add tests**
-   - At minimum: request parsing + smoke search against a small fixture workspace.
-   - If adding pagination in SQL: unit tests for `compileDocQueryWithParseFilter` output.
+   - At minimum: request parsing + a smoke test against a scenario workspace.
 
 ## Open Questions
 

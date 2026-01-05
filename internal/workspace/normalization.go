@@ -28,7 +28,7 @@ func normalizeRelatedFile(resolver *paths.Resolver, raw string) RelatedFileNorma
 		return RelatedFileNormalized{}
 	}
 
-	n := resolver.Normalize(raw)
+	n := resolver.NormalizeNoFS(raw)
 	return RelatedFileNormalized{
 		Canonical:    strings.TrimSpace(n.Canonical),
 		RepoRelative: strings.TrimSpace(n.RepoRelative),

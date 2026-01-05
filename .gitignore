@@ -34,3 +34,8 @@ out/
 docmgr
 !docmgr/
 docmgr-local
+
+# Web UI (Vite/React)
+ui/node_modules/
+ui/dist/
+internal/web/embed/public/

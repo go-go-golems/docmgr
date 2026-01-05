@@ -2,8 +2,101 @@
 
 ## TODO
 
+- [x] Write UI implementation plan from `design/01-design-docmgr-search-web-ui.md`
+- [x] Extend `/api/v1/search/docs` results to include `lastUpdated` + `relatedFiles[]` (no file serving)
+- [x] Create `ui/` React+Vite app skeleton (routing, layout, CSS baseline)
+- [x] Add RTK store + RTK Query `docmgrApi` slice (health/status/refresh/search endpoints)
+- [x] Implement header: title + refresh button + last refresh “time ago” + toast on success
+- [x] Implement search bar: input + Search button + keyboard hint line (`/`, Enter, Esc)
+- [x] Implement mode toggle (Docs / Reverse / Files) + per-mode placeholders/hints
+- [x] Implement filter bar (ticket/topics/type/status/orderBy/file/dir + clear) + collapsible UI
+- [x] Implement Topics multi-select with no suggestions (token list + “Add topic” input)
+- [x] Implement quick toggles (includeArchived/includeScripts/includeControlDocs)
+- [x] Implement active filter chips (remove chip → update filters → rerun search if active)
+- [x] Implement docs results list:
+- [x] Result card UI (status badge, topic badges, snippet, monospace path, hover copy button)
+- [x] Loading spinner + pre-search empty state + post-search empty state
+- [x] Cursor pagination (“Load more results” → append + nextCursor)
+- [x] Implement reverse lookup mode (sets `reverse=true` and emphasizes matched file + note)
+- [x] Implement diagnostics badge + expandable diagnostics panel (server-provided items)
+- [x] Implement preview panel:
+- [x] Desktop split pane (select result → show metadata + snippet + related files)
+- [x] Mobile modal/page variant (“View →”)
+- [x] Copy path (no file serving / no in-app full doc rendering)
+- [x] Implement keyboard shortcuts overlay modal (`?`) + core shortcuts:
+- [x] `/` focus input, ↑/↓ navigation, Enter select/open, Esc close/clear
+- [x] Alt+1/2/3 mode switching
+- [x] Cmd/Ctrl+R refresh index
+- [x] Cmd/Ctrl+K copy selected path
+- [x] Implement files suggestions mode (`/api/v1/search/files`) + file cards
+- [x] Implement URL sync (`mode`, `q`, filters) and restore state on reload
+- [x] Add responsive styling (compact layout, filter drawer, preview modal)
+- [x] Add doc viewer + file viewer (doc serving MVP):
+- [x] Backend: implement `GET /api/v1/docs/get?path=...` (doc metadata + body)
+- [x] Backend: implement `GET /api/v1/files/get?path=...&root=repo|docs` (safe text-only)
+- [x] Backend: add tests (traversal rejection, symlink escape, binary rejection, size limit/truncation)
+- [x] Frontend: add RTK Query endpoints `getDoc` + `getFile`
+- [x] Frontend: add routes `/doc?path=...` and `/file?path=...&root=...`
+- [x] Frontend: render markdown in doc viewer (client-side) using `react-markdown` + `remark-gfm`
+- [x] Frontend: add code highlighting for fenced blocks using `rehype-highlight` + a highlight.js theme
+- [x] Frontend: wire “Open doc” from search results and “Open related file” from RelatedFiles
+- [x] Embed packaging (per `go-web-frontend-embed`):
+- [x] Add `internal/web` embed + SPA fallback handler
+- [x] Add `go generate` bridge to build/copy `ui/dist/public` into `internal/web/embed/public`
+- [x] Wire SPA handler into `docmgr api serve` without shadowing `/api`
+- [x] Add Makefile targets for `dev-frontend`, `dev-backend`, and embed build
+- [x] Add minimal regression test: `GET /` serves `index.html` when embed assets exist
+- [x] Update `pkg/doc` docs for “Web UI” (how to run dev, how to run embedded)
+- [x] Persist selected doc in URL (restore preview/sidebar on navigation)
+- [x] Use real links for “Open” actions (ctrl-click / new tab)
+- [x] Render search snippets as markdown with match highlighting
+- [ ] Ticket page (API + UI):
+  - [x] Backend: `internal/tickets` resolve ticket dir + index path
+  - [x] Backend: `internal/tasksmd` parse tasks.md into sections/items (stable ids by scan order)
+  - [x] Backend: `internal/tasksmd` update tasks.md (check/uncheck + append)
+  - [x] Backend: `internal/ticketgraph` expose mermaid builder (extract from `pkg/commands/ticket_graph.go`)
+  - [x] API: mount `/api/v1/tickets/*` routes in `internal/httpapi/server.go`
+  - [x] API: `GET /api/v1/tickets/get?ticket=...` (summary + stats)
+  - [x] API: `GET /api/v1/tickets/docs?ticket=...&pageSize=...&cursor=...&orderBy=...` (docs list)
+  - [x] API: `GET /api/v1/tickets/tasks?ticket=...` (sections + stats)
+  - [x] API: `POST /api/v1/tickets/tasks/check` (toggle by id)
+  - [x] API: `POST /api/v1/tickets/tasks/add` (append to section)
+  - [x] API: `GET /api/v1/tickets/graph?ticket=...&direction=TD|LR` (mermaid)
+  - [x] API: tests for ticket endpoints + tasks.md safety
+  - [x] UI: add route `/ticket/:ticket` + header + tab bar
+  - [x] UI: Overview tab (metadata + stats + summary excerpt + key docs + open tasks)
+  - [x] UI: Documents tab (group by docType + preview drawer; `doc=` in URL)
+  - [x] UI: Tasks tab (sections + check/uncheck + add task)
+  - [ ] UI: Graph tab (render mermaid + side panel selection; `file=` in URL)
+  - [x] UI: Changelog tab (open `changelog.md` in doc viewer, or render inline)
+  - [x] UI: link ticket badge from Search results to `/ticket/:ticket`
+  - [x] UI: doc viewer “Back to ticket” link (when doc has Ticket frontmatter)
+  - [ ] Docs: update `pkg/doc/docmgr-http-api.md` with `/tickets/*` endpoints
+
+## Done
+
 - [x] Trace doc search implementation from CLI → Workspace.QueryDocs
 - [x] Write exhaustive search implementation + API/CLI guide
 - [x] Validate search behavior with go run examples
 - [x] Run docmgr doctor for the ticket
 - [x] Upload diary + guide PDFs to reMarkable
+- [x] Render diagnostics as a structured list (severity/message/suggestion) instead of raw JSON
+- [x] Show API error details inline (code/message/details) for search failures
+- [x] UI: add /workspace route group + AppShell (TopBar + SideNav)
+- [x] UI: Workspace Home page MVP (WorkspaceOverviewCard from workspace status)
+- [x] UI: Workspace Tickets page skeleton (filters + placeholder until API exists)
+- [x] UI: Workspace Topics page skeleton + Topic detail route skeleton
+- [x] UI: Workspace Recent activity page skeleton
+- [x] UI: Add Workspace entry link from Search (and/or header actions)
+- [x] API: implement workspace summary endpoint per design/03-workspace-rest-api.md
+- [x] API: implement tickets list endpoint (filters/sort/pagination) for Workspace Tickets
+- [x] API: implement topics list + topic detail endpoints for Workspace Topics
+- [x] API: implement recent activity endpoint for Workspace Recent
+- [x] API: implement /api/v1/workspace/facets (topics/owners/status/intents/docTypes)
+- [x] API: implement /api/v1/workspace/recent (recent tickets + docs)
+- [x] UI: wire Workspace Home to /workspace/summary + /workspace/recent (replace placeholders)
+- [x] UI: wire Workspace Tickets page to /workspace/tickets + /workspace/facets (table view MVP)
+- [x] UI: wire Workspace Topics pages to /workspace/topics endpoints (grid + topic detail)
+- [x] UI: wire Workspace Recent page to /workspace/recent or /workspace/activity endpoint
+- [x] API: add handler tests for /workspace endpoints
+- [x] Docs: update pkg/doc/docmgr-http-api.md with /workspace/* endpoints

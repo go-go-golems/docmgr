@@ -1,0 +1,131 @@
+# Tasks
+
+## TODO
+
+### Guardrails (keep refactor safe)
+- [x] Confirm current UI builds before changes (`pnpm -C ui build`)
+- [x] Confirm current UI lint passes before changes (`pnpm -C ui lint`)
+- [x] Keep diffs behavior-preserving (no UX changes; extraction-only)
+- [x] Keep each commit scoped to 1–2 extractions max
+
+### High ROI extraction: Search page “leaf widgets” (low coupling)
+Goal: shrink `ui/src/features/search/SearchPage.tsx` by moving pure subcomponents/helpers into dedicated files.
+
+- [x] Extract `useIsMobile` into `ui/src/features/search/hooks/useIsMobile.ts`
+- [x] Extract `MarkdownSnippet` + highlighting helpers into `ui/src/features/search/components/MarkdownSnippet.tsx`
+- [x] Extract `DiagnosticList` into `ui/src/features/search/components/DiagnosticList.tsx`
+- [x] Extract `TopicMultiSelect` into `ui/src/features/search/components/TopicMultiSelect.tsx`
+- [x] Update `SearchPage.tsx` to consume extracted modules (no behavior changes)
+
+### High ROI extraction: shared utilities (duplication reducer)
+Goal: eliminate repeated patterns across Search/Doc/File/Ticket.
+
+- [x] Introduce `ui/src/lib/time.ts` (`timeAgo`, `formatDate` as needed)
+- [x] Introduce `ui/src/lib/clipboard.ts` (`copyToClipboard(text)` wrapper + consistent errors)
+- [x] Introduce `ui/src/lib/apiError.ts` (parse error envelope; `apiErrorMessage(err)` helper)
+- [ ] (Optional) Replace page-local duplicates in Search only first; expand to other pages in follow-up ticket
+
+### High ROI extraction: Search page behavior hooks (highest impact, more risk)
+Goal: make the route component a thin orchestrator by extracting behavior into hooks.
+
+- [x] Extract URL sync into `ui/src/features/search/hooks/useSearchUrlSync.ts`
+- [x] Reads initial mode/query/filters from URL
+- [x] Writes mode/query/filters to URL with debounce
+- [x] Preserves current behavior for `sel` + `preview` params
+- [ ] Extract keyboard shortcuts into `ui/src/features/search/hooks/useSearchHotkeys.ts`
+  - [ ] `/` focus search input
+  - [ ] `?` open shortcuts modal
+  - [ ] Arrow navigation + Enter open + Esc clear/close
+  - [ ] Alt+1/2/3 mode switching
+  - [ ] Cmd/Ctrl+R refresh, Cmd/Ctrl+K copy selected path
+- [x] Extract selection model into `ui/src/features/search/hooks/useSearchSelection.ts`
+- [x] Selected index/path; desktop vs mobile preview behavior preserved
+
+### CSS cleanup (de-couple “design system” from Search-only layout)
+- [x] Split `ui/src/App.css` into shared utilities vs Search-only layout
+- [x] Keep classnames stable for now (minimize churn)
+
+### Validation
+- [x] `pnpm -C ui lint`
+- [x] `pnpm -C ui build`
+- [ ] Quick manual check: Search page still supports keyboard shortcuts + preview panel + URL restore
+
+### Docmgr bookkeeping
+- [x] Relate touched files to `index.md` (`docmgr doc relate --ticket 007-MODULARIZE-UI-WIDGETS ...`)
+- [x] Update `changelog.md` with each extraction batch (`docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS ...`)
+
+## Done
+- [x] Redux cleanup: make RTK Query own Search docs results (no local copies)
+- [x] Implement searchDocs pagination merge (serializeQueryArgs ignores cursor; merge appends; forceRefetch on cursor change)
+- [x] Refactor SearchPage: remove docsResults/docsTotal/docsNextCursor/docsDiagnostics local state; render from RTK Query data
+- [x] Refactor SearchPage: derive hasSearched from lazy query state; ensure Clear resets queries + selection + auto-search latch
+- [ ] Manual UX check: docs search, load more, clear, URL-restore auto-search, selection/preview, hotkeys
+
+## TODO (Widget componentization: primary)
+
+Notes:
+- Keyboard shortcuts (tasks 18–23) are intentionally secondary; prioritize extracting UI widgets and shared primitives first.
+- Keep behavior stable and commit in small batches (1–2 extractions per commit) to keep reviews manageable.
+
+### Shared primitives (to support Workspace pages + shrink page files)
+- [x] Add `PageHeader` primitive (title/subtitle + right-side actions)
+- [x] Add `LoadingSpinner` primitive (Bootstrap wrapper used across pages)
+- [x] Add `EmptyState` primitive (title + body + optional actions)
+- [x] Add `ApiErrorAlert` primitive (render `apiErrorFromUnknown` output + details disclosure)
+- [x] Add `RelatedFilesList` widget (copy/open actions; used by DocViewer + Search preview + Ticket)
+- [x] Replace page-local `toErrorBanner` duplication with `ApiErrorAlert` where applicable (start with Search/Ticket)
+
+### Search page: split into widgets (hotkeys remain in-page for now)
+Goal: make `ui/src/features/search/SearchPage.tsx` a thin orchestrator (~200–350 LOC) by extracting UI composition into dedicated widgets.
+
+- [x] Introduce `ui/src/features/search/widgets/` directory (home for Search-only widgets)
+- [x] Extract `SearchHeader` (title + refresh + workspace status)
+- [x] Extract `SearchBar` (input + placeholder + keyboard hint + submit button)
+- [x] Extract `SearchModeToggle` (Docs/Reverse/Files buttons)
+- [x] Extract `SearchActiveChips` (computed filter chips row)
+- [x] Extract `SearchFiltersDesktop` (non-mobile filter panel)
+- [x] Extract `SearchFiltersDrawer` (mobile modal; share inner form fields with desktop)
+- [x] Extract `SearchDiagnosticsPanel` + diagnostics toggle button
+- [x] Extract `SearchFilesResults` (render files results list + empty state)
+- [x] Extract `SearchDocsResults` (render docs list, “Load more”, and empty state)
+- [x] Extract `SearchPreviewPanel` (desktop right-side preview)
+- [x] Extract `SearchPreviewModal` (mobile preview modal)
+- [x] Follow-up: move duplicated “path header + copy/open actions” into shared primitives (`PageHeader`, `RelatedFilesList`) and simplify Search widgets
+
+### Ticket page: split into widgets (tab bodies become files)
+Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becomes a router+data orchestrator and establishes the “dashboard of cards” pattern used by Workspace pages.
+
+- [x] Introduce `ui/src/features/ticket/tabs/` directory (one file per tab body)
+- [x] Extract `TicketHeader` (title/subtitle + stats + actions)
+- [x] Extract `TicketTabs` (tab selection UI)
+- [x] Extract `TicketOverviewTab` (cards + key docs + open tasks + index doc)
+- [x] Extract `TicketDocumentsTab` (docs list/grouping + preview panel)
+- [x] Extract `TicketTasksTab` (sections list + add task form; keep `newTaskText` local)
+- [x] Extract `TicketGraphTab` (Mermaid graph + debug details)
+- [x] Extract `TicketChangelogTab` (changelog link + rendering as applicable)
+- [x] Identify shared “Doc list + preview” patterns between Search and Ticket and factor shared pieces into `ui/src/components/`
+
+### Design system coherence (incremental, avoid churn)
+- [ ] Ensure new primitives/widgets use `ui/src/styles/design-system.css` patterns first (avoid adding new ad-hoc CSS)
+- [ ] Add/standardize a minimal `.dm-*` utility set as needed (mono paths, compact cards, section spacing)
+- [ ] Keep Search-only layout rules in `ui/src/styles/search.css` (avoid leaking page layout into design system)
+
+### Validation + docmgr bookkeeping (per extraction batch)
+- [ ] After each extraction batch: `pnpm -C ui lint` + `pnpm -C ui build`
+- [ ] After each batch: `docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS --entry \"...\" --file-note ...`
+- [ ] After each batch: `docmgr doc relate --ticket 007-MODULARIZE-UI-WIDGETS --file-note \"/abs/path:reason\"`
+- [x] Retrofit TicketHeader to use shared PageHeader (reduce header layout duplication)
+- [x] Retrofit SearchHeader to use shared PageHeader where it fits (keep Refresh button behavior)
+- [x] Add CodeBlock primitive and use it in FileViewer (wrap docmgr-code + highlight HTML)
+- [x] Add MarkdownBlock primitive (ReactMarkdown+remarkGfm+rehypeHighlight) and use it in DocViewer + TicketOverview index.md
+- [x] Add ToastHost + useToast (global queue) and replace page-local toast timers (Search/Ticket/Doc/File)
+- [x] Unify formatDate into ui/src/lib/time.ts and replace ad-hoc date formatting in Ticket/Doc pages
+- [x] Extract DiagnosticCard from DocViewer and reuse for any diagnostics rendering (DocViewer/Search)
+- [x] DocCard styling: introduce dm-* classnames (dm-card, dm-path) or a Card primitive to decouple from Search-specific result-*
+- [x] ToastHost/useToast: add Redux ui/toast slice + provider
+- [x] ToastHost/useToast: retrofit DocViewerPage + FileViewerPage (remove local setTimeout)
+- [x] ToastHost/useToast: retrofit Search widgets + TicketPage tabs (remove page-local toast state)
+- [x] Design system: add minimal dm-* utilities (dm-card, dm-path, spacing) in ui/src/styles/design-system.css
+- [x] DocCard styling: replace result-* classes with dm-* (or Card primitive) without Search-only coupling
+- [ ] Audit useState/useEffect across ui/src and classify per state strategy doc (local vs slice vs RTK Query)
+- [ ] Workspace pages (follow-up): add route + skeleton widgets directory layout aligned with workspace-page.md

@@ -1,0 +1,127 @@
+.dm-topic-badge,
+.topic-badge {
+  font-size: 0.75rem;
+  margin-right: 4px;
+}
+
+.dm-card,
+.result-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.dm-card:hover,
+.result-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #0d6efd;
+}
+
+.dm-card.dm-card--selected,
+.result-card.selected {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.25);
+}
+
+.dm-card-title,
+.result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 6px;
+}
+
+.dm-card-meta,
+.result-meta {
+  font-size: 0.875rem;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+.dm-card-snippet,
+.result-snippet {
+  font-size: 0.9rem;
+  color: #495057;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.snippet-markdown mark {
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+.dm-path-pill,
+.result-path {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  font-size: 0.8rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.dm-copy-btn,
+.copy-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.dm-card:hover .dm-copy-btn,
+.result-card:hover .copy-btn {
+  opacity: 1;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6c757d;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.docmgr-markdown :first-child {
+  margin-top: 0;
+}
+
+.docmgr-markdown pre {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  overflow: auto;
+}
+
+.docmgr-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+}
+
+.docmgr-code {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 12px;
+  overflow: auto;
+  max-height: 70vh;
+}
+
+@media (max-width: 576px) {
+  .dm-card,
+  .result-card {
+    padding: 12px;
+  }
+  .dm-card-snippet,
+  .result-snippet {
+    font-size: 0.85rem;
+  }
+}

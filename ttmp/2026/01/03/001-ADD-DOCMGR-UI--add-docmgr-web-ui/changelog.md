@@ -75,3 +75,12 @@ UI: persist selected doc in URL, allow ctrl-click Open links, and render snippet
 - pkg/doc/docmgr-web-ui.md — Document sel/preview params
 - ui/src/features/search/SearchPage.tsx — sel/preview URL sync
 
+
+## 2026-01-04
+
+Design ticket page HTTP API + Web UI (overview/docs/tasks/graph/changelog)
+
+### Related Files
+
+- ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design/02-ticket-page-api-and-web-ui.md — Ticket page design spec
+

@@ -25,6 +25,7 @@ test:
 	go test ./...
 
 build:
+	go generate ./...
 	go build -tags "sqlite_fts5,embed" ./cmd/docmgr
 
 .PHONY: ui-install ui-dev ui-generate build-embed dev-backend dev-frontend
@@ -70,5 +71,6 @@ bump-glazed:
 
 DOCMGR_BINARY=$(shell which docmgr)
 install:
+	go generate ./...
 	go build -tags "sqlite_fts5,embed" -o ./dist/docmgr ./cmd/docmgr && \
 		cp ./dist/docmgr $(DOCMGR_BINARY)

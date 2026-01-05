@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import hljs from 'highlight.js'
@@ -9,13 +9,12 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { PageHeader } from '../../components/PageHeader'
 import { copyToClipboard } from '../../lib/clipboard'
 import { useGetFileQuery } from '../../services/docmgrApi'
-
-type ToastState = { kind: 'success' | 'error'; message: string } | null
+import { useToast } from '../toast/useToast'
 
 export function FileViewerPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [toast, setToast] = useState<ToastState>(null)
+  const toast = useToast()
 
   const path = (searchParams.get('path') ?? '').trim()
   const rootParam = (searchParams.get('root') ?? 'repo').trim().toLowerCase()
@@ -44,11 +43,9 @@ export function FileViewerPage() {
   async function onCopy(text: string) {
     try {
       await copyToClipboard(text)
-      setToast({ kind: 'success', message: 'Copied' })
-      setTimeout(() => setToast(null), 1200)
+      toast.success('Copied', { timeoutMs: 1200 })
     } catch (e) {
-      setToast({ kind: 'error', message: `Copy failed: ${String(e)}` })
-      setTimeout(() => setToast(null), 2500)
+      toast.error(`Copy failed: ${String(e)}`, { timeoutMs: 2500 })
     }
   }
 
@@ -69,12 +66,6 @@ export function FileViewerPage() {
           </>
         }
       />
-
-      {toast ? (
-        <div className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} py-2`}>
-          {toast.message}
-        </div>
-      ) : null}
 
       {path === '' ? <div className="alert alert-info">Missing file path.</div> : null}
 

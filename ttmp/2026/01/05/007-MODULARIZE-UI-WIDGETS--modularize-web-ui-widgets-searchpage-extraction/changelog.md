@@ -158,3 +158,12 @@ UI: add global toast system (8be000a) + retrofit Doc/File/Ticket/Search to use T
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/toast/toastSlice.ts — Toast queue in Redux
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/toast/useToast.ts — Imperative toast API for components
 
+
+## 2026-01-05
+
+Add analysis doc: post-refactor UI componentization roadmap
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/analysis/01-post-refactor-ui-componentization-roadmap.md — Summarizes next high-ROI componentization work
+

@@ -122,3 +122,12 @@ Design + scaffold Workspace navigation UI (AppShell + /workspace pages) (commit 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchHeader.tsx — Add Workspace entry link
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/workspace/WorkspaceLayout.tsx — Workspace shell with TopBar + SideNav
 
+
+## 2026-01-05
+
+Add playbook for implementing new UI pages/widgets (post-refactor conventions)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/playbook/01-playbook-implementing-new-ui-pages-and-widgets-post-refactor.md — Central workflow and conventions
+

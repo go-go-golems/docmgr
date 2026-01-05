@@ -5,36 +5,15 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 
+import { ApiErrorAlert } from '../../components/ApiErrorAlert'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { PageHeader } from '../../components/PageHeader'
+import { RelatedFilesList } from '../../components/RelatedFilesList'
+import { copyToClipboard } from '../../lib/clipboard'
 import { useGetDocQuery } from '../../services/docmgrApi'
 import type { DiagnosticTaxonomy, RelatedFile } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
-
-type APIErrorPayload = {
-  error?: {
-    code?: string
-    message?: string
-    details?: unknown
-  }
-}
-
-type ErrorBanner = {
-  title: string
-  code?: string
-  message: string
-  details?: unknown
-}
-
-function toErrorBanner(err: unknown, title: string): ErrorBanner {
-  const maybe = err as { data?: unknown; status?: number } | undefined
-  const data = maybe?.data as APIErrorPayload | undefined
-  const code = data?.error?.code
-  const message =
-    data?.error?.message ??
-    (typeof err === 'string' ? err : err instanceof Error ? err.message : String(err))
-  const details = data?.error?.details
-  return { title, code, message, details }
-}
 
 function DiagnosticCard({ diag }: { diag: DiagnosticTaxonomy }) {
   const severity = (diag.Severity || 'info').toLowerCase()
@@ -91,8 +70,7 @@ export function DocViewerPage() {
 
   async function onCopy(text: string) {
     try {
-      if (!navigator.clipboard) throw new Error('clipboard not available')
-      await navigator.clipboard.writeText(text)
+      await copyToClipboard(text)
       setToast({ kind: 'success', message: 'Copied' })
       setTimeout(() => setToast(null), 1200)
     } catch (e) {
@@ -103,20 +81,21 @@ export function DocViewerPage() {
 
   return (
     <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
-        <div>
-          <div className="h4 mb-0">{title}</div>
-          <div className="text-muted small font-monospace">{data?.path ?? path}</div>
-        </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
-            Back
-          </button>
-          <Link className="btn btn-outline-primary" to="/">
-            Search
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title={title}
+        subtitle={data?.path ?? path}
+        subtitleClassName="font-monospace"
+        actions={
+          <>
+            <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
+              Back
+            </button>
+            <Link className="btn btn-outline-primary" to="/">
+              Search
+            </Link>
+          </>
+        }
+      />
 
       {toast ? (
         <div className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} py-2`}>
@@ -126,27 +105,9 @@ export function DocViewerPage() {
 
       {path === '' ? <div className="alert alert-info">Missing doc path.</div> : null}
 
-      {error ? (
-        (() => {
-          const b = toErrorBanner(error, 'Failed to load document')
-          return (
-            <div className="alert alert-danger">
-              <div className="fw-semibold">{b.title}</div>
-              <div className="small">
-                {b.code ? <span className="me-2">({b.code})</span> : null}
-                {b.message}
-              </div>
-              {b.details ? <pre className="small mb-0 mt-2">{JSON.stringify(b.details, null, 2)}</pre> : null}
-            </div>
-          )
-        })()
-      ) : null}
+      {error ? <ApiErrorAlert title="Failed to load document" error={error} /> : null}
 
-      {isLoading ? (
-        <div className="text-center my-4">
-          <div className="spinner-border text-primary" role="status" />
-        </div>
-      ) : null}
+      {isLoading ? <LoadingSpinner /> : null}
 
       {data?.diagnostic ? <DiagnosticCard diag={data.diagnostic} /> : null}
 
@@ -212,27 +173,7 @@ export function DocViewerPage() {
         <div className="card mb-3">
           <div className="card-header fw-semibold">Related files</div>
           <div className="card-body">
-            <ul className="list-unstyled mb-0 vstack gap-2">
-              {relatedFiles.map((rf) => (
-                <li key={`${rf.path}:${rf.note ?? ''}`} className="d-flex gap-2 align-items-start">
-                  <div className="flex-grow-1">
-                    <div className="font-monospace">{rf.path}</div>
-                    {rf.note ? <div className="text-muted small">{rf.note}</div> : null}
-                  </div>
-                  <div className="d-flex gap-2">
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => void onCopy(rf.path)}>
-                      Copy
-                    </button>
-                    <Link
-                      className="btn btn-sm btn-outline-primary"
-                      to={`/file?root=repo&path=${encodeURIComponent(rf.path)}`}
-                    >
-                      Open
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <RelatedFilesList files={relatedFiles} onCopyPath={(p) => void onCopy(p)} />
           </div>
         </div>
       ) : null}

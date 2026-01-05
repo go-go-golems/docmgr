@@ -3,35 +3,13 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import hljs from 'highlight.js'
 
+import { ApiErrorAlert } from '../../components/ApiErrorAlert'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { PageHeader } from '../../components/PageHeader'
+import { copyToClipboard } from '../../lib/clipboard'
 import { useGetFileQuery } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
-
-type APIErrorPayload = {
-  error?: {
-    code?: string
-    message?: string
-    details?: unknown
-  }
-}
-
-type ErrorBanner = {
-  title: string
-  code?: string
-  message: string
-  details?: unknown
-}
-
-function toErrorBanner(err: unknown, title: string): ErrorBanner {
-  const maybe = err as { data?: unknown; status?: number } | undefined
-  const data = maybe?.data as APIErrorPayload | undefined
-  const code = data?.error?.code
-  const message =
-    data?.error?.message ??
-    (typeof err === 'string' ? err : err instanceof Error ? err.message : String(err))
-  const details = data?.error?.details
-  return { title, code, message, details }
-}
 
 export function FileViewerPage() {
   const navigate = useNavigate()
@@ -64,8 +42,7 @@ export function FileViewerPage() {
 
   async function onCopy(text: string) {
     try {
-      if (!navigator.clipboard) throw new Error('clipboard not available')
-      await navigator.clipboard.writeText(text)
+      await copyToClipboard(text)
       setToast({ kind: 'success', message: 'Copied' })
       setTimeout(() => setToast(null), 1200)
     } catch (e) {
@@ -76,20 +53,21 @@ export function FileViewerPage() {
 
   return (
     <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-3 gap-2">
-        <div>
-          <div className="h4 mb-0">File</div>
-          <div className="text-muted small font-monospace">{data?.path ?? path}</div>
-        </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
-            Back
-          </button>
-          <Link className="btn btn-outline-primary" to="/">
-            Search
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="File"
+        subtitle={data?.path ?? path}
+        subtitleClassName="font-monospace"
+        actions={
+          <>
+            <button className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
+              Back
+            </button>
+            <Link className="btn btn-outline-primary" to="/">
+              Search
+            </Link>
+          </>
+        }
+      />
 
       {toast ? (
         <div className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} py-2`}>
@@ -99,27 +77,9 @@ export function FileViewerPage() {
 
       {path === '' ? <div className="alert alert-info">Missing file path.</div> : null}
 
-      {error ? (
-        (() => {
-          const b = toErrorBanner(error, 'Failed to load file')
-          return (
-            <div className="alert alert-danger">
-              <div className="fw-semibold">{b.title}</div>
-              <div className="small">
-                {b.code ? <span className="me-2">({b.code})</span> : null}
-                {b.message}
-              </div>
-              {b.details ? <pre className="small mb-0 mt-2">{JSON.stringify(b.details, null, 2)}</pre> : null}
-            </div>
-          )
-        })()
-      ) : null}
+      {error ? <ApiErrorAlert title="Failed to load file" error={error} /> : null}
 
-      {isLoading ? (
-        <div className="text-center my-4">
-          <div className="spinner-border text-primary" role="status" />
-        </div>
-      ) : null}
+      {isLoading ? <LoadingSpinner /> : null}
 
       {data ? (
         <>

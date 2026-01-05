@@ -64,7 +64,7 @@
   - [x] API: `GET /api/v1/tickets/graph?ticket=...&direction=TD|LR` (mermaid)
   - [x] API: tests for ticket endpoints + tasks.md safety
   - [x] UI: add route `/ticket/:ticket` + header + tab bar
-  - [ ] UI: Overview tab (metadata + stats + summary excerpt + key docs + open tasks)
+  - [x] UI: Overview tab (metadata + stats + summary excerpt + key docs + open tasks)
   - [x] UI: Documents tab (group by docType + preview drawer; `doc=` in URL)
   - [x] UI: Tasks tab (sections + check/uncheck + add task)
   - [ ] UI: Graph tab (render mermaid + side panel selection; `file=` in URL)

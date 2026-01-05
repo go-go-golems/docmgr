@@ -1,15 +1,20 @@
 import { useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+
 import {
   useAddTicketTaskMutation,
   useCheckTicketTasksMutation,
+  useGetDocQuery,
   useGetTicketDocsQuery,
   useGetTicketGraphQuery,
   useGetTicketQuery,
   useGetTicketTasksQuery,
   type TicketDocItem,
 } from '../../services/docmgrApi'
+import { MermaidDiagram } from '../../components/MermaidDiagram'
 
 type TabKey = 'overview' | 'documents' | 'tasks' | 'graph' | 'changelog'
 
@@ -66,17 +71,23 @@ export function TicketPage() {
 
   const { data: docsData, error: docsError, isLoading: docsLoading } = useGetTicketDocsQuery(
     { ticket, pageSize: 500, orderBy: 'path' },
-    { skip: ticket === '' || tab !== 'documents' },
+    { skip: ticket === '' || (tab !== 'documents' && tab !== 'overview') },
   )
 
   const { data: tasksData, error: tasksError, isLoading: tasksLoading } = useGetTicketTasksQuery(
     { ticket },
-    { skip: ticket === '' || tab !== 'tasks' },
+    { skip: ticket === '' || (tab !== 'tasks' && tab !== 'overview') },
   )
 
   const { data: graphData, error: graphError, isLoading: graphLoading } = useGetTicketGraphQuery(
     { ticket, direction: 'TD' },
     { skip: ticket === '' || tab !== 'graph' },
+  )
+
+  const indexPath = (t?.indexPath ?? '').trim()
+  const { data: indexDocData, error: indexDocError } = useGetDocQuery(
+    { path: indexPath },
+    { skip: indexPath === '' || tab !== 'overview' },
   )
 
   const [checkTask, checkTaskState] = useCheckTicketTasksMutation()
@@ -91,6 +102,22 @@ export function TicketPage() {
 
   const docsByType = useMemo(() => groupByDocType(docsData?.results ?? []), [docsData])
   const docTypeKeys = useMemo(() => Object.keys(docsByType).sort(), [docsByType])
+
+  const keyDocs = useMemo(() => {
+    const list = docsData?.results ?? []
+    return list.filter((d) => d.docType !== 'index').slice(0, 6)
+  }, [docsData])
+
+  const openTasks = useMemo(() => {
+    const secs = tasksData?.sections ?? []
+    const out: { id: number; text: string; checked: boolean }[] = []
+    for (const sec of secs) {
+      for (const it of sec.items) {
+        if (!it.checked) out.push({ id: it.id, text: it.text, checked: it.checked })
+      }
+    }
+    return out.slice(0, 10)
+  }, [tasksData])
 
   function setTab(next: TabKey) {
     const sp = new URLSearchParams(searchParams)
@@ -236,12 +263,91 @@ export function TicketPage() {
                     </Link>
                   ) : null}
                   <button className="btn btn-sm btn-outline-secondary" onClick={() => setTab('documents')}>
-                    View documents
+                    Documents
                   </button>
                   <button className="btn btn-sm btn-outline-secondary" onClick={() => setTab('tasks')}>
-                    View tasks
+                    Tasks
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-6">
+            <div className="card">
+              <div className="card-header fw-semibold">Key documents</div>
+              <div className="card-body">
+                {docsLoading ? (
+                  <div className="text-muted">Loading…</div>
+                ) : docsError ? (
+                  <div className="alert alert-danger mb-0">Failed to load docs: {apiErrorMessage(docsError)}</div>
+                ) : keyDocs.length === 0 ? (
+                  <div className="text-muted">No documents found.</div>
+                ) : (
+                  <ul className="list-unstyled mb-0 vstack gap-2">
+                    {keyDocs.map((d) => (
+                      <li key={d.path} className="d-flex justify-content-between align-items-start gap-2">
+                        <div className="flex-grow-1">
+                          <div className="fw-semibold">{d.title || d.path}</div>
+                          <div className="small text-muted font-monospace">{d.path}</div>
+                        </div>
+                        <Link className="btn btn-sm btn-outline-primary" to={`/doc?path=${encodeURIComponent(d.path)}`}>
+                          Open
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12 col-lg-6">
+            <div className="card">
+              <div className="card-header fw-semibold">Open tasks</div>
+              <div className="card-body">
+                {tasksLoading ? (
+                  <div className="text-muted">Loading…</div>
+                ) : tasksError ? (
+                  <div className="alert alert-danger mb-0">Failed to load tasks: {apiErrorMessage(tasksError)}</div>
+                ) : openTasks.length === 0 ? (
+                  <div className="text-muted">No open tasks.</div>
+                ) : (
+                  <div className="vstack gap-2">
+                    {openTasks.map((it) => (
+                      <label key={it.id} className="d-flex gap-2 align-items-start">
+                        <input
+                          type="checkbox"
+                          checked={it.checked}
+                          onChange={(e) => void checkTask({ ticket, ids: [it.id], checked: e.target.checked })}
+                          disabled={checkTaskState.isLoading}
+                        />
+                        <span>
+                          <span className="text-muted me-2">#{it.id}</span>
+                          {it.text}
+                        </span>
+                      </label>
+                    ))}
+                    <button className="btn btn-sm btn-outline-secondary align-self-start" onClick={() => setTab('tasks')}>
+                      View all tasks
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header fw-semibold">index.md</div>
+              <div className="card-body docmgr-markdown">
+                {indexDocError ? (
+                  <div className="alert alert-danger mb-0">Failed to load index.md: {apiErrorMessage(indexDocError)}</div>
+                ) : indexDocData?.body ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{indexDocData.body}</ReactMarkdown>
+                ) : (
+                  <div className="text-muted">No content.</div>
+                )}
               </div>
             </div>
           </div>
@@ -487,12 +593,15 @@ export function TicketPage() {
             ) : null}
             {graphData ? (
               <div>
-                <div className="text-muted small mb-2">
-                  Mermaid rendering is coming next; for now this shows the Mermaid DSL.
+                <div className="overflow-auto border rounded p-2" style={{ maxHeight: 650 }}>
+                  <MermaidDiagram code={graphData.mermaid} />
                 </div>
-                <pre className="bg-light p-2 rounded small overflow-auto" style={{ maxHeight: 500 }}>
-                  {graphData.mermaid}
-                </pre>
+                <details className="mt-3">
+                  <summary className="text-muted small">Mermaid DSL</summary>
+                  <pre className="bg-light p-2 rounded small overflow-auto" style={{ maxHeight: 500 }}>
+                    {graphData.mermaid}
+                  </pre>
+                </details>
               </div>
             ) : null}
           </div>

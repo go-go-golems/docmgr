@@ -13,6 +13,7 @@
     "@reduxjs/toolkit": "^2.9.0",
     "bootstrap": "^5.3.8",
     "highlight.js": "^11.11.1",
+    "mermaid": "^11.12.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

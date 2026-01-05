@@ -36,6 +36,12 @@ func NewServer(mgr *IndexManager, opts ServerOptions) *Server {
 
 	s.mux.HandleFunc("/api/v1/healthz", s.wrap(s.handleHealthz))
 	s.mux.HandleFunc("/api/v1/workspace/status", s.wrap(s.handleWorkspaceStatus))
+	s.mux.HandleFunc("/api/v1/workspace/summary", s.wrap(s.handleWorkspaceSummary))
+	s.mux.HandleFunc("/api/v1/workspace/tickets", s.wrap(s.handleWorkspaceTickets))
+	s.mux.HandleFunc("/api/v1/workspace/facets", s.wrap(s.handleWorkspaceFacets))
+	s.mux.HandleFunc("/api/v1/workspace/recent", s.wrap(s.handleWorkspaceRecent))
+	s.mux.HandleFunc("/api/v1/workspace/topics", s.wrap(s.handleWorkspaceTopics))
+	s.mux.HandleFunc("/api/v1/workspace/topics/get", s.wrap(s.handleWorkspaceTopicsGet))
 	s.mux.HandleFunc("/api/v1/index/refresh", s.wrap(s.handleIndexRefresh))
 	s.mux.HandleFunc("/api/v1/search/docs", s.wrap(s.handleSearchDocs))
 	s.mux.HandleFunc("/api/v1/search/files", s.wrap(s.handleSearchFiles))

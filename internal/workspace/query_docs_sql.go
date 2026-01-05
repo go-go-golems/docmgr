@@ -76,6 +76,10 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 		where = append(where, "d.status = ?")
 		args = append(args, strings.TrimSpace(q.Filters.Status))
 	}
+	if strings.TrimSpace(q.Filters.Intent) != "" {
+		where = append(where, "d.intent = ?")
+		args = append(args, strings.TrimSpace(q.Filters.Intent))
+	}
 
 	// TopicsAny: OR semantics (any topic matches).
 	if topics := normalizeLowerList(q.Filters.TopicsAny); len(topics) > 0 {
@@ -83,6 +87,17 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 			`SELECT 1 FROM doc_topics t WHERE t.doc_id = d.doc_id AND `,
 			"t.topic_lower",
 			toAny(topics),
+		)
+		where = append(where, clause)
+		args = append(args, cargs...)
+	}
+
+	// OwnersAny: OR semantics (any owner matches).
+	if owners := normalizeLowerList(q.Filters.OwnersAny); len(owners) > 0 {
+		clause, cargs := existsInClause(
+			`SELECT 1 FROM doc_owners o WHERE o.doc_id = d.doc_id AND `,
+			"o.owner_lower",
+			toAny(owners),
 		)
 		where = append(where, clause)
 		args = append(args, cargs...)

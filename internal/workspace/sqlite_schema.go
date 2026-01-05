@@ -117,6 +117,18 @@ CREATE TABLE IF NOT EXISTS doc_topics (
 `,
 		`CREATE INDEX IF NOT EXISTS idx_doc_topics_topic ON doc_topics(topic_lower);`,
 
+		// doc_owners: many-to-many doc ↔ owner
+		`
+CREATE TABLE IF NOT EXISTS doc_owners (
+    doc_id INTEGER NOT NULL,
+    owner_lower TEXT NOT NULL,              -- lowercase owner for case-insensitive matching
+    owner_original TEXT,                    -- original case (for display)
+    PRIMARY KEY (doc_id, owner_lower),
+    FOREIGN KEY (doc_id) REFERENCES docs(doc_id) ON DELETE CASCADE
+);
+`,
+		`CREATE INDEX IF NOT EXISTS idx_doc_owners_owner ON doc_owners(owner_lower);`,
+
 		// related_files: one row per RelatedFiles entry
 		`
 CREATE TABLE IF NOT EXISTS related_files (

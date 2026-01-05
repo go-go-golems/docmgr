@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { ApiErrorAlert } from '../../components/ApiErrorAlert'
 import { copyToClipboard } from '../../lib/clipboard'
+import { useToast } from '../toast/useToast'
 import { useIsMobile } from './hooks/useIsMobile'
 import { useSearchSelection } from './hooks/useSearchSelection'
 import { useSearchUrlSync } from './hooks/useSearchUrlSync'
@@ -28,7 +29,6 @@ import {
   useRefreshIndexMutation,
 } from '../../services/docmgrApi'
 
-type ToastState = { kind: 'success' | 'error'; message: string } | null
 type ErrorState = { title: string; error: unknown } | null
 
 function isEditableTarget(target: EventTarget | null): boolean {
@@ -44,6 +44,7 @@ export function SearchPage() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { mode, query, filters } = useAppSelector((s) => s.search)
+  const toast = useToast()
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const isMobile = useIsMobile(992)
 
@@ -53,7 +54,6 @@ export function SearchPage() {
   const [triggerSearchDocs, searchDocsState] = useLazySearchDocsQuery()
   const [triggerSearchFiles, searchFilesState] = useLazySearchFilesQuery()
 
-  const [toast, setToast] = useState<ToastState>(null)
   const [errorState, setErrorState] = useState<ErrorState>(null)
   const [showFilters, setShowFilters] = useState(true)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
@@ -100,23 +100,23 @@ export function SearchPage() {
     async (path: string) => {
       try {
         await copyToClipboard(path)
-        setToast({ kind: 'success', message: `Copied path: ${path}` })
+        toast.success(`Copied path: ${path}`, { timeoutMs: 2000 })
       } catch {
-        setToast({ kind: 'error', message: 'Failed to copy path (clipboard not available)' })
+        toast.error('Failed to copy path (clipboard not available)', { timeoutMs: 2000 })
       }
     },
-    [setToast],
+    [toast],
   )
 
   const onRefresh = useCallback(async () => {
     try {
       await refreshIndex().unwrap()
       await refetchWs()
-      setToast({ kind: 'success', message: 'Index refreshed successfully' })
+      toast.success('Index refreshed successfully', { timeoutMs: 2000 })
     } catch (e) {
-      setToast({ kind: 'error', message: `Index refresh failed: ${String(e)}` })
+      toast.error(`Index refresh failed: ${String(e)}`, { timeoutMs: 2000 })
     }
-  }, [refreshIndex, refetchWs])
+  }, [refreshIndex, refetchWs, toast])
 
   const effectiveOrderBy = useMemo(() => {
     if (filters.orderBy) return filters.orderBy
@@ -260,12 +260,6 @@ export function SearchPage() {
       return
     }
   }, [isMobile])
-
-  useEffect(() => {
-    if (!toast) return
-    const t = window.setTimeout(() => setToast(null), 2000)
-    return () => window.clearTimeout(t)
-  }, [toast])
 
   const doSearchDocs = async (cursor: string) => {
     const textQuery = mode === 'reverse' ? '' : query
@@ -460,17 +454,6 @@ export function SearchPage() {
 
   return (
     <div className="search-container container">
-      {toast ? (
-        <div className="toast-container">
-          <div
-            className={`alert ${toast.kind === 'success' ? 'alert-success' : 'alert-danger'} mb-0`}
-            role="alert"
-          >
-            {toast.message}
-          </div>
-        </div>
-      ) : null}
-
       <SearchHeader
         wsStatus={wsStatus}
         wsError={wsError}

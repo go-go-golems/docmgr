@@ -11,6 +11,10 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: internal/httpapi/tickets.go
+      Note: Ticket API endpoints (/tickets/get/docs/tasks/graph) (commits 522e678,4a82f9d)
+    - Path: internal/httpapi/tickets_test.go
+      Note: Basic handler test coverage for ticket endpoints (commit 522e678)
     - Path: .goreleaser.yaml
       Note: Release tags sqlite_fts5
     - Path: Makefile
@@ -23,6 +27,12 @@ RelatedFiles:
       Note: Safe path resolution + symlink escape protection (commit bacf9f9)
     - Path: internal/httpapi/server.go
       Note: Allow empty browse; reverse query->file; orderBy guards
+    - Path: internal/tasksmd/tasksmd.go
+      Note: Parse/mutate tasks.md for ticket tasks API (commit 522e678)
+    - Path: internal/ticketgraph/ticketgraph.go
+      Note: Mermaid builder for ticket graph API (commit 522e678)
+    - Path: internal/tickets/resolve.go
+      Note: Resolve ticket dir/index.md from workspace index (commit 522e678)
     - Path: internal/searchsvc/search.go
       Note: Add lastUpdated+relatedFiles to search results for UI
     - Path: internal/web/generate_build.go
@@ -58,13 +68,19 @@ RelatedFiles:
         Wire Open doc/Open file navigation (commit bacf9f9)
         Mobile preview modal + filter drawer + keyboard shortcuts (Step 10)
         URL sel/preview state + Link opens + markdown snippets (Step 11)
+        Ticket badge links to /ticket/:ticket (commit 522e678)
+    - Path: ui/src/features/ticket/TicketPage.tsx
+      Note: Ticket page tabs (overview/docs/tasks/graph/changelog) (commits 522e678,4a82f9d)
+    - Path: ui/src/components/MermaidDiagram.tsx
+      Note: Client-side Mermaid rendering for ticket graph (commit 4a82f9d)
     - Path: ui/src/services/docmgrApi.ts
       Note: |-
         RTK Query client for docmgr HTTP API
         RTK Query endpoints getDoc/getFile (commit bacf9f9)
+        Ticket endpoints (/tickets/*) (commit 522e678)
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-04T19:22:44-05:00
+LastUpdated: 2026-01-05T00:20:58-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
@@ -669,3 +685,171 @@ This step improves navigation ergonomics: selecting a result is now reflected in
 
 ### What warrants a second pair of eyes
 - Confirm URL restore logic for `sel` doesn’t fight with the existing filter URL-sync loop.
+
+## Step 12: Design the ticket page API + Web UI (tabs + widgets)
+
+This step turned the `sources/topic-page.md` concept into a concrete design for a ticket-specific page that can be implemented without shelling out to the CLI. The main outcome is a crisp API surface (`/api/v1/tickets/*`) and UI routing contract (`/ticket/:ticket?tab=...`) that fit cleanly into the existing `IndexManager` + React Router app.
+
+**Commit (docs):** `cd16089` — "ticket(001): design ticket page API and web UI"
+
+### What I did
+- Wrote `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design/02-ticket-page-api-and-web-ui.md`:
+  - routes, tab structure, data contracts, phased implementation plan
+  - decisions about treating `index.md` frontmatter as canonical ticket metadata
+- Expanded the ticket task list for API/UI implementation breakdown (commit `2fd4fb3`).
+
+### Why
+- The Search UI is useful, but it lacks a “ticket cockpit” view. The ticket page is the missing navigation hub for docs + tasks + graph + changelog.
+
+### What worked
+- The design aligned well with existing backend structure:
+  - reuse `IndexManager` snapshot + `Workspace.QueryDocs` under the hood
+  - keep doc/file viewers as separate routes (`/doc`, `/file`)
+
+### What didn't work
+- N/A (design-only).
+
+### What I learned
+- `tasks.md` / `changelog.md` are control docs that aren’t necessarily indexed, so ticket APIs must read them directly from disk (same safety constraints as `/files/get`).
+
+### What was tricky to build
+- Designing a ticket resolution mechanism that is stable and unambiguous:
+  - ticket ID → find `DocType: index` → ticket dir
+  - avoid relying on heuristic directory scans in the HTTP server.
+
+### What warrants a second pair of eyes
+- Confirm the contract for “ticket discovery” is correct: a ticket is identified by the unique `index.md` document (`DocType: index`) and its parent directory.
+
+### What should be done in the future
+- If we want to support tickets without frontmatter index docs, add a fallback resolver (but not needed for v1).
+
+### Code review instructions
+- Read `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/design/02-ticket-page-api-and-web-ui.md` and sanity-check the endpoint shapes and URL params.
+
+## Step 13: Add full-page ASCII screenshots to the ticket page design + upload
+
+This step made the design doc more actionable by embedding “full page” ASCII screenshots for each tab plus a mobile layout. The immediate benefit is implementation alignment: it’s easy to notice missing widgets or navigation affordances while coding.
+
+**Commit (docs):** `e6a5f29` — "docs(ticket): add full ASCII screenshots"
+
+### What I did
+- Added a dedicated `ASCII Screenshots (Full Pages)` section to the ticket design doc.
+- Uploaded the updated design doc to reMarkable (overwrite).
+
+### Commands
+- `python3 /home/manuel/.local/bin/remarkable_upload.py --ticket-dir ... --mirror-ticket-structure --force ttmp/.../design/02-ticket-page-api-and-web-ui.md`
+
+### What was tricky to build
+- Keeping the screenshots “complete” without turning them into lorem ipsum walls; the goal is to specify layout + widgets, not the final copy.
+
+### What warrants a second pair of eyes
+- N/A (docs-only), but reviewers should confirm the screenshots reflect the intended feature set.
+
+## Step 14: Implement ticket API endpoints on top of IndexManager (no CLI shell-outs)
+
+This step implemented the new ticket API surface in the Go HTTP server and introduced reusable internal packages for ticket resolution, tasks parsing/mutation, and graph generation. The key outcome: the web UI can fetch ticket-specific views via `/api/v1/tickets/*` with safe filesystem access patterns.
+
+**Commit (code):** `522e678` — "feat(ticket-page): add ticket API and UI"
+
+### What I did
+- Backend:
+  - Added `internal/tickets/resolve.go` to resolve a ticket to its `index.md` and ticket dir via `Workspace.QueryDocs`.
+  - Added `internal/tasksmd/tasksmd.go` to parse `tasks.md` into sections + stable numeric IDs (scan order) and to mutate tasks (check/uncheck + append).
+  - Added `internal/ticketgraph/ticketgraph.go` to produce Mermaid DSL from docs + related files.
+  - Added `internal/httpapi/tickets.go` implementing:
+    - `GET /api/v1/tickets/get`
+    - `GET /api/v1/tickets/docs` (cursor pagination)
+    - `GET /api/v1/tickets/tasks`
+    - `POST /api/v1/tickets/tasks/check`
+    - `POST /api/v1/tickets/tasks/add`
+    - `GET /api/v1/tickets/graph`
+  - Mounted the handlers in `internal/httpapi/server.go`.
+  - Added `internal/httpapi/tickets_test.go` to cover a basic end-to-end flow.
+- UI (initial pass):
+  - Added `ui/src/features/ticket/TicketPage.tsx` and route `/ticket/:ticket`.
+  - Added RTK Query endpoints in `ui/src/services/docmgrApi.ts`.
+  - Linked ticket badges from Search + Doc viewer to `/ticket/:ticket`.
+
+### Commands
+- `gofmt -w ...`
+- `go test ./...`
+- `pnpm -C ui lint`
+- `pnpm -C ui build`
+
+### What worked
+- The API layer fits cleanly into the current server: it uses the same `IndexManager.WithWorkspace` pattern and reuses the existing cursor encoding.
+
+### What didn't work
+- Initially saw `404` on `/api/v1/tickets/*` while testing through Vite proxy: the running backend process was stale (see Step 16).
+
+### What was tricky to build
+- `tasks.md` isn’t guaranteed to be indexed; reading/mutating it safely required:
+  - root-bound resolution (`resolveFileWithin`)
+  - best-effort behavior when tasks.md doesn’t exist (return `exists=false`).
+
+### What warrants a second pair of eyes
+- Confirm task ID stability semantics are acceptable (IDs are “scan order at read time”; mutations preserve line positions but edits may renumber later).
+- Confirm graph canonicalization keys match `QueryDocs` reverse-lookup behavior closely enough for UX.
+
+### What should be done in the future
+- Add stronger per-handler tests around path safety (e.g., tasks path traversal attempts), similar to `docs_files_test.go`.
+
+### Code review instructions
+- Start with:
+  - `internal/httpapi/tickets.go`
+  - `internal/tickets/resolve.go`
+  - `internal/tasksmd/tasksmd.go`
+  - `internal/ticketgraph/ticketgraph.go`
+  - `ui/src/features/ticket/TicketPage.tsx`
+
+## Step 15: Improve ticket Overview and render the Mermaid graph in the UI
+
+This step made the ticket page feel “real”: the Overview tab now shows key docs, open tasks, and renders `index.md` content; the Graph tab renders Mermaid client-side instead of showing raw DSL.
+
+**Commit (code):** `4a82f9d` — "feat(ticket-page): overview and mermaid graph"
+
+### What I did
+- UI:
+  - Overview tab fetches and renders `index.md` body markdown via the existing `/api/v1/docs/get`.
+  - Overview tab shows “Key documents” and “Open tasks” (quick checkboxes).
+  - Graph tab renders Mermaid using a small React wrapper component:
+    - `ui/src/components/MermaidDiagram.tsx`
+    - dependency: `pnpm -C ui add mermaid`
+  - Kept a `<details>` block with raw Mermaid DSL for debugging.
+- Ticket tasks bookkeeping:
+  - Checked off the “Overview tab” task in `ttmp/.../tasks.md`.
+
+### Commands
+- `pnpm -C ui add mermaid`
+- `pnpm -C ui lint`
+- `pnpm -C ui build`
+
+### What was tricky to build
+- Mermaid is heavy and significantly increases the production bundle. Acceptable for now, but a clear candidate for code-splitting later.
+
+### What warrants a second pair of eyes
+- Confirm `mermaid.initialize({ securityLevel: 'strict' })` is sufficient and that we’re not accidentally enabling HTML injection via Mermaid.
+
+## Step 16: Debug 404s for ticket endpoints (stale backend process)
+
+I hit a confusing failure where the UI and `curl` against `http://localhost:3000/api/v1/tickets/*` returned `404`, despite the code being implemented. The underlying issue was simply that the running `go run ... api serve` process was started before the new commit and hadn’t been restarted.
+
+### What I did
+- Verified:
+  - `curl http://127.0.0.1:3001/api/v1/healthz` → `200 OK`
+  - `curl http://127.0.0.1:3001/api/v1/tickets/get?...` → `404 Not Found`
+  - which strongly implies “old server binary still running”.
+- Restarted the backend process in tmux (`docmgr-dev` pane 0).
+- Re-verified:
+  - `curl http://127.0.0.1:3001/api/v1/tickets/get?...` → `200 OK`
+  - `curl http://127.0.0.1:3000/api/v1/tickets/get?...` → `200 OK` (via Vite proxy).
+
+### Commands
+- Backend restart:
+  - `go run -tags sqlite_fts5 ./cmd/docmgr api serve --addr 127.0.0.1:3001 --root ttmp`
+- Checks:
+  - `curl -i http://127.0.0.1:3001/api/v1/tickets/get?ticket=DOCMGR-002`
+  - `curl -i http://127.0.0.1:3000/api/v1/tickets/get?ticket=DOCMGR-002`
+
+### What I learned
+- When testing new endpoints with `go run`, a green health check doesn’t guarantee you’re running the latest code; always validate a newly added route explicitly.

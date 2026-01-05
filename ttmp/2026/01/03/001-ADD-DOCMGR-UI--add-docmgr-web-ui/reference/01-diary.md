@@ -1137,3 +1137,48 @@ I uploaded the updated diary and the Workspace REST API design doc to the reMark
 ### Technical details
 - Command:
   - `python3 /home/manuel/.local/bin/remarkable_upload.py --force --ticket-dir ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui --mirror-ticket-structure ttmp/.../reference/01-diary.md ttmp/.../design/03-workspace-rest-api.md`
+
+## Step 23: Commit the documentation updates (analysis + diary + changelog + sources)
+
+I committed the documentation work as a focused, docs-only commit so it’s easy to review and easy to revert independently of future UI refactors. This includes the new React architecture/workspace widget system analysis doc, the diary updates (Steps 17–22), and the ticket changelog entry.
+
+**Commit (docs):** `52b6693` — "docs(ui): react architecture + workspace widgets"
+
+### What I did
+- Staged only ticket documentation files:
+  - analysis doc, diary, changelog, and the Workspace page source spec markdown.
+- Committed with a docs-scoped message.
+
+### Why
+- Keeping documentation changes isolated avoids mixing “decision record” updates with implementation churn.
+
+### What worked
+- Lefthook pre-commit hooks correctly skipped irrelevant checks (no staged code/lint targets).
+
+### What didn't work
+- N/A.
+
+### What I learned
+- For docs-only commits, `git add <explicit paths>` keeps staging clean and avoids accidentally committing generated assets.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A (docs only).
+
+### What should be done in the future
+- If we refactor UI structure per the analysis doc, do it via a series of small commits and update the changelog/diary per extraction.
+
+### Code review instructions
+- Review the analysis doc:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/analysis/02-react-ui-architecture-workspace-page-widget-system.md`
+- Review the diary steps and changelog entry:
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/reference/01-diary.md`
+  - `ttmp/2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/changelog.md`
+
+### Technical details
+- Commands:
+  - `git status --porcelain`
+  - `git diff --cached --stat`
+  - `git commit -m "docs(ui): react architecture + workspace widgets"`

@@ -22,7 +22,7 @@ Goal: eliminate repeated patterns across Search/Doc/File/Ticket.
 
 - [x] Introduce `ui/src/lib/time.ts` (`timeAgo`, `formatDate` as needed)
 - [x] Introduce `ui/src/lib/clipboard.ts` (`copyToClipboard(text)` wrapper + consistent errors)
-- [ ] Introduce `ui/src/lib/apiError.ts` (parse error envelope; `apiErrorMessage(err)` helper)
+- [x] Introduce `ui/src/lib/apiError.ts` (parse error envelope; `apiErrorMessage(err)` helper)
 - [ ] (Optional) Replace page-local duplicates in Search only first; expand to other pages in follow-up ticket
 
 ### High ROI extraction: Search page behavior hooks (highest impact, more risk)

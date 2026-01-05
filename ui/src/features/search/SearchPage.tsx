@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
 import { DocCard } from '../../components/DocCard'
+import { apiErrorFromUnknown } from '../../lib/apiError'
 import { copyToClipboard } from '../../lib/clipboard'
 import { timeAgo } from '../../lib/time'
 import { DiagnosticList } from './components/DiagnosticList'
@@ -20,14 +21,6 @@ import {
 import type { DiagnosticTaxonomy, SearchDocResult } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
-
-type APIErrorPayload = {
-  error?: {
-    code?: string
-    message?: string
-    details?: unknown
-  }
-}
 
 type ErrorBanner = {
   title: string
@@ -68,14 +61,8 @@ function formatCSV(values: string[]): string {
 }
 
 function toErrorBanner(err: unknown, title: string): ErrorBanner {
-  const maybe = err as { data?: unknown; status?: number } | undefined
-  const data = maybe?.data as APIErrorPayload | undefined
-  const code = data?.error?.code
-  const message =
-    data?.error?.message ??
-    (typeof err === 'string' ? err : err instanceof Error ? err.message : String(err))
-  const details = data?.error?.details
-  return { title, code, message, details }
+  const parsed = apiErrorFromUnknown(err)
+  return { title, code: parsed.code, message: parsed.message, details: parsed.details }
 }
 
 export function SearchPage() {

@@ -24,3 +24,12 @@ Extract shared helpers into ui/src/lib (timeAgo + copyToClipboard) and switch Se
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/clipboard.ts — New
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/time.ts — New
 
+
+## 2026-01-05
+
+Extract api error envelope parsing into ui/src/lib/apiError.ts and use it in SearchPage to build error banners.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/lib/apiError.ts — New
+

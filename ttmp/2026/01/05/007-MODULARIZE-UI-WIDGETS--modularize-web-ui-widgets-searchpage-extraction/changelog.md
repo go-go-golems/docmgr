@@ -72,3 +72,15 @@ Search: move docs results out of local state into RTK Query (pagination merge + 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/SearchPage.tsx — stop copying search responses into useState; render from RTK Query state and reset on Clear
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/services/docmgrApi.ts — searchDocs now merges paginated pages into one cache entry (cursor excluded from cache key)
 
+
+## 2026-01-05
+
+SearchPage: split into widgets + introduce shared primitives (EmptyState/LoadingSpinner/ApiErrorAlert/RelatedFilesList); lint+build (commit 159be3b)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/ApiErrorAlert.tsx — Shared API error banner used by SearchPage
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/SearchPage.tsx — Now a thin orchestrator delegating UI to widgets (filters/results/preview/etc)
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchDocsResults.tsx — Docs results list widget (DocCard rendering + load more)
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/widgets/SearchPreviewPanel.tsx — Desktop preview widget; uses shared RelatedFilesList
+

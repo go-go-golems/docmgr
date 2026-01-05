@@ -69,27 +69,27 @@ Notes:
 
 ### Shared primitives (to support Workspace pages + shrink page files)
 - [ ] Add `PageHeader` primitive (title/subtitle + right-side actions)
-- [ ] Add `LoadingSpinner` primitive (Bootstrap wrapper used across pages)
-- [ ] Add `EmptyState` primitive (title + body + optional actions)
-- [ ] Add `ApiErrorAlert` primitive (render `apiErrorFromUnknown` output + details disclosure)
-- [ ] Add `RelatedFilesList` widget (copy/open actions; used by DocViewer + Search preview + Ticket)
+- [x] Add `LoadingSpinner` primitive (Bootstrap wrapper used across pages)
+- [x] Add `EmptyState` primitive (title + body + optional actions)
+- [x] Add `ApiErrorAlert` primitive (render `apiErrorFromUnknown` output + details disclosure)
+- [x] Add `RelatedFilesList` widget (copy/open actions; used by DocViewer + Search preview + Ticket)
 - [ ] Replace page-local `toErrorBanner` duplication with `ApiErrorAlert` where applicable (start with Search/Ticket)
 
 ### Search page: split into widgets (hotkeys remain in-page for now)
 Goal: make `ui/src/features/search/SearchPage.tsx` a thin orchestrator (~200–350 LOC) by extracting UI composition into dedicated widgets.
 
-- [ ] Introduce `ui/src/features/search/widgets/` directory (home for Search-only widgets)
-- [ ] Extract `SearchHeader` (title + refresh + workspace status)
-- [ ] Extract `SearchBar` (input + placeholder + keyboard hint + submit button)
-- [ ] Extract `SearchModeToggle` (Docs/Reverse/Files buttons)
-- [ ] Extract `SearchActiveChips` (computed filter chips row)
-- [ ] Extract `SearchFiltersDesktop` (non-mobile filter panel)
-- [ ] Extract `SearchFiltersDrawer` (mobile modal; share inner form fields with desktop)
-- [ ] Extract `SearchDiagnosticsPanel` + diagnostics toggle button
-- [ ] Extract `SearchFilesResults` (render files results list + empty state)
-- [ ] Extract `SearchDocsResults` (render docs list, “Load more”, and empty state)
-- [ ] Extract `SearchPreviewPanel` (desktop right-side preview)
-- [ ] Extract `SearchPreviewModal` (mobile preview modal)
+- [x] Introduce `ui/src/features/search/widgets/` directory (home for Search-only widgets)
+- [x] Extract `SearchHeader` (title + refresh + workspace status)
+- [x] Extract `SearchBar` (input + placeholder + keyboard hint + submit button)
+- [x] Extract `SearchModeToggle` (Docs/Reverse/Files buttons)
+- [x] Extract `SearchActiveChips` (computed filter chips row)
+- [x] Extract `SearchFiltersDesktop` (non-mobile filter panel)
+- [x] Extract `SearchFiltersDrawer` (mobile modal; share inner form fields with desktop)
+- [x] Extract `SearchDiagnosticsPanel` + diagnostics toggle button
+- [x] Extract `SearchFilesResults` (render files results list + empty state)
+- [x] Extract `SearchDocsResults` (render docs list, “Load more”, and empty state)
+- [x] Extract `SearchPreviewPanel` (desktop right-side preview)
+- [x] Extract `SearchPreviewModal` (mobile preview modal)
 - [ ] Follow-up: move duplicated “path header + copy/open actions” into shared primitives (`PageHeader`, `RelatedFilesList`) and simplify Search widgets
 
 ### Ticket page: split into widgets (tab bodies become files)

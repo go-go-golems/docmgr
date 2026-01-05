@@ -14,8 +14,14 @@ Owners: []
 RelatedFiles:
     - Path: ui/src/App.tsx
       Note: CSS import split; route entrypoint using shared+search styles.
+    - Path: ui/src/components/ApiErrorAlert.tsx
+      Note: Shared error alert primitive
+    - Path: ui/src/components/RelatedFilesList.tsx
+      Note: Shared related-files list widget
     - Path: ui/src/features/search/SearchPage.tsx
-      Note: Refactor target; orchestrates Search UI and now consumes extracted leaf widgets.
+      Note: |-
+        Refactor target; orchestrates Search UI and now consumes extracted leaf widgets.
+        Search is now composed from ui/src/features/search/widgets/*
     - Path: ui/src/features/search/components/DiagnosticList.tsx
       Note: Extracted diagnostics renderer widget (cards + details).
     - Path: ui/src/features/search/components/MarkdownSnippet.tsx
@@ -28,6 +34,12 @@ RelatedFiles:
       Note: Extracted selection model (selected/index/apply desired selection) from SearchPage.
     - Path: ui/src/features/search/hooks/useSearchUrlSync.ts
       Note: Extracted URL read/write sync (mode/q/filters/sel/preview) from SearchPage.
+    - Path: ui/src/features/search/widgets/SearchDocsResults.tsx
+      Note: Docs results list widget
+    - Path: ui/src/features/search/widgets/SearchFiltersDesktop.tsx
+      Note: Desktop filter panel widget
+    - Path: ui/src/features/search/widgets/SearchPreviewModal.tsx
+      Note: Mobile preview modal widget
     - Path: ui/src/lib/apiError.ts
       Note: Shared helper for docmgr API error envelope parsing (used by SearchPage error banner).
     - Path: ui/src/lib/clipboard.ts
@@ -44,6 +56,7 @@ LastUpdated: 2026-01-05T08:49:54.386444656-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

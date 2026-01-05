@@ -25,3 +25,12 @@ Step 6: Implement MVP Search Web UI + embed serving (commit 04a4d52)
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/internal/web/spa.go — Serve SPA fallback
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/SearchPage.tsx — UI MVP
 
+
+## 2026-01-04
+
+Implement URL sync + structured diagnostics + inline API errors in Web UI
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/SearchPage.tsx — URL sync
+

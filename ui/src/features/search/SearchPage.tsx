@@ -9,9 +9,24 @@ import {
   useLazySearchFilesQuery,
   useRefreshIndexMutation,
 } from '../../services/docmgrApi'
-import type { SearchDocResult } from '../../services/docmgrApi'
+import type { DiagnosticTaxonomy, SearchDocResult } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
+
+type APIErrorPayload = {
+  error?: {
+    code?: string
+    message?: string
+    details?: unknown
+  }
+}
+
+type ErrorBanner = {
+  title: string
+  code?: string
+  message: string
+  details?: unknown
+}
 
 function timeAgo(iso?: string): string {
   if (!iso) return 'unknown'
@@ -27,6 +42,95 @@ function timeAgo(iso?: string): string {
   if (hours < 48) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   return `${days}d ago`
+}
+
+function parseBoolParam(v: string | null, def: boolean): boolean {
+  if (v == null || v.trim() === '') return def
+  const s = v.trim().toLowerCase()
+  if (['1', 'true', 't', 'yes', 'y', 'on'].includes(s)) return true
+  if (['0', 'false', 'f', 'no', 'n', 'off'].includes(s)) return false
+  return def
+}
+
+function parseCSV(v: string | null): string[] {
+  if (v == null) return []
+  const s = v.trim()
+  if (s === '') return []
+  return s
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p !== '')
+}
+
+function formatCSV(values: string[]): string {
+  return values.map((v) => v.trim()).filter((v) => v !== '').join(',')
+}
+
+function toErrorBanner(err: unknown, title: string): ErrorBanner {
+  const maybe = err as { data?: unknown; status?: number } | undefined
+  const data = maybe?.data as APIErrorPayload | undefined
+  const code = data?.error?.code
+  const message =
+    data?.error?.message ??
+    (typeof err === 'string' ? err : err instanceof Error ? err.message : String(err))
+  const details = data?.error?.details
+  return { title, code, message, details }
+}
+
+function DiagnosticList({ diagnostics }: { diagnostics: DiagnosticTaxonomy[] }) {
+  const max = 20
+  const shown = diagnostics.slice(0, max)
+
+  return (
+    <div className="vstack gap-2">
+      {shown.map((d, idx) => {
+        const severity = (d.Severity || 'info').toLowerCase()
+        const badge =
+          severity === 'warning'
+            ? 'warning'
+            : severity === 'error'
+              ? 'danger'
+              : severity === 'info'
+                ? 'info'
+                : 'secondary'
+
+        const reason =
+          typeof d.Context === 'object' && d.Context != null ? (d.Context['Reason'] as unknown) : undefined
+
+        return (
+          <div key={`${d.Stage ?? 'stage'}:${d.Symptom ?? 'symptom'}:${idx}`} className="card">
+            <div className="card-body py-2">
+              <div className="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                  <span className={`badge text-bg-${badge} me-2`}>{d.Severity ?? 'info'}</span>
+                  <span className="fw-semibold">
+                    {(d.Stage ?? 'unknown') + (d.Symptom ? ` • ${d.Symptom}` : '')}
+                  </span>
+                </div>
+                {d.Tool ? <span className="text-muted small">{d.Tool}</span> : null}
+              </div>
+              {d.Path ? (
+                <div className="small mt-1">
+                  <span className="text-muted">Path: </span>
+                  <span className="font-monospace">{d.Path}</span>
+                </div>
+              ) : null}
+              {typeof reason === 'string' && reason.trim() !== '' ? (
+                <div className="small mt-1 text-muted">{reason}</div>
+              ) : null}
+              <details className="mt-2">
+                <summary className="small text-muted">Details</summary>
+                <pre className="small mb-0">{JSON.stringify(d, null, 2)}</pre>
+              </details>
+            </div>
+          </div>
+        )
+      })}
+      {diagnostics.length > max ? (
+        <div className="text-muted small">… {diagnostics.length - max} more diagnostics</div>
+      ) : null}
+    </div>
+  )
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -178,15 +282,17 @@ export function SearchPage() {
   const [triggerSearchFiles, searchFilesState] = useLazySearchFilesQuery()
 
   const [toast, setToast] = useState<ToastState>(null)
+  const [errorBanner, setErrorBanner] = useState<ErrorBanner | null>(null)
   const [showFilters, setShowFilters] = useState(true)
   const [showDiagnostics, setShowDiagnostics] = useState(false)
+  const [urlSyncReady, setURLSyncReady] = useState(false)
 
   const [hasSearched, setHasSearched] = useState(false)
 
   const [docsResults, setDocsResults] = useState<SearchDocResult[]>([])
   const [docsTotal, setDocsTotal] = useState<number>(0)
   const [docsNextCursor, setDocsNextCursor] = useState<string>('')
-  const [docsDiagnostics, setDocsDiagnostics] = useState<unknown[]>([])
+  const [docsDiagnostics, setDocsDiagnostics] = useState<DiagnosticTaxonomy[]>([])
 
   const [selected, setSelected] = useState<SearchDocResult | null>(null)
 
@@ -276,7 +382,7 @@ export function SearchPage() {
 
     setDocsTotal(resp.total)
     setDocsNextCursor(resp.nextCursor || '')
-    setDocsDiagnostics(resp.diagnostics || [])
+    setDocsDiagnostics(resp.diagnostics ?? [])
     setHasSearched(true)
 
     if (append) setDocsResults((prev) => [...prev, ...resp.results])
@@ -287,6 +393,7 @@ export function SearchPage() {
     e.preventDefault()
     setSelected(null)
     setShowDiagnostics(false)
+    setErrorBanner(null)
 
     if (mode === 'files') {
       try {
@@ -298,7 +405,7 @@ export function SearchPage() {
           limit: 200,
         }).unwrap()
       } catch (err) {
-        setToast({ kind: 'error', message: `Search failed: ${String(err)}` })
+        setErrorBanner(toErrorBanner(err, 'Files search failed'))
       }
       return
     }
@@ -306,7 +413,7 @@ export function SearchPage() {
     try {
       await doSearchDocs('', false)
     } catch (err) {
-      setToast({ kind: 'error', message: `Search failed: ${String(err)}` })
+      setErrorBanner(toErrorBanner(err, 'Search failed'))
     }
   }
 
@@ -315,7 +422,7 @@ export function SearchPage() {
     try {
       await doSearchDocs(docsNextCursor, true)
     } catch (err) {
-      setToast({ kind: 'error', message: `Load more failed: ${String(err)}` })
+      setErrorBanner(toErrorBanner(err, 'Load more failed'))
     }
   }
 
@@ -383,6 +490,119 @@ export function SearchPage() {
     else dispatch(setQuery(v))
   }
 
+  // URL sync (mode/q/filters) – no cursor/pagination state in URL.
+  const urlWriteTimerRef = useRef<number | null>(null)
+  const autoSearchedRef = useRef(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const modeParam = (params.get('mode') || '').trim()
+    const nextMode = modeParam === 'reverse' || modeParam === 'files' ? modeParam : 'docs'
+
+    dispatch(setMode(nextMode))
+    dispatch(setQuery((params.get('q') || '').trim()))
+    dispatch(setFilter({ key: 'ticket', value: (params.get('ticket') || '').trim() }))
+    dispatch(setFilter({ key: 'topics', value: parseCSV(params.get('topics')) }))
+    dispatch(setFilter({ key: 'docType', value: (params.get('docType') || '').trim() }))
+    dispatch(setFilter({ key: 'status', value: (params.get('status') || '').trim() }))
+    dispatch(setFilter({ key: 'file', value: (params.get('file') || '').trim() }))
+    dispatch(setFilter({ key: 'dir', value: (params.get('dir') || '').trim() }))
+    dispatch(setFilter({ key: 'orderBy', value: (params.get('orderBy') || '').trim() || 'rank' }))
+    dispatch(
+      setFilter({
+        key: 'includeArchived',
+        value: parseBoolParam(params.get('includeArchived'), true),
+      }),
+    )
+    dispatch(
+      setFilter({
+        key: 'includeScripts',
+        value: parseBoolParam(params.get('includeScripts'), true),
+      }),
+    )
+    dispatch(
+      setFilter({
+        key: 'includeControlDocs',
+        value: parseBoolParam(params.get('includeControlDocs'), true),
+      }),
+    )
+
+    setURLSyncReady(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!urlSyncReady) return
+
+    if (urlWriteTimerRef.current != null) window.clearTimeout(urlWriteTimerRef.current)
+    urlWriteTimerRef.current = window.setTimeout(() => {
+      const params = new URLSearchParams()
+      if (mode !== 'docs') params.set('mode', mode)
+
+      if (query.trim() !== '') params.set('q', query.trim())
+      if (filters.ticket.trim() !== '') params.set('ticket', filters.ticket.trim())
+      if (filters.topics.length > 0) params.set('topics', formatCSV(filters.topics))
+      if (filters.docType.trim() !== '') params.set('docType', filters.docType.trim())
+      if (filters.status.trim() !== '') params.set('status', filters.status.trim())
+      if (filters.file.trim() !== '') params.set('file', filters.file.trim())
+      if (filters.dir.trim() !== '') params.set('dir', filters.dir.trim())
+      if (filters.orderBy.trim() !== '' && filters.orderBy.trim() !== 'rank')
+        params.set('orderBy', filters.orderBy.trim())
+      if (filters.includeArchived !== true) params.set('includeArchived', String(filters.includeArchived))
+      if (filters.includeScripts !== true) params.set('includeScripts', String(filters.includeScripts))
+      if (filters.includeControlDocs !== true)
+        params.set('includeControlDocs', String(filters.includeControlDocs))
+
+      const next = params.toString()
+      const url = next === '' ? window.location.pathname : `${window.location.pathname}?${next}`
+      window.history.replaceState({}, '', url)
+    }, 250)
+
+    return () => {
+      if (urlWriteTimerRef.current != null) window.clearTimeout(urlWriteTimerRef.current)
+    }
+  }, [filters, mode, query])
+
+  useEffect(() => {
+    if (!urlSyncReady) return
+    if (autoSearchedRef.current) return
+
+    const hasIntent =
+      query.trim() !== '' ||
+      filters.ticket.trim() !== '' ||
+      filters.topics.length > 0 ||
+      filters.docType.trim() !== '' ||
+      filters.status.trim() !== '' ||
+      filters.file.trim() !== '' ||
+      filters.dir.trim() !== ''
+
+    if (!hasIntent) return
+
+    autoSearchedRef.current = true
+    // Auto-run search once after URL restore so shared links "just work".
+    void (async () => {
+      try {
+        setErrorBanner(null)
+        setSelected(null)
+        setShowDiagnostics(false)
+        if (mode === 'files') {
+          setHasSearched(true)
+          await triggerSearchFiles({
+            query,
+            ticket: filters.ticket,
+            topics: filters.topics,
+            limit: 200,
+          }).unwrap()
+          return
+        }
+        await doSearchDocs('', false)
+      } catch (err) {
+        setErrorBanner(toErrorBanner(err, 'Search failed'))
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlSyncReady])
+
   return (
     <div className="search-container container">
       {toast ? (
@@ -412,6 +632,22 @@ export function SearchPage() {
       {wsError ? (
         <div className="alert alert-warning">
           Workspace status unavailable. Is the server running on <code>127.0.0.1:3001</code>?
+        </div>
+      ) : null}
+
+      {errorBanner ? (
+        <div className="alert alert-danger">
+          <div className="fw-semibold">{errorBanner.title}</div>
+          <div className="small">
+            {errorBanner.code ? <span className="me-2">({errorBanner.code})</span> : null}
+            {errorBanner.message}
+          </div>
+          {errorBanner.details ? (
+            <details className="mt-2">
+              <summary className="small">Details</summary>
+              <pre className="small mb-0">{JSON.stringify(errorBanner.details, null, 2)}</pre>
+            </details>
+          ) : null}
         </div>
       ) : null}
 
@@ -669,7 +905,7 @@ export function SearchPage() {
       {mode !== 'files' && showDiagnostics && docsDiagnostics.length > 0 ? (
         <div className="alert alert-warning">
           <div className="fw-semibold mb-2">Diagnostics</div>
-          <pre className="mb-0 small">{JSON.stringify(docsDiagnostics, null, 2)}</pre>
+          <DiagnosticList diagnostics={docsDiagnostics} />
         </div>
       ) : null}
 
@@ -807,11 +1043,7 @@ export function SearchPage() {
         </div>
       )}
 
-      {searchDocsState.isError || searchFilesState.isError ? (
-        <div className="alert alert-danger mt-3">
-          Search error. Ensure the backend is running and the index is built.
-        </div>
-      ) : null}
+      {/* Errors are rendered via the main error banner near the top. */}
     </div>
   )
 }

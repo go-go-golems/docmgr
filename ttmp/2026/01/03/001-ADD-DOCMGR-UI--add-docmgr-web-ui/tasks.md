@@ -2,7 +2,7 @@
 
 ## TODO
 
-- [ ] Write UI implementation plan from `design/01-design-docmgr-search-web-ui.md`
+- [x] Write UI implementation plan from `design/01-design-docmgr-search-web-ui.md`
 - [x] Extend `/api/v1/search/docs` results to include `lastUpdated` + `relatedFiles[]` (no file serving)
 - [x] Create `ui/` React+Vite app skeleton (routing, layout, CSS baseline)
 - [x] Add RTK store + RTK Query `docmgrApi` slice (health/status/refresh/search endpoints)
@@ -29,7 +29,7 @@
 - [x] Cmd/Ctrl+R refresh index
   - [ ] Cmd/Ctrl+K copy selected path
 - [x] Implement files suggestions mode (`/api/v1/search/files`) + file cards
-- [ ] Implement URL sync (`mode`, `q`, filters) and restore state on reload
+- [x] Implement URL sync (`mode`, `q`, filters) and restore state on reload
 - [ ] Add responsive styling (compact layout, filter drawer, preview modal)
 - [x] Embed packaging (per `go-web-frontend-embed`):
 - [x] Add `internal/web` embed + SPA fallback handler
@@ -46,5 +46,5 @@
 - [x] Validate search behavior with go run examples
 - [x] Run docmgr doctor for the ticket
 - [x] Upload diary + guide PDFs to reMarkable
-- [ ] Render diagnostics as a structured list (severity/message/suggestion) instead of raw JSON
-- [ ] Show API error details inline (code/message/details) for search failures
+- [x] Render diagnostics as a structured list (severity/message/suggestion) instead of raw JSON
+- [x] Show API error details inline (code/message/details) for search failures

@@ -60,8 +60,18 @@ export type SearchDocsResponse = {
   query: SearchDocsQueryEcho
   total: number
   results: SearchDocResult[]
-  diagnostics: unknown[]
+  diagnostics: DiagnosticTaxonomy[] | null
   nextCursor: string
+}
+
+export type DiagnosticTaxonomy = {
+  Tool?: string
+  Stage?: string
+  Symptom?: string
+  Path?: string
+  Severity?: string
+  Context?: Record<string, unknown>
+  Cause?: Record<string, unknown>
 }
 
 export type SearchDocsArgs = {

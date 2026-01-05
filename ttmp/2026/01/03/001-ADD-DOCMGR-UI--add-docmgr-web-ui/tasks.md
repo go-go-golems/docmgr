@@ -50,6 +50,24 @@
 - [x] Persist selected doc in URL (restore preview/sidebar on navigation)
 - [x] Use real links for “Open” actions (ctrl-click / new tab)
 - [x] Render search snippets as markdown with match highlighting
+- [ ] Ticket page (API + UI):
+  - [ ] API: resolve ticket dir via index doc (reusable helper in `internal/tickets`)
+  - [ ] API: `GET /api/v1/tickets/get?ticket=...` (summary + quick stats)
+  - [ ] API: `GET /api/v1/tickets/docs?ticket=...&pageSize=...&cursor=...` (docs list)
+  - [ ] API: `GET /api/v1/tickets/tasks?ticket=...` (parse tasks.md into sections/items)
+  - [ ] API: `POST /api/v1/tickets/tasks/check` (check/uncheck by ids)
+  - [ ] API: `POST /api/v1/tickets/tasks/add` (append to section)
+  - [ ] API: `GET /api/v1/tickets/graph?ticket=...&format=mermaid|markdown&direction=TD|LR`
+  - [ ] API: tests for traversal/symlink safety on tasks/changelog reads (and basic handler tests)
+  - [ ] UI: add route `/ticket/:ticket` with tab param (`tab=overview|documents|tasks|graph|changelog`)
+  - [ ] UI: Overview tab (metadata + stats + key docs + open tasks)
+  - [ ] UI: Documents tab (group by docType, view links, optional preview selection)
+  - [ ] UI: Tasks tab (grouped checklist + check/uncheck + add task)
+  - [ ] UI: Graph tab (render mermaid + side panel)
+  - [ ] UI: Changelog tab (open changelog.md in doc viewer, or render markdown inline)
+  - [ ] UI: wire ticket badge links from Search + DocViewer back to ticket page
+  - [ ] Docs: update `pkg/doc/docmgr-http-api.md` with `/tickets/*` endpoints
+  - [ ] Ticket docs: add design tasks + implementation diary steps
 
 ## Done
 

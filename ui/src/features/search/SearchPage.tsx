@@ -11,6 +11,7 @@ import { DiagnosticList } from './components/DiagnosticList'
 import { MarkdownSnippet } from './components/MarkdownSnippet'
 import { TopicMultiSelect } from './components/TopicMultiSelect'
 import { useIsMobile } from './hooks/useIsMobile'
+import { useSearchSelection } from './hooks/useSearchSelection'
 import { useSearchUrlSync } from './hooks/useSearchUrlSync'
 import { clearFilters, setFilter, setMode, setQuery } from './searchSlice'
 import {
@@ -72,8 +73,31 @@ export function SearchPage() {
   const [docsNextCursor, setDocsNextCursor] = useState<string>('')
   const [docsDiagnostics, setDocsDiagnostics] = useState<DiagnosticTaxonomy[]>([])
 
-  const [selected, setSelected] = useState<SearchDocResult | null>(null)
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedPathForUrl, setSelectedPathForUrl] = useState<string>('')
+
+  const { urlSyncReady, desiredSelectedPath, desiredPreviewOpen } = useSearchUrlSync({
+    dispatch,
+    mode,
+    query,
+    filters,
+    selectedPath: selectedPathForUrl,
+    previewOpen: isMobile && showPreviewModal,
+  })
+
+  const { selected, selectedIndex, setSelected, setSelectedIndex, clearSelection, selectDocByIndex } =
+    useSearchSelection({
+      docsResults,
+      isMobile,
+      urlSyncReady,
+      desiredSelectedPath,
+      desiredPreviewOpen,
+      openPreviewModal: () => setShowPreviewModal(true),
+      closePreviewModal: () => setShowPreviewModal(false),
+    })
+
+  useEffect(() => {
+    setSelectedPathForUrl(selected?.path ?? '')
+  }, [selected])
 
   const onCopyPath = useCallback(
     async (path: string) => {
@@ -96,18 +120,6 @@ export function SearchPage() {
       setToast({ kind: 'error', message: `Index refresh failed: ${String(e)}` })
     }
   }, [refreshIndex, refetchWs])
-
-  const selectDocByIndex = useCallback(
-    (idx: number, opts?: { openModal?: boolean }) => {
-      if (idx < 0 || idx >= docsResults.length) return
-      setSelected(docsResults[idx])
-      setSelectedIndex(idx)
-      if (isMobile && (opts?.openModal ?? true)) {
-        setShowPreviewModal(true)
-      }
-    },
-    [docsResults, isMobile],
-  )
 
   const effectiveOrderBy = useMemo(() => {
     if (filters.orderBy) return filters.orderBy
@@ -149,27 +161,21 @@ export function SearchPage() {
         if (e.key === '1') {
           e.preventDefault()
           dispatch(setMode('docs'))
-          setSelected(null)
-          setSelectedIndex(null)
-          setShowPreviewModal(false)
+          clearSelection()
           searchInputRef.current?.focus()
           return
         }
         if (e.key === '2') {
           e.preventDefault()
           dispatch(setMode('reverse'))
-          setSelected(null)
-          setSelectedIndex(null)
-          setShowPreviewModal(false)
+          clearSelection()
           searchInputRef.current?.focus()
           return
         }
         if (e.key === '3') {
           e.preventDefault()
           dispatch(setMode('files'))
-          setSelected(null)
-          setSelectedIndex(null)
-          setShowPreviewModal(false)
+          clearSelection()
           searchInputRef.current?.focus()
           return
         }
@@ -226,9 +232,7 @@ export function SearchPage() {
         if (e.key === 'Escape') {
           if (selected) {
             e.preventDefault()
-            setSelected(null)
-            setSelectedIndex(null)
-            setShowPreviewModal(false)
+            clearSelection()
             return
           }
         }
@@ -247,6 +251,7 @@ export function SearchPage() {
     selectDocByIndex,
     selected,
     selectedIndex,
+    clearSelection,
     showPreviewModal,
     showShortcuts,
   ])
@@ -395,35 +400,7 @@ export function SearchPage() {
     else dispatch(setQuery(v))
   }
 
-  const { urlSyncReady, desiredSelectedPath, desiredPreviewOpen } = useSearchUrlSync({
-    dispatch,
-    mode,
-    query,
-    filters,
-    selectedPath: selected?.path ?? '',
-    previewOpen: isMobile && showPreviewModal,
-  })
-
   const autoSearchedRef = useRef(false)
-  const selectionAppliedRef = useRef(false)
-
-  useEffect(() => {
-    if (!urlSyncReady) return
-    if (selectionAppliedRef.current) return
-    if (desiredSelectedPath.trim() === '') return
-    if (docsResults.length === 0) return
-
-    const idx = docsResults.findIndex((d) => d.path === desiredSelectedPath.trim())
-    if (idx < 0) {
-      selectionAppliedRef.current = true
-      return
-    }
-
-    selectionAppliedRef.current = true
-    setSelected(docsResults[idx])
-    setSelectedIndex(idx)
-    if (isMobile && desiredPreviewOpen) setShowPreviewModal(true)
-  }, [desiredPreviewOpen, desiredSelectedPath, docsResults, isMobile, urlSyncReady])
 
   useEffect(() => {
     if (!urlSyncReady) return

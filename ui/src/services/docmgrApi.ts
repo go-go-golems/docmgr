@@ -252,6 +252,38 @@ export const docmgrApi = createApi({
           cursor: args.cursor ?? '',
         },
       }),
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { cursor, ...rest } = queryArgs ?? {}
+        void cursor
+        return rest
+      },
+      merge: (currentCache, newData, { arg }) => {
+        const cursor = arg?.cursor ?? ''
+
+        if (!cursor) {
+          currentCache.query = newData.query
+          currentCache.total = newData.total
+          currentCache.results = newData.results
+          currentCache.diagnostics = newData.diagnostics
+          currentCache.nextCursor = newData.nextCursor
+          return
+        }
+
+        currentCache.query = newData.query
+        currentCache.total = newData.total
+        currentCache.nextCursor = newData.nextCursor
+        if (newData.diagnostics != null) currentCache.diagnostics = newData.diagnostics
+
+        const seen = new Set(currentCache.results.map((r) => `${r.ticket}:${r.path}`))
+        for (const r of newData.results) {
+          const key = `${r.ticket}:${r.path}`
+          if (seen.has(key)) continue
+          currentCache.results.push(r)
+          seen.add(key)
+        }
+      },
+      forceRefetch: ({ currentArg, previousArg }) =>
+        (currentArg?.cursor ?? '') !== (previousArg?.cursor ?? ''),
       providesTags: ['Search'],
     }),
     searchFiles: builder.query<SearchFilesResponse, SearchFilesArgs>({

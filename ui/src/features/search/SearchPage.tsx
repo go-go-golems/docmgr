@@ -20,7 +20,6 @@ import {
   useLazySearchFilesQuery,
   useRefreshIndexMutation,
 } from '../../services/docmgrApi'
-import type { DiagnosticTaxonomy, SearchDocResult } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
@@ -66,13 +65,6 @@ export function SearchPage() {
   const [showFilterDrawer, setShowFilterDrawer] = useState(false)
   const [showPreviewModal, setShowPreviewModal] = useState(false)
 
-  const [hasSearched, setHasSearched] = useState(false)
-
-  const [docsResults, setDocsResults] = useState<SearchDocResult[]>([])
-  const [docsTotal, setDocsTotal] = useState<number>(0)
-  const [docsNextCursor, setDocsNextCursor] = useState<string>('')
-  const [docsDiagnostics, setDocsDiagnostics] = useState<DiagnosticTaxonomy[]>([])
-
   const [selectedPathForUrl, setSelectedPathForUrl] = useState<string>('')
 
   const { urlSyncReady, desiredSelectedPath, desiredPreviewOpen } = useSearchUrlSync({
@@ -83,6 +75,15 @@ export function SearchPage() {
     selectedPath: selectedPathForUrl,
     previewOpen: isMobile && showPreviewModal,
   })
+
+  const docsData = searchDocsState.data
+  const docsResults = useMemo(() => docsData?.results ?? [], [docsData?.results])
+  const docsTotal = docsData?.total ?? 0
+  const docsNextCursor = docsData?.nextCursor ?? ''
+  const docsDiagnostics = useMemo(() => docsData?.diagnostics ?? [], [docsData?.diagnostics])
+  const docsHighlightQuery = mode === 'docs' ? (docsData?.query?.query ?? query) : ''
+
+  const hasSearched = !searchDocsState.isUninitialized || !searchFilesState.isUninitialized
 
   const { selected, selectedIndex, setSelected, setSelectedIndex, clearSelection, selectDocByIndex } =
     useSearchSelection({
@@ -270,13 +271,14 @@ export function SearchPage() {
     return () => window.clearTimeout(t)
   }, [toast])
 
-  const doSearchDocs = async (cursor: string, append: boolean) => {
+  const doSearchDocs = async (cursor: string) => {
     const textQuery = mode === 'reverse' ? '' : query
-    const resp = await triggerSearchDocs({
-      query: textQuery,
-      ticket: filters.ticket,
-      topics: filters.topics,
-      docType: filters.docType,
+    await triggerSearchDocs(
+      {
+        query: textQuery,
+        ticket: filters.ticket,
+        topics: filters.topics,
+        docType: filters.docType,
       status: filters.status,
       file: filters.file,
       dir: filters.dir,
@@ -284,19 +286,13 @@ export function SearchPage() {
       reverse: mode === 'reverse',
       includeArchived: filters.includeArchived,
       includeScripts: filters.includeScripts,
-      includeControlDocs: filters.includeControlDocs,
-      includeDiagnostics: true,
-      pageSize: 200,
-      cursor,
-    }).unwrap()
-
-    setDocsTotal(resp.total)
-    setDocsNextCursor(resp.nextCursor || '')
-    setDocsDiagnostics(resp.diagnostics ?? [])
-    setHasSearched(true)
-
-    if (append) setDocsResults((prev) => [...prev, ...resp.results])
-    else setDocsResults(resp.results)
+        includeControlDocs: filters.includeControlDocs,
+        includeDiagnostics: true,
+        pageSize: 200,
+        cursor,
+      },
+      false,
+    ).unwrap()
   }
 
   const onSubmit = async (e: FormEvent) => {
@@ -307,13 +303,15 @@ export function SearchPage() {
 
     if (mode === 'files') {
       try {
-        setHasSearched(true)
-        await triggerSearchFiles({
-          query,
-          ticket: filters.ticket,
-          topics: filters.topics,
-          limit: 200,
-        }).unwrap()
+        await triggerSearchFiles(
+          {
+            query,
+            ticket: filters.ticket,
+            topics: filters.topics,
+            limit: 200,
+          },
+          false,
+        ).unwrap()
       } catch (err) {
         setErrorBanner(toErrorBanner(err, 'Files search failed'))
       }
@@ -321,7 +319,7 @@ export function SearchPage() {
     }
 
     try {
-      await doSearchDocs('', false)
+      await doSearchDocs('')
     } catch (err) {
       setErrorBanner(toErrorBanner(err, 'Search failed'))
     }
@@ -330,7 +328,7 @@ export function SearchPage() {
   const onLoadMore = async () => {
     if (!docsNextCursor) return
     try {
-      await doSearchDocs(docsNextCursor, true)
+      await doSearchDocs(docsNextCursor)
     } catch (err) {
       setErrorBanner(toErrorBanner(err, 'Load more failed'))
     }
@@ -425,16 +423,18 @@ export function SearchPage() {
         setSelected(null)
         setShowDiagnostics(false)
         if (mode === 'files') {
-          setHasSearched(true)
-          await triggerSearchFiles({
-            query,
-            ticket: filters.ticket,
-            topics: filters.topics,
-            limit: 200,
-          }).unwrap()
+          await triggerSearchFiles(
+            {
+              query,
+              ticket: filters.ticket,
+              topics: filters.topics,
+              limit: 200,
+            },
+            false,
+          ).unwrap()
           return
         }
-        await doSearchDocs('', false)
+        await doSearchDocs('')
       } catch (err) {
         setErrorBanner(toErrorBanner(err, 'Search failed'))
       }
@@ -689,12 +689,13 @@ export function SearchPage() {
                   className="btn btn-sm btn-outline-secondary"
                   onClick={() => {
                     dispatch(clearFilters())
-                    setSelected(null)
-                    setHasSearched(false)
-                    setDocsResults([])
-                    setDocsTotal(0)
-                    setDocsNextCursor('')
-                    setDocsDiagnostics([])
+                    clearSelection()
+                    setErrorBanner(null)
+                    setShowDiagnostics(false)
+                    setShowPreviewModal(false)
+                    searchDocsState.reset?.()
+                    searchFilesState.reset?.()
+                    autoSearchedRef.current = false
                   }}
                 >
                   Clear
@@ -846,13 +847,13 @@ export function SearchPage() {
                     className="btn btn-outline-secondary"
                     onClick={() => {
                       dispatch(clearFilters())
-                      setSelected(null)
-                      setSelectedIndex(null)
-                      setHasSearched(false)
-                      setDocsResults([])
-                      setDocsTotal(0)
-                      setDocsNextCursor('')
-                      setDocsDiagnostics([])
+                      clearSelection()
+                      setErrorBanner(null)
+                      setShowDiagnostics(false)
+                      setShowPreviewModal(false)
+                      searchDocsState.reset?.()
+                      searchFilesState.reset?.()
+                      autoSearchedRef.current = false
                       setShowFilterDrawer(false)
                     }}
                   >
@@ -951,7 +952,7 @@ export function SearchPage() {
 	                <div className="mb-3">
 	                  <div className="text-muted small mb-1">Snippet</div>
                     <div className="small">
-                      <MarkdownSnippet markdown={selected.snippet} query={mode === 'docs' ? query : ''} />
+                      <MarkdownSnippet markdown={selected.snippet} query={docsHighlightQuery} />
                     </div>
 	                </div>
 
@@ -1120,7 +1121,7 @@ export function SearchPage() {
                     path={r.path}
                     lastUpdated={r.lastUpdated}
                     relatedFiles={r.relatedFiles}
-                    snippet={<MarkdownSnippet markdown={r.snippet} query={mode === 'docs' ? query : ''} />}
+                    snippet={<MarkdownSnippet markdown={r.snippet} query={docsHighlightQuery} />}
                     selected={selected?.path === r.path && selected?.ticket === r.ticket}
                     onCopyPath={(p) => void onCopyPath(p)}
                     onSelect={() => {
@@ -1188,7 +1189,7 @@ export function SearchPage() {
 	                <div className="mb-3">
 	                  <div className="text-muted small mb-1">Snippet</div>
 	                  <div className="small">
-	                    <MarkdownSnippet markdown={selected.snippet} query={mode === 'docs' ? query : ''} />
+	                    <MarkdownSnippet markdown={selected.snippet} query={docsHighlightQuery} />
 	                  </div>
 	                </div>
                   {selected.relatedFiles && selected.relatedFiles.length > 0 ? (

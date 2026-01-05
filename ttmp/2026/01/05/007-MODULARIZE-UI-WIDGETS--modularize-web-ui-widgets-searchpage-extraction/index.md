@@ -12,6 +12,8 @@ DocType: index
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: ui/src/App.tsx
+      Note: CSS import split; route entrypoint using shared+search styles.
     - Path: ui/src/features/search/SearchPage.tsx
       Note: Refactor target; orchestrates Search UI and now consumes extracted leaf widgets.
     - Path: ui/src/features/search/components/DiagnosticList.tsx
@@ -22,6 +24,8 @@ RelatedFiles:
       Note: Extracted topics token input widget.
     - Path: ui/src/features/search/hooks/useIsMobile.ts
       Note: Extracted responsive hook from SearchPage (mobile breakpoint logic).
+    - Path: ui/src/features/search/hooks/useSearchSelection.ts
+      Note: Extracted selection model (selected/index/apply desired selection) from SearchPage.
     - Path: ui/src/features/search/hooks/useSearchUrlSync.ts
       Note: Extracted URL read/write sync (mode/q/filters/sel/preview) from SearchPage.
     - Path: ui/src/lib/apiError.ts
@@ -30,12 +34,17 @@ RelatedFiles:
       Note: Extracted clipboard helper; SearchPage uses for copy-path.
     - Path: ui/src/lib/time.ts
       Note: Extracted SearchPage timeAgo helper into shared lib (no behavior change for Search).
+    - Path: ui/src/styles/design-system.css
+      Note: Shared UI styling (DocCard/result cards
+    - Path: ui/src/styles/search.css
+      Note: Search-page-specific layout styling (container
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-05T08:49:54.386444656-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 

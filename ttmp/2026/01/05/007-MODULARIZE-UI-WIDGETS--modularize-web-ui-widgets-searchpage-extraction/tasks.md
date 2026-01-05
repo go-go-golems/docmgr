@@ -38,12 +38,12 @@ Goal: make the route component a thin orchestrator by extracting behavior into h
   - [ ] Arrow navigation + Enter open + Esc clear/close
   - [ ] Alt+1/2/3 mode switching
   - [ ] Cmd/Ctrl+R refresh, Cmd/Ctrl+K copy selected path
-- [ ] Extract selection model into `ui/src/features/search/hooks/useSearchSelection.ts`
-  - [ ] Selected index/path; desktop vs mobile preview behavior preserved
+- [x] Extract selection model into `ui/src/features/search/hooks/useSearchSelection.ts`
+- [x] Selected index/path; desktop vs mobile preview behavior preserved
 
 ### CSS cleanup (de-couple “design system” from Search-only layout)
-- [ ] Split `ui/src/App.css` into shared utilities vs Search-only layout
-- [ ] Keep classnames stable for now (minimize churn)
+- [x] Split `ui/src/App.css` into shared utilities vs Search-only layout
+- [x] Keep classnames stable for now (minimize churn)
 
 ### Validation
 - [x] `pnpm -C ui lint`

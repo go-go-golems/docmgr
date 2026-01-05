@@ -42,3 +42,14 @@ Extract SearchPage URL state sync into useSearchUrlSync (restores from URL and d
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/hooks/useSearchUrlSync.ts — New
 
+
+## 2026-01-05
+
+Extract Search selection model into a hook and split App.css into design-system vs Search-specific styles; lint+build verified.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/search/hooks/useSearchSelection.ts — New
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/styles/design-system.css — New
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/styles/search.css — New
+

@@ -97,6 +97,12 @@ function extractHighlightTerms(raw: string): string[] {
 function highlightReactNode(node: ReactNode, re: RegExp | null, inCode = false): ReactNode {
   if (!re) return node
 
+  if (node == null || typeof node === 'boolean') return node
+
+  if (Array.isArray(node)) {
+    return node.map((child) => highlightReactNode(child, re, inCode))
+  }
+
   if (typeof node === 'string' || typeof node === 'number') {
     if (inCode) return node
     const parts = String(node).split(re)
@@ -127,19 +133,19 @@ function MarkdownSnippet({ markdown, query }: { markdown: string; query: string 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const components: any = useMemo(
     () => ({
-      p: ({ children, ...props }: any) => (
+      p: ({ children, node: _node, ...props }: any) => (
         <p {...props} className={props.className} style={{ marginBottom: 0 }}>
           {highlightReactNode(children, re)}
         </p>
       ),
-      li: ({ children, ...props }: any) => <li {...props}>{highlightReactNode(children, re)}</li>,
-      h1: ({ children, ...props }: any) => <h1 {...props}>{highlightReactNode(children, re)}</h1>,
-      h2: ({ children, ...props }: any) => <h2 {...props}>{highlightReactNode(children, re)}</h2>,
-      h3: ({ children, ...props }: any) => <h3 {...props}>{highlightReactNode(children, re)}</h3>,
-      h4: ({ children, ...props }: any) => <h4 {...props}>{highlightReactNode(children, re)}</h4>,
-      h5: ({ children, ...props }: any) => <h5 {...props}>{highlightReactNode(children, re)}</h5>,
-      h6: ({ children, ...props }: any) => <h6 {...props}>{highlightReactNode(children, re)}</h6>,
-      blockquote: ({ children, ...props }: any) => (
+      li: ({ children, node: _node, ...props }: any) => <li {...props}>{highlightReactNode(children, re)}</li>,
+      h1: ({ children, node: _node, ...props }: any) => <h1 {...props}>{highlightReactNode(children, re)}</h1>,
+      h2: ({ children, node: _node, ...props }: any) => <h2 {...props}>{highlightReactNode(children, re)}</h2>,
+      h3: ({ children, node: _node, ...props }: any) => <h3 {...props}>{highlightReactNode(children, re)}</h3>,
+      h4: ({ children, node: _node, ...props }: any) => <h4 {...props}>{highlightReactNode(children, re)}</h4>,
+      h5: ({ children, node: _node, ...props }: any) => <h5 {...props}>{highlightReactNode(children, re)}</h5>,
+      h6: ({ children, node: _node, ...props }: any) => <h6 {...props}>{highlightReactNode(children, re)}</h6>,
+      blockquote: ({ children, node: _node, ...props }: any) => (
         <blockquote {...props}>{highlightReactNode(children, re)}</blockquote>
       ),
     }),

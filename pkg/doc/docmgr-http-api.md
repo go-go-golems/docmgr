@@ -139,6 +139,59 @@ Response (shape):
 }
 ```
 
+### 5.2.1. Workspace Summary
+
+`GET /api/v1/workspace/summary`
+
+Purpose: render the Workspace home/dashboard with one call (basic stats + recent tickets + recent docs).
+
+Response (shape):
+
+```json
+{
+  "root": "/abs/path/to/ttmp",
+  "repoRoot": "/abs/path/to/repo",
+  "indexedAt": "2026-01-05T00:00:00Z",
+  "docsIndexed": 413,
+  "stats": {
+    "ticketsTotal": 128,
+    "ticketsActive": 12,
+    "ticketsComplete": 84,
+    "ticketsReview": 9,
+    "ticketsDraft": 23
+  },
+  "recent": {
+    "tickets": [
+      {
+        "ticket": "001-ADD-DOCMGR-UI",
+        "title": "Add docmgr Web UI",
+        "status": "active",
+        "topics": ["docmgr", "ui"],
+        "owners": [],
+        "intent": "long-term",
+        "createdAt": "2026-01-03",
+        "updatedAt": "2026-01-05T00:00:00Z",
+        "ticketDir": "2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui",
+        "indexPath": "2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/index.md",
+        "snippet": "",
+        "stats": null
+      }
+    ],
+    "docs": [
+      {
+        "path": "2026/01/03/.../design/03-workspace-rest-api.md",
+        "ticket": "001-ADD-DOCMGR-UI",
+        "title": "Design: docmgr Workspace REST API (for full-site navigation)",
+        "docType": "design-doc",
+        "status": "active",
+        "topics": ["docmgr", "ui", "http", "api", "workspace"],
+        "updatedAt": "2026-01-05T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
 ### 5.3. Refresh Index
 
 `POST /api/v1/index/refresh`
@@ -151,6 +204,165 @@ Response (shape):
   "indexedAt": "2026-01-04T21:05:04.583Z",
   "docsIndexed": 200,
   "ftsAvailable": true
+}
+```
+
+### 5.3.1. Workspace Tickets
+
+`GET /api/v1/workspace/tickets`
+
+Purpose: list tickets (workspace-wide) derived from the ticket `index.md` docs (`DocType: index`).
+
+Query parameters:
+- `status` (string): `active|review|complete|draft|` (empty = all)
+- `ticket` (string): exact ticket ID match (optional)
+- `topics` (string): comma-separated, match any topic (optional)
+- `owners` (string): comma-separated, match any owner (optional)
+- `intent` (string): exact match (optional)
+- `q` (string): full-text query (FTS5) applied to index docs only (optional)
+- `orderBy` (string): `last_updated|ticket|title` (default `last_updated`)
+- `reverse` (bool, default `false`)
+- `includeArchived` (bool, default `true`)
+- `includeStats` (bool, default `false`): when true, computes per-ticket stats (tasks/docs/related files)
+- `pageSize` (int, default `200`, max `1000`)
+- `cursor` (string, optional)
+
+Response (shape):
+
+```json
+{
+  "query": {
+    "q": "",
+    "status": "active",
+    "ticket": "",
+    "topics": ["docmgr", "ui"],
+    "owners": [],
+    "intent": "",
+    "orderBy": "last_updated",
+    "reverse": false,
+    "includeArchived": true,
+    "includeStats": false,
+    "pageSize": 200,
+    "cursor": ""
+  },
+  "total": 128,
+  "results": [
+    {
+      "ticket": "001-ADD-DOCMGR-UI",
+      "title": "Add docmgr Web UI",
+      "status": "active",
+      "topics": ["docmgr", "ui"],
+      "owners": [],
+      "intent": "long-term",
+      "createdAt": "2026-01-03",
+      "updatedAt": "2026-01-05T00:00:00Z",
+      "ticketDir": "2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui",
+      "indexPath": "2026/01/03/001-ADD-DOCMGR-UI--add-docmgr-web-ui/index.md",
+      "snippet": "",
+      "stats": null
+    }
+  ],
+  "nextCursor": ""
+}
+```
+
+### 5.3.2. Workspace Facets
+
+`GET /api/v1/workspace/facets`
+
+Purpose: drive Workspace filters (statuses/docTypes/intents/topics/owners).
+
+Query parameters:
+- `includeArchived` (bool, default `true`)
+
+Response (shape):
+
+```json
+{
+  "statuses": ["active", "review", "complete", "draft"],
+  "docTypes": ["index", "design-doc", "reference", "analysis", "sources"],
+  "intents": ["short-term", "long-term", "evergreen"],
+  "topics": ["docmgr", "ui", "tooling"],
+  "owners": ["manuel", "alex"]
+}
+```
+
+Notes:
+- The server prefers `vocabulary.yaml` for `statuses/docTypes/intents/topics` when present, but falls back to deriving from indexed docs.
+
+### 5.3.3. Workspace Recent
+
+`GET /api/v1/workspace/recent`
+
+Purpose: show “recently updated tickets” and “recently updated docs”.
+
+Query parameters:
+- `ticketsLimit` (int, default `20`, max `1000`)
+- `docsLimit` (int, default `20`, max `1000`)
+- `includeArchived` (bool, default `true`)
+
+Response (shape):
+
+```json
+{
+  "tickets": [ /* TicketListItem[] (same as /workspace/tickets results) */ ],
+  "docs": [
+    {
+      "path": "2026/01/03/.../design/03-workspace-rest-api.md",
+      "ticket": "001-ADD-DOCMGR-UI",
+      "title": "Design: docmgr Workspace REST API (for full-site navigation)",
+      "docType": "design-doc",
+      "status": "active",
+      "topics": ["docmgr", "ui"],
+      "updatedAt": "2026-01-05T00:00:00Z"
+    }
+  ]
+}
+```
+
+### 5.3.4. Workspace Topics
+
+`GET /api/v1/workspace/topics`
+
+Purpose: list topics (workspace-wide) with basic counts.
+
+Query parameters:
+- `includeArchived` (bool, default `true`)
+
+Response (shape):
+
+```json
+{
+  "total": 42,
+  "results": [
+    { "topic": "docmgr", "docsTotal": 120, "ticketsTotal": 14, "updatedAt": "2026-01-05T00:00:00Z" }
+  ]
+}
+```
+
+### 5.3.5. Workspace Topic Detail
+
+`GET /api/v1/workspace/topics/get`
+
+Query parameters:
+- `topic` (string, required)
+- `includeArchived` (bool, default `true`)
+- `docsLimit` (int, default `20`, max `1000`)
+
+Response (shape):
+
+```json
+{
+  "topic": "docmgr",
+  "stats": {
+    "ticketsTotal": 14,
+    "ticketsActive": 6,
+    "ticketsComplete": 4,
+    "ticketsReview": 2,
+    "ticketsDraft": 2
+  },
+  "tickets": [ /* TicketListItem[] */ ],
+  "docs": [ /* RecentDocItem[] */ ]
 }
 ```
 

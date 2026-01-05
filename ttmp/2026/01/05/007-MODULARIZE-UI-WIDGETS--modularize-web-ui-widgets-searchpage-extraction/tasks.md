@@ -118,13 +118,13 @@ Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becom
 - [x] Retrofit SearchHeader to use shared PageHeader where it fits (keep Refresh button behavior)
 - [x] Add CodeBlock primitive and use it in FileViewer (wrap docmgr-code + highlight HTML)
 - [x] Add MarkdownBlock primitive (ReactMarkdown+remarkGfm+rehypeHighlight) and use it in DocViewer + TicketOverview index.md
-- [ ] Add ToastHost + useToast (global queue) and replace page-local toast timers (Search/Ticket/Doc/File)
+- [x] Add ToastHost + useToast (global queue) and replace page-local toast timers (Search/Ticket/Doc/File)
 - [x] Unify formatDate into ui/src/lib/time.ts and replace ad-hoc date formatting in Ticket/Doc pages
 - [x] Extract DiagnosticCard from DocViewer and reuse for any diagnostics rendering (DocViewer/Search)
 - [ ] DocCard styling: introduce dm-* classnames (dm-card, dm-path) or a Card primitive to decouple from Search-specific result-*
-- [ ] ToastHost/useToast: add Redux ui/toast slice + provider
-- [ ] ToastHost/useToast: retrofit DocViewerPage + FileViewerPage (remove local setTimeout)
-- [ ] ToastHost/useToast: retrofit Search widgets + TicketPage tabs (remove page-local toast state)
+- [x] ToastHost/useToast: add Redux ui/toast slice + provider
+- [x] ToastHost/useToast: retrofit DocViewerPage + FileViewerPage (remove local setTimeout)
+- [x] ToastHost/useToast: retrofit Search widgets + TicketPage tabs (remove page-local toast state)
 - [ ] Design system: add minimal dm-* utilities (dm-card, dm-path, spacing) in ui/src/styles/design-system.css
 - [ ] DocCard styling: replace result-* classes with dm-* (or Card primitive) without Search-only coupling
 - [ ] Audit useState/useEffect across ui/src and classify per state strategy doc (local vs slice vs RTK Query)

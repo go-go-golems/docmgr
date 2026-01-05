@@ -20,14 +20,28 @@ RelatedFiles:
       Note: Shared markdown rendering primitive
     - Path: ui/src/components/PageHeader.tsx
       Note: Shared page header primitive used across routes
+    - Path: ui/src/components/ToastHost.tsx
+      Note: Global toast rendering and timeout management
     - Path: ui/src/features/doc/DocViewerPage.tsx
-      Note: Uses DiagnosticCard primitive
+      Note: |-
+        Uses DiagnosticCard primitive
+        No more page-local toast timers
     - Path: ui/src/features/file/FileViewerPage.tsx
-      Note: Uses CodeBlock primitive
+      Note: |-
+        Uses CodeBlock primitive
+        No more page-local toast timers
+    - Path: ui/src/features/search/SearchPage.tsx
+      Note: No more page-local toast timers
     - Path: ui/src/features/search/widgets/SearchHeader.tsx
       Note: Search page header widget retrofit
+    - Path: ui/src/features/ticket/TicketPage.tsx
+      Note: No more page-local toast timers
     - Path: ui/src/features/ticket/components/TicketHeader.tsx
       Note: Ticket header widget retrofit
+    - Path: ui/src/features/toast/toastSlice.ts
+      Note: Redux slice for toast queue
+    - Path: ui/src/features/toast/useToast.ts
+      Note: Hook used by pages
     - Path: ui/src/lib/time.ts
       Note: Shared time/date formatting helpers
 ExternalSources: []
@@ -36,6 +50,7 @@ LastUpdated: 2026-01-05T10:53:27.605970965-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -412,3 +427,53 @@ No failures surfaced in this pass, so the current state is safe to continue from
 
 ### Technical details
 - N/A
+
+## Step 10: Add a global toast system and remove per-page timers
+
+Multiple pages were each managing their own toast UI state and `setTimeout` cleanup logic. That creates duplicated code, inconsistent timeouts/messages, and subtle leak risks when navigating quickly. This step introduces a single global toast queue in Redux and a `ToastHost` that owns timeout cleanup, then retrofits Search/Ticket/Doc/File to use `useToast()`.
+
+This is one of the highest-ROI extractions so far because it removes copy/paste logic across four routes and establishes a shared “UX primitive” that Workspace pages will also need.
+
+**Commit (code):** 8be000a — "UI: add global toast system"  
+**Commit (code):** fc60503 — "UI: use ToastHost in doc/file viewers"  
+**Commit (code):** 2e44767 — "UI: use ToastHost in TicketPage"  
+**Commit (code):** 5ef282d — "UI: use ToastHost in SearchPage"
+
+### What I did
+- Added `ui/src/features/toast/toastSlice.ts` (Redux toast queue) and `ui/src/features/toast/useToast.ts` (imperative API)
+- Added `ui/src/components/ToastHost.tsx` and mounted it in `ui/src/App.tsx`
+- Updated `ui/src/app/store.ts` to include `toast` reducer
+- Removed page-local toast state + `setTimeout` cleanup from:
+  - `ui/src/features/search/SearchPage.tsx`
+  - `ui/src/features/ticket/TicketPage.tsx`
+  - `ui/src/features/doc/DocViewerPage.tsx`
+  - `ui/src/features/file/FileViewerPage.tsx`
+
+### Why
+- Avoid duplicated timer logic and inconsistent behavior
+- Make it easy for any widget/page to “toast” without owning UI layout
+
+### What worked
+- Redux slice + host pattern kept page changes small (mostly deleting code)
+
+### What didn't work
+- N/A
+
+### What I learned
+- Centralizing time-based UI cleanup (timeouts) is safer than scattering `setTimeout` across route components
+
+### What was tricky to build
+- Ensuring timers are cleaned up both when a toast is removed and when the host unmounts (navigation or HMR)
+
+### What warrants a second pair of eyes
+- UX parity: toast positioning/stacking vs the old Search-only toast container
+
+### What should be done in the future
+- Consider a consistent message vocabulary (“Copied” vs “Copied path: …”) once DocCard styling work starts
+
+### Code review instructions
+- Start with `ui/src/features/toast/toastSlice.ts` and `ui/src/components/ToastHost.tsx`
+- Verify the four retrofit sites listed above compile and behave the same
+
+### Technical details
+- `ToastHost` uses a `Map<toastId, timeoutHandle>` to ensure one timer per toast and to avoid leaking timers

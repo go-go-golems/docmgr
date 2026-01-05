@@ -147,3 +147,14 @@ Add follow-up tasks for toast system, dm-* utilities, DocCard restyle, and state
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/tasks.md — Track next refactor phases
 
+
+## 2026-01-05
+
+UI: add global toast system (8be000a) + retrofit Doc/File/Ticket/Search to use ToastHost (fc60503, 2e44767, 5ef282d)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/ToastHost.tsx — Central toast rendering and timer cleanup
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/toast/toastSlice.ts — Toast queue in Redux
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/features/toast/useToast.ts — Imperative toast API for components
+

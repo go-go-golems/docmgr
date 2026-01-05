@@ -55,3 +55,8 @@ Goal: make the route component a thin orchestrator by extracting behavior into h
 - [x] Update `changelog.md` with each extraction batch (`docmgr changelog update --ticket 007-MODULARIZE-UI-WIDGETS ...`)
 
 ## Done
+- [x] Redux cleanup: make RTK Query own Search docs results (no local copies)
+- [x] Implement searchDocs pagination merge (serializeQueryArgs ignores cursor; merge appends; forceRefetch on cursor change)
+- [x] Refactor SearchPage: remove docsResults/docsTotal/docsNextCursor/docsDiagnostics local state; render from RTK Query data
+- [x] Refactor SearchPage: derive hasSearched from lazy query state; ensure Clear resets queries + selection + auto-search latch
+- [ ] Manual UX check: docs search, load more, clear, URL-restore auto-search, selection/preview, hotkeys

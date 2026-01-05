@@ -6,7 +6,8 @@ import { DocViewerPage } from './features/doc/DocViewerPage'
 import { FileViewerPage } from './features/file/FileViewerPage'
 import { SearchPage } from './features/search/SearchPage'
 import { TicketPage } from './features/ticket/TicketPage'
-import './App.css'
+import './styles/design-system.css'
+import './styles/search.css'
 
 function App() {
   return (

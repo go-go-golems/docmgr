@@ -36,6 +36,10 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null
 }
 
+function asArray<T>(v: T[] | null | undefined): T[] {
+  return Array.isArray(v) ? v : []
+}
+
 function apiErrorMessage(err: unknown): string {
   const maybe = err as { data?: unknown } | undefined
   const data = isRecord(maybe?.data) ? maybe?.data : undefined
@@ -126,7 +130,7 @@ export function TicketPage() {
     const secs = tasksData?.sections ?? []
     const out: { id: number; text: string; checked: boolean }[] = []
     for (const sec of secs) {
-      for (const it of sec.items) {
+      for (const it of asArray(sec.items)) {
         if (!it.checked) out.push({ id: it.id, text: it.text, checked: it.checked })
       }
     }
@@ -533,11 +537,11 @@ export function TicketPage() {
                   <div key={sec.title} className="card">
                     <div className="card-header fw-semibold">{sec.title}</div>
                     <div className="card-body">
-                      {sec.items.length === 0 ? (
+                      {asArray(sec.items).length === 0 ? (
                         <div className="text-muted small">No tasks in this section.</div>
                       ) : (
                         <div className="vstack gap-2">
-                          {sec.items.map((it) => (
+                          {asArray(sec.items).map((it) => (
                             <label key={it.id} className="d-flex gap-2 align-items-start">
                               <input
                                 type="checkbox"

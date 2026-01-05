@@ -9,20 +9,24 @@ export function SearchPreviewContent({
   doc,
   highlightQuery,
   onCopyPath,
+  showMeta = true,
 }: {
   doc: SearchDocResult
   highlightQuery: string
   onCopyPath: (path: string) => void
+  showMeta?: boolean
 }) {
   return (
     <>
-      <div className="text-muted small mb-2">
-        <Link to={`/ticket/${encodeURIComponent(doc.ticket)}`} className="text-decoration-none">
-          {doc.ticket}
-        </Link>{' '}
-        • {doc.docType} • {doc.status}
-        {doc.lastUpdated ? <span className="ms-2">Updated {timeAgo(doc.lastUpdated)}</span> : null}
-      </div>
+      {showMeta ? (
+        <div className="text-muted small mb-2">
+          <Link to={`/ticket/${encodeURIComponent(doc.ticket)}`} className="text-decoration-none">
+            {doc.ticket}
+          </Link>{' '}
+          • {doc.docType} • {doc.status}
+          {doc.lastUpdated ? <span className="ms-2">Updated {timeAgo(doc.lastUpdated)}</span> : null}
+        </div>
+      ) : null}
 
       <div className="mb-2">
         <span className="text-muted small">Path</span>
@@ -53,4 +57,3 @@ export function SearchPreviewContent({
     </>
   )
 }
-

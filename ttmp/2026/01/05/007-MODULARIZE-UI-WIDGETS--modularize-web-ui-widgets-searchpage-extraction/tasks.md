@@ -121,11 +121,11 @@ Goal: split `ui/src/features/ticket/TicketPage.tsx` into tab widgets so it becom
 - [x] Add ToastHost + useToast (global queue) and replace page-local toast timers (Search/Ticket/Doc/File)
 - [x] Unify formatDate into ui/src/lib/time.ts and replace ad-hoc date formatting in Ticket/Doc pages
 - [x] Extract DiagnosticCard from DocViewer and reuse for any diagnostics rendering (DocViewer/Search)
-- [ ] DocCard styling: introduce dm-* classnames (dm-card, dm-path) or a Card primitive to decouple from Search-specific result-*
+- [x] DocCard styling: introduce dm-* classnames (dm-card, dm-path) or a Card primitive to decouple from Search-specific result-*
 - [x] ToastHost/useToast: add Redux ui/toast slice + provider
 - [x] ToastHost/useToast: retrofit DocViewerPage + FileViewerPage (remove local setTimeout)
 - [x] ToastHost/useToast: retrofit Search widgets + TicketPage tabs (remove page-local toast state)
-- [ ] Design system: add minimal dm-* utilities (dm-card, dm-path, spacing) in ui/src/styles/design-system.css
-- [ ] DocCard styling: replace result-* classes with dm-* (or Card primitive) without Search-only coupling
+- [x] Design system: add minimal dm-* utilities (dm-card, dm-path, spacing) in ui/src/styles/design-system.css
+- [x] DocCard styling: replace result-* classes with dm-* (or Card primitive) without Search-only coupling
 - [ ] Audit useState/useEffect across ui/src and classify per state strategy doc (local vs slice vs RTK Query)
 - [ ] Workspace pages (follow-up): add route + skeleton widgets directory layout aligned with workspace-page.md

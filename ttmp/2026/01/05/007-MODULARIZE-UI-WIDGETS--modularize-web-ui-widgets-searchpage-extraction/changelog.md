@@ -167,3 +167,13 @@ Add analysis doc: post-refactor UI componentization roadmap
 
 - /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ttmp/2026/01/05/007-MODULARIZE-UI-WIDGETS--modularize-web-ui-widgets-searchpage-extraction/analysis/01-post-refactor-ui-componentization-roadmap.md — Summarizes next high-ROI componentization work
 
+
+## 2026-01-05
+
+Decouple DocCard from Search-only styling: add dm-* utilities and refactor DocCard API; update Search/Ticket usages
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/components/DocCard.tsx — DocCard now takes a doc object and uses dm-* classes
+- /home/manuel/workspaces/2026-01-03/add-docmgr-webui/docmgr/ui/src/styles/design-system.css — Add dm-* aliases and remove unused toast-container CSS
+

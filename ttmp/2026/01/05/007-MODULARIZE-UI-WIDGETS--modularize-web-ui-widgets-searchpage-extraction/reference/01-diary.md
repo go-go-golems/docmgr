@@ -16,10 +16,14 @@ RelatedFiles:
       Note: Shared code rendering used by FileViewer
     - Path: ui/src/components/DiagnosticCard.tsx
       Note: Shared diagnostic rendering extracted from DocViewer
+    - Path: ui/src/components/DocCard.tsx
+      Note: Decoupled from Search-specific styling; now reusable across pages
     - Path: ui/src/components/MarkdownBlock.tsx
       Note: Shared markdown rendering primitive
     - Path: ui/src/components/PageHeader.tsx
       Note: Shared page header primitive used across routes
+    - Path: ui/src/components/PathHeader.tsx
+      Note: Switched to dm-path-pill
     - Path: ui/src/components/ToastHost.tsx
       Note: Global toast rendering and timeout management
     - Path: ui/src/features/doc/DocViewerPage.tsx
@@ -32,24 +36,33 @@ RelatedFiles:
         No more page-local toast timers
     - Path: ui/src/features/search/SearchPage.tsx
       Note: No more page-local toast timers
+    - Path: ui/src/features/search/widgets/SearchDocsResults.tsx
+      Note: Uses DocCard doc-object API
+    - Path: ui/src/features/search/widgets/SearchFilesResults.tsx
+      Note: Switched to dm-* card/path styles
     - Path: ui/src/features/search/widgets/SearchHeader.tsx
       Note: Search page header widget retrofit
     - Path: ui/src/features/ticket/TicketPage.tsx
       Note: No more page-local toast timers
     - Path: ui/src/features/ticket/components/TicketHeader.tsx
       Note: Ticket header widget retrofit
+    - Path: ui/src/features/ticket/tabs/TicketDocumentsTab.tsx
+      Note: Uses DocCard doc-object API
     - Path: ui/src/features/toast/toastSlice.ts
       Note: Redux slice for toast queue
     - Path: ui/src/features/toast/useToast.ts
       Note: Hook used by pages
     - Path: ui/src/lib/time.ts
       Note: Shared time/date formatting helpers
+    - Path: ui/src/styles/design-system.css
+      Note: dm-* utility aliases for reusable cards/path pills
 ExternalSources: []
 Summary: ""
 LastUpdated: 2026-01-05T10:53:27.605970965-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -477,3 +490,56 @@ This is one of the highest-ROI extractions so far because it removes copy/paste 
 
 ### Technical details
 - `ToastHost` uses a `Map<toastId, timeoutHandle>` to ensure one timer per toast and to avoid leaking timers
+
+## Step 11: Decouple DocCard from Search-only styling and reuse it across pages
+
+`DocCard` started life as a “Search result card”, which meant it carried Search-centric class names (`result-*`, `topic-badge`, `copy-btn`) and an API that required the caller to pass a bunch of parallel props. Now that we’re actively building a coherent widget/primitives system, that coupling becomes a blocker: we want the same doc list item to render in Search, Ticket, and future Workspace widgets without inheriting Search page concerns.
+
+This step refactors `DocCard` into a domain component with a single `doc` object prop, introduces a `dm-*` utility namespace in the shared design-system stylesheet, and updates Search/Ticket callsites to use the new API. The immediate goal is to keep behavior stable but make DocCard re-usable in more contexts with less prop churn.
+
+### What I did
+- Updated `ui/src/styles/design-system.css` to add `dm-*` utility aliases for card/path/snippet styling and removed the now-unused `.toast-container` rule
+- Refactored `ui/src/components/DocCard.tsx`:
+  - Accept `doc: DocCardDoc` instead of parallel props
+  - Use `dm-*` classnames (neutral styling)
+  - Add Enter/Space keyboard activation for accessibility
+- Updated callsites:
+  - `ui/src/features/search/widgets/SearchDocsResults.tsx` now passes `doc={r}`
+  - `ui/src/features/ticket/tabs/TicketDocumentsTab.tsx` now passes `doc={{...d, ticket}}`
+- Updated remaining `result-*` consumers to use dm-*:
+  - `ui/src/features/search/widgets/SearchFilesResults.tsx`
+  - `ui/src/components/PathHeader.tsx`
+
+### Why
+- Make `DocCard` a true domain component (usable outside Search)
+- Establish a minimal `dm-*` design-system namespace to prevent “page CSS leaks” as Workspace pages land
+
+### What worked
+- The “doc object” prop shape reduced callsite verbosity and makes it easier to thread through doc types consistently
+- Keeping old CSS selectors as aliases avoided surprises while we migrate remaining usages
+
+### What didn't work
+- N/A
+
+### What I learned
+- When a component is used in multiple pages, switching from “parallel props” → “single domain object + small overrides” lowers maintenance cost quickly
+
+### What was tricky to build
+- Keeping styling stable while renaming classnames; the alias approach lets us migrate gradually without breaking consumers
+
+### What warrants a second pair of eyes
+- Visual parity: confirm Search docs results and Ticket docs tab still look correct (hover/selected/copy button behavior)
+
+### What should be done in the future
+- Consider a small “pattern” component for list+preview once Workspace pages add a third consumer (avoid premature abstraction)
+
+### Code review instructions
+- Start with `ui/src/components/DocCard.tsx` and `ui/src/styles/design-system.css`
+- Then verify the refactored usages:
+  - `ui/src/features/search/widgets/SearchDocsResults.tsx`
+  - `ui/src/features/ticket/tabs/TicketDocumentsTab.tsx`
+  - `ui/src/features/search/widgets/SearchFilesResults.tsx`
+  - `ui/src/components/PathHeader.tsx`
+
+### Technical details
+- New classnames are dm-* but the old selectors remain as aliases temporarily for safer migration

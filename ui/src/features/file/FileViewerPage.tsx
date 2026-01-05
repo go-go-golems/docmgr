@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import hljs from 'highlight.js'
 
 import { ApiErrorAlert } from '../../components/ApiErrorAlert'
+import { CodeBlock } from '../../components/CodeBlock'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { PageHeader } from '../../components/PageHeader'
 import { copyToClipboard } from '../../lib/clipboard'
@@ -101,12 +102,7 @@ export function FileViewerPage() {
             </div>
           </div>
 
-          <pre className="docmgr-code">
-            <code
-              className={`hljs ${data.language ? `language-${data.language}` : ''}`}
-              dangerouslySetInnerHTML={{ __html: highlighted }}
-            />
-          </pre>
+          <CodeBlock html={highlighted} language={data.language} />
         </>
       ) : null}
     </div>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { ApiErrorAlert } from '../../components/ApiErrorAlert'
+import { DiagnosticCard } from '../../components/DiagnosticCard'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { MarkdownBlock } from '../../components/MarkdownBlock'
 import { PageHeader } from '../../components/PageHeader'
@@ -9,45 +10,9 @@ import { RelatedFilesList } from '../../components/RelatedFilesList'
 import { copyToClipboard } from '../../lib/clipboard'
 import { formatDate } from '../../lib/time'
 import { useGetDocQuery } from '../../services/docmgrApi'
-import type { DiagnosticTaxonomy, RelatedFile } from '../../services/docmgrApi'
+import type { RelatedFile } from '../../services/docmgrApi'
 
 type ToastState = { kind: 'success' | 'error'; message: string } | null
-
-function DiagnosticCard({ diag }: { diag: DiagnosticTaxonomy }) {
-  const severity = (diag.Severity || 'info').toLowerCase()
-  const badge =
-    severity === 'warning'
-      ? 'warning'
-      : severity === 'error'
-        ? 'danger'
-        : severity === 'info'
-          ? 'info'
-          : 'secondary'
-
-  const reason =
-    typeof diag.Context === 'object' && diag.Context != null ? (diag.Context['Reason'] as unknown) : undefined
-
-  return (
-    <div className="alert alert-warning">
-      <div className="fw-semibold mb-1">
-        <span className={`badge text-bg-${badge} me-2`}>{diag.Severity ?? 'info'}</span>
-        Parse diagnostics
-      </div>
-      <div className="small">
-        {(diag.Stage ?? 'unknown') + (diag.Symptom ? ` • ${diag.Symptom}` : '')}
-      </div>
-      {diag.Path ? (
-        <div className="small mt-1">
-          <span className="text-muted">Path: </span>
-          <span className="font-monospace">{diag.Path}</span>
-        </div>
-      ) : null}
-      {typeof reason === 'string' && reason.trim() !== '' ? (
-        <div className="small mt-1 text-muted">{reason}</div>
-      ) : null}
-    </div>
-  )
-}
 
 export function DocViewerPage() {
   const navigate = useNavigate()

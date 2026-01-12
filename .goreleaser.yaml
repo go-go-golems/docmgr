@@ -8,8 +8,9 @@ before:
     - pnpm -C ui install
     - go generate ./internal/web
 builds:
-  - env:
-      - CGO_ENABLED=0
+  - id: docmgr-linux
+    env:
+      - CGO_ENABLED=1
     main: ./cmd/docmgr
     binary: docmgr
     flags:
@@ -18,6 +19,17 @@ builds:
       - linux
 # I am not able to test windows at the time
 #      - windows
+    goarch:
+      - amd64
+      - arm64
+  - id: docmgr-darwin
+    env:
+      - CGO_ENABLED=1
+    main: ./cmd/docmgr
+    binary: docmgr
+    flags:
+      - -tags=sqlite_fts5,embed
+    goos:
       - darwin
     goarch:
       - amd64

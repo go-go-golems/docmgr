@@ -27,6 +27,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 Before ANY task, review the skills list:
 
 - Run: `docmgr skill list`
+  - Scans `ttmp/skills/` and, when `--ticket` is provided, `<ticket>/skills/`.
   - Human output includes copy/pasteable `Load:` commands and ticket context (`Ticket: <ID> — <Title>`) for ticket-scoped skills.
   - By default, `skill list` only shows skills from tickets whose status is `active` (workspace-level skills are always shown).
   - To narrow to a single ticket’s skills: `docmgr skill list --ticket <TICKET-ID>`
@@ -37,10 +38,18 @@ When you decide a skill might apply, load it:
 
 - Run: `docmgr skill show <skill-name>`
   - Also supported: `docmgr skill show --skill <skill-name>` (legacy)
-  - Matching is resilient: you can use title (with/without `Skill:`), filename slug, or a path to the skill file.
+  - Matching is resilient: you can use title (with/without `Skill:`), skill name/slug, or a path to the `skill.yaml` file.
   - If you need to narrow to a specific ticket (disambiguation / archaeology):
     - `docmgr skill show --ticket <TICKET-ID> <query>`
   - Note: by default, `skill show` hides skills that belong to **non-active tickets**. `--ticket` overrides that behavior.
+  - To materialize sources (read files + run help commands): `docmgr skill show <query> --resolve`
+
+## Skill export/import (docmgr)
+
+- Export a plan to Agent Skills format: `docmgr skill export <query> --out dist`
+  - Generates `SKILL.md` + `references/` and packages a `.skill` file.
+- Import a `.skill` archive or skill directory: `docmgr skill import <path>`
+  - Writes a `skill.yaml` plan under `ttmp/skills/` (or `<ticket>/skills/` when `--ticket` is provided).
 
 ## Tool Mapping (docmgr)
 
@@ -53,7 +62,11 @@ When skills reference tools you don't have, substitute docmgr equivalents:
 
 ## Skill Naming + Priority (docmgr)
 
-Skills are docmgr documents with `DocType: skill`.
+Skills are plan files (`skill.yaml`) stored under:
+- `ttmp/skills/` (workspace skills)
+- `<ticket>/skills/` (ticket-scoped skills)
+
+The `docmgr skill` verbs operate on these plan files, not DocType skill documents.
 
 When multiple skills could apply, use this order:
 
@@ -125,5 +138,3 @@ This prompt pack is adapted from Superpowers:
 
 - `superpowers/skills/using-superpowers/SKILL.md`: `https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md`
 - `superpowers/.codex/superpowers-bootstrap.md`: `https://github.com/obra/superpowers/blob/main/.codex/superpowers-bootstrap.md`
-
-

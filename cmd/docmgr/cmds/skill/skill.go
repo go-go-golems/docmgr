@@ -7,8 +7,8 @@ func Attach(root *cobra.Command) error {
 	skillCmd := &cobra.Command{
 		Use:   "skill",
 		Short: "List and show skills",
-		Long: `Manage skills documentation. Skills are documents with DocType=skill
-that provide structured information about what a skill is for and when to use it.
+		Long: `Manage skill plans. Skills are skill.yaml plans
+that package references and help output into Agent Skills format.
 
 Examples:
  
@@ -26,8 +26,16 @@ Examples:
 	if err != nil {
 		return err
 	}
+	exportCmd, err := newExportCommand()
+	if err != nil {
+		return err
+	}
+	importCmd, err := newImportCommand()
+	if err != nil {
+		return err
+	}
 
-	skillCmd.AddCommand(listCmd, showCmd)
+	skillCmd.AddCommand(listCmd, showCmd, exportCmd, importCmd)
 	root.AddCommand(skillCmd)
 	return nil
 }

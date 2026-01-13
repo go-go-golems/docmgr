@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/paths"
+	"github.com/go-go-golems/docmgr/internal/skills"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -14,6 +16,7 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
+	"github.com/pkg/errors"
 )
 
 // SkillListCommand lists skills
@@ -37,9 +40,10 @@ func NewSkillListCommand() (*SkillListCommand, error) {
 		CommandDescription: cmds.NewCommandDescription(
 			"list",
 			cmds.WithShort("List skills"),
-			cmds.WithLong(`Lists skills (documents with DocType=skill) with their WhatFor, WhenToUse, topics, and related files.
+			cmds.WithLong(`Lists skill.yaml plans with their WhatFor, WhenToUse, topics, and related files.
 
-Skills are structured documentation artifacts that provide information about what a skill is for and when to use it.
+Skills are plan-based documentation artifacts that package references and help output
+into Agent Skills format.
 
 Columns:
   skill,what_for,when_to_use,topics,related_paths,path,load_command
@@ -49,8 +53,8 @@ Examples:
   docmgr skill list
   docmgr skill list --ticket 001-ADD-CLAUDE-SKILLS
   docmgr skill list --topics backend,tooling
-  docmgr skill list --file pkg/commands/add.go
-  docmgr skill list --dir pkg/commands/
+  docmgr skill list --file glazed/pkg/doc/topics/01-help-system.md
+  docmgr skill list --dir glazed/pkg/doc/topics/
 
   # Scriptable (JSON)
   docmgr skill list --with-glaze-output --output json
@@ -113,132 +117,22 @@ func (c *SkillListCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
-		return fmt.Errorf("root directory does not exist: %s", settings.Root)
-	}
-
-	fileQueryRaw := strings.TrimSpace(settings.File)
-	dirQueryRaw := strings.TrimSpace(settings.Dir)
-
-	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	results, err := collectSkillListResults(ctx, settings)
 	if err != nil {
-		return fmt.Errorf("failed to discover workspace: %w", err)
-	}
-	settings.Root = ws.Context().Root
-	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-		return fmt.Errorf("failed to initialize workspace index: %w", err)
+		return err
 	}
 
-	defaultRoot := workspace.ResolveRoot("ttmp")
-	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
-	ticketTitleByID := map[string]string{}
-	ticketStatusByID := map[string]string{}
-	for _, t := range ticketIndexDocs {
-		ticketID := strings.TrimSpace(t.Ticket)
-		if ticketID == "" {
-			continue
-		}
-		ticketTitleByID[ticketID] = strings.TrimSpace(t.Title)
-		ticketStatusByID[ticketID] = strings.TrimSpace(t.Status)
-	}
-
-	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
-	}
-
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: scope,
-		Filters: workspace.DocFilters{
-			DocType:   "skill",
-			Ticket:    strings.TrimSpace(settings.Ticket),
-			TopicsAny: settings.Topics,
-			RelatedFile: func() []string {
-				if fileQueryRaw != "" {
-					return []string{fileQueryRaw}
-				}
-				return nil
-			}(),
-			RelatedDir: func() []string {
-				if dirQueryRaw != "" {
-					return []string{dirQueryRaw}
-				}
-				return nil
-			}(),
-		},
-		Options: workspace.DocQueryOptions{
-			IncludeBody:        false,
-			IncludeErrors:      false,
-			IncludeDiagnostics: false,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to query skills: %w", err)
-	}
-
-	// Default behavior: only include skills from ACTIVE tickets unless --ticket is provided.
-	// Workspace-level skills (no Ticket) are always included.
-	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
-	filtered := make([]workspace.DocHandle, 0, len(res.Docs))
-	for _, h := range res.Docs {
-		if h.Doc == nil {
-			continue
-		}
-		if activeTicketOnly && strings.TrimSpace(h.Doc.Ticket) != "" {
-			tid := strings.TrimSpace(h.Doc.Ticket)
-			st := strings.ToLower(strings.TrimSpace(ticketStatusByID[tid]))
-			if st != "active" {
-				continue
-			}
-		}
-		filtered = append(filtered, h)
-	}
-
-	// Build a uniqueness index for load command generation.
-	titleCounts := map[string]int{}
-	slugCounts := map[string]int{}
-	for _, handle := range filtered {
-		if handle.Doc == nil {
-			continue
-		}
-		titleNoPrefix := strings.TrimSpace(stripSkillPrefix(handle.Doc.Title))
-		if titleNoPrefix == "" {
-			titleNoPrefix = strings.TrimSpace(handle.Doc.Title)
-		}
-		titleCounts[strings.ToLower(titleNoPrefix)]++
-		slugCounts[strings.ToLower(skillSlugFromPath(handle.Path))]++
-	}
-
-	loadCtx := skillLoadCommandContext{
-		EffectiveRoot: settings.Root,
-		DefaultRoot:   defaultRoot,
-		TicketFilter:  strings.TrimSpace(settings.Ticket),
-		TitleCounts:   titleCounts,
-		SlugCounts:    slugCounts,
-	}
-
-	for _, handle := range filtered {
-		if handle.Doc == nil {
-			continue
-		}
-		doc := handle.Doc
-
-		// Extract related file paths
-		relatedPaths := make([]string, 0, len(doc.RelatedFiles))
-		for _, rf := range doc.RelatedFiles {
-			relatedPaths = append(relatedPaths, rf.Path)
-		}
-
+	for _, result := range results {
 		row := types.NewRow(
-			types.MRP("skill", doc.Title),
-			types.MRP("what_for", doc.WhatFor),
-			types.MRP("when_to_use", doc.WhenToUse),
-			types.MRP("topics", strings.Join(doc.Topics, ",")),
-			types.MRP("related_paths", strings.Join(relatedPaths, ",")),
-			types.MRP("path", handle.Path),
-			types.MRP("load_command", buildSkillLoadCommand(loadCtx, doc.Title, handle.Path)),
-			types.MRP("ticket", doc.Ticket),
-			types.MRP("ticket_title", ticketTitleByID[strings.TrimSpace(doc.Ticket)]),
+			types.MRP("skill", result.Skill),
+			types.MRP("what_for", result.WhatFor),
+			types.MRP("when_to_use", result.WhenToUse),
+			types.MRP("topics", strings.Join(result.Topics, ",")),
+			types.MRP("related_paths", strings.Join(result.RelatedPaths, ",")),
+			types.MRP("path", result.Path),
+			types.MRP("load_command", result.LoadCommand),
+			types.MRP("ticket", result.Ticket),
+			types.MRP("ticket_title", result.TicketTitle),
 		)
 		if err := gp.AddRow(ctx, row); err != nil {
 			return err
@@ -292,150 +186,11 @@ func (c *SkillListCommand) Run(
 		return nil
 	}
 
-	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
-		return fmt.Errorf("root directory does not exist: %s", settings.Root)
-	}
-
-	fileQueryRaw := strings.TrimSpace(settings.File)
-	dirQueryRaw := strings.TrimSpace(settings.Dir)
-
-	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	results, err := collectSkillListResults(ctx, settings)
 	if err != nil {
-		return fmt.Errorf("failed to discover workspace: %w", err)
-	}
-	settings.Root = ws.Context().Root
-	defaultRoot := workspace.ResolveRoot("ttmp")
-	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-		return fmt.Errorf("failed to initialize workspace index: %w", err)
+		return err
 	}
 
-	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
-	ticketTitleByID := map[string]string{}
-	ticketStatusByID := map[string]string{}
-	for _, t := range ticketIndexDocs {
-		ticketID := strings.TrimSpace(t.Ticket)
-		if ticketID == "" {
-			continue
-		}
-		ticketTitleByID[ticketID] = strings.TrimSpace(t.Title)
-		ticketStatusByID[ticketID] = strings.TrimSpace(t.Status)
-	}
-
-	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
-	}
-
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope: scope,
-		Filters: workspace.DocFilters{
-			DocType:   "skill",
-			Ticket:    strings.TrimSpace(settings.Ticket),
-			TopicsAny: settings.Topics,
-			RelatedFile: func() []string {
-				if fileQueryRaw != "" {
-					return []string{fileQueryRaw}
-				}
-				return nil
-			}(),
-			RelatedDir: func() []string {
-				if dirQueryRaw != "" {
-					return []string{dirQueryRaw}
-				}
-				return nil
-			}(),
-		},
-		Options: workspace.DocQueryOptions{
-			IncludeBody:        false,
-			IncludeErrors:      false,
-			IncludeDiagnostics: false,
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("failed to query skills: %w", err)
-	}
-
-	// Default behavior: only include skills from ACTIVE tickets unless --ticket is provided.
-	// Workspace-level skills (no Ticket) are always included.
-	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
-	filtered := make([]workspace.DocHandle, 0, len(res.Docs))
-	for _, h := range res.Docs {
-		if h.Doc == nil {
-			continue
-		}
-		if activeTicketOnly && strings.TrimSpace(h.Doc.Ticket) != "" {
-			tid := strings.TrimSpace(h.Doc.Ticket)
-			st := strings.ToLower(strings.TrimSpace(ticketStatusByID[tid]))
-			if st != "active" {
-				continue
-			}
-		}
-		filtered = append(filtered, h)
-	}
-
-	// Build a uniqueness index for load command generation.
-	titleCounts := map[string]int{}
-	slugCounts := map[string]int{}
-	for _, handle := range filtered {
-		if handle.Doc == nil {
-			continue
-		}
-		titleNoPrefix := strings.TrimSpace(stripSkillPrefix(handle.Doc.Title))
-		if titleNoPrefix == "" {
-			titleNoPrefix = strings.TrimSpace(handle.Doc.Title)
-		}
-		titleCounts[strings.ToLower(titleNoPrefix)]++
-		slugCounts[strings.ToLower(skillSlugFromPath(handle.Path))]++
-	}
-
-	loadCtx := skillLoadCommandContext{
-		EffectiveRoot: settings.Root,
-		DefaultRoot:   defaultRoot,
-		TicketFilter:  strings.TrimSpace(settings.Ticket),
-		TitleCounts:   titleCounts,
-		SlugCounts:    slugCounts,
-	}
-
-	// Build template data
-	type SkillResult struct {
-		Skill        string
-		WhatFor      string
-		WhenToUse    string
-		Topics       []string
-		RelatedPaths []string
-		Path         string
-		LoadCommand  string
-		Ticket       string
-		TicketTitle  string
-	}
-
-	results := make([]SkillResult, 0, len(res.Docs))
-	for _, handle := range filtered {
-		if handle.Doc == nil {
-			continue
-		}
-		doc := handle.Doc
-
-		// Extract related file paths
-		relatedPaths := make([]string, 0, len(doc.RelatedFiles))
-		for _, rf := range doc.RelatedFiles {
-			relatedPaths = append(relatedPaths, rf.Path)
-		}
-
-		results = append(results, SkillResult{
-			Skill:        doc.Title,
-			WhatFor:      doc.WhatFor,
-			WhenToUse:    doc.WhenToUse,
-			Topics:       doc.Topics,
-			RelatedPaths: relatedPaths,
-			Path:         handle.Path,
-			LoadCommand:  buildSkillLoadCommand(loadCtx, doc.Title, handle.Path),
-			Ticket:       doc.Ticket,
-			TicketTitle:  ticketTitleByID[strings.TrimSpace(doc.Ticket)],
-		})
-	}
-
-	// Human-friendly output
 	for _, result := range results {
 		fmt.Printf("Skill: %s\n", result.Skill)
 		if strings.TrimSpace(result.Ticket) != "" {
@@ -488,3 +243,197 @@ func (c *SkillListCommand) Run(
 }
 
 var _ cmds.BareCommand = &SkillListCommand{}
+
+type skillListResult struct {
+	Skill        string
+	WhatFor      string
+	WhenToUse    string
+	Topics       []string
+	RelatedPaths []string
+	Path         string
+	LoadCommand  string
+	Ticket       string
+	TicketTitle  string
+}
+
+func collectSkillListResults(ctx context.Context, settings *SkillListSettings) ([]skillListResult, error) {
+	if settings == nil {
+		return nil, errors.New("settings required")
+	}
+	if _, err := os.Stat(settings.Root); os.IsNotExist(err) {
+		return nil, fmt.Errorf("root directory does not exist: %s", settings.Root)
+	}
+
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to discover workspace")
+	}
+	settings.Root = ws.Context().Root
+
+	if strings.TrimSpace(settings.Ticket) != "" {
+		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+			return nil, errors.Wrap(err, "failed to initialize workspace index")
+		}
+	}
+
+	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
+	ticketTitleByID := map[string]string{}
+	ticketStatusByID := map[string]string{}
+	for _, t := range ticketIndexDocs {
+		ticketID := strings.TrimSpace(t.Ticket)
+		if ticketID == "" {
+			continue
+		}
+		ticketTitleByID[ticketID] = strings.TrimSpace(t.Title)
+		ticketStatusByID[ticketID] = strings.TrimSpace(t.Status)
+	}
+
+	handles, err := skills.DiscoverPlans(ctx, ws, skills.DiscoverOptions{
+		TicketID:         strings.TrimSpace(settings.Ticket),
+		IncludeWorkspace: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	fileQueryRaw := strings.TrimSpace(settings.File)
+	dirQueryRaw := strings.TrimSpace(settings.Dir)
+
+	var fileQuery paths.NormalizedPath
+	var dirQuery paths.NormalizedPath
+	if fileQueryRaw != "" {
+		fileQuery = ws.Resolver().Normalize(fileQueryRaw)
+	}
+	if dirQueryRaw != "" {
+		dirQuery = ws.Resolver().Normalize(dirQueryRaw)
+	}
+
+	activeTicketOnly := strings.TrimSpace(settings.Ticket) == ""
+	var filtered []skills.PlanHandle
+	for _, handle := range handles {
+		if handle.Plan == nil {
+			continue
+		}
+		if activeTicketOnly && strings.TrimSpace(handle.TicketID) != "" {
+			st := strings.ToLower(strings.TrimSpace(ticketStatusByID[strings.TrimSpace(handle.TicketID)]))
+			if !isTicketActiveForSkillDefaultFilter(st) {
+				continue
+			}
+		}
+		if !matchesAnyTopic(handle.Plan.Skill.Topics, settings.Topics) {
+			continue
+		}
+		if fileQueryRaw != "" && !matchesFileSources(fileQuery, handle.SourceFiles) {
+			continue
+		}
+		if dirQueryRaw != "" && !matchesDirSources(dirQuery, handle.SourceFiles) {
+			continue
+		}
+		filtered = append(filtered, handle)
+	}
+
+	// Build a uniqueness index for load command generation.
+	titleCounts := map[string]int{}
+	nameCounts := map[string]int{}
+	slugCounts := map[string]int{}
+	for _, handle := range filtered {
+		if handle.Plan == nil {
+			continue
+		}
+		titleNoPrefix := strings.TrimSpace(stripSkillPrefix(handle.Plan.DisplayTitle()))
+		if titleNoPrefix == "" {
+			titleNoPrefix = strings.TrimSpace(handle.Plan.DisplayTitle())
+		}
+		titleCounts[strings.ToLower(titleNoPrefix)]++
+		nameCounts[strings.ToLower(strings.TrimSpace(handle.Plan.Skill.Name))]++
+		slugCounts[strings.ToLower(skillSlugFromPath(handle.Path))]++
+	}
+
+	loadCtx := skillLoadCommandContext{
+		EffectiveRoot: settings.Root,
+		DefaultRoot:   workspace.ResolveRoot("ttmp"),
+		TicketFilter:  strings.TrimSpace(settings.Ticket),
+		TitleCounts:   titleCounts,
+		NameCounts:    nameCounts,
+		SlugCounts:    slugCounts,
+	}
+
+	results := make([]skillListResult, 0, len(filtered))
+	for _, handle := range filtered {
+		if handle.Plan == nil {
+			continue
+		}
+		plan := handle.Plan
+
+		relatedPaths := make([]string, 0, len(handle.SourceFiles))
+		for _, rf := range handle.SourceFiles {
+			relatedPaths = append(relatedPaths, rf.Path)
+		}
+
+		results = append(results, skillListResult{
+			Skill:        plan.DisplayTitle(),
+			WhatFor:      plan.Skill.WhatFor,
+			WhenToUse:    plan.Skill.WhenToUse,
+			Topics:       plan.Skill.Topics,
+			RelatedPaths: relatedPaths,
+			Path:         handle.DisplayPath,
+			LoadCommand:  buildSkillLoadCommand(loadCtx, plan.DisplayTitle(), plan.Skill.Name, handle.DisplayPath),
+			Ticket:       handle.TicketID,
+			TicketTitle:  ticketTitleByID[strings.TrimSpace(handle.TicketID)],
+		})
+	}
+
+	return results, nil
+}
+
+func matchesAnyTopic(planTopics []string, filter []string) bool {
+	if len(filter) == 0 {
+		return true
+	}
+	if len(planTopics) == 0 {
+		return false
+	}
+	wanted := make([]string, 0, len(filter))
+	for _, topic := range filter {
+		t := strings.ToLower(strings.TrimSpace(topic))
+		if t != "" {
+			wanted = append(wanted, t)
+		}
+	}
+	if len(wanted) == 0 {
+		return true
+	}
+	for _, topic := range planTopics {
+		topicLower := strings.ToLower(strings.TrimSpace(topic))
+		for _, wantedTopic := range wanted {
+			if topicLower == wantedTopic {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func matchesFileSources(query paths.NormalizedPath, sources []skills.SourceFile) bool {
+	if query.Empty() {
+		return false
+	}
+	for _, source := range sources {
+		if paths.MatchPaths(query, source.Normalized) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesDirSources(query paths.NormalizedPath, sources []skills.SourceFile) bool {
+	if query.Empty() {
+		return false
+	}
+	for _, source := range sources {
+		if paths.DirectoryMatch(query, source.Normalized) {
+			return true
+		}
+	}
+	return false
+}

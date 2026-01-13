@@ -1,0 +1,24 @@
+skill:
+  name: api-design-sample
+  title: API Design Sample
+  description: Example plan for API design references and packaging.
+  what_for: Provide sample API design references for testing plan packaging.
+  when_to_use: Use when validating skill plan handling for API design content.
+  topics: [api, design, example]
+  compatibility: Works without external binaries.
+
+sources:
+  - type: file
+    path: ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/api-design-sample/fixtures/api-guidelines.md
+    output: references/api-guidelines.md
+    strip-frontmatter: true
+
+  - type: file
+    path: ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/api-design-sample/fixtures/error-handling.md
+    output: references/error-handling.md
+
+output:
+  skill_dir_name: api-design-sample
+  skill_md:
+    include_index: true
+    index_title: Example References

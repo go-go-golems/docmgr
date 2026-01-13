@@ -1,0 +1,25 @@
+skill:
+  name: mixed-sample
+  title: Mixed Sources Sample
+  description: Sample plan with file and binary help sources.
+  what_for: Exercise mixed source resolution and export behavior.
+  when_to_use: Use when verifying plan resolution across source types.
+  topics: [example, mixed, help]
+  compatibility: Requires docmgr on PATH.
+
+sources:
+  - type: file
+    path: ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/mixed-sample/fixtures/overview.md
+    output: references/overview.md
+
+  - type: binary-help
+    binary: docmgr
+    topic: vocab
+    output: references/docmgr-vocab-help.md
+    wrap: markdown
+
+output:
+  skill_dir_name: mixed-sample
+  skill_md:
+    include_index: true
+    index_title: Mixed References

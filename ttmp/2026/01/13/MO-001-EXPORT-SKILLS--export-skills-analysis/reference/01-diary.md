@@ -13,6 +13,8 @@ Owners: []
 RelatedFiles:
     - Path: ../../../../../../../../../../.local/bin/remarkable_upload.py
       Note: Upload tooling used for reMarkable delivery
+    - Path: docmgr/internal/skills/discovery.go
+      Note: Discovery now scans all ticket skill plans by default
     - Path: docmgr/internal/skills/plan.go
       Note: Skill plan schema and validation defaults
     - Path: docmgr/internal/skills/resolve.go
@@ -23,6 +25,8 @@ RelatedFiles:
       Note: Import command for .skill artifacts
     - Path: docmgr/pkg/doc/how-to-write-skills.md
       Note: Plan-based skills guidance and migration notes
+    - Path: docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh
+      Note: Smoke tests updated for plan-based skills and export/import
     - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/01-skill-creation-packaging-and-doc-export-analysis.md
       Note: Analysis document created in Step 1
     - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/02-exporting-glazed-and-docmgr-docs-into-skills-analysis.md
@@ -37,15 +41,24 @@ RelatedFiles:
       Note: skill.yaml export plan brainstorm in Step 4
     - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/design-doc/03-design-skill-yaml-discovery-skill-verbs-and-agent-skills-import-export.md
       Note: Design doc created in Step 6
+    - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/analysis-export-sample/skill.yaml
+      Note: Plan referencing ticket analysis docs
+    - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/api-design-sample/skill.yaml
+      Note: Ticket plan sample for API design
+    - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/docmgr-help-sample/skill.yaml
+      Note: Binary help sample plan
+    - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/mixed-sample/skill.yaml
+      Note: Mixed source plan
 ExternalSources:
     - https://agentskills.io/home
     - https://agentskills.io/specification
     - https://cursor.com/docs/context/skills
 Summary: ""
-LastUpdated: 2026-01-13T17:01:02-05:00
+LastUpdated: 2026-01-13T17:29:46-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -417,3 +430,51 @@ This was a small follow-on to the main implementation, but it keeps the plan sch
 ### Technical details
 - Metadata parsing update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/internal/skills/skill_markdown.go`.
 - Import mapping update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go`.
+
+## Step 9: Add example skill plans and update skills smoke tests
+
+I added a set of sample `skill.yaml` plans inside the MO-001-EXPORT-SKILLS ticket so we have real artifacts to experiment with and validate plan behavior. I also updated the skills smoke scenario to generate plan-based skills, validate list/show behavior against the new output format, and exercise `skill export` and `skill import` to cover the Agent Skills packaging flow.
+
+To keep behavior consistent with the existing docs and historical UX, I adjusted discovery so skill list/show include active ticket plans by default (and still include workspace plans). This required initializing the workspace index up front and scanning ticket directories through the index.
+
+**Commit (code):** 334e817 — "Skills: scan tickets by default and update smoke tests"
+
+### What I did
+- Added ticket-local sample plans under `ttmp/.../skills/` to use as real fixtures for plan-based skills testing.
+- Updated `internal/skills` discovery to include active ticket plans by default and scan ticket skill directories using the workspace index.
+- Reworked `test-scenarios/testing-doc-manager/20-skills-smoke.sh` to create plan-based skills, assert the new output format, and add export/import coverage.
+- Ran `gofmt -w` on the modified Go sources.
+
+### Why
+- We need real plan examples inside the ticket to experiment with packaging workflows and verify plan behavior.
+- Smoke tests must reflect plan-based skills and cover the new export/import verbs.
+
+### What worked
+- Ticket skill plans and smoke test updates are now aligned with the plan-based skill UX.
+- Skill discovery now matches the documented default behavior (workspace + active tickets).
+
+### What didn't work
+- Tests still cannot run because the repo Go toolchain (go.work) version mismatch blocks `go test` and `golangci-lint`.
+
+### What I learned
+- Scanning ticket plans by default requires initializing the workspace index even when no `--ticket` is passed.
+
+### What was tricky to build
+- Updating smoke tests to align with the new plan output while preserving ambiguity and filtering checks.
+
+### What warrants a second pair of eyes
+- Confirm that scanning all ticket directories via the index is performant enough for large doc trees.
+- Review the updated smoke test expectations for plan output formatting.
+
+### What should be done in the future
+- Once the Go version mismatch is resolved, run the smoke scenario and add any missing assertions.
+
+### Code review instructions
+- Review ticket plans under `docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/` to confirm plan validity.
+- Review `docmgr/internal/skills/discovery.go` for the updated all-ticket scan path.
+- Review `docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh` for updated plan fixtures and export/import coverage.
+
+### Technical details
+- Ticket plan fixtures: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/`.
+- Discovery update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/internal/skills/discovery.go`.
+- Smoke test update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh`.

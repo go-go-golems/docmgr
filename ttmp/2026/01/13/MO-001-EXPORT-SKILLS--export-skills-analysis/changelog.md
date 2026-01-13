@@ -80,3 +80,12 @@ Step 8: preserve compatibility metadata on import (commit 7f6400c)
 
 - /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go — Import mapping now carries compatibility
 
+
+## 2026-01-13
+
+Step 9: add ticket skill plan samples and update skills smoke tests (commit 334e817)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Plan-based skills smoke updates
+

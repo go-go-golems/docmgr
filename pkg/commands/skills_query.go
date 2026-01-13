@@ -79,8 +79,18 @@ func buildSkillCandidates(ws *workspace.Workspace, handles []skills.PlanHandle, 
 	querySlugNoPrefixLower := slugifyLower(stripSkillPrefix(queryRaw))
 
 	var queryPathNorm paths.NormalizedPath
-	if looksLikePathQuery(queryRaw) {
+	pathQuery := looksLikePathQuery(queryRaw)
+	if pathQuery {
 		queryPathNorm = ws.Resolver().Normalize(queryRaw)
+	}
+	queryAbs := filepath.FromSlash(queryPathNorm.Abs)
+	queryExists := false
+	queryIsDir := false
+	if queryAbs != "" {
+		if fi, err := os.Stat(queryAbs); err == nil {
+			queryExists = true
+			queryIsDir = fi.IsDir()
+		}
 	}
 
 	var candidates []skillCandidate
@@ -111,17 +121,14 @@ func buildSkillCandidates(ws *workspace.Workspace, handles []skills.PlanHandle, 
 			PathNorm:           pathNorm,
 		}
 
-		if looksLikePathQuery(queryRaw) && !queryPathNorm.Empty() {
-			if queryPathNorm.Exists {
-				if queryPathNorm.Abs != "" {
-					if fi, err := os.Stat(filepath.FromSlash(queryPathNorm.Abs)); err == nil && fi.IsDir() {
-						if paths.DirectoryMatch(queryPathNorm, cand.PathNorm) {
-							cand.Score = 1000
-							cand.Why = "path-dir"
-						}
-					}
+		if pathQuery && !queryPathNorm.Empty() {
+			if queryExists && queryIsDir {
+				if paths.DirectoryMatch(queryPathNorm, cand.PathNorm) {
+					cand.Score = 1000
+					cand.Why = "path-dir"
 				}
-				if cand.Score == 0 && paths.MatchPaths(queryPathNorm, cand.PathNorm) {
+			} else if queryExists {
+				if pathsMatchExact(queryPathNorm, cand.PathNorm) {
 					cand.Score = 1100
 					cand.Why = "path-file"
 				}
@@ -181,6 +188,25 @@ func buildSkillCandidates(ws *workspace.Workspace, handles []skills.PlanHandle, 
 	}
 
 	return candidates
+}
+
+func pathsMatchExact(query paths.NormalizedPath, cand paths.NormalizedPath) bool {
+	if query.Abs != "" && cand.Abs != "" && query.Abs == cand.Abs {
+		return true
+	}
+	if query.Canonical != "" && cand.Canonical != "" && query.Canonical == cand.Canonical {
+		return true
+	}
+	if query.RepoRelative != "" && cand.RepoRelative != "" && query.RepoRelative == cand.RepoRelative {
+		return true
+	}
+	if query.DocsRelative != "" && cand.DocsRelative != "" && query.DocsRelative == cand.DocsRelative {
+		return true
+	}
+	if query.DocRelative != "" && cand.DocRelative != "" && query.DocRelative == cand.DocRelative {
+		return true
+	}
+	return false
 }
 
 func sortSkillCandidates(candidates []skillCandidate) {

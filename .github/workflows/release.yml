@@ -60,7 +60,11 @@ jobs:
       - name: Install Docker runtime (Colima)
         run: |
           brew install docker colima
-          colima start --cpu 4 --memory 8 --disk 40
+          colima start --runtime docker --vm-type qemu --cpu 4 --memory 8 --disk 40 || {
+            cat /Users/runner/.colima/_lima/colima/ha.stderr.log || true
+            exit 1
+          }
+          docker context use colima
           docker version
 
       - uses: goreleaser/goreleaser-action@v6

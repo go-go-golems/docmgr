@@ -3,6 +3,8 @@
 all: build
 
 VERSION=v0.1.14
+GORELEASER_ARGS ?= --skip=sign --snapshot --clean
+GORELEASER_TARGET ?= --single-target
 
 docker-lint:
 	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run -v
@@ -49,7 +51,7 @@ dev-frontend:
 	pnpm -C ui dev
 
 goreleaser:
-	goreleaser release --skip=sign --snapshot --clean
+	goreleaser release $(GORELEASER_ARGS) $(GORELEASER_TARGET)
 
 tag-major:
 	git tag $(shell svu major)

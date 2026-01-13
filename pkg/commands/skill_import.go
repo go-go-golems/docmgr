@@ -193,13 +193,14 @@ func (c *SkillImportCommand) Run(ctx context.Context, parsedLayers *layers.Parse
 
 	plan := skills.Plan{
 		Skill: skills.SkillMetadata{
-			Name:        skillName,
-			Title:       title,
-			Description: strings.TrimSpace(parsed.Frontmatter.Description),
-			WhatFor:     whatFor,
-			WhenToUse:   whenToUse,
-			Topics:      topics,
-			License:     strings.TrimSpace(parsed.Frontmatter.License),
+			Name:          skillName,
+			Title:         title,
+			Description:   strings.TrimSpace(parsed.Frontmatter.Description),
+			WhatFor:       whatFor,
+			WhenToUse:     whenToUse,
+			Topics:        topics,
+			License:       strings.TrimSpace(parsed.Frontmatter.License),
+			Compatibility: strings.TrimSpace(parsed.Metadata.Compatibility),
 		},
 		Output: skills.OutputConfig{
 			SkillDirName: skillName,

@@ -28,10 +28,11 @@ type ParsedSkillMarkdown struct {
 
 // SkillExtraMetadata captures optional metadata fields.
 type SkillExtraMetadata struct {
-	Topics    []string `yaml:"topics"`
-	WhatFor   string   `yaml:"what_for"`
-	WhenToUse string   `yaml:"when_to_use"`
-	Title     string   `yaml:"title"`
+	Topics        []string `yaml:"topics"`
+	WhatFor       string   `yaml:"what_for"`
+	WhenToUse     string   `yaml:"when_to_use"`
+	Title         string   `yaml:"title"`
+	Compatibility string   `yaml:"compatibility"`
 }
 
 // RenderSkillMarkdown builds SKILL.md for export.

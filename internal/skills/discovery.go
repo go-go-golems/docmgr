@@ -31,8 +31,9 @@ type SourceFile struct {
 
 // DiscoverOptions configures plan discovery.
 type DiscoverOptions struct {
-	TicketID         string
-	IncludeWorkspace bool
+	TicketID          string
+	IncludeWorkspace  bool
+	IncludeAllTickets bool
 }
 
 // DiscoverPlans finds skill.yaml plans under workspace and ticket scopes.
@@ -77,6 +78,17 @@ func DiscoverPlans(ctx context.Context, ws *workspace.Workspace, opts DiscoverOp
 		}
 	}
 
+	if strings.TrimSpace(opts.TicketID) == "" && opts.IncludeAllTickets {
+		if ws.DB() == nil {
+			return nil, errors.New("workspace index not initialized; call InitIndex before scanning tickets")
+		}
+		ticketPlans, err := scanAllTicketPlans(ctx, ws)
+		if err != nil {
+			return nil, err
+		}
+		planPaths = append(planPaths, ticketPlans...)
+	}
+
 	resolver := ws.Resolver()
 
 	var handles []PlanHandle
@@ -115,6 +127,61 @@ func DiscoverPlans(ctx context.Context, ws *workspace.Workspace, opts DiscoverOp
 	}
 
 	return handles, nil
+}
+
+func scanAllTicketPlans(ctx context.Context, ws *workspace.Workspace) ([]struct {
+	Path     string
+	TicketID string
+}, error) {
+	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
+		Scope: workspace.Scope{Kind: workspace.ScopeRepo},
+		Filters: workspace.DocFilters{
+			DocType: "index",
+		},
+		Options: workspace.DocQueryOptions{
+			IncludeErrors:       false,
+			IncludeArchivedPath: true,
+			IncludeScriptsPath:  true,
+			IncludeControlDocs:  true,
+			OrderBy:             workspace.OrderByPath,
+		},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query ticket index docs")
+	}
+
+	seen := map[string]struct{}{}
+	var planPaths []struct {
+		Path     string
+		TicketID string
+	}
+	for _, handle := range res.Docs {
+		if handle.Doc == nil {
+			continue
+		}
+		ticketID := strings.TrimSpace(handle.Doc.Ticket)
+		if ticketID == "" {
+			continue
+		}
+		ticketDir := filepath.Clean(filepath.Dir(filepath.FromSlash(handle.Path)))
+		if _, ok := seen[ticketDir]; ok {
+			continue
+		}
+		seen[ticketDir] = struct{}{}
+
+		ticketPlans, err := scanSkillPlans(filepath.Join(ticketDir, "skills"))
+		if err != nil {
+			return nil, err
+		}
+		for _, plan := range ticketPlans {
+			planPaths = append(planPaths, struct {
+				Path     string
+				TicketID string
+			}{Path: plan, TicketID: ticketID})
+		}
+	}
+
+	return planPaths, nil
 }
 
 func scanSkillPlans(base string) ([]string, error) {

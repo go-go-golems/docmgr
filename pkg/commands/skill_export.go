@@ -63,7 +63,7 @@ Examples:
 				parameters.NewParameterDefinition(
 					"ticket",
 					parameters.ParameterTypeString,
-					parameters.WithHelp("Limit search to a ticket workspace"),
+					parameters.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
 					parameters.WithDefault(""),
 				),
 				parameters.NewParameterDefinition(
@@ -120,16 +120,14 @@ func (c *SkillExportCommand) Run(ctx context.Context, parsedLayers *layers.Parse
 		return errors.Wrap(err, "failed to discover workspace")
 	}
 	settings.Root = ws.Context().Root
-
-	if strings.TrimSpace(settings.Ticket) != "" {
-		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-			return errors.Wrap(err, "failed to initialize workspace index")
-		}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return errors.Wrap(err, "failed to initialize workspace index")
 	}
 
 	handles, err := skills.DiscoverPlans(ctx, ws, skills.DiscoverOptions{
-		TicketID:         strings.TrimSpace(settings.Ticket),
-		IncludeWorkspace: true,
+		TicketID:          strings.TrimSpace(settings.Ticket),
+		IncludeWorkspace:  true,
+		IncludeAllTickets: strings.TrimSpace(settings.Ticket) == "",
 	})
 	if err != nil {
 		return err

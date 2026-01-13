@@ -69,7 +69,7 @@ Examples:
 				parameters.NewParameterDefinition(
 					"ticket",
 					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by ticket identifier"),
+					parameters.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
 					parameters.WithDefault(""),
 				),
 				parameters.NewParameterDefinition(
@@ -269,11 +269,8 @@ func collectSkillListResults(ctx context.Context, settings *SkillListSettings) (
 		return nil, errors.Wrap(err, "failed to discover workspace")
 	}
 	settings.Root = ws.Context().Root
-
-	if strings.TrimSpace(settings.Ticket) != "" {
-		if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-			return nil, errors.Wrap(err, "failed to initialize workspace index")
-		}
+	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+		return nil, errors.Wrap(err, "failed to initialize workspace index")
 	}
 
 	_, ticketIndexDocs, _ := queryTicketIndexDocs(ctx, settings.Root, "", "")
@@ -289,8 +286,9 @@ func collectSkillListResults(ctx context.Context, settings *SkillListSettings) (
 	}
 
 	handles, err := skills.DiscoverPlans(ctx, ws, skills.DiscoverOptions{
-		TicketID:         strings.TrimSpace(settings.Ticket),
-		IncludeWorkspace: true,
+		TicketID:          strings.TrimSpace(settings.Ticket),
+		IncludeWorkspace:  true,
+		IncludeAllTickets: strings.TrimSpace(settings.Ticket) == "",
 	})
 	if err != nil {
 		return nil, err

@@ -59,7 +59,7 @@ jobs:
 
       - name: Install Docker runtime (Colima)
         run: |
-          brew install docker colima
+          brew install docker colima qemu
           colima start --runtime docker --vm-type qemu --cpu 4 --memory 8 --disk 40 || {
             cat /Users/runner/.colima/_lima/colima/ha.stderr.log || true
             exit 1

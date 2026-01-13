@@ -4,12 +4,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io"
-	"io/fs"
+	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"dagger.io/dagger"
 )
 
 func main() {
@@ -20,11 +22,27 @@ func main() {
 
 	uiDir := filepath.Join(repoRoot, "ui")
 	outDir := filepath.Join(repoRoot, "internal", "web", "embed", "public")
-	builtDir := filepath.Join(uiDir, "dist", "public")
 
-	if err := run(repoRoot, "pnpm", "-C", uiDir, "build"); err != nil {
-		fatalf("ui build: %v", err)
+	if _, err := os.Stat(uiDir); err != nil {
+		fatalf("ui directory not found at %s: %v", uiDir, err)
 	}
+
+	pnpmVersion := os.Getenv("WEB_PNPM_VERSION")
+	if pnpmVersion == "" {
+		pnpmVersion = "10.15.0"
+	}
+
+	builderImage := os.Getenv("WEB_BUILDER_IMAGE")
+	if builderImage == "" {
+		builderImage = "node:22"
+	}
+
+	ctx := context.Background()
+	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stdout))
+	if err != nil {
+		fatalf("connect dagger: %v", err)
+	}
+	defer client.Close()
 
 	if err := os.RemoveAll(outDir); err != nil {
 		fatalf("remove %s: %v", outDir, err)
@@ -33,9 +51,38 @@ func main() {
 		fatalf("mkdir %s: %v", outDir, err)
 	}
 
-	if err := copyDir(builtDir, outDir); err != nil {
-		fatalf("copy %s -> %s: %v", builtDir, outDir, err)
+	webDir := client.Host().Directory(uiDir)
+	ctr := client.Container().From(builderImage).
+		WithWorkdir("/src").
+		WithMountedDirectory("/src", webDir).
+		WithEnvVariable("PNPM_HOME", "/pnpm")
+
+	if pnpmCacheDir := os.Getenv("PNPM_CACHE_DIR"); pnpmCacheDir != "" {
+		if err := os.MkdirAll(pnpmCacheDir, 0o755); err != nil {
+			fatalf("mkdir %s: %v", pnpmCacheDir, err)
+		}
+		cacheDir := client.Host().Directory(pnpmCacheDir)
+		ctr = ctr.WithMountedDirectory("/pnpm/store", cacheDir).
+			WithEnvVariable("PNPM_STORE_DIR", "/pnpm/store")
 	}
+
+	if os.Getenv("WEB_BUILDER_IMAGE") == "" || !strings.Contains(builderImage, ":") {
+		ctr = ctr.WithExec([]string{
+			"sh", "-lc",
+			fmt.Sprintf("corepack enable && corepack prepare pnpm@%s --activate", pnpmVersion),
+		})
+	}
+
+	ctr = ctr.
+		WithExec([]string{"sh", "-lc", "pnpm --version"}).
+		WithExec([]string{"sh", "-lc", "pnpm install --reporter=append-only"}).
+		WithExec([]string{"sh", "-lc", "pnpm build"})
+
+	dist := ctr.Directory("/src/dist/public")
+	if _, err := dist.Export(ctx, outDir); err != nil {
+		fatalf("export dist: %v", err)
+	}
+	log.Printf("exported web dist to %s", outDir)
 }
 
 func findRepoRoot() (string, error) {
@@ -53,61 +100,6 @@ func findRepoRoot() (string, error) {
 		}
 		wd = next
 	}
-}
-
-func run(repoRoot, name string, args ...string) error {
-	cmd := exec.Command(name, args...)
-	cmd.Dir = repoRoot
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
-	return cmd.Run()
-}
-
-func copyDir(src, dst string) error {
-	return fs.WalkDir(os.DirFS(src), ".", func(p string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if p == "." {
-			return nil
-		}
-
-		srcPath := filepath.Join(src, p)
-		dstPath := filepath.Join(dst, p)
-
-		if d.IsDir() {
-			return os.MkdirAll(dstPath, 0o755)
-		}
-
-		if err := os.MkdirAll(filepath.Dir(dstPath), 0o755); err != nil {
-			return err
-		}
-		in, err := os.Open(srcPath)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-
-		out, err := os.Create(dstPath)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = out.Close() }()
-
-		if _, err := io.Copy(out, in); err != nil {
-			return err
-		}
-		if err := out.Close(); err != nil {
-			return err
-		}
-
-		// Ensure readability in repo checkouts.
-		if err := os.Chmod(dstPath, 0o644); err != nil {
-			return err
-		}
-		return nil
-	})
 }
 
 func fatalf(format string, args ...any) {

@@ -49,15 +49,18 @@ RelatedFiles:
       Note: Binary help sample plan
     - Path: docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/mixed-sample/skill.yaml
       Note: Mixed source plan
+    - Path: pkg/commands/skills_query.go
+      Note: Fix exact path matching for plan lookups
 ExternalSources:
     - https://agentskills.io/home
     - https://agentskills.io/specification
     - https://cursor.com/docs/context/skills
 Summary: ""
-LastUpdated: 2026-01-13T17:29:46-05:00
+LastUpdated: 2026-01-13T17:42:13-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -478,3 +481,49 @@ To keep behavior consistent with the existing docs and historical UX, I adjusted
 - Ticket plan fixtures: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/`.
 - Discovery update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/internal/skills/discovery.go`.
 - Smoke test update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh`.
+
+## Step 10: Fix path matching ambiguity and run the skills smoke scenario
+
+I tightened the skill query matching logic so explicit file paths only match the exact plan file instead of using suffix-based fuzzy matching. This prevents ambiguity errors when a ticket plan and workspace plan share the same relative `skills/<name>/skill.yaml` suffix.
+
+After the fix, I rebuilt the local docmgr binary, reran the skills smoke scenario with it, and verified that the sample plans in the MO-001 ticket list correctly under `docmgr skill list`.
+
+**Commit (code):** 451d827 — "Skill show: require exact path matches"
+
+### What I did
+- Updated `docmgr/pkg/commands/skills_query.go` to treat existing file path queries as exact matches.
+- Built a local binary via `go build -o /tmp/docmgr-local ./cmd/docmgr`.
+- Ran the skills smoke script with `DOCMGR_PATH=/tmp/docmgr-local ./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario`.
+- Listed the ticket skill plans with `/tmp/docmgr-local skill list --root ttmp --ticket MO-001-EXPORT-SKILLS`.
+
+### Why
+- Exact path queries should unambiguously pick a single plan file even when multiple plans share the same slug across workspace and ticket scopes.
+- Smoke coverage needed to validate the updated list/show/export/import behaviors end-to-end.
+
+### What worked
+- The smoke scenario completed successfully after the path match fix.
+- Ticket-local skills now list as expected for MO-001-EXPORT-SKILLS.
+
+### What didn't work
+- Initial smoke run with the PATH `docmgr` binary failed because it predated plan-based skills (`[fail] Test 1 (missing: Skill: WebSocket Management)`).
+- The first run with the local binary failed at path resolution (`Error: multiple skills match "/tmp/docmgr-scenario/acme-chat-app/ttmp/2026/01/04/MEN-4242--normalize-chat-api-paths-and-websocket-lifecycle/skills/api-design/skill.yaml"`).
+
+### What I learned
+- Absolute-path queries were too fuzzy because `paths.MatchPaths` can match shared suffixes; explicit file queries need a strict equality check.
+
+### What was tricky to build
+- Preserving fuzzy matching for non-existent paths while guaranteeing exact matches for existing files.
+
+### What warrants a second pair of eyes
+- Confirm the new exact path behavior does not regress legitimate fuzzy path queries (for example, short relative suffixes).
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- Review `docmgr/pkg/commands/skills_query.go` for the updated path match behavior.
+- Re-run `DOCMGR_PATH=/tmp/docmgr-local ./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario` to validate the smoke scenario.
+
+### Technical details
+- Smoke test command: `DOCMGR_PATH=/tmp/docmgr-local ./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario`.
+- Skill list command: `/tmp/docmgr-local skill list --root ttmp --ticket MO-001-EXPORT-SKILLS`.

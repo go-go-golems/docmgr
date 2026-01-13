@@ -5,7 +5,6 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - sh -c 'GOFLAGS=-tags=tools go mod tidy'
-    - go generate ./internal/web
 builds:
   - id: docmgr-linux
     env:

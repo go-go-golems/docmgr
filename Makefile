@@ -26,16 +26,15 @@ govulncheck:
 test:
 	go test ./...
 
-build:
-	go generate ./...
+build: ui-build
 	go build -tags "sqlite_fts5,embed" ./cmd/docmgr
 
-.PHONY: ui-generate build-embed dev-backend
+.PHONY: ui-build build-embed dev-backend
 
-ui-generate:
-	go generate ./internal/web
+ui-build:
+	GOWORK=off go run ./internal/web/generate_build.go
 
-build-embed: ui-generate
+build-embed: ui-build
 	go build -tags "sqlite_fts5,embed" ./cmd/docmgr
 
 dev-backend:
@@ -63,7 +62,6 @@ bump-glazed:
 	go mod tidy
 
 DOCMGR_BINARY=$(shell which docmgr)
-install:
-	go generate ./...
+install: ui-build
 	go build -tags "sqlite_fts5,embed" -o ./dist/docmgr ./cmd/docmgr && \
 		cp ./dist/docmgr $(DOCMGR_BINARY)

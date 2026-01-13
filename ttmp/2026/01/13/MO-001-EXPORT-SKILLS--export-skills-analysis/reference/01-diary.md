@@ -42,7 +42,7 @@ ExternalSources:
     - https://agentskills.io/specification
     - https://cursor.com/docs/context/skills
 Summary: ""
-LastUpdated: 2026-01-13T16:58:30-05:00
+LastUpdated: 2026-01-13T17:01:02-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
@@ -375,3 +375,45 @@ The update includes safety gates so binaries are only executed during `--resolve
 - Skill verbs: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_list.go`, `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_show.go`.
 - Export/import commands: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_export.go`, `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go`.
 - Go test failure: `go test ./internal/skills -count=1` (Go version mismatch with `go.work`).
+
+## Step 8: Preserve compatibility metadata on import
+
+I updated the import mapping to carry `compatibility` metadata from Agent Skills into the generated `skill.yaml` plan. This ensures downstream plan consumers retain the compatibility constraints encoded in the source SKILL.md frontmatter metadata.
+
+This was a small follow-on to the main implementation, but it keeps the plan schema aligned with the Agent Skills metadata model and avoids losing important compatibility notes during import.
+
+**Commit (code):** 7f6400c — "Skill import: preserve compatibility metadata"
+
+### What I did
+- Added `Compatibility` to the parsed SKILL.md metadata struct.
+- Wired `compatibility` into the plan generation in `docmgr/pkg/commands/skill_import.go`.
+- Ran `gofmt -w` on the modified files.
+
+### Why
+- Import should preserve compatibility constraints from upstream skills instead of silently dropping them.
+
+### What worked
+- The compatibility field now flows into `skill.yaml` without changing the existing import defaults.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- The SKILL.md metadata map can safely carry optional compatibility fields, which are easy to round-trip into the plan.
+
+### What was tricky to build
+- Keeping the import defaults intact while adding a new optional field without breaking validation.
+
+### What warrants a second pair of eyes
+- Verify that the metadata unmarshalling logic still handles unexpected fields gracefully.
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- Review `docmgr/internal/skills/skill_markdown.go` for metadata parsing changes.
+- Review `docmgr/pkg/commands/skill_import.go` for the updated plan mapping.
+
+### Technical details
+- Metadata parsing update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/internal/skills/skill_markdown.go`.
+- Import mapping update: `/home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go`.

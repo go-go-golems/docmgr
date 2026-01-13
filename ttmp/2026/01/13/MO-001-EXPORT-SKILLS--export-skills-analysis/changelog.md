@@ -71,3 +71,12 @@ Step 7: implement plan-based skills, export/import verbs, docs updates (commit 6
 
 - /home/manuel/workspaces/2026-01-13/install-skills/docmgr/internal/skills/plan.go — Skill plan schema and validation
 
+
+## 2026-01-13
+
+Step 8: preserve compatibility metadata on import (commit 7f6400c)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go — Import mapping now carries compatibility
+

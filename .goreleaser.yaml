@@ -4,7 +4,7 @@ project_name: docmgr
 before:
   hooks:
     # You may remove this if you don't use go modules.
-    - go mod tidy
+    - sh -c 'GOFLAGS=-tags=tools go mod tidy'
     - go generate ./internal/web
 builds:
   - id: docmgr-linux

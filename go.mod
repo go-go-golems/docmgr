@@ -5,6 +5,7 @@ go 1.24.2
 toolchain go1.24.9
 
 require (
+	dagger.io/dagger v0.19.9
 	github.com/adrg/frontmatter v0.2.0
 	github.com/carapace-sh/carapace v1.10.2
 	github.com/charmbracelet/glamour v0.10.0
@@ -17,7 +18,6 @@ require (
 )
 
 require (
-	dagger.io/dagger v0.19.9 // indirect
 	github.com/99designs/gqlgen v0.17.81 // indirect
 	github.com/BurntSushi/toml v1.3.2 // indirect
 	github.com/Khan/genqlient v0.8.1 // indirect

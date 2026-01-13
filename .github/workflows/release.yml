@@ -57,6 +57,12 @@ jobs:
           go-version: '>=1.19.5'
           cache: true
 
+      - name: Install Docker runtime (Colima)
+        run: |
+          brew install docker colima
+          colima start --cpu 4 --memory 8 --disk 40
+          docker version
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser-pro

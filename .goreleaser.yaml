@@ -5,7 +5,6 @@ before:
   hooks:
     # You may remove this if you don't use go modules.
     - go mod tidy
-    - pnpm -C ui install
     - go generate ./internal/web
 builds:
   - id: docmgr-linux

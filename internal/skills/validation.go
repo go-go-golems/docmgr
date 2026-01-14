@@ -69,7 +69,9 @@ func (p *Plan) Validate() error {
 				issues = append(issues, fmt.Sprintf("%s.path is required for file source", issuePrefix))
 			}
 			if strings.TrimSpace(source.Output) == "" {
-				issues = append(issues, fmt.Sprintf("%s.output is required for file source", issuePrefix))
+				if !source.AppendToBody {
+					issues = append(issues, fmt.Sprintf("%s.output is required for file source", issuePrefix))
+				}
 			} else if err := validateOutputPath(source.Output); err != nil {
 				issues = append(issues, fmt.Sprintf("%s.output invalid: %s", issuePrefix, err))
 			}
@@ -81,7 +83,9 @@ func (p *Plan) Validate() error {
 				issues = append(issues, fmt.Sprintf("%s.topic is required for binary-help source", issuePrefix))
 			}
 			if strings.TrimSpace(source.Output) == "" {
-				issues = append(issues, fmt.Sprintf("%s.output is required for binary-help source", issuePrefix))
+				if !source.AppendToBody {
+					issues = append(issues, fmt.Sprintf("%s.output is required for binary-help source", issuePrefix))
+				}
 			} else if err := validateOutputPath(source.Output); err != nil {
 				issues = append(issues, fmt.Sprintf("%s.output invalid: %s", issuePrefix, err))
 			}

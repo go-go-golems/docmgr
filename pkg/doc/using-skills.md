@@ -46,8 +46,9 @@ When you decide a skill might apply, load it:
 
 ## Skill export/import (docmgr)
 
-- Export a plan to Agent Skills format: `docmgr skill export <query> --out dist`
-  - Generates `SKILL.md` + `references/` and packages a `.skill` file.
+- Export a plan to Agent Skills format: `docmgr skill export <query> --output-skill dist/<name>.skill`
+  - Generates `SKILL.md` + `references/` in a skill directory, and packages a `.skill` when `--output-skill` is set.
+  - Use `--out-dir` to write the expanded skill directory to a known location.
 - Import a `.skill` archive or skill directory: `docmgr skill import <path>`
   - Writes a `skill.yaml` plan under `ttmp/skills/` (or `<ticket>/skills/` when `--ticket` is provided).
 

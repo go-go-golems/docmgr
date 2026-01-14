@@ -1,0 +1,34 @@
+skill:
+    name: docmgr
+    title: Docmgr
+    description: 'Documentation management with the `docmgr` CLI: create and work in ticket workspaces (`ttmp/...`), add documents, relate code/files to docs, manage tasks/changelogs/metadata/vocabulary, and search/validate docs. Use when a user mentions `docmgr`, ticket docs, `docmgr doc relate`, `docmgr doc search`, YAML frontmatter validation, or asks to turn ad-hoc markdown into a structured, searchable knowledge base.'
+    what_for: 'Documentation management with the `docmgr` CLI: create and work in ticket workspaces (`ttmp/...`), add documents, relate code/files to docs, manage tasks/changelogs/metadata/vocabulary, and search/validate docs. Use when a user mentions `docmgr`, ticket docs, `docmgr doc relate`, `docmgr doc search`, YAML frontmatter validation, or asks to turn ad-hoc markdown into a structured, searchable knowledge base.'
+    when_to_use: Use when working with Docmgr.
+    topics:
+        - imported-skill
+    license: ""
+    compatibility: ""
+sources:
+    - type: file
+      path: ttmp/skills/docmgr/skill-body.md
+      strip-frontmatter: false
+      append_to_body: true
+      binary: ""
+      topic: ""
+      wrap: ""
+      timeout_seconds: 0
+    - type: file
+      path: ttmp/skills/docmgr/docmgr.md
+      strip-frontmatter: false
+      output: references/docmgr.md
+      append_to_body: false
+      binary: ""
+      topic: ""
+      wrap: ""
+      timeout_seconds: 0
+output:
+    skill_dir_name: docmgr
+    skill_md:
+        intro: ""
+        include_index: false
+        index_title: ""

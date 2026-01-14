@@ -281,17 +281,36 @@ func (c *SkillShowCommand) Run(
 	if len(plan.Sources) > 0 {
 		fmt.Printf("\nSources:\n")
 		for _, source := range plan.Sources {
+			markers := []string{}
 			switch strings.ToLower(strings.TrimSpace(source.Type)) {
 			case "file":
-				line := fmt.Sprintf("  - file: %s -> %s", source.Path, source.Output)
+				line := fmt.Sprintf("  - file: %s", source.Path)
+				if strings.TrimSpace(source.Output) != "" {
+					line += fmt.Sprintf(" -> %s", source.Output)
+				}
 				if source.StripFrontmatter {
-					line += " (strip-frontmatter)"
+					markers = append(markers, "strip-frontmatter")
+				}
+				if source.AppendToBody {
+					markers = append(markers, "append-to-body")
+				}
+				if len(markers) > 0 {
+					line += fmt.Sprintf(" (%s)", strings.Join(markers, ", "))
 				}
 				fmt.Println(line)
 			case "binary-help":
-				line := fmt.Sprintf("  - binary-help: %s help %s -> %s", source.Binary, source.Topic, source.Output)
+				line := fmt.Sprintf("  - binary-help: %s help %s", source.Binary, source.Topic)
+				if strings.TrimSpace(source.Output) != "" {
+					line += fmt.Sprintf(" -> %s", source.Output)
+				}
 				if strings.TrimSpace(source.Wrap) != "" {
-					line += fmt.Sprintf(" (wrap: %s)", strings.TrimSpace(source.Wrap))
+					markers = append(markers, fmt.Sprintf("wrap: %s", strings.TrimSpace(source.Wrap)))
+				}
+				if source.AppendToBody {
+					markers = append(markers, "append-to-body")
+				}
+				if len(markers) > 0 {
+					line += fmt.Sprintf(" (%s)", strings.Join(markers, ", "))
 				}
 				fmt.Println(line)
 			default:

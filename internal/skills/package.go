@@ -11,12 +11,12 @@ import (
 )
 
 // PackageSkillDir zips a skill directory into a .skill file.
-func PackageSkillDir(skillDir string, outDir string, force bool) (string, error) {
+func PackageSkillDir(skillDir string, outputPath string, force bool) (string, error) {
 	if strings.TrimSpace(skillDir) == "" {
 		return "", errors.New("skill directory is required")
 	}
-	if strings.TrimSpace(outDir) == "" {
-		return "", errors.New("output directory is required")
+	if strings.TrimSpace(outputPath) == "" {
+		return "", errors.New("output skill path is required")
 	}
 
 	info, err := os.Stat(skillDir)
@@ -27,12 +27,16 @@ func PackageSkillDir(skillDir string, outDir string, force bool) (string, error)
 		return "", errors.New("skill path must be a directory")
 	}
 
-	skillName := filepath.Base(skillDir)
-	outPath := filepath.Join(outDir, skillName+".skill")
-	if _, err := os.Stat(outPath); err == nil && !force {
-		return "", errors.Errorf("output file already exists: %s", outPath)
+	outPath := filepath.Clean(outputPath)
+	if info, err := os.Stat(outPath); err == nil {
+		if info.IsDir() {
+			return "", errors.Errorf("output skill path is a directory: %s", outPath)
+		}
+		if !force {
+			return "", errors.Errorf("output file already exists: %s", outPath)
+		}
 	}
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outPath), 0o755); err != nil {
 		return "", errors.Wrap(err, "failed to create output directory")
 	}
 

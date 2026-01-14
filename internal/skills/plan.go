@@ -27,6 +27,7 @@ type Source struct {
 	Path             string `yaml:"path"`
 	StripFrontmatter bool   `yaml:"strip-frontmatter"`
 	Output           string `yaml:"output"`
+	AppendToBody     bool   `yaml:"append_to_body"`
 	Binary           string `yaml:"binary"`
 	Topic            string `yaml:"topic"`
 	Wrap             string `yaml:"wrap"`

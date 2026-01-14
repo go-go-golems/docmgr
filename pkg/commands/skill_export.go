@@ -21,13 +21,13 @@ type SkillExportCommand struct {
 
 // SkillExportSettings holds the parameters for skill export.
 type SkillExportSettings struct {
-	Root     string `glazed.parameter:"root"`
-	Ticket   string `glazed.parameter:"ticket"`
-	Skill    string `glazed.parameter:"skill"`
-	Query    string `glazed.parameter:"query"`
-	Out      string `glazed.parameter:"out"`
-	SkillDir string `glazed.parameter:"skill-dir"`
-	Force    bool   `glazed.parameter:"force"`
+	Root        string `glazed.parameter:"root"`
+	Ticket      string `glazed.parameter:"ticket"`
+	Skill       string `glazed.parameter:"skill"`
+	Query       string `glazed.parameter:"query"`
+	OutDir      string `glazed.parameter:"out-dir"`
+	OutputSkill string `glazed.parameter:"output-skill"`
+	Force       bool   `glazed.parameter:"force"`
 }
 
 func NewSkillExportCommand() (*SkillExportCommand, error) {
@@ -38,12 +38,12 @@ func NewSkillExportCommand() (*SkillExportCommand, error) {
 			cmds.WithLong(`Exports a skill.yaml plan as a standard Agent Skills package (.skill).
 
 This resolves file sources, captures binary help output, writes SKILL.md + references,
-then packages the result as a .skill archive.
+and optionally packages the result as a .skill archive when --output-skill is provided.
 
 Examples:
-  docmgr skill export glaze-help --out dist
-  docmgr skill export ttmp/skills/glaze-help/skill.yaml --out dist
-  docmgr skill export api-design --ticket MEN-4242 --out dist
+  docmgr skill export glaze-help --output-skill dist/glaze-help.skill
+  docmgr skill export ttmp/skills/glaze-help/skill.yaml --out-dir dist
+  docmgr skill export api-design --ticket MEN-4242 --out-dir dist --output-skill dist/api-design.skill
 `),
 			cmds.WithArguments(
 				parameters.NewParameterDefinition(
@@ -73,15 +73,15 @@ Examples:
 					parameters.WithRequired(false),
 				),
 				parameters.NewParameterDefinition(
-					"out",
+					"out-dir",
 					parameters.ParameterTypeString,
-					parameters.WithHelp("Output directory for the .skill package"),
-					parameters.WithDefault("."),
+					parameters.WithHelp("Optional output directory for the expanded skill (defaults to temp dir)"),
+					parameters.WithDefault(""),
 				),
 				parameters.NewParameterDefinition(
-					"skill-dir",
+					"output-skill",
 					parameters.ParameterTypeString,
-					parameters.WithHelp("Optional output directory for the unpacked skill (defaults to temp dir)"),
+					parameters.WithHelp("Optional output path for the .skill package (only created when set)"),
 					parameters.WithDefault(""),
 				),
 				parameters.NewParameterDefinition(
@@ -215,15 +215,19 @@ func (c *SkillExportCommand) Run(ctx context.Context, parsedLayers *layers.Parse
 	h := candidates[0].Handle
 
 	result, err := skills.ExportPlan(ctx, ws, h, skills.ExportOptions{
-		OutDir:   settings.Out,
-		SkillDir: settings.SkillDir,
-		Force:    settings.Force,
+		OutDir:          settings.OutDir,
+		OutputSkillPath: settings.OutputSkill,
+		Force:           settings.Force,
 	})
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(os.Stdout, "Exported skill to %s\n", result.PackagePath)
+	if result.PackagePath != "" {
+		fmt.Fprintf(os.Stdout, "Exported skill to %s\n", result.PackagePath)
+	} else {
+		fmt.Fprintln(os.Stdout, "No .skill output requested (use --output-skill to create one)")
+	}
 	fmt.Fprintf(os.Stdout, "Skill directory: %s\n", result.SkillDir)
 	return nil
 }

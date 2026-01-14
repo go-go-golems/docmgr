@@ -1,0 +1,25 @@
+skill:
+    name: git-commit-instructions
+    title: Git Commit Instructions
+    description: 'Practical Git hygiene for staging and committing: review diffs, stage intentionally, avoid committing noise/build artifacts/secrets, and recover from accidental staging or committing. Use when a user asks how to commit changes, write a commit workflow checklist, unstage/remove accidental files, or verify `.gitignore` behavior.'
+    what_for: 'Practical Git hygiene for staging and committing: review diffs, stage intentionally, avoid committing noise/build artifacts/secrets, and recover from accidental staging or committing. Use when a user asks how to commit changes, write a commit workflow checklist, unstage/remove accidental files, or verify `.gitignore` behavior.'
+    when_to_use: Use when working with Git Commit Instructions.
+    topics:
+        - imported-skill
+    license: ""
+    compatibility: ""
+sources:
+    - type: file
+      path: ttmp/skills/git-commit-instructions/git-commit-instructions.md
+      strip-frontmatter: false
+      output: git-commit-instructions.md
+      binary: ""
+      topic: ""
+      wrap: ""
+      timeout_seconds: 0
+output:
+    skill_dir_name: git-commit-instructions
+    skill_md:
+        intro: ""
+        include_index: null
+        index_title: ""

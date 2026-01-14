@@ -36,7 +36,7 @@ type SkillExtraMetadata struct {
 }
 
 // RenderSkillMarkdown builds SKILL.md for export.
-func RenderSkillMarkdown(plan *Plan, referencePaths []string) ([]byte, error) {
+func RenderSkillMarkdown(plan *Plan, referencePaths []string, appendBodies []string) ([]byte, error) {
 	if plan == nil {
 		return nil, errors.New("skill plan is required")
 	}
@@ -74,28 +74,62 @@ func RenderSkillMarkdown(plan *Plan, referencePaths []string) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to render skill frontmatter")
 	}
 
+	cleanedAppendBodies := make([]string, 0, len(appendBodies))
+	for _, chunk := range appendBodies {
+		trimmed := strings.TrimSpace(chunk)
+		if trimmed != "" {
+			cleanedAppendBodies = append(cleanedAppendBodies, trimmed)
+		}
+	}
+	appendBodies = cleanedAppendBodies
+
+	includeAutoSections := len(appendBodies) == 0
+
+	includeTitle := true
+	if len(appendBodies) > 0 {
+		for _, line := range strings.Split(appendBodies[0], "\n") {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			if strings.HasPrefix(trimmed, "# ") {
+				includeTitle = false
+			}
+			break
+		}
+	}
+
 	var body strings.Builder
-	body.WriteString("# ")
-	body.WriteString(plan.DisplayTitle())
-	body.WriteString("\n\n")
-
-	intro := strings.TrimSpace(plan.Output.SkillMD.Intro)
-	if intro != "" {
-		body.WriteString(intro)
-		body.WriteString("\n\n")
-	} else if strings.TrimSpace(plan.Skill.Description) != "" {
-		body.WriteString(strings.TrimSpace(plan.Skill.Description))
+	if includeTitle {
+		body.WriteString("# ")
+		body.WriteString(plan.DisplayTitle())
 		body.WriteString("\n\n")
 	}
 
-	if strings.TrimSpace(plan.Skill.WhatFor) != "" {
-		body.WriteString("## What this skill is for\n\n")
-		body.WriteString(strings.TrimSpace(plan.Skill.WhatFor))
-		body.WriteString("\n\n")
+	if includeAutoSections {
+		intro := strings.TrimSpace(plan.Output.SkillMD.Intro)
+		if intro != "" {
+			body.WriteString(intro)
+			body.WriteString("\n\n")
+		} else if strings.TrimSpace(plan.Skill.Description) != "" {
+			body.WriteString(strings.TrimSpace(plan.Skill.Description))
+			body.WriteString("\n\n")
+		}
+
+		if strings.TrimSpace(plan.Skill.WhatFor) != "" {
+			body.WriteString("## What this skill is for\n\n")
+			body.WriteString(strings.TrimSpace(plan.Skill.WhatFor))
+			body.WriteString("\n\n")
+		}
+		if strings.TrimSpace(plan.Skill.WhenToUse) != "" {
+			body.WriteString("## When to use\n\n")
+			body.WriteString(strings.TrimSpace(plan.Skill.WhenToUse))
+			body.WriteString("\n\n")
+		}
 	}
-	if strings.TrimSpace(plan.Skill.WhenToUse) != "" {
-		body.WriteString("## When to use\n\n")
-		body.WriteString(strings.TrimSpace(plan.Skill.WhenToUse))
+
+	for _, chunk := range appendBodies {
+		body.WriteString(chunk)
 		body.WriteString("\n\n")
 	}
 

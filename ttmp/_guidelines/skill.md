@@ -16,6 +16,7 @@ Skills are meant to be discoverable via:
   - `skill.topics`: topics for discovery
 - **skill.yaml sources**
   - `sources`: explicit `file` and/or `binary-help` entries
+  - `sources[].append_to_body`: append source content into the main SKILL.md body (output file is not written; auto sections are suppressed when present; title is skipped if the content already starts with one)
   - `output`: optional export options (`skill_dir_name`, `skill_md`)
 - **SKILL.md body** (exported)
   - **Overview**: 2–5 sentences (why it matters; what it enforces)

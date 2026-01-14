@@ -55,7 +55,7 @@ func ResolvePlan(ctx context.Context, ws *workspace.Workspace, handle PlanHandle
 			}
 			resolved = append(resolved, ResolvedSource{
 				Source:     source,
-				OutputPath: cleanOutputPath(source.Output),
+				OutputPath: normalizeOutputPath(source.Output),
 				Content:    content,
 			})
 		case "binary-help":
@@ -68,7 +68,7 @@ func ResolvePlan(ctx context.Context, ws *workspace.Workspace, handle PlanHandle
 			}
 			resolved = append(resolved, ResolvedSource{
 				Source:     source,
-				OutputPath: cleanOutputPath(source.Output),
+				OutputPath: normalizeOutputPath(source.Output),
 				Content:    content,
 			})
 		default:
@@ -159,6 +159,14 @@ func resolveSourcePath(repoRoot string, planDir string, raw string) (string, err
 
 func cleanOutputPath(path string) string {
 	return filepath.ToSlash(filepath.Clean(strings.TrimSpace(path)))
+}
+
+func normalizeOutputPath(path string) string {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return ""
+	}
+	return cleanOutputPath(trimmed)
 }
 
 func stripFrontmatter(data []byte) []byte {

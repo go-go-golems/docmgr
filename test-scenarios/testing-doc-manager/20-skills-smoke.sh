@@ -363,7 +363,7 @@ echo "[ok] Test 12"
 # Test 13: Export a ticket skill plan
 echo ""
 echo "==> Test 13: Export skill plan (websocket-management)"
-OUT_13="$(${DOCMGR} skill export websocket-management --ticket MEN-4242 --root "${DOCS_ROOT}" --out "${ROOT_DIR}/exports")"
+OUT_13="$(${DOCMGR} skill export websocket-management --ticket MEN-4242 --root "${DOCS_ROOT}" --output-skill "${ROOT_DIR}/exports/websocket-management.skill")"
 assert_contains "Test 13" "${OUT_13}" "Exported skill to"
 if [[ ! -f "${ROOT_DIR}/exports/websocket-management.skill" ]]; then
   dump_output "Test 13 (missing export file)" "${OUT_13}"

@@ -72,6 +72,7 @@ sources:
     path: backend/testing/framework.md
     output: references/testing-framework.md
     strip-frontmatter: true
+    append_to_body: false
 
   - type: binary-help
     binary: glaze
@@ -95,6 +96,7 @@ output:
 - **`skill.topics`**: Enable filtering with `docmgr skill list --topics testing`. Choose topics that match how developers think about the domain.
 
 - **`sources`**: Declares explicit files or binary help output that should be packaged into the skill. `docmgr skill list --file` and `--dir` filter against `file` sources.
+- **`sources[].append_to_body`**: When true, the resolved content is appended into the main SKILL.md body (in order) before the references index, and the source output file is not written. When any append-to-body content exists, the auto-generated intro/WhatFor/WhenToUse sections are suppressed to avoid duplicate headers. If the appended content already starts with a `# Title`, the exporter also skips the generated title to prevent duplication.
 
 - **`output`**: Controls export naming and how `SKILL.md` is generated.
 
@@ -779,7 +781,7 @@ DocType skill documents are still valid workflow docs, but they are no longer us
 1. Create `ttmp/skills/<skill-name>/skill.yaml` (or `<ticket>/skills/<skill-name>/skill.yaml`).
 2. Copy `Title` → `skill.title`, `WhatFor` → `skill.what_for`, `WhenToUse` → `skill.when_to_use`, and `Topics` → `skill.topics`.
 3. Add `sources` entries for any reference files the skill needs (or move the skill body into the exported `SKILL.md` during `docmgr skill export`).
-4. Validate with `docmgr skill show <name>` and export with `docmgr skill export <name> --out dist`.
+4. Validate with `docmgr skill show <name>` and export with `docmgr skill export <name> --output-skill dist/<name>.skill`.
 
 ---
 

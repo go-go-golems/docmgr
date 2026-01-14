@@ -1,0 +1,25 @@
+skill:
+    name: diary
+    title: Diary
+    description: 'Write and maintain an implementation diary: step-by-step narrative of what changed, why, what worked, what failed (with exact errors/commands), what was tricky, and how to review/validate. Use when a user asks to create/update a “Diary” doc, record work for a ticket, document debugging outcomes, or produce code review instructions and future follow-ups.'
+    what_for: 'Write and maintain an implementation diary: step-by-step narrative of what changed, why, what worked, what failed (with exact errors/commands), what was tricky, and how to review/validate. Use when a user asks to create/update a “Diary” doc, record work for a ticket, document debugging outcomes, or produce code review instructions and future follow-ups.'
+    when_to_use: Use when working with Diary.
+    topics:
+        - imported-skill
+    license: ""
+    compatibility: ""
+sources:
+    - type: file
+      path: ttmp/skills/diary/diary.md
+      strip-frontmatter: false
+      output: diary.md
+      binary: ""
+      topic: ""
+      wrap: ""
+      timeout_seconds: 0
+output:
+    skill_dir_name: diary
+    skill_md:
+        intro: ""
+        include_index: null
+        index_title: ""

@@ -12,9 +12,9 @@ import (
 
 // ExportOptions controls skill export behavior.
 type ExportOptions struct {
-	OutDir   string
-	SkillDir string
-	Force    bool
+	OutDir          string
+	OutputSkillPath string
+	Force           bool
 }
 
 // ExportResult captures export outputs.
@@ -37,7 +37,7 @@ func ExportPlan(ctx context.Context, ws *workspace.Workspace, handle PlanHandle,
 		return ExportResult{}, errors.New("skill name is required")
 	}
 
-	baseDir := strings.TrimSpace(opts.SkillDir)
+	baseDir := strings.TrimSpace(opts.OutDir)
 	var skillDir string
 	if baseDir != "" {
 		skillDir = filepath.Join(baseDir, skillName)
@@ -62,8 +62,14 @@ func ExportPlan(ctx context.Context, ws *workspace.Workspace, handle PlanHandle,
 	}
 
 	var referencePaths []string
+	var appendBodies []string
+	var nonBodyOutputs []string
 	for _, res := range resolved {
-		outputPath := cleanOutputPath(res.OutputPath)
+		if res.Source.AppendToBody {
+			appendBodies = append(appendBodies, string(res.Content))
+			continue
+		}
+		outputPath := normalizeOutputPath(res.OutputPath)
 		if strings.TrimSpace(outputPath) == "" {
 			return ExportResult{}, errors.New("resolved output path is empty")
 		}
@@ -77,15 +83,14 @@ func ExportPlan(ctx context.Context, ws *workspace.Workspace, handle PlanHandle,
 		if strings.HasPrefix(outputPath, "references/") {
 			referencePaths = append(referencePaths, outputPath)
 		}
+		nonBodyOutputs = append(nonBodyOutputs, outputPath)
 	}
 
 	if len(referencePaths) == 0 {
-		for _, res := range resolved {
-			referencePaths = append(referencePaths, cleanOutputPath(res.OutputPath))
-		}
+		referencePaths = append(referencePaths, nonBodyOutputs...)
 	}
 
-	skillMD, err := RenderSkillMarkdown(handle.Plan, referencePaths)
+	skillMD, err := RenderSkillMarkdown(handle.Plan, referencePaths, appendBodies)
 	if err != nil {
 		return ExportResult{}, err
 	}
@@ -101,13 +106,13 @@ func ExportPlan(ctx context.Context, ws *workspace.Workspace, handle PlanHandle,
 		return ExportResult{}, err
 	}
 
-	outDir := strings.TrimSpace(opts.OutDir)
-	if outDir == "" {
-		outDir = "."
-	}
-	packagePath, err := PackageSkillDir(skillDir, outDir, opts.Force)
-	if err != nil {
-		return ExportResult{}, err
+	packagePath := ""
+	if strings.TrimSpace(opts.OutputSkillPath) != "" {
+		path, err := PackageSkillDir(skillDir, opts.OutputSkillPath, opts.Force)
+		if err != nil {
+			return ExportResult{}, err
+		}
+		packagePath = path
 	}
 
 	return ExportResult{SkillDir: skillDir, PackagePath: packagePath}, nil

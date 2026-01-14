@@ -1,0 +1,24 @@
+skill:
+  name: docmgr-help-sample
+  title: Docmgr Help Sample
+  description: Example plan that captures docmgr help output.
+  what_for: Provide a packaged reference of docmgr help output.
+  when_to_use: Use when testing binary-help capture workflows.
+  topics: [docmgr, help, example]
+  compatibility: Requires docmgr on PATH.
+
+sources:
+  - type: file
+    path: ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/skills/docmgr-help-sample/fixtures/notes.md
+    output: references/notes.md
+
+  - type: binary-help
+    binary: docmgr
+    topic: skill
+    output: references/docmgr-skill-help.md
+    wrap: markdown
+
+output:
+  skill_dir_name: docmgr-help-sample
+  skill_md:
+    include_index: true

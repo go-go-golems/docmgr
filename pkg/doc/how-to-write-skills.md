@@ -19,7 +19,7 @@ SectionType: Tutorial
 
 Skills are structured markdown documents that teach LLMs (and humans) to follow disciplined workflows. Unlike general documentation that describes what exists, skills prescribe how to work—they're executable playbooks that enforce best practices like test-driven development, systematic debugging, and structured design processes. A well-written skill transforms "maybe I should write tests" into "you MUST write a failing test first, watch it fail, then implement." This document teaches you how to create effective skills that LLMs will follow reliably.
 
-Skills in docmgr are documents with `DocType: skill` that include two key preamble fields: `WhatFor` (what the skill accomplishes) and `WhenToUse` (when to apply it). These fields, combined with clear structure and strong enforcement language, ensure skills are discoverable and consistently applied.
+Skills in docmgr are plan files (`skill.yaml`) that live under `ttmp/skills/` or a ticket’s `skills/` folder. The plan’s `skill` metadata includes `what_for` (what the skill accomplishes) and `when_to_use` (when to apply it). These fields, combined with clear structure and strong enforcement language, ensure skills are discoverable and consistently applied.
 
 **What you'll learn:**
 - The anatomy of a skill document (frontmatter, structure, enforcement patterns)
@@ -52,46 +52,53 @@ Create a skill when you have a workflow that:
 
 ---
 
-## Skill Frontmatter Contract
+## Skill Plan Contract (skill.yaml)
 
-Skills in docmgr use standard YAML frontmatter with specific fields that enable discovery and filtering:
+Skills in docmgr use a `skill.yaml` plan file with explicit metadata and sources:
 
 ```yaml
----
-Title: "Skill: Test-Driven Development"
-Ticket: 001-ADD-CLAUDE-SKILLS      # Optional for workspace-level skills
-DocType: skill                      # Required: marks this as a skill
-Topics:                             # Required: for filtering/discovery
-  - testing
-  - tdd
-  - quality
-WhatFor: |                          # Required: what this skill accomplishes
-  Enforces RED-GREEN-REFACTOR cycle to ensure every function has a test
-  that was verified to fail before implementation. Prevents untested code
-  and ensures tests actually verify behavior.
-WhenToUse: |                        # Required: when to apply this skill
-  Use when implementing any feature or bugfix, before writing implementation
-  code. Also use when refactoring existing code or changing behavior.
-RelatedFiles:                       # Optional: code files this skill applies to
-  - Path: backend/testing/framework.go
-    Note: Testing framework setup
-  - Path: backend/api/handlers_test.go
-    Note: Example of TDD in practice
-Status: active                      # Inherited from ticket if not specified
-Intent: long-term                   # Inherited from ticket if not specified
-Owners: []                          # Inherited from ticket if not specified
----
+skill:
+  name: test-driven-development
+  title: Test-Driven Development
+  description: Enforces the RED-GREEN-REFACTOR cycle.
+  what_for: Ensure every function has a failing test before implementation.
+  when_to_use: Use when implementing features or refactoring behavior.
+  topics: [testing, tdd, quality]
+  license: Proprietary
+  compatibility: Requires go test tooling.
+
+sources:
+  - type: file
+    path: backend/testing/framework.md
+    output: references/testing-framework.md
+    strip-frontmatter: true
+    append_to_body: false
+
+  - type: binary-help
+    binary: glaze
+    topic: help-system
+    output: references/glaze-help-system.md
+    wrap: markdown
+
+output:
+  skill_dir_name: test-driven-development
+  skill_md:
+    include_index: true
+    index_title: References
 ```
 
 **Key fields explained:**
 
-- **`WhatFor`**: Explains what the skill accomplishes. Keep it concise (2-3 sentences). Focus on outcomes and benefits, not process steps.
+- **`skill.what_for`**: Explains what the skill accomplishes. Keep it concise (2-3 sentences). Focus on outcomes and benefits, not process steps.
 
-- **`WhenToUse`**: The trigger condition that helps LLMs (and humans) decide when to apply this skill. Use clear "use when" language: "Use when implementing any feature", "Use when encountering any bug", "Use when starting creative work".
+- **`skill.when_to_use`**: The trigger condition that helps LLMs (and humans) decide when to apply this skill. Use clear "use when" language: "Use when implementing any feature", "Use when encountering any bug", "Use when starting creative work".
 
-- **`Topics`**: Enable filtering with `docmgr skill list --topics testing`. Choose topics that match how developers think about the domain.
+- **`skill.topics`**: Enable filtering with `docmgr skill list --topics testing`. Choose topics that match how developers think about the domain.
 
-- **`RelatedFiles`**: Link to example code or files this skill applies to. Enables reverse lookup with `docmgr skill list --file path/to/file.go`.
+- **`sources`**: Declares explicit files or binary help output that should be packaged into the skill. `docmgr skill list --file` and `--dir` filter against `file` sources.
+- **`sources[].append_to_body`**: When true, the resolved content is appended into the main SKILL.md body (in order) before the references index, and the source output file is not written. When any append-to-body content exists, the auto-generated intro/WhatFor/WhenToUse sections are suppressed to avoid duplicate headers. If the appended content already starts with a `# Title`, the exporter also skips the generated title to prevent duplication.
+
+- **`output`**: Controls export naming and how `SKILL.md` is generated.
 
 ---
 
@@ -257,28 +264,27 @@ Include a note in your skill:
 
 Here's a complete skill that demonstrates all the techniques we've covered. This example is adapted from Superpowers' TDD skill but using docmgr commands.
 
-```markdown
----
-Title: "Skill: Test-Driven Development"
-DocType: skill
-Topics:
-  - testing
-  - tdd
-  - quality
-WhatFor: |
-  Enforces RED-GREEN-REFACTOR cycle to ensure every function has a test
-  that was verified to fail before implementation. Prevents untested code
-  and ensures tests actually verify behavior.
-WhenToUse: |
-  Use when implementing any feature or bugfix, before writing implementation
-  code. Also use when refactoring existing code or changing behavior.
-RelatedFiles:
-  - Path: backend/testing/framework.go
-    Note: Testing framework setup and conventions
-Status: active
-Intent: long-term
----
+```yaml
+# skill.yaml
+skill:
+  name: test-driven-development
+  title: Test-Driven Development
+  description: Enforces RED-GREEN-REFACTOR cycle for every function.
+  what_for: Ensure every function has a failing test before implementation.
+  when_to_use: Use when implementing features or refactoring behavior.
+  topics: [testing, tdd, quality]
 
+sources:
+  - type: file
+    path: backend/testing/framework.md
+    output: references/testing-framework.md
+
+output:
+  skill_dir_name: test-driven-development
+```
+
+```markdown
+# SKILL.md
 # Skill: Test-Driven Development
 
 ## Overview
@@ -739,10 +745,10 @@ For skills that apply across all tickets:
 
 ```
 ttmp/skills/
-├── test-driven-development.md
-├── systematic-debugging.md
-├── code-review.md
-└── brainstorming.md
+├── test-driven-development/skill.yaml
+├── systematic-debugging/skill.yaml
+├── code-review/skill.yaml
+└── brainstorming/skill.yaml
 ```
 
 **Frontmatter:** Omit `Ticket` field or use a generic ticket like `000-WORKSPACE-SKILLS`
@@ -754,17 +760,28 @@ ttmp/skills/
 For skills specific to a feature or domain:
 
 ```
-ttmp/YYYY/MM/DD/TICKET--slug/skill/
-├── auth-implementation.md
-├── websocket-testing.md
-└── frontend-component-patterns.md
+ttmp/YYYY/MM/DD/TICKET--slug/skills/
+├── auth-implementation/skill.yaml
+├── websocket-testing/skill.yaml
+└── frontend-component-patterns/skill.yaml
 ```
 
 **Frontmatter:** Include `Ticket` field
 
 **When to use:** Domain-specific patterns, experimental workflows, ticket-scoped processes
 
-**Note on convention:** `docmgr doc add --doc-type skill` creates ticket-scoped skills under the doc-type folder `skill/` (singular). Workspace-level skills are commonly stored under `ttmp/skills/` (plural) as a curated global library, but the authoritative source for discovery is the frontmatter field `DocType: skill` (not the directory name).
+**Note on convention:** `docmgr doc add --doc-type skill` still creates DocType skill docs under the doc-type folder, but `docmgr skill list/show` operate on `skill.yaml` plans. Use the `skills/` folders for plan-based skills.
+
+---
+
+## Migration from DocType Skill Docs
+
+DocType skill documents are still valid workflow docs, but they are no longer used by `docmgr skill list/show`. To migrate a DocType skill into a plan:
+
+1. Create `ttmp/skills/<skill-name>/skill.yaml` (or `<ticket>/skills/<skill-name>/skill.yaml`).
+2. Copy `Title` → `skill.title`, `WhatFor` → `skill.what_for`, `WhenToUse` → `skill.when_to_use`, and `Topics` → `skill.topics`.
+3. Add `sources` entries for any reference files the skill needs (or move the skill body into the exported `SKILL.md` during `docmgr skill export`).
+4. Validate with `docmgr skill show <name>` and export with `docmgr skill export <name> --output-skill dist/<name>.skill` (use `--out-dir dist` to keep the expanded skill directory).
 
 ---
 
@@ -920,7 +937,7 @@ This guide is adapted from Superpowers' skill-writing practices:
 
 When creating a new skill, ensure it has:
 
-- [ ] Complete frontmatter (`Title`, `DocType: skill`, `Topics`, `WhatFor`, `WhenToUse`)
+- [ ] Complete skill.yaml metadata (`skill.name`, `skill.description`, `skill.what_for`, `skill.when_to_use`, `skill.topics`)
 - [ ] Clear trigger condition in `WhenToUse`
 - [ ] Overview section (2-3 sentences)
 - [ ] Iron Law or Core Principle (if rigid skill)
@@ -961,4 +978,3 @@ After creating your skill:
 4. **Share with team**: Get feedback on trigger conditions and enforcement
 
 5. **Iterate**: Update based on real usage patterns
-

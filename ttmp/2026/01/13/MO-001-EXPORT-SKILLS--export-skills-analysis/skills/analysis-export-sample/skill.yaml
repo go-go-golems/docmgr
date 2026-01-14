@@ -1,0 +1,25 @@
+skill:
+  name: analysis-export-sample
+  title: Analysis Export Sample
+  description: Plan that packages existing ticket analysis docs as references.
+  what_for: Provide a portable reference bundle of analysis documentation.
+  when_to_use: Use when testing plan exports against existing ticket docs.
+  topics: [analysis, export, example]
+  compatibility: Works without external binaries.
+
+sources:
+  - type: file
+    path: ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/04-deep-analysis-skill-yaml-plans-glazed-help-capture-and-agent-skills-export.md
+    output: references/deep-analysis.md
+    strip-frontmatter: true
+
+  - type: file
+    path: ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/design-doc/03-design-skill-yaml-discovery-skill-verbs-and-agent-skills-import-export.md
+    output: references/skill-design.md
+    strip-frontmatter: true
+
+output:
+  skill_dir_name: analysis-export-sample
+  skill_md:
+    include_index: true
+    index_title: Analysis References

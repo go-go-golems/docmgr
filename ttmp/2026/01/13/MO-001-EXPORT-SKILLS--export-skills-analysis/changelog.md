@@ -1,0 +1,100 @@
+# Changelog
+
+## 2026-01-13
+
+- Initial workspace created
+
+
+## 2026-01-13
+
+Step 1: Create ticket workspace and write detailed analysis of skill creation/packaging and doc export paths.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/01-skill-creation-packaging-and-doc-export-analysis.md — Primary analysis deliverable
+
+
+## 2026-01-13
+
+Step 2: Incorporate Agent Skills spec and Cursor integration details into the analysis.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/01-skill-creation-packaging-and-doc-export-analysis.md — Added external spec and client behavior section
+
+
+## 2026-01-13
+
+Step 3: Add analysis and brainstorm design doc for exporting Glazed/docmgr docs into skills.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/02-exporting-glazed-and-docmgr-docs-into-skills-analysis.md — Analysis of export strategies
+
+
+## 2026-01-13
+
+Step 4: Analyze docmgr skill system and draft skill.yaml export plan design for binary help capture.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/03-docmgr-skill-system-analysis-and-interaction-with-skill-exports.md — docmgr skill system analysis
+
+
+## 2026-01-13
+
+Step 5: Upload new analysis/design docs to reMarkable and update diary.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/03-docmgr-skill-system-analysis-and-interaction-with-skill-exports.md — Uploaded to reMarkable
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/design-doc/02-brainstorm-skill-yaml-export-plans-and-binary-help-capture.md — Uploaded to reMarkable
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/reference/01-diary.md — Recorded Steps 3-5
+
+
+## 2026-01-13
+
+Step 6: Draft deep analysis and design for skill.yaml plans, verbs, and Agent Skills import/export.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/analysis/04-deep-analysis-skill-yaml-plans-glazed-help-capture-and-agent-skills-export.md — Deep analysis doc
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/design-doc/03-design-skill-yaml-discovery-skill-verbs-and-agent-skills-import-export.md — Design doc
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/ttmp/2026/01/13/MO-001-EXPORT-SKILLS--export-skills-analysis/reference/01-diary.md — Recorded Step 6
+
+
+## 2026-01-13
+
+Step 7: implement plan-based skills, export/import verbs, docs updates (commit 61420b2)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/internal/skills/plan.go — Skill plan schema and validation
+
+
+## 2026-01-13
+
+Step 8: preserve compatibility metadata on import (commit 7f6400c)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go — Import mapping now carries compatibility
+
+
+## 2026-01-13
+
+Step 9: add ticket skill plan samples and update skills smoke tests (commit 334e817)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Plan-based skills smoke updates
+
+
+## 2026-01-13
+
+Step 10: Fix path matching ambiguity and rerun skills smoke tests (commit 451d827)
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skills_query.go — Require exact path match for plan files
+

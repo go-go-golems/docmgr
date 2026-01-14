@@ -42,6 +42,7 @@ RelatedFiles:
       Note: |-
         Document append_to_body
         Document title suppression with append_to_body
+        Update export example for --out-dir
     - Path: pkg/doc/using-skills.md
       Note: |-
         Update export flag documentation
@@ -61,10 +62,11 @@ RelatedFiles:
         Append source without output
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-14T18:20:59-05:00
+LastUpdated: 2026-01-14T18:26:19-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 
@@ -489,3 +491,37 @@ I ran an export → import roundtrip for the docmgr skill to ensure the new impo
 ### Technical details
 - Export command: `/tmp/docmgr-local skill export docmgr --out-dir /tmp/docmgr-roundtrip --output-skill /tmp/docmgr-roundtrip/docmgr.skill --force`.
 - Import command: `/tmp/docmgr-local skill import /tmp/docmgr-roundtrip/docmgr.skill --force`.
+
+## Step 11: Refresh skill documentation examples
+
+I reviewed the skills documentation to ensure the export examples reflect the new flag names and opt-in packaging behavior. The migration guidance now mentions `--out-dir` explicitly so users know how to keep the expanded skill directory.
+
+### What I did
+- Updated the export example in `docmgr/pkg/doc/how-to-write-skills.md` to mention `--out-dir`.
+
+### Why
+- The flag rename changed how users should invoke `skill export`, so the docs needed to match the new CLI.
+
+### What worked
+- The updated example now aligns with the current export flags.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Small example updates are easy to miss when CLI flags change, so it helps to scan migration steps explicitly.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- Verify no other docs or guides still mention the old `--out` or `--skill-dir` flags.
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- Review `docmgr/pkg/doc/how-to-write-skills.md` around the migration checklist.
+
+### Technical details
+- Example: `docmgr skill export <name> --output-skill dist/<name>.skill --out-dir dist`.

@@ -94,3 +94,12 @@ Step 10: export/import roundtrip preserves SKILL.md body
 
 - /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go — Import body preserved
 
+
+## 2026-01-14
+
+Step 11: update skill export docs for new flags
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/doc/how-to-write-skills.md — Note --out-dir for export
+

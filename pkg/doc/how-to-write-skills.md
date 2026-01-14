@@ -781,7 +781,7 @@ DocType skill documents are still valid workflow docs, but they are no longer us
 1. Create `ttmp/skills/<skill-name>/skill.yaml` (or `<ticket>/skills/<skill-name>/skill.yaml`).
 2. Copy `Title` → `skill.title`, `WhatFor` → `skill.what_for`, `WhenToUse` → `skill.when_to_use`, and `Topics` → `skill.topics`.
 3. Add `sources` entries for any reference files the skill needs (or move the skill body into the exported `SKILL.md` during `docmgr skill export`).
-4. Validate with `docmgr skill show <name>` and export with `docmgr skill export <name> --output-skill dist/<name>.skill`.
+4. Validate with `docmgr skill show <name>` and export with `docmgr skill export <name> --output-skill dist/<name>.skill` (use `--out-dir dist` to keep the expanded skill directory).
 
 ---
 

@@ -207,6 +207,20 @@ func (c *SkillImportCommand) Run(ctx context.Context, parsedLayers *layers.Parse
 		},
 	}
 
+	body := strings.TrimSpace(parsed.Body)
+	if body != "" {
+		bodyPath := filepath.Join(planDir, "skill-body.md")
+		if err := os.WriteFile(bodyPath, []byte(body+"\n"), 0o644); err != nil {
+			return errors.Wrap(err, "failed to write skill body")
+		}
+		sourcePath := filepath.ToSlash(filepath.Join(planRel, "skill-body.md"))
+		plan.Sources = append(plan.Sources, skills.Source{
+			Type:         "file",
+			Path:         sourcePath,
+			AppendToBody: true,
+		})
+	}
+
 	for _, src := range referenceFiles {
 		rel := filepath.ToSlash(src.RelPath)
 		if rel == "" {

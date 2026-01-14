@@ -51,6 +51,7 @@ When you decide a skill might apply, load it:
   - Use `--out-dir` to write the expanded skill directory to a known location.
 - Import a `.skill` archive or skill directory: `docmgr skill import <path>`
   - Writes a `skill.yaml` plan under `ttmp/skills/` (or `<ticket>/skills/` when `--ticket` is provided).
+  - Preserves the SKILL.md body as an `append_to_body` source so re-export remains lossless.
 
 ## Tool Mapping (docmgr)
 

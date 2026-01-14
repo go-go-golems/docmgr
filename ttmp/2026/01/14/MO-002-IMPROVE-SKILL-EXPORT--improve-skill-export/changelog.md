@@ -76,3 +76,21 @@ Step 8: run skills smoke test with updated binary
 
 - /home/manuel/workspaces/2026-01-13/install-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Validated --output-skill usage
 
+
+## 2026-01-14
+
+Step 9: preserve SKILL.md body during import
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go — Import SKILL.md body as append source
+
+
+## 2026-01-14
+
+Step 10: export/import roundtrip preserves SKILL.md body
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_import.go — Import body preserved
+

@@ -30,6 +30,10 @@ RelatedFiles:
       Note: Allow append sources without outputs
     - Path: pkg/commands/skill_export.go
       Note: Rename flags and make packaging opt-in
+    - Path: pkg/commands/skill_import.go
+      Note: |-
+        Import SKILL.md body into plan
+        Roundtrip validated with preserved body
     - Path: pkg/commands/skill_show.go
       Note: |-
         Expose append-to-body marker in output
@@ -39,7 +43,9 @@ RelatedFiles:
         Document append_to_body
         Document title suppression with append_to_body
     - Path: pkg/doc/using-skills.md
-      Note: Update export flag documentation
+      Note: |-
+        Update export flag documentation
+        Document append-to-body import
     - Path: test-scenarios/testing-doc-manager/20-skills-smoke.sh
       Note: Update export flag usage
     - Path: ttmp/_guidelines/skill.md
@@ -55,10 +61,12 @@ RelatedFiles:
         Append source without output
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-14T17:55:17-05:00
+LastUpdated: 2026-01-14T18:20:59-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
+
 
 
 
@@ -407,3 +415,77 @@ I ran the skills smoke scenario to validate the new `--output-skill` flag. The f
 
 ### Technical details
 - Smoke test command: `DOCMGR_PATH=/tmp/docmgr-local ./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario`.
+
+## Step 9: Preserve SKILL.md body during import
+
+I updated `skill import` to write the SKILL.md body into a plan file and mark it as `append_to_body`. This makes imports lossless, so re-exporting a skill retains its authored instructions instead of only the auto-generated metadata sections.
+
+### What I did
+- Added SKILL.md body extraction and a new append-to-body source in `docmgr/pkg/commands/skill_import.go`.
+- Documented the behavior in `docmgr/pkg/doc/using-skills.md`.
+
+### Why
+- The import path previously ignored the SKILL.md body, losing the core skill instructions.
+
+### What worked
+- Imported plans now preserve the SKILL.md body for clean re-export.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- Importing the body as an append source is the simplest way to keep export/import roundtrips lossless.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- Confirm that the body extraction formatting is acceptable for complex SKILL.md content.
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- Review `docmgr/pkg/commands/skill_import.go` for the append-to-body import logic.
+- Review `docmgr/pkg/doc/using-skills.md` for the updated import note.
+
+### Technical details
+- SKILL.md body is written to `skill-body.md` in the plan directory and referenced with `append_to_body: true`.
+
+## Step 10: Export/import roundtrip validation
+
+I ran an export → import roundtrip for the docmgr skill to ensure the new import-body logic preserves the original SKILL.md content. After exporting to a temporary directory and importing back into `ttmp/skills/docmgr`, I compared the imported `skill-body.md` against the backup SKILL.md body and confirmed they match.
+
+### What I did
+- Built the binary via `go build -o /tmp/docmgr-local ./cmd/docmgr`.
+- Exported the docmgr skill to `/tmp/docmgr-roundtrip` with `--output-skill`.
+- Imported the `.skill` back into `ttmp/skills/docmgr` with `--force`.
+- Compared the backup SKILL.md body to the imported `skill-body.md`.
+
+### Why
+- Verify the import change keeps the authored SKILL.md body intact across export/import.
+
+### What worked
+- The imported `skill-body.md` matches the backup SKILL.md body exactly.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- The append-to-body import path maintains a lossless roundtrip for skill bodies.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- Re-run the roundtrip and compare the body with the included Python snippet if needed.
+
+### Technical details
+- Export command: `/tmp/docmgr-local skill export docmgr --out-dir /tmp/docmgr-roundtrip --output-skill /tmp/docmgr-roundtrip/docmgr.skill --force`.
+- Import command: `/tmp/docmgr-local skill import /tmp/docmgr-roundtrip/docmgr.skill --force`.

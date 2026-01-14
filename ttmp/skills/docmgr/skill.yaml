@@ -12,6 +12,7 @@ sources:
     - type: file
       path: ttmp/skills/docmgr/skill-body.md
       strip-frontmatter: false
+      output: ""
       append_to_body: true
       binary: ""
       topic: ""
@@ -20,7 +21,7 @@ sources:
     - type: file
       path: ttmp/skills/docmgr/docmgr.md
       strip-frontmatter: false
-      output: references/docmgr.md
+      output: docmgr.md
       append_to_body: false
       binary: ""
       topic: ""
@@ -30,5 +31,5 @@ output:
     skill_dir_name: docmgr
     skill_md:
         intro: ""
-        include_index: false
+        include_index: null
         index_title: ""

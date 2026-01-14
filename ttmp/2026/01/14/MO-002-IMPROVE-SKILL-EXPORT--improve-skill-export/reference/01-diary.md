@@ -55,7 +55,7 @@ RelatedFiles:
         Append source without output
 ExternalSources: []
 Summary: ""
-LastUpdated: 2026-01-14T17:43:18-05:00
+LastUpdated: 2026-01-14T17:55:17-05:00
 WhatFor: ""
 WhenToUse: ""
 ---
@@ -372,3 +372,38 @@ I committed the export flag changes, append-to-body behavior, and imported skill
 ### Technical details
 - `make test`
 - `make lint`
+
+## Step 8: Run the updated skills smoke scenario
+
+I ran the skills smoke scenario to validate the new `--output-skill` flag. The first run failed because the scenario was using the system `docmgr` binary (which doesn’t recognize the new flag). After rerunning with `DOCMGR_PATH=/tmp/docmgr-local`, the scenario passed end-to-end.
+
+### What I did
+- Ran `./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario` (failed on `--output-skill`).
+- Re-ran with `DOCMGR_PATH=/tmp/docmgr-local ./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario`.
+
+### Why
+- Confirm the new flag behavior works in the existing smoke test coverage.
+
+### What worked
+- The scenario completed successfully when using the updated binary.
+
+### What didn't work
+- The initial run failed with `Error: unknown flag: --output-skill` because it used the old `docmgr` binary.
+
+### What I learned
+- The smoke scenario depends on the `DOCMGR_PATH` override when testing new CLI flags.
+
+### What was tricky to build
+- N/A.
+
+### What warrants a second pair of eyes
+- N/A.
+
+### What should be done in the future
+- N/A.
+
+### Code review instructions
+- Re-run the scenario with `DOCMGR_PATH=/tmp/docmgr-local` to validate locally.
+
+### Technical details
+- Smoke test command: `DOCMGR_PATH=/tmp/docmgr-local ./docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh /tmp/docmgr-scenario`.

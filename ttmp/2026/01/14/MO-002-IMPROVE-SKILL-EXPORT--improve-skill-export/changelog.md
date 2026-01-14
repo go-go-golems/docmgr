@@ -67,3 +67,12 @@ Step 7: commit export changes and run tests/lint (commit 8d27cb5)
 
 - /home/manuel/workspaces/2026-01-13/install-skills/docmgr/pkg/commands/skill_export.go — CLI flag rename and opt-in packaging
 
+
+## 2026-01-14
+
+Step 8: run skills smoke test with updated binary
+
+### Related Files
+
+- /home/manuel/workspaces/2026-01-13/install-skills/docmgr/test-scenarios/testing-doc-manager/20-skills-smoke.sh — Validated --output-skill usage
+

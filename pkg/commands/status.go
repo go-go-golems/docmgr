@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -24,12 +25,12 @@ type StatusCommand struct {
 }
 
 type StatusSettings struct {
-	Root                string `glazed.parameter:"root"`
-	Ticket              string `glazed.parameter:"ticket"`
-	StaleAfterDays      int    `glazed.parameter:"stale-after"`
-	SummaryOnly         bool   `glazed.parameter:"summary-only"`
-	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string `glazed.parameter:"schema-format"`
+	Root                string `glazed:"root"`
+	Ticket              string `glazed:"ticket"`
+	StaleAfterDays      int    `glazed:"stale-after"`
+	SummaryOnly         bool   `glazed:"summary-only"`
+	PrintTemplateSchema bool   `glazed:"print-template-schema"`
+	SchemaFormat        string `glazed:"schema-format"`
 }
 
 func NewStatusCommand() (*StatusCommand, error) {
@@ -46,41 +47,41 @@ Examples:
   docmgr status --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Limit to a specific ticket"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Limit to a specific ticket"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"stale-after",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Days after which a ticket is considered stale (default 30)"),
-					parameters.WithDefault(30),
+					fields.TypeInteger,
+					fields.WithHelp("Days after which a ticket is considered stale (default 30)"),
+					fields.WithDefault(30),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"summary-only",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print only the summary row, without per-ticket rows"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print only the summary row, without per-ticket rows"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
 			),
 		),
@@ -89,11 +90,11 @@ Examples:
 
 func (c *StatusCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &StatusSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -224,11 +225,11 @@ var _ cmds.GlazeCommand = &StatusCommand{}
 // Implement BareCommand for human-friendly output
 func (c *StatusCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 
 ) error {
 	settings := &StatusSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

@@ -8,8 +8,9 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"gopkg.in/yaml.v3"
@@ -22,7 +23,7 @@ type ConfigShowCommand struct {
 
 // ConfigShowSettings holds the parameters for the config show command
 type ConfigShowSettings struct {
-	Root string `glazed.parameter:"root"`
+	Root string `glazed:"root"`
 }
 
 func NewConfigShowCommand() (*ConfigShowCommand, error) {
@@ -49,11 +50,11 @@ Examples:
   # Force a config file via env var
   DOCMGR_CONFIG=/path/to/.ttmp.yaml docmgr config show`),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs (for testing resolution)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs (for testing resolution)"),
+					fields.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -62,11 +63,11 @@ Examples:
 
 func (c *ConfigShowCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &ConfigShowSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -346,10 +347,10 @@ func (c *ConfigShowCommand) RunIntoGlazeProcessor(
 // Run provides human-friendly output for config show command
 func (c *ConfigShowCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &ConfigShowSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

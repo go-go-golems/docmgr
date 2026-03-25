@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -23,21 +24,21 @@ type TicketGraphCommand struct {
 }
 
 type TicketGraphSettings struct {
-	Ticket             string `glazed.parameter:"ticket"`
-	Root               string `glazed.parameter:"root"`
-	Format             string `glazed.parameter:"format"`
-	Direction          string `glazed.parameter:"direction"`
-	Label              string `glazed.parameter:"label"`
-	EdgeNotes          string `glazed.parameter:"edge-notes"`
-	Depth              int    `glazed.parameter:"depth"`
-	Scope              string `glazed.parameter:"scope"`
-	ExpandFiles        bool   `glazed.parameter:"expand-files"`
-	MaxNodes           int    `glazed.parameter:"max-nodes"`
-	MaxEdges           int    `glazed.parameter:"max-edges"`
-	BatchSize          int    `glazed.parameter:"batch-size"`
-	IncludeControlDocs bool   `glazed.parameter:"include-control-docs"`
-	IncludeArchived    bool   `glazed.parameter:"include-archived"`
-	IncludeScriptsPath bool   `glazed.parameter:"include-scripts-path"`
+	Ticket             string `glazed:"ticket"`
+	Root               string `glazed:"root"`
+	Format             string `glazed:"format"`
+	Direction          string `glazed:"direction"`
+	Label              string `glazed:"label"`
+	EdgeNotes          string `glazed:"edge-notes"`
+	Depth              int    `glazed:"depth"`
+	Scope              string `glazed:"scope"`
+	ExpandFiles        bool   `glazed:"expand-files"`
+	MaxNodes           int    `glazed:"max-nodes"`
+	MaxEdges           int    `glazed:"max-edges"`
+	BatchSize          int    `glazed:"batch-size"`
+	IncludeControlDocs bool   `glazed:"include-control-docs"`
+	IncludeArchived    bool   `glazed:"include-archived"`
+	IncludeScriptsPath bool   `glazed:"include-scripts-path"`
 }
 
 func NewTicketGraphCommand() (*TicketGraphCommand, error) {
@@ -68,95 +69,95 @@ Examples:
   docmgr ticket graph --ticket MEN-4242 --scope repo --depth 1 --expand-files=false
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Output format: markdown|mermaid"),
-					parameters.WithDefault("markdown"),
+					fields.TypeString,
+					fields.WithHelp("Output format: markdown|mermaid"),
+					fields.WithDefault("markdown"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"direction",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Mermaid direction: TD|LR"),
-					parameters.WithDefault("TD"),
+					fields.TypeString,
+					fields.WithHelp("Mermaid direction: TD|LR"),
+					fields.WithDefault("TD"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"label",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Doc node label: title|path|both"),
-					parameters.WithDefault("both"),
+					fields.TypeString,
+					fields.WithHelp("Doc node label: title|path|both"),
+					fields.WithDefault("both"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"edge-notes",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Include RelatedFiles.Note as edge label: none|short"),
-					parameters.WithDefault("short"),
+					fields.TypeString,
+					fields.WithHelp("Include RelatedFiles.Note as edge label: none|short"),
+					fields.WithDefault("short"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"depth",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Transitive expansion depth (0=ticket docs + their related files only)"),
-					parameters.WithDefault(0),
+					fields.TypeInteger,
+					fields.WithHelp("Transitive expansion depth (0=ticket docs + their related files only)"),
+					fields.WithDefault(0),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"scope",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Graph expansion scope: ticket|repo (repo required for depth>0)"),
-					parameters.WithDefault("ticket"),
+					fields.TypeString,
+					fields.WithHelp("Graph expansion scope: ticket|repo (repo required for depth>0)"),
+					fields.WithDefault("ticket"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"expand-files",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("When expanding to new docs, also add their RelatedFiles to the file frontier"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("When expanding to new docs, also add their RelatedFiles to the file frontier"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"max-nodes",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Maximum total nodes (docs + files) before failing"),
-					parameters.WithDefault(500),
+					fields.TypeInteger,
+					fields.WithHelp("Maximum total nodes (docs + files) before failing"),
+					fields.WithDefault(500),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"max-edges",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Maximum total edges before failing"),
-					parameters.WithDefault(2000),
+					fields.TypeInteger,
+					fields.WithHelp("Maximum total edges before failing"),
+					fields.WithDefault(2000),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"batch-size",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Batch size for repo-scope reverse lookup queries during expansion"),
-					parameters.WithDefault(50),
+					fields.TypeInteger,
+					fields.WithHelp("Batch size for repo-scope reverse lookup queries during expansion"),
+					fields.WithDefault(50),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"include-control-docs",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Include control docs (README.md, tasks.md, changelog.md)"),
-					parameters.WithDefault(true),
+					fields.TypeBool,
+					fields.WithHelp("Include control docs (README.md, tasks.md, changelog.md)"),
+					fields.WithDefault(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"include-archived",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Include documents under archive/"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Include documents under archive/"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"include-scripts-path",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Include documents under scripts/"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Include documents under scripts/"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -165,11 +166,11 @@ Examples:
 
 func (c *TicketGraphCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &TicketGraphSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -199,10 +200,10 @@ var _ cmds.GlazeCommand = &TicketGraphCommand{}
 
 func (c *TicketGraphCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &TicketGraphSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

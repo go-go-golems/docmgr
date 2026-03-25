@@ -17,8 +17,9 @@ import (
 	"github.com/go-go-golems/docmgr/pkg/frontmatter"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -30,10 +31,10 @@ type ValidateFrontmatterCommand struct {
 
 // ValidateFrontmatterSettings holds parameters for validation.
 type ValidateFrontmatterSettings struct {
-	Doc          string `glazed.parameter:"doc"`
-	Root         string `glazed.parameter:"root"`
-	SuggestFixes bool   `glazed.parameter:"suggest-fixes"`
-	AutoFix      bool   `glazed.parameter:"auto-fix"`
+	Doc          string `glazed:"doc"`
+	Root         string `glazed:"root"`
+	SuggestFixes bool   `glazed:"suggest-fixes"`
+	AutoFix      bool   `glazed:"auto-fix"`
 }
 
 func NewValidateFrontmatterCommand() (*ValidateFrontmatterCommand, error) {
@@ -52,29 +53,29 @@ Examples:
   docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to the markdown document to validate"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to the markdown document to validate"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Docs root (used when doc is relative)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Docs root (used when doc is relative)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"suggest-fixes",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Show suggested fixes when validation fails"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Show suggested fixes when validation fails"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"auto-fix",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Attempt to auto-fix common YAML issues (creates .bak backup)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Attempt to auto-fix common YAML issues (creates .bak backup)"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -83,11 +84,11 @@ Examples:
 
 func (c *ValidateFrontmatterCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &ValidateFrontmatterSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -120,10 +121,10 @@ func (c *ValidateFrontmatterCommand) RunIntoGlazeProcessor(
 
 func (c *ValidateFrontmatterCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &ValidateFrontmatterSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

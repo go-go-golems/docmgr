@@ -11,8 +11,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -23,11 +24,11 @@ type DocMoveCommand struct {
 }
 
 type DocMoveSettings struct {
-	Root       string `glazed.parameter:"root"`
-	Doc        string `glazed.parameter:"doc"`
-	DestTicket string `glazed.parameter:"dest-ticket"`
-	DestDir    string `glazed.parameter:"dest-dir"`
-	Overwrite  bool   `glazed.parameter:"overwrite"`
+	Root       string `glazed:"root"`
+	Doc        string `glazed:"doc"`
+	DestTicket string `glazed:"dest-ticket"`
+	DestDir    string `glazed:"dest-dir"`
+	Overwrite  bool   `glazed:"overwrite"`
 }
 
 type DocMoveResult struct {
@@ -70,35 +71,35 @@ Examples:
   docmgr doc move --doc ttmp/.../reference/01-diary.md --dest-ticket MEN-5678 --overwrite
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to the markdown document to move"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to the markdown document to move"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"dest-ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Destination ticket ID"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Destination ticket ID"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"dest-dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Relative directory inside the destination ticket (defaults to original subpath)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Relative directory inside the destination ticket (defaults to original subpath)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Docs root (ttmp)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Docs root (ttmp)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"overwrite",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite destination file if it exists"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite destination file if it exists"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -107,11 +108,11 @@ Examples:
 
 func (c *DocMoveCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &DocMoveSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

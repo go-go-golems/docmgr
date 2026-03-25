@@ -14,8 +14,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -27,14 +28,14 @@ type SkillImportCommand struct {
 
 // SkillImportSettings holds the parameters for skill import.
 type SkillImportSettings struct {
-	Root      string   `glazed.parameter:"root"`
-	Ticket    string   `glazed.parameter:"ticket"`
-	Input     string   `glazed.parameter:"input"`
-	Topics    []string `glazed.parameter:"topics"`
-	Title     string   `glazed.parameter:"title"`
-	WhatFor   string   `glazed.parameter:"what-for"`
-	WhenToUse string   `glazed.parameter:"when-to-use"`
-	Force     bool     `glazed.parameter:"force"`
+	Root      string   `glazed:"root"`
+	Ticket    string   `glazed:"ticket"`
+	Input     string   `glazed:"input"`
+	Topics    []string `glazed:"topics"`
+	Title     string   `glazed:"title"`
+	WhatFor   string   `glazed:"what-for"`
+	WhenToUse string   `glazed:"when-to-use"`
+	Force     bool     `glazed:"force"`
 }
 
 func NewSkillImportCommand() (*SkillImportCommand, error) {
@@ -53,55 +54,55 @@ Examples:
   docmgr skill import ./my-skill-dir --topics tooling,docs
 `),
 			cmds.WithArguments(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"input",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to .skill archive or skill directory"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to .skill archive or skill directory"),
+					fields.WithRequired(true),
 				),
 			),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Write plan into a ticket's skills folder"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Write plan into a ticket's skills folder"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Override topics for the imported plan"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Override topics for the imported plan"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"title",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Override title for the imported plan"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Override title for the imported plan"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"what-for",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Override what_for for the imported plan"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Override what_for for the imported plan"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"when-to-use",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Override when_to_use for the imported plan"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Override when_to_use for the imported plan"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"force",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite existing plan files"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite existing plan files"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -109,9 +110,9 @@ Examples:
 }
 
 // Run implements BareCommand.
-func (c *SkillImportCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *SkillImportCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	settings := &SkillImportSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

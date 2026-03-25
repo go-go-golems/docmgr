@@ -12,8 +12,9 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -24,8 +25,8 @@ type RenumberCommand struct {
 }
 
 type RenumberSettings struct {
-	Root   string `glazed.parameter:"root"`
-	Ticket string `glazed.parameter:"ticket"`
+	Root   string `glazed:"root"`
+	Ticket string `glazed:"ticket"`
 }
 
 type RenumberResult struct {
@@ -52,17 +53,17 @@ Examples:
   docmgr doc renumber --ticket MEN-4242 --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -71,11 +72,11 @@ Examples:
 
 func (c *RenumberCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &RenumberSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -227,10 +228,10 @@ func (c *RenumberCommand) applyRenumber(ctx context.Context, settings *RenumberS
 
 func (c *RenumberCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &RenumberSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

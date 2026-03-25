@@ -9,8 +9,9 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -22,9 +23,9 @@ type ListCommand struct {
 
 // ListSettings holds the parameters for the list command
 type ListSettings struct {
-	Root   string `glazed.parameter:"root"`
-	Ticket string `glazed.parameter:"ticket"`
-	Status string `glazed.parameter:"status"`
+	Root   string `glazed:"root"`
+	Ticket string `glazed:"ticket"`
+	Status string `glazed:"status"`
 }
 
 func NewListCommand() (*ListCommand, error) {
@@ -40,23 +41,23 @@ Example:
   docmgr list --status active
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by ticket identifier"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by ticket identifier"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"status",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by status"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by status"),
+					fields.WithDefault(""),
 				),
 			),
 		),
@@ -65,11 +66,11 @@ Example:
 
 func (c *ListCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &ListSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

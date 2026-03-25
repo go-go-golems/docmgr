@@ -14,8 +14,9 @@ import (
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -29,12 +30,12 @@ const DefaultTicketPathTemplate = "{{YYYY}}/{{MM}}/{{DD}}/{{TICKET}}--{{SLUG}}"
 
 // CreateTicketSettings holds the parameters for the create-ticket command
 type CreateTicketSettings struct {
-	Ticket       string   `glazed.parameter:"ticket"`
-	Title        string   `glazed.parameter:"title"`
-	Topics       []string `glazed.parameter:"topics"`
-	Root         string   `glazed.parameter:"root"`
-	Force        bool     `glazed.parameter:"force"`
-	PathTemplate string   `glazed.parameter:"path-template"`
+	Ticket       string   `glazed:"ticket"`
+	Title        string   `glazed:"title"`
+	Topics       []string `glazed:"topics"`
+	Root         string   `glazed:"root"`
+	Force        bool     `glazed:"force"`
+	PathTemplate string   `glazed:"path-template"`
 }
 
 type CreateTicketResult struct {
@@ -65,41 +66,41 @@ Examples:
     --root ttmp --path-template "examples/{{TICKET}}--{{SLUG}}"
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier (e.g., MEN-3475)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier (e.g., MEN-3475)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"title",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket title"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket title"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of topics"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Comma-separated list of topics"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs (defaults to 'ttmp' or .ttmp.yaml root)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs (defaults to 'ttmp' or .ttmp.yaml root)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"force",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Force overwrite of existing files"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Force overwrite of existing files"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"path-template",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template for ticket directory relative to root (placeholders: {{YYYY}}, {{MM}}, {{DD}}, {{DATE}}, {{TICKET}}, {{SLUG}}, {{TITLE}})"),
-					parameters.WithDefault(DefaultTicketPathTemplate),
+					fields.TypeString,
+					fields.WithHelp("Template for ticket directory relative to root (placeholders: {{YYYY}}, {{MM}}, {{DD}}, {{DATE}}, {{TICKET}}, {{SLUG}}, {{TITLE}})"),
+					fields.WithDefault(DefaultTicketPathTemplate),
 				),
 			),
 		),
@@ -108,11 +109,11 @@ Examples:
 
 func (c *CreateTicketCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &CreateTicketSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -265,10 +266,10 @@ Use docmgr commands to manage this workspace:
 
 func (c *CreateTicketCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &CreateTicketSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

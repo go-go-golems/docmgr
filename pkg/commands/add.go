@@ -14,8 +14,9 @@ import (
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -27,17 +28,17 @@ type AddCommand struct {
 
 // AddSettings holds the parameters for the add command
 type AddSettings struct {
-	Ticket          string   `glazed.parameter:"ticket"`
-	DocType         string   `glazed.parameter:"doc-type"`
-	Title           string   `glazed.parameter:"title"`
-	Root            string   `glazed.parameter:"root"`
-	Topics          []string `glazed.parameter:"topics"`
-	Owners          []string `glazed.parameter:"owners"`
-	Status          string   `glazed.parameter:"status"`
-	Intent          string   `glazed.parameter:"intent"`
-	ExternalSources []string `glazed.parameter:"external-sources"`
-	Summary         string   `glazed.parameter:"summary"`
-	RelatedFiles    []string `glazed.parameter:"related-files"`
+	Ticket          string   `glazed:"ticket"`
+	DocType         string   `glazed:"doc-type"`
+	Title           string   `glazed:"title"`
+	Root            string   `glazed:"root"`
+	Topics          []string `glazed:"topics"`
+	Owners          []string `glazed:"owners"`
+	Status          string   `glazed:"status"`
+	Intent          string   `glazed:"intent"`
+	ExternalSources []string `glazed:"external-sources"`
+	Summary         string   `glazed:"summary"`
+	RelatedFiles    []string `glazed:"related-files"`
 }
 
 type AddResult struct {
@@ -77,71 +78,71 @@ Examples:
     --related-files "pkg/commands/add.go,pkg/commands/relate.go"
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc-type",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Document type (per vocabulary; stored under <doc-type>/ subdir"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Document type (per vocabulary; stored under <doc-type>/ subdir"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"title",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Document title"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Document title"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of topics (overrides ticket defaults)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Comma-separated list of topics (overrides ticket defaults)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"owners",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of owners (overrides ticket defaults)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Comma-separated list of owners (overrides ticket defaults)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"status",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Status (overrides ticket default)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Status (overrides ticket default)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"intent",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Intent (overrides ticket default)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Intent (overrides ticket default)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"external-sources",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of external sources (URLs)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Comma-separated list of external sources (URLs)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"summary",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Short summary for the document"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Short summary for the document"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"related-files",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of related files to seed frontmatter"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Comma-separated list of related files to seed frontmatter"),
+					fields.WithDefault([]string{}),
 				),
 			),
 		),
@@ -150,11 +151,11 @@ Examples:
 
 func (c *AddCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &AddSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -328,10 +329,10 @@ func (c *AddCommand) createDocument(ctx context.Context, settings *AddSettings) 
 
 func (c *AddCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &AddSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

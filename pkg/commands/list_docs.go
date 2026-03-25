@@ -14,8 +14,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/mattn/go-isatty"
@@ -28,14 +29,14 @@ type ListDocsCommand struct {
 
 // ListDocsSettings holds the parameters for the list docs command
 type ListDocsSettings struct {
-	Root    string   `glazed.parameter:"root"`
-	Ticket  string   `glazed.parameter:"ticket"`
-	Status  string   `glazed.parameter:"status"`
-	DocType string   `glazed.parameter:"doc-type"`
-	Topics  []string `glazed.parameter:"topics"`
+	Root    string   `glazed:"root"`
+	Ticket  string   `glazed:"ticket"`
+	Status  string   `glazed:"status"`
+	DocType string   `glazed:"doc-type"`
+	Topics  []string `glazed:"topics"`
 	// Schema printing flags (human mode only)
-	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string `glazed.parameter:"schema-format"`
+	PrintTemplateSchema bool   `glazed:"print-template-schema"`
+	SchemaFormat        string `glazed:"schema-format"`
 }
 
 func NewListDocsCommand() (*ListDocsCommand, error) {
@@ -64,47 +65,47 @@ Examples:
   docmgr list docs --ticket MEN-3475 --with-glaze-output --output tsv --fields doc_type,title,path
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by ticket identifier"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by ticket identifier"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"status",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by status"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by status"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc-type",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by document type"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by document type"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Filter by topics (comma-separated, matches any)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Filter by topics (comma-separated, matches any)"),
+					fields.WithDefault([]string{}),
 				),
 			),
 		),
@@ -113,11 +114,11 @@ Examples:
 
 func (c *ListDocsCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &ListDocsSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -238,10 +239,10 @@ var _ cmds.GlazeCommand = &ListDocsCommand{}
 // Implement BareCommand for human-friendly output
 func (c *ListDocsCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &ListDocsSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

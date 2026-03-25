@@ -13,8 +13,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -25,18 +26,18 @@ type RelateCommand struct {
 }
 
 type RelateSettings struct {
-	Ticket string `glazed.parameter:"ticket"`
-	Doc    string `glazed.parameter:"doc"`
+	Ticket string `glazed:"ticket"`
+	Doc    string `glazed:"doc"`
 	// Deprecated: kept only to emit a friendly migration error if provided
-	Files            []string `glazed.parameter:"files"`
-	RemoveFiles      []string `glazed.parameter:"remove-files"`
-	FileNotes        []string `glazed.parameter:"file-note"`
-	Suggest          bool     `glazed.parameter:"suggest"`
-	ApplySuggestions bool     `glazed.parameter:"apply-suggestions"`
-	FromGit          bool     `glazed.parameter:"from-git"`
-	Query            string   `glazed.parameter:"query"`
-	Topics           []string `glazed.parameter:"topics"`
-	Root             string   `glazed.parameter:"root"`
+	Files            []string `glazed:"files"`
+	RemoveFiles      []string `glazed:"remove-files"`
+	FileNotes        []string `glazed:"file-note"`
+	Suggest          bool     `glazed:"suggest"`
+	ApplySuggestions bool     `glazed:"apply-suggestions"`
+	FromGit          bool     `glazed:"from-git"`
+	Query            string   `glazed:"query"`
+	Topics           []string `glazed:"topics"`
+	Root             string   `glazed:"root"`
 }
 
 type RelateSuggestion struct {
@@ -82,72 +83,72 @@ Examples:
   docmgr doc relate --ticket MEN-4242 --remove-files "backend/chat/ws/heartbeat.go,web/src/store/api/chatApi.ts"
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier (updates ticket index when --doc not provided)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier (updates ticket index when --doc not provided)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to a specific document to update"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Path to a specific document to update"),
+					fields.WithDefault(""),
 				),
 				// Deprecated flag: still declared to provide a clearer migration error when used
-				parameters.NewParameterDefinition(
+				fields.New(
 					"files",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"remove-files",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Comma-separated list of files to remove from RelatedFiles"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Comma-separated list of files to remove from RelatedFiles"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"file-note",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Repeatable path-to-note mapping (format: path:note or path=note)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Repeatable path-to-note mapping (format: path:note or path=note)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"suggest",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Suggest related files using heuristics (git + ripgrep + existing docs)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Suggest related files using heuristics (git + ripgrep + existing docs)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"apply-suggestions",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Apply suggested files to the target document (requires --suggest)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Apply suggested files to the target document (requires --suggest)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"from-git",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Limit suggestions to changed files from git status (modified, staged, untracked)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Limit suggestions to changed files from git status (modified, staged, untracked)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"query",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Optional query to seed suggestions (e.g., a keyword)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Optional query to seed suggestions (e.g., a keyword)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Topics to seed suggestions (comma-separated)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Topics to seed suggestions (comma-separated)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -156,11 +157,11 @@ Examples:
 
 func (c *RelateCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &RelateSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -728,10 +729,10 @@ func (c *relateRowCollector) Close(ctx context.Context) error {
 
 func (c *RelateCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	collector := &relateRowCollector{}
-	if err := c.RunIntoGlazeProcessor(ctx, parsedLayers, collector); err != nil {
+	if err := c.RunIntoGlazeProcessor(ctx, parsedValues, collector); err != nil {
 		return err
 	}
 

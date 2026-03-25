@@ -8,8 +8,9 @@ import (
 	"github.com/go-go-golems/docmgr/scenariolog/internal/scenariolog"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/settings"
 	"github.com/go-go-golems/glazed/pkg/types"
@@ -37,8 +38,8 @@ func addGlazedCommands(rootCmd *cobra.Command) error {
 
 	cobraSearch, err := cli.BuildCobraCommand(searchCmd,
 		cli.WithParserConfig(cli.CobraParserConfig{
-			ShortHelpLayers: []string{layers.DefaultSlug},
-			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+			ShortHelpSections: []string{schema.DefaultSlug},
+			MiddlewaresFunc:   cli.CobraCommandDefaultMiddlewares,
 		}),
 	)
 	if err != nil {
@@ -46,8 +47,8 @@ func addGlazedCommands(rootCmd *cobra.Command) error {
 	}
 	cobraSummary, err := cli.BuildCobraCommand(summaryCmd,
 		cli.WithParserConfig(cli.CobraParserConfig{
-			ShortHelpLayers: []string{layers.DefaultSlug},
-			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+			ShortHelpSections: []string{schema.DefaultSlug},
+			MiddlewaresFunc:   cli.CobraCommandDefaultMiddlewares,
 		}),
 	)
 	if err != nil {
@@ -55,8 +56,8 @@ func addGlazedCommands(rootCmd *cobra.Command) error {
 	}
 	cobraFailures, err := cli.BuildCobraCommand(failuresCmd,
 		cli.WithParserConfig(cli.CobraParserConfig{
-			ShortHelpLayers: []string{layers.DefaultSlug},
-			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+			ShortHelpSections: []string{schema.DefaultSlug},
+			MiddlewaresFunc:   cli.CobraCommandDefaultMiddlewares,
 		}),
 	)
 	if err != nil {
@@ -64,8 +65,8 @@ func addGlazedCommands(rootCmd *cobra.Command) error {
 	}
 	cobraTimings, err := cli.BuildCobraCommand(timingsCmd,
 		cli.WithParserConfig(cli.CobraParserConfig{
-			ShortHelpLayers: []string{layers.DefaultSlug},
-			MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
+			ShortHelpSections: []string{schema.DefaultSlug},
+			MiddlewaresFunc:   cli.CobraCommandDefaultMiddlewares,
 		}),
 	)
 	if err != nil {
@@ -81,18 +82,18 @@ type SearchGlazedCommand struct {
 }
 
 type SearchGlazedSettings struct {
-	DBPath string `glazed.parameter:"db"`
-	RunID  string `glazed.parameter:"run-id"`
-	Query  string `glazed.parameter:"query"`
-	Limit  int    `glazed.parameter:"limit"`
+	DBPath string `glazed:"db"`
+	RunID  string `glazed:"run-id"`
+	Query  string `glazed:"query"`
+	Limit  int    `glazed:"limit"`
 }
 
 func NewSearchGlazedCommand() (*SearchGlazedCommand, error) {
-	glazedLayer, err := settings.NewGlazedParameterLayers()
+	glazedLayer, err := settings.NewGlazedSection()
 	if err != nil {
 		return nil, err
 	}
-	commandSettingsLayer, err := cli.NewCommandSettingsLayer()
+	commandSettingsLayer, err := cli.NewCommandSettingsSection()
 	if err != nil {
 		return nil, err
 	}
@@ -102,32 +103,32 @@ func NewSearchGlazedCommand() (*SearchGlazedCommand, error) {
 		cmds.WithShort("Search indexed log lines (FTS5)"),
 		cmds.WithLong("Search the FTS index of captured stdout/stderr artifacts and output matches as structured rows."),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition(
+			fields.New(
 				"db",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Path to sqlite database file"),
-				parameters.WithRequired(true),
+				fields.TypeString,
+				fields.WithHelp("Path to sqlite database file"),
+				fields.WithRequired(true),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"run-id",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Run id to search within"),
-				parameters.WithRequired(true),
+				fields.TypeString,
+				fields.WithHelp("Run id to search within"),
+				fields.WithRequired(true),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"query",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("FTS query string (e.g. 'warning OR error')"),
-				parameters.WithRequired(true),
+				fields.TypeString,
+				fields.WithHelp("FTS query string (e.g. 'warning OR error')"),
+				fields.WithRequired(true),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"limit",
-				parameters.ParameterTypeInteger,
-				parameters.WithHelp("Max number of hits to return"),
-				parameters.WithDefault(100),
+				fields.TypeInteger,
+				fields.WithHelp("Max number of hits to return"),
+				fields.WithDefault(100),
 			),
 		),
-		cmds.WithLayersList(glazedLayer, commandSettingsLayer),
+		cmds.WithSections(glazedLayer, commandSettingsLayer),
 	)
 
 	return &SearchGlazedCommand{CommandDescription: cmdDesc}, nil
@@ -135,9 +136,9 @@ func NewSearchGlazedCommand() (*SearchGlazedCommand, error) {
 
 var _ cmds.GlazeCommand = &SearchGlazedCommand{}
 
-func (c *SearchGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedLayers *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *SearchGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedValues *values.Values, gp middlewares.Processor) error {
 	s := &SearchGlazedSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -221,16 +222,16 @@ type SummaryGlazedCommand struct {
 }
 
 type SummaryGlazedSettings struct {
-	DBPath string `glazed.parameter:"db"`
-	RunID  string `glazed.parameter:"run-id"`
+	DBPath string `glazed:"db"`
+	RunID  string `glazed:"run-id"`
 }
 
 func NewSummaryGlazedCommand() (*SummaryGlazedCommand, error) {
-	glazedLayer, err := settings.NewGlazedParameterLayers()
+	glazedLayer, err := settings.NewGlazedSection()
 	if err != nil {
 		return nil, err
 	}
-	commandSettingsLayer, err := cli.NewCommandSettingsLayer()
+	commandSettingsLayer, err := cli.NewCommandSettingsSection()
 	if err != nil {
 		return nil, err
 	}
@@ -240,20 +241,20 @@ func NewSummaryGlazedCommand() (*SummaryGlazedCommand, error) {
 		cmds.WithShort("Show run summary"),
 		cmds.WithLong("Show high-level run metadata plus counts of steps and failures."),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition(
+			fields.New(
 				"db",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Path to sqlite database file"),
-				parameters.WithRequired(true),
+				fields.TypeString,
+				fields.WithHelp("Path to sqlite database file"),
+				fields.WithRequired(true),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"run-id",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Run id (defaults to latest run)"),
-				parameters.WithDefault(""),
+				fields.TypeString,
+				fields.WithHelp("Run id (defaults to latest run)"),
+				fields.WithDefault(""),
 			),
 		),
-		cmds.WithLayersList(glazedLayer, commandSettingsLayer),
+		cmds.WithSections(glazedLayer, commandSettingsLayer),
 	)
 
 	return &SummaryGlazedCommand{CommandDescription: cmdDesc}, nil
@@ -261,9 +262,9 @@ func NewSummaryGlazedCommand() (*SummaryGlazedCommand, error) {
 
 var _ cmds.GlazeCommand = &SummaryGlazedCommand{}
 
-func (c *SummaryGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedLayers *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *SummaryGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedValues *values.Values, gp middlewares.Processor) error {
 	s := &SummaryGlazedSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -337,16 +338,16 @@ type FailuresGlazedCommand struct {
 }
 
 type FailuresGlazedSettings struct {
-	DBPath string `glazed.parameter:"db"`
-	RunID  string `glazed.parameter:"run-id"`
+	DBPath string `glazed:"db"`
+	RunID  string `glazed:"run-id"`
 }
 
 func NewFailuresGlazedCommand() (*FailuresGlazedCommand, error) {
-	glazedLayer, err := settings.NewGlazedParameterLayers()
+	glazedLayer, err := settings.NewGlazedSection()
 	if err != nil {
 		return nil, err
 	}
-	commandSettingsLayer, err := cli.NewCommandSettingsLayer()
+	commandSettingsLayer, err := cli.NewCommandSettingsSection()
 	if err != nil {
 		return nil, err
 	}
@@ -356,29 +357,29 @@ func NewFailuresGlazedCommand() (*FailuresGlazedCommand, error) {
 		cmds.WithShort("List failing steps"),
 		cmds.WithLong("List steps with non-zero exit code, including stderr artifact paths."),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition(
+			fields.New(
 				"db",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Path to sqlite database file"),
-				parameters.WithRequired(true),
+				fields.TypeString,
+				fields.WithHelp("Path to sqlite database file"),
+				fields.WithRequired(true),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"run-id",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Run id (defaults to latest run)"),
-				parameters.WithDefault(""),
+				fields.TypeString,
+				fields.WithHelp("Run id (defaults to latest run)"),
+				fields.WithDefault(""),
 			),
 		),
-		cmds.WithLayersList(glazedLayer, commandSettingsLayer),
+		cmds.WithSections(glazedLayer, commandSettingsLayer),
 	)
 	return &FailuresGlazedCommand{CommandDescription: cmdDesc}, nil
 }
 
 var _ cmds.GlazeCommand = &FailuresGlazedCommand{}
 
-func (c *FailuresGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedLayers *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *FailuresGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedValues *values.Values, gp middlewares.Processor) error {
 	s := &FailuresGlazedSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -452,17 +453,17 @@ type TimingsGlazedCommand struct {
 }
 
 type TimingsGlazedSettings struct {
-	DBPath string `glazed.parameter:"db"`
-	RunID  string `glazed.parameter:"run-id"`
-	Top    int    `glazed.parameter:"top"`
+	DBPath string `glazed:"db"`
+	RunID  string `glazed:"run-id"`
+	Top    int    `glazed:"top"`
 }
 
 func NewTimingsGlazedCommand() (*TimingsGlazedCommand, error) {
-	glazedLayer, err := settings.NewGlazedParameterLayers()
+	glazedLayer, err := settings.NewGlazedSection()
 	if err != nil {
 		return nil, err
 	}
-	commandSettingsLayer, err := cli.NewCommandSettingsLayer()
+	commandSettingsLayer, err := cli.NewCommandSettingsSection()
 	if err != nil {
 		return nil, err
 	}
@@ -472,35 +473,35 @@ func NewTimingsGlazedCommand() (*TimingsGlazedCommand, error) {
 		cmds.WithShort("Show slowest steps"),
 		cmds.WithLong("Show slowest steps in the run (sorted by duration_ms DESC)."),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition(
+			fields.New(
 				"db",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Path to sqlite database file"),
-				parameters.WithRequired(true),
+				fields.TypeString,
+				fields.WithHelp("Path to sqlite database file"),
+				fields.WithRequired(true),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"run-id",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Run id (defaults to latest run)"),
-				parameters.WithDefault(""),
+				fields.TypeString,
+				fields.WithHelp("Run id (defaults to latest run)"),
+				fields.WithDefault(""),
 			),
-			parameters.NewParameterDefinition(
+			fields.New(
 				"top",
-				parameters.ParameterTypeInteger,
-				parameters.WithHelp("Return top N steps"),
-				parameters.WithDefault(10),
+				fields.TypeInteger,
+				fields.WithHelp("Return top N steps"),
+				fields.WithDefault(10),
 			),
 		),
-		cmds.WithLayersList(glazedLayer, commandSettingsLayer),
+		cmds.WithSections(glazedLayer, commandSettingsLayer),
 	)
 	return &TimingsGlazedCommand{CommandDescription: cmdDesc}, nil
 }
 
 var _ cmds.GlazeCommand = &TimingsGlazedCommand{}
 
-func (c *TimingsGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedLayers *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TimingsGlazedCommand) RunIntoGlazeProcessor(ctx context.Context, parsedValues *values.Values, gp middlewares.Processor) error {
 	s := &TimingsGlazedSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -604,5 +605,3 @@ func nullIntToInt(i sql.NullInt64) int {
 	}
 	return 0
 }
-
-

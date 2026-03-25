@@ -11,8 +11,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -23,9 +24,9 @@ type LayoutFixCommand struct {
 }
 
 type LayoutFixSettings struct {
-	Root   string `glazed.parameter:"root"`
-	Ticket string `glazed.parameter:"ticket"`
-	DryRun bool   `glazed.parameter:"dry-run"`
+	Root   string `glazed:"root"`
+	Ticket string `glazed:"ticket"`
+	DryRun bool   `glazed:"dry-run"`
 }
 
 type LayoutFixMove struct {
@@ -55,23 +56,23 @@ Examples:
   docmgr doc layout-fix --dry-run
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Limit to a specific ticket"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Limit to a specific ticket"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"dry-run",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Show planned moves without changing files"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Show planned moves without changing files"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -80,14 +81,14 @@ Examples:
 
 func (c *LayoutFixCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &LayoutFixSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -256,13 +257,13 @@ func (c *LayoutFixCommand) applyLayoutFix(ctx context.Context, settings *LayoutF
 
 func (c *LayoutFixCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &LayoutFixSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

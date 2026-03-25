@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -25,23 +26,23 @@ type SearchCommand struct {
 
 // SearchSettings holds the parameters for the search command
 type SearchSettings struct {
-	Query               string   `glazed.parameter:"query"`
-	Ticket              string   `glazed.parameter:"ticket"`
-	Topics              []string `glazed.parameter:"topics"`
-	DocType             string   `glazed.parameter:"doc-type"`
-	Status              string   `glazed.parameter:"status"`
-	OrderBy             string   `glazed.parameter:"order-by"`
-	Files               bool     `glazed.parameter:"files"`
-	File                string   `glazed.parameter:"file"`
-	Dir                 string   `glazed.parameter:"dir"`
-	ExternalSource      string   `glazed.parameter:"external-source"`
-	Since               string   `glazed.parameter:"since"`
-	Until               string   `glazed.parameter:"until"`
-	CreatedSince        string   `glazed.parameter:"created-since"`
-	UpdatedSince        string   `glazed.parameter:"updated-since"`
-	Root                string   `glazed.parameter:"root"`
-	PrintTemplateSchema bool     `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string   `glazed.parameter:"schema-format"`
+	Query               string   `glazed:"query"`
+	Ticket              string   `glazed:"ticket"`
+	Topics              []string `glazed:"topics"`
+	DocType             string   `glazed:"doc-type"`
+	Status              string   `glazed:"status"`
+	OrderBy             string   `glazed:"order-by"`
+	Files               bool     `glazed:"files"`
+	File                string   `glazed:"file"`
+	Dir                 string   `glazed:"dir"`
+	ExternalSource      string   `glazed:"external-source"`
+	Since               string   `glazed:"since"`
+	Until               string   `glazed:"until"`
+	CreatedSince        string   `glazed:"created-since"`
+	UpdatedSince        string   `glazed:"updated-since"`
+	Root                string   `glazed:"root"`
+	PrintTemplateSchema bool     `glazed:"print-template-schema"`
+	SchemaFormat        string   `glazed:"schema-format"`
 }
 
 func NewSearchCommand() (*SearchCommand, error) {
@@ -76,107 +77,107 @@ Examples:
   docmgr search --created-since "2025-01-01" --until "2025-01-31"
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"query",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Search query text (searches document content)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Search query text (searches document content)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by ticket identifier"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by ticket identifier"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Filter by topics (comma-separated, matches any)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Filter by topics (comma-separated, matches any)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc-type",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by document type"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by document type"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"status",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by status"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by status"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"order-by",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Order results by: path|last_updated|rank"),
-					parameters.WithDefault("path"),
+					fields.TypeString,
+					fields.WithHelp("Order results by: path|last_updated|rank"),
+					fields.WithDefault("path"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"files",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Suggest related files using heuristics (git + ripgrep)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Suggest related files using heuristics (git + ripgrep)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"file",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents that reference this file path"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents that reference this file path"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents in this directory or referencing files in it"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents in this directory or referencing files in it"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"external-source",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents that reference this external source URL"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents that reference this external source URL"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"since",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents updated since this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents updated since this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"until",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents updated until this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents updated until this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"created-since",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents created since this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents created since this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"updated-since",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find documents updated since this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find documents updated since this date (relative: '2 weeks ago', 'last month', or absolute: '2025-01-01')"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
 			),
 		),
@@ -185,11 +186,11 @@ Examples:
 
 func (c *SearchCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &SearchSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -357,10 +358,10 @@ var _ cmds.GlazeCommand = &SearchCommand{}
 // Implement BareCommand for human-friendly output
 func (c *SearchCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &SearchSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 	settings.Root = workspace.ResolveRoot(settings.Root)

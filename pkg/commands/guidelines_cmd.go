@@ -9,8 +9,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -22,11 +23,11 @@ type GuidelinesCommand struct {
 
 // GuidelinesSettings holds the parameters for the guidelines command
 type GuidelinesSettings struct {
-	DocType             string `glazed.parameter:"doc-type"`
-	Root                string `glazed.parameter:"root"`
-	List                bool   `glazed.parameter:"list"`
-	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string `glazed.parameter:"schema-format"`
+	DocType             string `glazed:"doc-type"`
+	Root                string `glazed:"root"`
+	List                bool   `glazed:"list"`
+	PrintTemplateSchema bool   `glazed:"print-template-schema"`
+	SchemaFormat        string `glazed:"schema-format"`
 }
 
 func NewGuidelinesCommand() (*GuidelinesCommand, error) {
@@ -44,35 +45,35 @@ Examples:
   docmgr doc guidelines --doc-type design-doc
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc-type",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Document type to show guidelines for"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Document type to show guidelines for"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"list",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("List all available document types"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("List all available document types"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
 			),
 		),
@@ -81,11 +82,11 @@ Examples:
 
 func (c *GuidelinesCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &GuidelinesSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -141,10 +142,10 @@ var _ cmds.GlazeCommand = &GuidelinesCommand{}
 // Implement BareCommand for human-friendly output
 func (c *GuidelinesCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &GuidelinesSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

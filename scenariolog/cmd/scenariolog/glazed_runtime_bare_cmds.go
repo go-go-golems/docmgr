@@ -10,8 +10,9 @@ import (
 	"github.com/go-go-golems/docmgr/scenariolog/internal/scenariolog"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -49,7 +50,7 @@ type InitBareCommand struct {
 }
 
 type InitSettings struct {
-	DBPath string `glazed.parameter:"db"`
+	DBPath string `glazed:"db"`
 }
 
 func NewInitBareCommand() *InitBareCommand {
@@ -58,11 +59,11 @@ func NewInitBareCommand() *InitBareCommand {
 			"init",
 			cmds.WithShort("Initialize or migrate the scenario sqlite database"),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"db",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to sqlite database file"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to sqlite database file"),
+					fields.WithRequired(true),
 				),
 			),
 		),
@@ -71,9 +72,9 @@ func NewInitBareCommand() *InitBareCommand {
 
 var _ cmds.BareCommand = &InitBareCommand{}
 
-func (c *InitBareCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *InitBareCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	s := &InitSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -95,11 +96,11 @@ type RunStartBareCommand struct {
 }
 
 type RunStartSettings struct {
-	DBPath   string            `glazed.parameter:"db"`
-	RootDir  string            `glazed.parameter:"root-dir"`
-	Suite    string            `glazed.parameter:"suite"`
-	RunID    string            `glazed.parameter:"run-id"`
-	KV       map[string]string `glazed.parameter:"kv"`
+	DBPath  string            `glazed:"db"`
+	RootDir string            `glazed:"root-dir"`
+	Suite   string            `glazed:"suite"`
+	RunID   string            `glazed:"run-id"`
+	KV      map[string]string `glazed:"kv"`
 }
 
 func NewRunStartBareCommand() *RunStartBareCommand {
@@ -108,32 +109,32 @@ func NewRunStartBareCommand() *RunStartBareCommand {
 			"start",
 			cmds.WithShort("Start a new run and print the run_id"),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"db",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to sqlite database file"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to sqlite database file"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root-dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for this scenario run (where artifacts live)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Root directory for this scenario run (where artifacts live)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"suite",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Suite name (optional)"),
+					fields.TypeString,
+					fields.WithHelp("Suite name (optional)"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"run-id",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Explicit run id (optional; otherwise generated)"),
+					fields.TypeString,
+					fields.WithHelp("Explicit run id (optional; otherwise generated)"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"kv",
-					parameters.ParameterTypeKeyValue,
-					parameters.WithHelp("KV tags to attach to the run (repeatable). Format: key:value, or --kv @file.json/@file.yaml for a map"),
+					fields.TypeKeyValue,
+					fields.WithHelp("KV tags to attach to the run (repeatable). Format: key:value, or --kv @file.json/@file.yaml for a map"),
 				),
 			),
 		),
@@ -142,9 +143,9 @@ func NewRunStartBareCommand() *RunStartBareCommand {
 
 var _ cmds.BareCommand = &RunStartBareCommand{}
 
-func (c *RunStartBareCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *RunStartBareCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	s := &RunStartSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -184,9 +185,9 @@ type RunEndBareCommand struct {
 }
 
 type RunEndSettings struct {
-	DBPath   string `glazed.parameter:"db"`
-	RunID    string `glazed.parameter:"run-id"`
-	ExitCode int    `glazed.parameter:"exit-code"`
+	DBPath   string `glazed:"db"`
+	RunID    string `glazed:"run-id"`
+	ExitCode int    `glazed:"exit-code"`
 }
 
 func NewRunEndBareCommand() *RunEndBareCommand {
@@ -195,23 +196,23 @@ func NewRunEndBareCommand() *RunEndBareCommand {
 			"end",
 			cmds.WithShort("Finalize a run (exit code + duration)"),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"db",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to sqlite database file"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to sqlite database file"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"run-id",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Run id to finalize"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Run id to finalize"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"exit-code",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Exit code for the run (default 0)"),
-					parameters.WithDefault(0),
+					fields.TypeInteger,
+					fields.WithHelp("Exit code for the run (default 0)"),
+					fields.WithDefault(0),
 				),
 			),
 		),
@@ -220,9 +221,9 @@ func NewRunEndBareCommand() *RunEndBareCommand {
 
 var _ cmds.BareCommand = &RunEndBareCommand{}
 
-func (c *RunEndBareCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *RunEndBareCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	s := &RunEndSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -244,16 +245,16 @@ type ExecBareCommand struct {
 }
 
 type ExecSettings struct {
-	DBPath     string            `glazed.parameter:"db"`
-	RunID      string            `glazed.parameter:"run-id"`
-	RootDir    string            `glazed.parameter:"root-dir"`
-	WorkDir    string            `glazed.parameter:"work-dir"`
-	LogDir     string            `glazed.parameter:"log-dir"`
-	StepNum    int               `glazed.parameter:"step-num"`
-	StepName   string            `glazed.parameter:"name"`
-	ScriptPath string            `glazed.parameter:"script-path"`
-	KV         map[string]string `glazed.parameter:"kv"`
-	Command    []string          `glazed.parameter:"cmd"`
+	DBPath     string            `glazed:"db"`
+	RunID      string            `glazed:"run-id"`
+	RootDir    string            `glazed:"root-dir"`
+	WorkDir    string            `glazed:"work-dir"`
+	LogDir     string            `glazed:"log-dir"`
+	StepNum    int               `glazed:"step-num"`
+	StepName   string            `glazed:"name"`
+	ScriptPath string            `glazed:"script-path"`
+	KV         map[string]string `glazed:"kv"`
+	Command    []string          `glazed:"cmd"`
 }
 
 func NewExecBareCommand() *ExecBareCommand {
@@ -262,64 +263,64 @@ func NewExecBareCommand() *ExecBareCommand {
 			"exec",
 			cmds.WithShort("Execute a step command, capture stdout/stderr, and log results to sqlite"),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"db",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to sqlite database file"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to sqlite database file"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"run-id",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Run id to attach this step to"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Run id to attach this step to"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root-dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for this scenario run (used for path normalization)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Root directory for this scenario run (used for path normalization)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"work-dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Working directory for the executed command (defaults to current directory)"),
+					fields.TypeString,
+					fields.WithHelp("Working directory for the executed command (defaults to current directory)"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"log-dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Log directory (relative to root-dir unless absolute; must already exist)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Log directory (relative to root-dir unless absolute; must already exist)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"step-num",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Step number (used for ordering + filenames)"),
-					parameters.WithDefault(0),
+					fields.TypeInteger,
+					fields.WithHelp("Step number (used for ordering + filenames)"),
+					fields.WithDefault(0),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"name",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Step name"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Step name"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"script-path",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Script path (optional)"),
+					fields.TypeString,
+					fields.WithHelp("Script path (optional)"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"kv",
-					parameters.ParameterTypeKeyValue,
-					parameters.WithHelp("KV tags to attach to this step (repeatable). Format: key:value, or --kv @file.json/@file.yaml for a map"),
+					fields.TypeKeyValue,
+					fields.WithHelp("KV tags to attach to this step (repeatable). Format: key:value, or --kv @file.json/@file.yaml for a map"),
 				),
 			),
 			cmds.WithArguments(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"cmd",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Command to execute (argv)"),
-					parameters.WithRequired(true),
+					fields.TypeStringList,
+					fields.WithHelp("Command to execute (argv)"),
+					fields.WithRequired(true),
 				),
 			),
 		),
@@ -328,9 +329,9 @@ func NewExecBareCommand() *ExecBareCommand {
 
 var _ cmds.BareCommand = &ExecBareCommand{}
 
-func (c *ExecBareCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *ExecBareCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	s := &ExecSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 	if len(s.Command) == 0 {
@@ -385,5 +386,3 @@ func (c *ExecBareCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLa
 
 	return nil
 }
-
-

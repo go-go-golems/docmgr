@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -128,11 +129,11 @@ func formatTaskLine(checked bool, text string) string {
 type TasksListCommand struct{ *cmds.CommandDescription }
 
 type TasksListSettings struct {
-	Ticket              string `glazed.parameter:"ticket"`
-	Root                string `glazed.parameter:"root"`
-	TasksFile           string `glazed.parameter:"tasks-file"`
-	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string `glazed.parameter:"schema-format"`
+	Ticket              string `glazed:"ticket"`
+	Root                string `glazed:"root"`
+	TasksFile           string `glazed:"tasks-file"`
+	PrintTemplateSchema bool   `glazed:"print-template-schema"`
+	SchemaFormat        string `glazed:"schema-format"`
 }
 
 func NewTasksListCommand() (*TasksListCommand, error) {
@@ -152,19 +153,19 @@ Examples:
   docmgr task list --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields index,text
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("print-template-schema", parameters.ParameterTypeBool, parameters.WithHelp("Print template schema after output (human mode only)"), parameters.WithDefault(false)),
-			parameters.NewParameterDefinition("schema-format", parameters.ParameterTypeString, parameters.WithHelp("Template schema output format: json|yaml"), parameters.WithDefault("json")),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("print-template-schema", fields.TypeBool, fields.WithHelp("Print template schema after output (human mode only)"), fields.WithDefault(false)),
+			fields.New("schema-format", fields.TypeString, fields.WithHelp("Template schema output format: json|yaml"), fields.WithDefault("json")),
 		),
 	)
 	return &TasksListCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
 	s := &TasksListSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
 
@@ -215,9 +216,9 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 var _ cmds.GlazeCommand = &TasksListCommand{}
 
 // Implement BareCommand for human-friendly output
-func (c *TasksListCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+func (c *TasksListCommand) Run(ctx context.Context, pl *values.Values) error {
 	s := &TasksListSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks list settings: %w", err)
 	}
 
@@ -316,11 +317,11 @@ var _ cmds.BareCommand = &TasksListCommand{}
 type TasksAddCommand struct{ *cmds.CommandDescription }
 
 type TasksAddSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
-	Text      string `glazed.parameter:"text"`
-	After     int    `glazed.parameter:"after"`
+	Ticket    string `glazed:"ticket"`
+	Root      string `glazed:"root"`
+	TasksFile string `glazed:"tasks-file"`
+	Text      string `glazed:"text"`
+	After     int    `glazed:"after"`
 }
 
 func NewTasksAddCommand() (*TasksAddCommand, error) {
@@ -337,19 +338,19 @@ Examples:
   docmgr task add --ticket MEN-4242 --text "Add tests" --after 1
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("text", parameters.ParameterTypeString, parameters.WithHelp("Task text to add"), parameters.WithRequired(true)),
-			parameters.NewParameterDefinition("after", parameters.ParameterTypeInteger, parameters.WithHelp("Insert after given task index (0=append)"), parameters.WithDefault(0)),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("text", fields.TypeString, fields.WithHelp("Task text to add"), fields.WithRequired(true)),
+			fields.New("after", fields.TypeInteger, fields.WithHelp("Insert after given task index (0=append)"), fields.WithDefault(0)),
 		),
 	)
 	return &TasksAddCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksAddCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+func (c *TasksAddCommand) Run(ctx context.Context, pl *values.Values) error {
 	s := &TasksAddSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks add settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
@@ -386,11 +387,11 @@ var _ cmds.BareCommand = &TasksAddCommand{}
 type TasksCheckCommand struct{ *cmds.CommandDescription }
 
 type TasksCheckSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
-	IDs       []int  `glazed.parameter:"id"`
-	Match     string `glazed.parameter:"match"`
+	Ticket    string `glazed:"ticket"`
+	Root      string `glazed:"root"`
+	TasksFile string `glazed:"tasks-file"`
+	IDs       []int  `glazed:"id"`
+	Match     string `glazed:"match"`
 }
 
 func NewTasksCheckCommand() (*TasksCheckCommand, error) {
@@ -404,19 +405,19 @@ Examples:
   docmgr task check --ticket MEN-4242 --id 1,2
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeIntegerList, parameters.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
-			parameters.NewParameterDefinition("match", parameters.ParameterTypeString, parameters.WithHelp("Substring to match a task if --id not set"), parameters.WithDefault("")),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("id", fields.TypeIntegerList, fields.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
+			fields.New("match", fields.TypeString, fields.WithHelp("Substring to match a task if --id not set"), fields.WithDefault("")),
 		),
 	)
 	return &TasksCheckCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+func (c *TasksCheckCommand) Run(ctx context.Context, pl *values.Values) error {
 	s := &TasksCheckSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
@@ -488,9 +489,9 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) er
 	return nil
 }
 
-func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
 	s := &TasksCheckSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
@@ -568,11 +569,11 @@ var _ cmds.GlazeCommand = &TasksCheckCommand{}
 type TasksUncheckCommand struct{ *cmds.CommandDescription }
 
 type TasksUncheckSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
-	IDs       []int  `glazed.parameter:"id"`
-	Match     string `glazed.parameter:"match"`
+	Ticket    string `glazed:"ticket"`
+	Root      string `glazed:"root"`
+	TasksFile string `glazed:"tasks-file"`
+	IDs       []int  `glazed:"id"`
+	Match     string `glazed:"match"`
 }
 
 func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
@@ -586,19 +587,19 @@ Examples:
   docmgr task uncheck --ticket MEN-4242 --id 1,2
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeIntegerList, parameters.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
-			parameters.NewParameterDefinition("match", parameters.ParameterTypeString, parameters.WithHelp("Substring to match a task if --id not set"), parameters.WithDefault("")),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("id", fields.TypeIntegerList, fields.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
+			fields.New("match", fields.TypeString, fields.WithHelp("Substring to match a task if --id not set"), fields.WithDefault("")),
 		),
 	)
 	return &TasksUncheckCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksUncheckCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+func (c *TasksUncheckCommand) Run(ctx context.Context, pl *values.Values) error {
 	s := &TasksUncheckSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks uncheck settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
@@ -659,11 +660,11 @@ var _ cmds.BareCommand = &TasksUncheckCommand{}
 type TasksEditCommand struct{ *cmds.CommandDescription }
 
 type TasksEditSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
-	ID        int    `glazed.parameter:"id"`
-	Text      string `glazed.parameter:"text"`
+	Ticket    string `glazed:"ticket"`
+	Root      string `glazed:"root"`
+	TasksFile string `glazed:"tasks-file"`
+	ID        int    `glazed:"id"`
+	Text      string `glazed:"text"`
 }
 
 func NewTasksEditCommand() (*TasksEditCommand, error) {
@@ -676,19 +677,19 @@ Examples:
   docmgr task edit --ticket MEN-4242 --id 1 --text "Updated task text"
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeInteger, parameters.WithHelp("Task index (from 'tasks list')"), parameters.WithRequired(true)),
-			parameters.NewParameterDefinition("text", parameters.ParameterTypeString, parameters.WithHelp("New task text"), parameters.WithRequired(true)),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("id", fields.TypeInteger, fields.WithHelp("Task index (from 'tasks list')"), fields.WithRequired(true)),
+			fields.New("text", fields.TypeString, fields.WithHelp("New task text"), fields.WithRequired(true)),
 		),
 	)
 	return &TasksEditCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers.ParsedLayers, gp middlewares.Processor) error {
+func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
 	s := &TasksEditSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
 	path, err := editTaskLine(ctx, s)
@@ -704,9 +705,9 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *layers
 
 var _ cmds.GlazeCommand = &TasksEditCommand{}
 
-func (c *TasksEditCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+func (c *TasksEditCommand) Run(ctx context.Context, pl *values.Values) error {
 	s := &TasksEditSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks edit settings: %w", err)
 	}
 	path, err := editTaskLine(ctx, s)
@@ -746,10 +747,10 @@ func editTaskLine(ctx context.Context, s *TasksEditSettings) (string, error) {
 type TasksRemoveCommand struct{ *cmds.CommandDescription }
 
 type TasksRemoveSettings struct {
-	Ticket    string `glazed.parameter:"ticket"`
-	Root      string `glazed.parameter:"root"`
-	TasksFile string `glazed.parameter:"tasks-file"`
-	IDs       []int  `glazed.parameter:"id"`
+	Ticket    string `glazed:"ticket"`
+	Root      string `glazed:"root"`
+	TasksFile string `glazed:"tasks-file"`
+	IDs       []int  `glazed:"id"`
 }
 
 func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
@@ -763,18 +764,18 @@ Examples:
   docmgr task remove --ticket MEN-4242 --id 3,4
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier (if --tasks-file not set)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("tasks-file", parameters.ParameterTypeString, parameters.WithHelp("Path to tasks.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("id", parameters.ParameterTypeIntegerList, parameters.WithHelp("Task index(es), comma-separated (from 'tasks list')"), parameters.WithRequired(true)),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("id", fields.TypeIntegerList, fields.WithHelp("Task index(es), comma-separated (from 'tasks list')"), fields.WithRequired(true)),
 		),
 	)
 	return &TasksRemoveCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksRemoveCommand) Run(ctx context.Context, pl *layers.ParsedLayers) error {
+func (c *TasksRemoveCommand) Run(ctx context.Context, pl *values.Values) error {
 	s := &TasksRemoveSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks remove settings: %w", err)
 	}
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)

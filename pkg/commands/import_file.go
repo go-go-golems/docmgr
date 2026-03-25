@@ -11,8 +11,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"gopkg.in/yaml.v3"
@@ -25,10 +26,10 @@ type ImportFileCommand struct {
 
 // ImportFileSettings holds the parameters for the import file command
 type ImportFileSettings struct {
-	Ticket   string `glazed.parameter:"ticket"`
-	FilePath string `glazed.parameter:"file"`
-	Root     string `glazed.parameter:"root"`
-	Name     string `glazed.parameter:"name"`
+	Ticket   string `glazed:"ticket"`
+	FilePath string `glazed:"file"`
+	Root     string `glazed:"root"`
+	Name     string `glazed:"name"`
 }
 
 type ImportFileResult struct {
@@ -54,29 +55,29 @@ Examples:
   docmgr import file --ticket MEN-3475 --file /path/to/spec.pdf --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"file",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to file to import"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Path to file to import"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"name",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Optional name for the imported file"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Optional name for the imported file"),
+					fields.WithDefault(""),
 				),
 			),
 		),
@@ -85,14 +86,14 @@ Examples:
 
 func (c *ImportFileCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &ImportFileSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -236,13 +237,13 @@ func (c *ImportFileCommand) importFile(ctx context.Context, settings *ImportFile
 
 func (c *ImportFileCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &ImportFileSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

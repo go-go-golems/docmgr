@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/utils"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -24,10 +25,10 @@ type TicketMoveCommand struct {
 }
 
 type TicketMoveSettings struct {
-	Root         string `glazed.parameter:"root"`
-	Ticket       string `glazed.parameter:"ticket"`
-	PathTemplate string `glazed.parameter:"path-template"`
-	Overwrite    bool   `glazed.parameter:"overwrite"`
+	Root         string `glazed:"root"`
+	Ticket       string `glazed:"ticket"`
+	PathTemplate string `glazed:"path-template"`
+	Overwrite    bool   `glazed:"overwrite"`
 }
 
 type TicketMoveResult struct {
@@ -64,29 +65,29 @@ Examples:
   docmgr ticket move --ticket MEN-4242 --overwrite
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier to move"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier to move"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Docs root (ttmp)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Docs root (ttmp)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"path-template",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path template to render destination (overrides config/default)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Path template to render destination (overrides config/default)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"overwrite",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite destination if it exists (use with care)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite destination if it exists (use with care)"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -95,11 +96,11 @@ Examples:
 
 func (c *TicketMoveCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	pl *layers.ParsedLayers,
+	pl *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &TicketMoveSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

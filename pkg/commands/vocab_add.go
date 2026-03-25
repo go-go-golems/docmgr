@@ -10,8 +10,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -23,10 +24,10 @@ type VocabAddCommand struct {
 
 // VocabAddSettings holds the parameters for the vocab add command
 type VocabAddSettings struct {
-	Category    string `glazed.parameter:"category"`
-	Slug        string `glazed.parameter:"slug"`
-	Description string `glazed.parameter:"description"`
-	Root        string `glazed.parameter:"root"`
+	Category    string `glazed:"category"`
+	Slug        string `glazed:"slug"`
+	Description string `glazed:"description"`
+	Root        string `glazed:"root"`
 }
 
 type VocabAddResult struct {
@@ -56,29 +57,29 @@ Examples:
   docmgr vocab add --category topics --slug observability --description "Logging and metrics" --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"category",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Category (topics, docTypes, intent)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Category (topics, docTypes, intent)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"slug",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Vocabulary slug (lowercase, no spaces)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Vocabulary slug (lowercase, no spaces)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"description",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Description of the vocabulary entry"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Description of the vocabulary entry"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -87,11 +88,11 @@ Examples:
 
 func (c *VocabAddCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &VocabAddSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -182,10 +183,10 @@ func (c *VocabAddCommand) addVocabularyEntry(settings *VocabAddSettings) (*Vocab
 
 func (c *VocabAddCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &VocabAddSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

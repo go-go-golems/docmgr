@@ -9,8 +9,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/skills"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/pkg/errors"
 )
 
@@ -21,11 +22,11 @@ type SkillShowCommand struct {
 
 // SkillShowSettings holds command parameters
 type SkillShowSettings struct {
-	Root    string `glazed.parameter:"root"`
-	Ticket  string `glazed.parameter:"ticket"`
-	Skill   string `glazed.parameter:"skill"`
-	Query   string `glazed.parameter:"query"`
-	Resolve bool   `glazed.parameter:"resolve"`
+	Root    string `glazed:"root"`
+	Ticket  string `glazed:"ticket"`
+	Skill   string `glazed:"skill"`
+	Query   string `glazed:"query"`
+	Resolve bool   `glazed:"resolve"`
 }
 
 func NewSkillShowCommand() (*SkillShowCommand, error) {
@@ -51,37 +52,37 @@ Examples:
   docmgr skill show api-design --resolve
 `),
 			cmds.WithArguments(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"query",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Skill query (title/slug/path)"),
-					parameters.WithRequired(false),
+					fields.TypeString,
+					fields.WithHelp("Skill query (title/slug/path)"),
+					fields.WithRequired(false),
 				),
 			),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"skill",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Skill query (title/slug/path). Deprecated in favor of positional argument, but still supported."),
-					parameters.WithRequired(false),
+					fields.TypeString,
+					fields.WithHelp("Skill query (title/slug/path). Deprecated in favor of positional argument, but still supported."),
+					fields.WithRequired(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"resolve",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Resolve sources (reads files and runs binary help commands)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Resolve sources (reads files and runs binary help commands)"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -105,10 +106,10 @@ func isTicketActiveForSkillDefaultFilter(st string) bool {
 // Run implements BareCommand (show commands typically use human-friendly output)
 func (c *SkillShowCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &SkillShowSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

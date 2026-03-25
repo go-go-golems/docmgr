@@ -13,8 +13,9 @@ import (
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 )
 
@@ -25,9 +26,9 @@ type TemplateValidateCommand struct {
 
 // TemplateValidateSettings holds the parameters for the template validate command
 type TemplateValidateSettings struct {
-	Root    string `glazed.parameter:"root"`
-	Path    string `glazed.parameter:"path"`
-	Verbose bool   `glazed.parameter:"verbose"`
+	Root    string `glazed:"root"`
+	Path    string `glazed:"path"`
+	Verbose bool   `glazed:"verbose"`
 }
 
 func NewTemplateValidateCommand() (*TemplateValidateCommand, error) {
@@ -54,23 +55,23 @@ Examples:
   docmgr template validate --verbose
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs (used to find templates directory)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs (used to find templates directory)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"path",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Specific template file to validate (relative to root or absolute). If not specified, validates all templates."),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Specific template file to validate (relative to root or absolute). If not specified, validates all templates."),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"verbose",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Show all validated templates, not just errors"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Show all validated templates, not just errors"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -79,11 +80,10 @@ Examples:
 
 func (c *TemplateValidateCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
-	gp middlewares.Processor,
+	parsedValues *values.Values,
 ) error {
 	settings := &TemplateValidateSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -162,11 +162,11 @@ func (c *TemplateValidateCommand) Run(
 
 func (c *TemplateValidateCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	// Template validate doesn't support Glaze output mode
-	return c.Run(ctx, parsedLayers, gp)
+	return c.Run(ctx, parsedValues)
 }
 
 // validateTemplate validates a single template file

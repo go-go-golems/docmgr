@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/searchsvc"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -21,18 +22,18 @@ import (
 type ChangelogUpdateCommand struct{ *cmds.CommandDescription }
 
 type ChangelogUpdateSettings struct {
-	Ticket        string `glazed.parameter:"ticket"`
-	Root          string `glazed.parameter:"root"`
-	ChangelogFile string `glazed.parameter:"changelog-file"`
-	Title         string `glazed.parameter:"title"`
-	Entry         string `glazed.parameter:"entry"`
+	Ticket        string `glazed:"ticket"`
+	Root          string `glazed:"root"`
+	ChangelogFile string `glazed:"changelog-file"`
+	Title         string `glazed:"title"`
+	Entry         string `glazed:"entry"`
 	// Deprecated: kept only to emit a friendly migration error if provided
-	Files            []string `glazed.parameter:"files"`
-	FileNotes        []string `glazed.parameter:"file-note"`
-	Suggest          bool     `glazed.parameter:"suggest"`
-	ApplySuggestions bool     `glazed.parameter:"apply-suggestions"`
-	Query            string   `glazed.parameter:"query"`
-	Topics           []string `glazed.parameter:"topics"`
+	Files            []string `glazed:"files"`
+	FileNotes        []string `glazed:"file-note"`
+	Suggest          bool     `glazed:"suggest"`
+	ApplySuggestions bool     `glazed:"apply-suggestions"`
+	Query            string   `glazed:"query"`
+	Topics           []string `glazed:"topics"`
 }
 
 func NewChangelogUpdateCommand() (*ChangelogUpdateCommand, error) {
@@ -57,17 +58,17 @@ Examples:
   docmgr changelog update --ticket MEN-4242 --suggest --apply-suggestions --query WebSocket
 `),
 		cmds.WithFlags(
-			parameters.NewParameterDefinition("ticket", parameters.ParameterTypeString, parameters.WithHelp("Ticket identifier for the target workspace"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("root", parameters.ParameterTypeString, parameters.WithHelp("Root directory for docs"), parameters.WithDefault("ttmp")),
-			parameters.NewParameterDefinition("changelog-file", parameters.ParameterTypeString, parameters.WithHelp("Path to changelog.md (overrides --ticket)"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("title", parameters.ParameterTypeString, parameters.WithHelp("Optional entry title"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("entry", parameters.ParameterTypeString, parameters.WithHelp("Entry text to append"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("files", parameters.ParameterTypeStringList, parameters.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"), parameters.WithDefault([]string{})),
-			parameters.NewParameterDefinition("file-note", parameters.ParameterTypeStringList, parameters.WithHelp("Repeatable path-to-note mapping (path:note or path=note)"), parameters.WithDefault([]string{})),
-			parameters.NewParameterDefinition("suggest", parameters.ParameterTypeBool, parameters.WithHelp("Suggest related files using heuristics (git + ripgrep + existing docs)"), parameters.WithDefault(false)),
-			parameters.NewParameterDefinition("apply-suggestions", parameters.ParameterTypeBool, parameters.WithHelp("Apply suggested files to this changelog entry"), parameters.WithDefault(false)),
-			parameters.NewParameterDefinition("query", parameters.ParameterTypeString, parameters.WithHelp("Optional query to seed suggestions"), parameters.WithDefault("")),
-			parameters.NewParameterDefinition("topics", parameters.ParameterTypeStringList, parameters.WithHelp("Topics to seed suggestions (comma-separated)"), parameters.WithDefault([]string{})),
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier for the target workspace"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("changelog-file", fields.TypeString, fields.WithHelp("Path to changelog.md (overrides --ticket)"), fields.WithDefault("")),
+			fields.New("title", fields.TypeString, fields.WithHelp("Optional entry title"), fields.WithDefault("")),
+			fields.New("entry", fields.TypeString, fields.WithHelp("Entry text to append"), fields.WithDefault("")),
+			fields.New("files", fields.TypeStringList, fields.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"), fields.WithDefault([]string{})),
+			fields.New("file-note", fields.TypeStringList, fields.WithHelp("Repeatable path-to-note mapping (path:note or path=note)"), fields.WithDefault([]string{})),
+			fields.New("suggest", fields.TypeBool, fields.WithHelp("Suggest related files using heuristics (git + ripgrep + existing docs)"), fields.WithDefault(false)),
+			fields.New("apply-suggestions", fields.TypeBool, fields.WithHelp("Apply suggested files to this changelog entry"), fields.WithDefault(false)),
+			fields.New("query", fields.TypeString, fields.WithHelp("Optional query to seed suggestions"), fields.WithDefault("")),
+			fields.New("topics", fields.TypeStringList, fields.WithHelp("Topics to seed suggestions (comma-separated)"), fields.WithDefault([]string{})),
 		),
 	)
 	return &ChangelogUpdateCommand{CommandDescription: cmd}, nil
@@ -75,11 +76,11 @@ Examples:
 
 func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	pl *layers.ParsedLayers,
+	pl *values.Values,
 	gp middlewares.Processor,
 ) error {
 	s := &ChangelogUpdateSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -383,10 +384,10 @@ var _ cmds.GlazeCommand = &ChangelogUpdateCommand{}
 // Implement BareCommand for human-friendly output with reminders
 func (c *ChangelogUpdateCommand) Run(
 	ctx context.Context,
-	pl *layers.ParsedLayers,
+	pl *values.Values,
 ) error {
 	s := &ChangelogUpdateSettings{}
-	if err := pl.InitializeStruct(layers.DefaultSlug, s); err != nil {
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

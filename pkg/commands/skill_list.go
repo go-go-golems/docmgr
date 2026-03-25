@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/pkg/errors"
@@ -26,13 +27,13 @@ type SkillListCommand struct {
 
 // SkillListSettings holds the parameters for the skill list command
 type SkillListSettings struct {
-	Root                string   `glazed.parameter:"root"`
-	Ticket              string   `glazed.parameter:"ticket"`
-	Topics              []string `glazed.parameter:"topics"`
-	File                string   `glazed.parameter:"file"`
-	Dir                 string   `glazed.parameter:"dir"`
-	PrintTemplateSchema bool     `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string   `glazed.parameter:"schema-format"`
+	Root                string   `glazed:"root"`
+	Ticket              string   `glazed:"ticket"`
+	Topics              []string `glazed:"topics"`
+	File                string   `glazed:"file"`
+	Dir                 string   `glazed:"dir"`
+	PrintTemplateSchema bool     `glazed:"print-template-schema"`
+	SchemaFormat        string   `glazed:"schema-format"`
 }
 
 func NewSkillListCommand() (*SkillListCommand, error) {
@@ -60,47 +61,47 @@ Examples:
   docmgr skill list --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"topics",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Filter by topics (comma-separated, matches any)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Filter by topics (comma-separated, matches any)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"file",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find skills that reference this file path"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find skills that reference this file path"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Find skills that reference files in this directory"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Find skills that reference files in this directory"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
 			),
 		),
@@ -109,11 +110,11 @@ Examples:
 
 func (c *SkillListCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &SkillListSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -147,10 +148,10 @@ var _ cmds.GlazeCommand = &SkillListCommand{}
 // Implement BareCommand for human-friendly output
 func (c *SkillListCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &SkillListSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

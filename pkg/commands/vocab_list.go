@@ -10,8 +10,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -23,10 +24,10 @@ type VocabListCommand struct {
 
 // VocabListSettings holds the parameters for the vocab list command
 type VocabListSettings struct {
-	Category            string `glazed.parameter:"category"`
-	Root                string `glazed.parameter:"root"`
-	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string `glazed.parameter:"schema-format"`
+	Category            string `glazed:"category"`
+	Root                string `glazed:"root"`
+	PrintTemplateSchema bool   `glazed:"print-template-schema"`
+	SchemaFormat        string `glazed:"schema-format"`
 }
 
 func NewVocabListCommand() (*VocabListCommand, error) {
@@ -52,29 +53,29 @@ Examples:
   docmgr vocab list --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"category",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Category to list (topics, docTypes, intent). Leave empty to list all."),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Category to list (topics, docTypes, intent). Leave empty to list all."),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
 			),
 		),
@@ -83,11 +84,11 @@ Examples:
 
 func (c *VocabListCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &VocabListSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 	// Echo resolved context
@@ -169,10 +170,10 @@ var _ cmds.GlazeCommand = &VocabListCommand{}
 // Implement BareCommand for human-friendly output
 func (c *VocabListCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &VocabListSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

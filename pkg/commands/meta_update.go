@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -25,12 +26,12 @@ type MetaUpdateCommand struct {
 
 // MetaUpdateSettings holds the parameters for the meta update command
 type MetaUpdateSettings struct {
-	Doc     string `glazed.parameter:"doc"`
-	Ticket  string `glazed.parameter:"ticket"`
-	DocType string `glazed.parameter:"doc-type"`
-	Field   string `glazed.parameter:"field"`
-	Value   string `glazed.parameter:"value"`
-	Root    string `glazed.parameter:"root"`
+	Doc     string `glazed:"doc"`
+	Ticket  string `glazed:"ticket"`
+	DocType string `glazed:"doc-type"`
+	Field   string `glazed:"field"`
+	Value   string `glazed:"value"`
+	Root    string `glazed:"root"`
 }
 
 type MetaUpdateContext struct {
@@ -75,41 +76,41 @@ Examples:
   docmgr meta update --ticket MEN-1234 --doc-type design-doc --field Topics --value chat,backend
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Path to specific document file"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Path to specific document file"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier (updates all docs for this ticket)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier (updates all docs for this ticket)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc-type",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Filter by document type (used with --ticket)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Filter by document type (used with --ticket)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"field",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Field name to update (Title, Ticket, Status, Topics, DocType, Intent, Owners, RelatedFiles, ExternalSources, Summary)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Field name to update (Title, Ticket, Status, Topics, DocType, Intent, Owners, RelatedFiles, ExternalSources, Summary)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"value",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("New value for the field (for lists, use comma-separated values)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("New value for the field (for lists, use comma-separated values)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
 			),
 		),
@@ -118,11 +119,11 @@ Examples:
 
 func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &MetaUpdateSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -272,10 +273,10 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 
 func (c *MetaUpdateCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &MetaUpdateSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

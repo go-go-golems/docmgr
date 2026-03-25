@@ -7,8 +7,9 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/pkg/errors"
 )
 
@@ -18,10 +19,10 @@ type ExportSQLiteCommand struct {
 }
 
 type ExportSQLiteSettings struct {
-	Root        string `glazed.parameter:"root"`
-	Out         string `glazed.parameter:"out"`
-	Force       bool   `glazed.parameter:"force"`
-	IncludeBody bool   `glazed.parameter:"include-body"`
+	Root        string `glazed:"root"`
+	Out         string `glazed:"out"`
+	Force       bool   `glazed:"force"`
+	IncludeBody bool   `glazed:"include-body"`
 }
 
 func NewExportSQLiteCommand() (*ExportSQLiteCommand, error) {
@@ -45,29 +46,29 @@ Examples:
   docmgr workspace export-sqlite --out /tmp/docmgr-index.sqlite
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"out",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Output sqlite file path"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Output sqlite file path"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"force",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite output file if it already exists"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite output file if it already exists"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"include-body",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Store markdown bodies in the exported sqlite (larger file)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Store markdown bodies in the exported sqlite (larger file)"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -75,9 +76,9 @@ Examples:
 }
 
 // Run implements cmds.BareCommand (classic/human mode only).
-func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	settings := &ExportSQLiteSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

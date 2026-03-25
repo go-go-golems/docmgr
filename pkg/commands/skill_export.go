@@ -9,8 +9,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/skills"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/pkg/errors"
 )
 
@@ -21,13 +22,13 @@ type SkillExportCommand struct {
 
 // SkillExportSettings holds the parameters for skill export.
 type SkillExportSettings struct {
-	Root        string `glazed.parameter:"root"`
-	Ticket      string `glazed.parameter:"ticket"`
-	Skill       string `glazed.parameter:"skill"`
-	Query       string `glazed.parameter:"query"`
-	OutDir      string `glazed.parameter:"out-dir"`
-	OutputSkill string `glazed.parameter:"output-skill"`
-	Force       bool   `glazed.parameter:"force"`
+	Root        string `glazed:"root"`
+	Ticket      string `glazed:"ticket"`
+	Skill       string `glazed:"skill"`
+	Query       string `glazed:"query"`
+	OutDir      string `glazed:"out-dir"`
+	OutputSkill string `glazed:"output-skill"`
+	Force       bool   `glazed:"force"`
 }
 
 func NewSkillExportCommand() (*SkillExportCommand, error) {
@@ -46,49 +47,49 @@ Examples:
   docmgr skill export api-design --ticket MEN-4242 --out-dir dist --output-skill dist/api-design.skill
 `),
 			cmds.WithArguments(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"query",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Skill query (name/title/slug/path)"),
-					parameters.WithRequired(false),
+					fields.TypeString,
+					fields.WithHelp("Skill query (name/title/slug/path)"),
+					fields.WithRequired(false),
 				),
 			),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Include ticket-scoped skills for this ticket (workspace skills still included)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"skill",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Skill query (title/slug/path). Deprecated in favor of positional argument, but still supported."),
-					parameters.WithRequired(false),
+					fields.TypeString,
+					fields.WithHelp("Skill query (title/slug/path). Deprecated in favor of positional argument, but still supported."),
+					fields.WithRequired(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"out-dir",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Optional output directory for the expanded skill (defaults to temp dir)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Optional output directory for the expanded skill (defaults to temp dir)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"output-skill",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Optional output path for the .skill package (only created when set)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Optional output path for the .skill package (only created when set)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"force",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite output files when they already exist"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite output files when they already exist"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -96,9 +97,9 @@ Examples:
 }
 
 // Run implements BareCommand.
-func (c *SkillExportCommand) Run(ctx context.Context, parsedLayers *layers.ParsedLayers) error {
+func (c *SkillExportCommand) Run(ctx context.Context, parsedValues *values.Values) error {
 	settings := &SkillExportSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

@@ -9,8 +9,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"gopkg.in/yaml.v3"
@@ -23,9 +24,9 @@ type InitCommand struct {
 
 // InitSettings holds the parameters for the root init command
 type InitSettings struct {
-	Root           string `glazed.parameter:"root"`
-	Force          bool   `glazed.parameter:"force"`
-	SeedVocabulary bool   `glazed.parameter:"seed-vocabulary"`
+	Root           string `glazed:"root"`
+	Force          bool   `glazed:"force"`
+	SeedVocabulary bool   `glazed:"seed-vocabulary"`
 }
 
 type InitResult struct {
@@ -59,23 +60,23 @@ Examples:
   docmgr init --root ttmp --seed-vocabulary
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs (defaults to 'ttmp' or .ttmp.yaml root)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs (defaults to 'ttmp' or .ttmp.yaml root)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"force",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite existing template/guideline files if present"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite existing template/guideline files if present"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"seed-vocabulary",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Seed a default vocabulary.yaml with common topics/docTypes/intent"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Seed a default vocabulary.yaml with common topics/docTypes/intent"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -84,11 +85,11 @@ Examples:
 
 func (c *InitCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &InitSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -193,10 +194,10 @@ func (c *InitCommand) initializeWorkspace(settings *InitSettings) (*InitResult, 
 
 func (c *InitCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &InitSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

@@ -9,8 +9,9 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"gopkg.in/yaml.v3"
@@ -23,11 +24,11 @@ type ConfigureCommand struct {
 
 // ConfigureSettings holds parameters for writing .ttmp.yaml
 type ConfigureSettings struct {
-	Root       string   `glazed.parameter:"root"`
-	Owners     []string `glazed.parameter:"owners"`
-	Intent     string   `glazed.parameter:"intent"`
-	Vocabulary string   `glazed.parameter:"vocabulary"`
-	Force      bool     `glazed.parameter:"force"`
+	Root       string   `glazed:"root"`
+	Owners     []string `glazed:"owners"`
+	Intent     string   `glazed:"intent"`
+	Vocabulary string   `glazed:"vocabulary"`
+	Force      bool     `glazed:"force"`
 }
 
 type ConfigureResult struct {
@@ -55,35 +56,35 @@ Examples:
   docmgr configure --force --root ttmp
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Docs root path (relative to repo root unless absolute)"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Docs root path (relative to repo root unless absolute)"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"owners",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Default owners (comma-separated)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Default owners (comma-separated)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"intent",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Default intent for new tickets"),
-					parameters.WithDefault("long-term"),
+					fields.TypeString,
+					fields.WithHelp("Default intent for new tickets"),
+					fields.WithDefault("long-term"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"vocabulary",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Vocabulary path (defaults to <root>/vocabulary.yaml)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Vocabulary path (defaults to <root>/vocabulary.yaml)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"force",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Overwrite existing .ttmp.yaml if present"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Overwrite existing .ttmp.yaml if present"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -92,11 +93,11 @@ Examples:
 
 func (c *ConfigureCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	settings := &ConfigureSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -164,10 +165,10 @@ func (c *ConfigureCommand) writeConfig(settings *ConfigureSettings) (*ConfigureR
 
 func (c *ConfigureCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &ConfigureSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

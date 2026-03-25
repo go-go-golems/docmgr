@@ -12,8 +12,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -24,10 +25,10 @@ type RenameTicketCommand struct {
 }
 
 type RenameTicketSettings struct {
-	Root      string `glazed.parameter:"root"`
-	Ticket    string `glazed.parameter:"ticket"`
-	NewTicket string `glazed.parameter:"new-ticket"`
-	DryRun    bool   `glazed.parameter:"dry-run"`
+	Root      string `glazed:"root"`
+	Ticket    string `glazed:"ticket"`
+	NewTicket string `glazed:"new-ticket"`
+	DryRun    bool   `glazed:"dry-run"`
 }
 
 func NewRenameTicketCommand() (*RenameTicketCommand, error) {
@@ -43,29 +44,29 @@ Examples:
   docmgr ticket rename-ticket --ticket DOCMGR-1 --new-ticket DOCMGR-101 --dry-run
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Current ticket identifier (e.g., MEN-1234)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Current ticket identifier (e.g., MEN-1234)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"new-ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("New ticket identifier (e.g., MEN-5678)"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("New ticket identifier (e.g., MEN-5678)"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"dry-run",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Show planned changes without modifying files"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Show planned changes without modifying files"),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -74,14 +75,14 @@ Examples:
 
 func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &RenameTicketSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -179,13 +180,13 @@ var _ cmds.GlazeCommand = &RenameTicketCommand{}
 // Implement BareCommand for human-friendly output
 func (c *RenameTicketCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &RenameTicketSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

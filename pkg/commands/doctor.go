@@ -18,8 +18,9 @@ import (
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	glazedMiddlewares "github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/mattn/go-isatty"
@@ -32,18 +33,18 @@ type DoctorCommand struct {
 
 // DoctorSettings holds the parameters for the doctor command
 type DoctorSettings struct {
-	Root            string   `glazed.parameter:"root"`
-	Ticket          string   `glazed.parameter:"ticket"`
-	Doc             string   `glazed.parameter:"doc"`
-	All             bool     `glazed.parameter:"all"`
-	IgnoreDirs      []string `glazed.parameter:"ignore-dir"`
-	IgnoreGlobs     []string `glazed.parameter:"ignore-glob"`
-	StaleAfterDays  int      `glazed.parameter:"stale-after"`
-	FailOn          string   `glazed.parameter:"fail-on"`
-	DiagnosticsJSON string   `glazed.parameter:"diagnostics-json"`
+	Root            string   `glazed:"root"`
+	Ticket          string   `glazed:"ticket"`
+	Doc             string   `glazed:"doc"`
+	All             bool     `glazed:"all"`
+	IgnoreDirs      []string `glazed:"ignore-dir"`
+	IgnoreGlobs     []string `glazed:"ignore-glob"`
+	StaleAfterDays  int      `glazed:"stale-after"`
+	FailOn          string   `glazed:"fail-on"`
+	DiagnosticsJSON string   `glazed:"diagnostics-json"`
 	// Schema printing flags (human mode only)
-	PrintTemplateSchema bool   `glazed.parameter:"print-template-schema"`
-	SchemaFormat        string `glazed.parameter:"schema-format"`
+	PrintTemplateSchema bool   `glazed:"print-template-schema"`
+	SchemaFormat        string `glazed:"schema-format"`
 }
 
 func NewDoctorCommand() (*DoctorCommand, error) {
@@ -91,71 +92,71 @@ Examples:
   docmgr doctor --ticket MEN-3475 --diagnostics-json - --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"print-template-schema",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Print template schema after output (human mode only)"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Print template schema after output (human mode only)"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"schema-format",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Template schema output format: json|yaml"),
-					parameters.WithDefault("json"),
+					fields.TypeString,
+					fields.WithHelp("Template schema output format: json|yaml"),
+					fields.WithDefault("json"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Check specific ticket"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Check specific ticket"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"doc",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Validate a single markdown file (overrides --ticket/--all)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Validate a single markdown file (overrides --ticket/--all)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"all",
-					parameters.ParameterTypeBool,
-					parameters.WithHelp("Check all tickets"),
-					parameters.WithDefault(false),
+					fields.TypeBool,
+					fields.WithHelp("Check all tickets"),
+					fields.WithDefault(false),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ignore-dir",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Directory names at root or within tickets to ignore (can be repeated)"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Directory names at root or within tickets to ignore (can be repeated)"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ignore-glob",
-					parameters.ParameterTypeStringList,
-					parameters.WithHelp("Glob patterns (applied to path or basename) to ignore during scanning"),
-					parameters.WithDefault([]string{}),
+					fields.TypeStringList,
+					fields.WithHelp("Glob patterns (applied to path or basename) to ignore during scanning"),
+					fields.WithDefault([]string{}),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"stale-after",
-					parameters.ParameterTypeInteger,
-					parameters.WithHelp("Days after which a document is considered stale (default 30)"),
-					parameters.WithDefault(30),
+					fields.TypeInteger,
+					fields.WithHelp("Days after which a document is considered stale (default 30)"),
+					fields.WithDefault(30),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"fail-on",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Fail with non-zero exit on severity: none|warning|error (default none)"),
-					parameters.WithDefault("none"),
+					fields.TypeString,
+					fields.WithHelp("Fail with non-zero exit on severity: none|warning|error (default none)"),
+					fields.WithDefault("none"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"diagnostics-json",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Write diagnostics rule output to JSON (file path or '-' for stdout)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Write diagnostics rule output to JSON (file path or '-' for stdout)"),
+					fields.WithDefault(""),
 				),
 			),
 		),
@@ -164,11 +165,11 @@ Examples:
 
 func (c *DoctorCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp glazedMiddlewares.Processor,
 ) error {
 	settings := &DoctorSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -233,8 +234,15 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Load vocabulary for validation (best-effort)
-	vocab, _ := LoadVocabulary()
+	// Load vocabulary for validation. Invalid vocabulary is a workspace problem,
+	// but it should surface as a normal command error rather than a panic.
+	vocab, err := LoadVocabulary()
+	if err != nil {
+		return fmt.Errorf("failed to load vocabulary: %w", err)
+	}
+	if vocab == nil {
+		return fmt.Errorf("failed to load vocabulary: vocabulary is nil")
+	}
 	topicSet := map[string]struct{}{}
 	topicList := make([]string, 0, len(vocab.Topics))
 	for _, it := range vocab.Topics {
@@ -1184,10 +1192,10 @@ func (c *doctorRowCollector) Close(ctx context.Context) error {
 
 func (c *DoctorCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	settings := &DoctorSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -1220,7 +1228,7 @@ func (c *DoctorCommand) Run(
 	}
 
 	collector := &doctorRowCollector{}
-	if err := c.RunIntoGlazeProcessor(ctx, parsedLayers, collector); err != nil {
+	if err := c.RunIntoGlazeProcessor(ctx, parsedValues, collector); err != nil {
 		return err
 	}
 

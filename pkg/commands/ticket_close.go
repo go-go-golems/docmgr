@@ -11,8 +11,9 @@ import (
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/cmds/fields"
+	"github.com/go-go-golems/glazed/pkg/cmds/schema"
+	"github.com/go-go-golems/glazed/pkg/cmds/values"
 	"github.com/go-go-golems/glazed/pkg/middlewares"
 	"github.com/go-go-golems/glazed/pkg/types"
 )
@@ -24,11 +25,11 @@ type TicketCloseCommand struct {
 
 // TicketCloseSettings holds the parameters for the ticket close command
 type TicketCloseSettings struct {
-	Ticket         string `glazed.parameter:"ticket"`
-	Root           string `glazed.parameter:"root"`
-	Status         string `glazed.parameter:"status"`
-	Intent         string `glazed.parameter:"intent"`
-	ChangelogEntry string `glazed.parameter:"changelog-entry"`
+	Ticket         string `glazed:"ticket"`
+	Root           string `glazed:"root"`
+	Status         string `glazed:"status"`
+	Intent         string `glazed:"intent"`
+	ChangelogEntry string `glazed:"changelog-entry"`
 }
 
 func NewTicketCloseCommand() (*TicketCloseCommand, error) {
@@ -58,35 +59,35 @@ Examples:
   docmgr ticket close --ticket DOCMGR-CLOSE --with-glaze-output --output json
 `),
 			cmds.WithFlags(
-				parameters.NewParameterDefinition(
+				fields.New(
 					"ticket",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Ticket identifier"),
-					parameters.WithRequired(true),
+					fields.TypeString,
+					fields.WithHelp("Ticket identifier"),
+					fields.WithRequired(true),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"root",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Root directory for docs"),
-					parameters.WithDefault("ttmp"),
+					fields.TypeString,
+					fields.WithHelp("Root directory for docs"),
+					fields.WithDefault("ttmp"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"status",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Status value (default: 'complete')"),
-					parameters.WithDefault("complete"),
+					fields.TypeString,
+					fields.WithHelp("Status value (default: 'complete')"),
+					fields.WithDefault("complete"),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"intent",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Intent value (optional, defaults from config or omitted)"),
-					parameters.WithDefault(""),
+					fields.TypeString,
+					fields.WithHelp("Intent value (optional, defaults from config or omitted)"),
+					fields.WithDefault(""),
 				),
-				parameters.NewParameterDefinition(
+				fields.New(
 					"changelog-entry",
-					parameters.ParameterTypeString,
-					parameters.WithHelp("Changelog entry message (default: 'Ticket closed')"),
-					parameters.WithDefault("Ticket closed"),
+					fields.TypeString,
+					fields.WithHelp("Changelog entry message (default: 'Ticket closed')"),
+					fields.WithDefault("Ticket closed"),
 				),
 			),
 		),
@@ -95,14 +96,14 @@ Examples:
 
 func (c *TicketCloseCommand) RunIntoGlazeProcessor(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 	gp middlewares.Processor,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &TicketCloseSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
@@ -209,13 +210,13 @@ var _ cmds.GlazeCommand = &TicketCloseCommand{}
 // Run implements BareCommand for human-friendly output
 func (c *TicketCloseCommand) Run(
 	ctx context.Context,
-	parsedLayers *layers.ParsedLayers,
+	parsedValues *values.Values,
 ) error {
 	if ctx == nil {
 		return fmt.Errorf("nil context")
 	}
 	settings := &TicketCloseSettings{}
-	if err := parsedLayers.InitializeStruct(layers.DefaultSlug, settings); err != nil {
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 

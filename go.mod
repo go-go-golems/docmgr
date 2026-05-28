@@ -1,6 +1,6 @@
 module github.com/go-go-golems/docmgr
 
-go 1.25.7
+go 1.26.3
 
 require (
 	dagger.io/dagger v0.19.9

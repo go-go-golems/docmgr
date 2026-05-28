@@ -65,3 +65,11 @@ DOCMGR_BINARY=$(shell which docmgr)
 install: ui-build
 	go build -tags "sqlite_fts5,embed" -o ./dist/docmgr ./cmd/docmgr && \
 		cp ./dist/docmgr $(DOCMGR_BINARY)
+
+.PHONY: logcopter-generate
+logcopter-generate:
+	GOWORK=off go tool logcopter-gen -include-main -var zlog -area-prefix go-go-golems.docmgr -strip-prefix github.com/go-go-golems/docmgr ./cmd/... ./pkg/...
+
+.PHONY: logcopter-check
+logcopter-check:
+	GOWORK=off go tool logcopter-gen -include-main -var zlog -area-prefix go-go-golems.docmgr -strip-prefix github.com/go-go-golems/docmgr -check ./cmd/... ./pkg/...

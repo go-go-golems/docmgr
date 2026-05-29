@@ -23,12 +23,12 @@ func (r *FrontmatterSyntaxRule) Render(ctx context.Context, t *core.Taxonomy) (*
 		return nil, fmt.Errorf("frontmatter syntax rule: unexpected context type")
 	}
 	var b strings.Builder
-	b.WriteString(fmt.Sprintf("File: %s\n", payload.File))
+	fmt.Fprintf(&b, "File: %s\n", payload.File)
 	if payload.Line > 0 {
-		b.WriteString(fmt.Sprintf("Line: %d Col: %d\n", payload.Line, payload.Column))
+		fmt.Fprintf(&b, "Line: %d Col: %d\n", payload.Line, payload.Column)
 	}
 	if payload.Problem != "" {
-		b.WriteString(fmt.Sprintf("Problem: %s\n", payload.Problem))
+		fmt.Fprintf(&b, "Problem: %s\n", payload.Problem)
 	}
 	if payload.Snippet != "" {
 		b.WriteString("\nSnippet:\n")
@@ -37,7 +37,7 @@ func (r *FrontmatterSyntaxRule) Render(ctx context.Context, t *core.Taxonomy) (*
 	if len(payload.Fixes) > 0 {
 		b.WriteString("\nSuggested fixes:\n")
 		for i, fix := range payload.Fixes {
-			b.WriteString(fmt.Sprintf("  %d. %s\n", i+1, fix))
+			fmt.Fprintf(&b, "  %d. %s\n", i+1, fix)
 		}
 	}
 	b.WriteString("\nFor more guidance, run: docmgr help yaml-frontmatter-validation\n")

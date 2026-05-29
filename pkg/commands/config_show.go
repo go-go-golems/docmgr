@@ -111,6 +111,7 @@ func (c *ConfigShowCommand) RunIntoGlazeProcessor(
 	// Step 2-4: Config file search (only if root flag wasn't set)
 	if providedRoot == "ttmp" || providedRoot == "" {
 		// Check DOCMGR_CONFIG env var
+		//glazedclilint:ignore config inspection command must report legacy DOCMGR_CONFIG discovery
 		if env := os.Getenv("DOCMGR_CONFIG"); env != "" {
 			var envPath string
 			if filepath.IsAbs(env) {
@@ -395,6 +396,7 @@ func (c *ConfigShowCommand) Run(
 	// Step 2-4: Config file search (only if root flag wasn't set)
 	if providedRoot == "ttmp" || providedRoot == "" {
 		// Check DOCMGR_CONFIG env var
+		//glazedclilint:ignore config inspection command must report legacy DOCMGR_CONFIG discovery
 		if env := os.Getenv("DOCMGR_CONFIG"); env != "" {
 			var envPath string
 			if filepath.IsAbs(env) {

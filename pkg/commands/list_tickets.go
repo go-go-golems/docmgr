@@ -264,7 +264,7 @@ func (c *ListTicketsCommand) Run(
 		fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", rootDisplay)
 	}
 
-	b.WriteString(fmt.Sprintf("## Tickets (%d)\n\n", len(tickets)))
+	fmt.Fprintf(&b, "## Tickets (%d)\n\n", len(tickets))
 	for _, t := range tickets {
 		topics := "—"
 		if len(t.Topics) > 0 {

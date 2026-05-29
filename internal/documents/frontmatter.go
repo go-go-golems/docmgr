@@ -216,9 +216,9 @@ func buildSnippet(lines []string, line, col int) string {
 	}
 	var b strings.Builder
 	for i := start; i <= end; i++ {
-		b.WriteString(fmt.Sprintf("%4d | %s\n", i, lines[i-1]))
+		fmt.Fprintf(&b, "%4d | %s\n", i, lines[i-1])
 		if i == line && col > 0 {
-			b.WriteString(fmt.Sprintf("     | %s^\n", strings.Repeat(" ", col-1)))
+			fmt.Fprintf(&b, "     | %s^\n", strings.Repeat(" ", col-1))
 		}
 	}
 	return strings.TrimRight(b.String(), "\n")

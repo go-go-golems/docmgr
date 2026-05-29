@@ -1,3 +1,4 @@
+//glazedclilint:file-ignore legacy API server command uses raw Cobra flags; migrate to Glazed fields in a follow-up
 package api
 
 import (

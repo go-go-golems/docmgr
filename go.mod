@@ -1,12 +1,15 @@
 module github.com/go-go-golems/docmgr
 
-go 1.26.3
+go 1.25.7
+
+toolchain go1.26.4
 
 require (
 	dagger.io/dagger v0.19.9
 	github.com/adrg/frontmatter v0.2.0
 	github.com/carapace-sh/carapace v1.10.2
 	github.com/charmbracelet/glamour v0.10.0
+	github.com/denormal/go-gitignore v0.0.0-20180930084346-ae8ad1d07817
 	github.com/go-go-golems/glazed v1.0.5
 	github.com/go-go-golems/logcopter v0.1.0
 	github.com/mattn/go-isatty v0.0.20
@@ -47,7 +50,6 @@ require (
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.5.0 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
-	github.com/denormal/go-gitignore v0.0.0-20180930084346-ae8ad1d07817 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect

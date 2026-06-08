@@ -64,10 +64,10 @@
 
 ### Phase 7 — CLI explanation command
 
-- [ ] Add `docmgr ignore explain <path>` command.
-- [ ] Render final decision, path, matched source class/file, and reason.
-- [ ] Add structured output fields for Glazed rendering.
-- [ ] Add command tests or scenario coverage.
+- [x] Add `docmgr ignore explain <path>` command.
+- [x] Render final decision, path, matched source class/file, and reason.
+- [x] Add structured output fields for Glazed rendering.
+- [x] Add command tests or scenario coverage.
 
 ### Phase 8 — Docs and scenarios
 

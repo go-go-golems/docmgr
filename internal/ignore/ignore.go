@@ -189,13 +189,20 @@ func (m *Matcher) resolvePath(path string) string {
 		}
 		return filepath.Clean(path)
 	}
+	cleanRel := filepath.Clean(path)
+	if m.repoRoot != "" && m.docsRoot != "" {
+		docsBase := filepath.Base(m.docsRoot)
+		if cleanRel == docsBase || strings.HasPrefix(cleanRel, docsBase+string(filepath.Separator)) {
+			return filepath.Clean(filepath.Join(m.repoRoot, cleanRel))
+		}
+	}
 	if m.docsRoot != "" {
-		candidate := filepath.Join(m.docsRoot, path)
+		candidate := filepath.Join(m.docsRoot, cleanRel)
 		if isWithin(m.docsRoot, candidate) {
 			return filepath.Clean(candidate)
 		}
 	}
-	abs, err := filepath.Abs(path)
+	abs, err := filepath.Abs(cleanRel)
 	if err != nil {
 		return filepath.Clean(path)
 	}

@@ -101,6 +101,21 @@ func TestMatcherRelativePathsResolveAgainstDocsRoot(t *testing.T) {
 	}
 }
 
+func TestMatcherRepoRelativeDocsRootPathDoesNotDuplicateDocsRoot(t *testing.T) {
+	repo, docs := testRepo(t)
+	m := loadTestMatcher(t, repo, docs)
+
+	rel := filepath.Join(filepath.Base(docs), "TICKET", "scripts", "node_modules", "pkg", "README.md")
+	decision := m.Match(rel, false)
+	if !decision.Ignored {
+		t.Fatalf("expected repo-relative docs-root path to be ignored, decision=%+v", decision)
+	}
+	want := filepath.ToSlash(filepath.Join(docs, "TICKET", "scripts", "node_modules", "pkg", "README.md"))
+	if decision.Path != want {
+		t.Fatalf("resolved path = %q, want %q", decision.Path, want)
+	}
+}
+
 func testRepo(t *testing.T) (string, string) {
 	t.Helper()
 	repo := t.TempDir()

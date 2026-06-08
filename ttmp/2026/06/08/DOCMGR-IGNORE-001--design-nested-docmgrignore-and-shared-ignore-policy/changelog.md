@@ -70,3 +70,17 @@ Cut doctor over to workspace-owned .docmgrignore behavior, removed doctor-local 
 - /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor_test.go — Removed obsolete helper-level regression test
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off doctor hard-cutover tasks
 
+
+## 2026-06-08
+
+Added docmgr ignore explain command with structured output and fixed repo-relative docs-root path resolution.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd/explain.go — Cobra wiring for ignore explain
+- /home/manuel/code/wesen/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd/ignore.go — Ignore command namespace
+- /home/manuel/code/wesen/go-go-golems/docmgr/cmd/docmgr/cmds/root.go — Root command registration for ignore namespace
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore.go — Repo-relative docs-root path resolution
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore_test.go — Path resolution regression test
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/ignore_explain.go — New ignore decision explanation command
+

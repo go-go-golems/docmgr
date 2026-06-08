@@ -525,3 +525,89 @@ rg -n "loadDocmgrIgnore|matchesAnyGlob|matchesSimplePathSegmentPattern|normalize
 ```
 
 The remaining helper `matchesDoctorIgnoreGlob` is only for explicit `--ignore-glob` command-line compatibility.
+
+## Step 6: Add `docmgr ignore explain`
+
+This step added the first user-facing inspection command for the new ignore system. `docmgr ignore explain <path>` resolves the workspace, uses the same `Workspace.IgnoreMatcher()` that indexing uses, and emits either a final decision row or a per-source trace when `--trace` is provided.
+
+The command is intentionally small: it reports the final ignored/included decision, matched source kind, source name, pattern string, pattern location when available, docs root, and repository root. This is enough to debug the original class of issue: “why is this dependency Markdown file being scanned?”
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 2)
+
+**Assistant interpretation:** Continue implementing the documented ignore system and add the explanation command from the design.
+
+**Inferred user intent:** Make ignore decisions observable, not just implicit in doctor/list/search behavior.
+
+**Commit (code):** pending — this step will be committed as the CLI explanation boundary.
+
+### What I did
+
+- Added `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/ignore_explain.go`.
+- Added Cobra wiring:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd/ignore.go`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd/explain.go`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/cmd/docmgr/cmds/root.go`
+- Added a repo-relative path resolution regression test in `internal/ignore` because the first command smoke revealed duplicated `ttmp/ttmp` paths.
+- Ran:
+  - `go test ./internal/ignore ./pkg/commands ./cmd/docmgr/cmds/... -count=1`
+  - `go run ./cmd/docmgr ignore explain --root ttmp ttmp/.../scripts/node_modules/pkg/README.md --with-glaze-output --output json`
+
+### Why
+
+- Ignore behavior is hard to debug without an explanation surface.
+- The new command gives users and future tests a way to ask the workspace matcher what it would do with a path.
+
+### What worked
+
+- The command reports built-in `node_modules` ignores correctly.
+- It supports structured Glazed output.
+- `--trace` is wired to emit source-level trace rows.
+
+### What didn't work
+
+- The first smoke test passed a repo-relative path beginning with `ttmp/` while also using `--root ttmp`. `Matcher.resolvePath` treated every relative path as docs-root-relative, producing `.../ttmp/ttmp/...` in the displayed path.
+- Fix:
+  - `resolvePath` now recognizes paths beginning with the docs-root base name as repo-relative docs-root paths and resolves them under `RepoRoot`.
+  - Added `TestMatcherRepoRelativeDocsRootPathDoesNotDuplicateDocsRoot`.
+
+### What I learned
+
+- The CLI needs to accept absolute, repo-relative, and docs-root-relative inputs because users naturally copy all three forms from different docmgr outputs.
+- `go-gitignore.Match.Position()` gives useful line/pattern metadata for built-in patterns and should support richer explanations for file-based patterns too.
+
+### What was tricky to build
+
+- The command needed to be Glaze-compatible while remaining simple. I implemented it as a `GlazeCommand` and used `common.BuildCommand` with dual mode in the Cobra wrapper.
+- Path resolution was the sharp edge; command UX revealed a case unit tests did not originally cover.
+
+### What warrants a second pair of eyes
+
+- Whether the command should infer `--is-dir` with `os.Stat` when the path exists, rather than requiring the flag.
+- Whether default output should be more prose-like in bare mode instead of row-oriented.
+- Whether trace output should include non-matching source rows by default or only with `--trace`.
+
+### What should be done in the future
+
+- Add scenario coverage for `ignore explain` once the testing script is updated.
+- Update user docs to advertise the command.
+
+### Code review instructions
+
+- Start with `pkg/commands/ignore_explain.go`.
+- Then review `cmd/docmgr/cmds/ignorecmd/*` and root command registration.
+- Validate with:
+  - `go run ./cmd/docmgr ignore explain --root ttmp ttmp/.../scripts/node_modules/pkg/README.md --with-glaze-output --output json`
+
+### Technical details
+
+Successful smoke output included:
+
+```json
+{
+  "ignored": true,
+  "pattern": "**/node_modules/**",
+  "source_kind": "builtin"
+}
+```

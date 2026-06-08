@@ -110,3 +110,15 @@ Final validation passed: go test ./... and local-binary docmgr doctor for DOCMGR
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md — Recorded final validation evidence and scenariolog caveat
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off final validation tasks
 
+
+## 2026-06-08
+
+Repaired scenariolog by aligning nested Glazed dependency with facade-package imports; full scenario suite now passes with sqlite_fts5 docmgr build.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/scenariolog/go.mod — Updated Glazed dependency to v1.0.5 and Go version required by that dependency
+- /home/manuel/code/wesen/go-go-golems/docmgr/scenariolog/go.sum — Updated nested module dependency checksums
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md — Recorded scenariolog repair and full scenario validation
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Added and checked scenario harness repair tasks
+

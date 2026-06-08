@@ -802,3 +802,113 @@ go test ./... -count=1
 go build -o /tmp/docmgr-ignore ./cmd/docmgr
 /tmp/docmgr-ignore --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30
 ```
+
+## Step 9: Repair scenariolog so the full scenario suite can run
+
+This step fixed the scenario harness that blocked full `run-all.sh` validation. `scenariolog` is a nested module used by `test-scenarios/testing-doc-manager/run-all.sh` to log scenario runs, steps, stdout/stderr artifacts, timings, and failures into SQLite. The helper itself was broken because its source imports the newer Glazed facade packages, but its nested `go.mod` still pinned `github.com/go-go-golems/glazed v0.7.3`.
+
+The fix was to follow the Glazed migration guidance and align the nested module with the main docmgr module's Glazed generation: bump `scenariolog` to `github.com/go-go-golems/glazed v1.0.5`, run `go mod tidy`, verify scenariolog tests/build, and rerun the full scenario suite with pinned local binaries.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Ok, go ahead, commit at appropriate intervals, keep a diary. I think there's docs in the glazed folder on @glazed/pkg/doc/tutorials/migrating-to-facade-packages.md which amight be relevant."
+
+**Assistant interpretation:** Fix the scenariolog dependency/API mismatch, use the Glazed migration document as reference, keep ticket diary/bookkeeping current, validate, and commit.
+
+**Inferred user intent:** Restore the full scenario runner so DOCMGR-IGNORE-001 can be validated through the normal scenario harness, not just direct script execution.
+
+**Commit (code):** pending — this step will commit the nested scenariolog dependency update and ticket bookkeeping.
+
+### What I did
+
+- Read `/home/manuel/code/wesen/go-go-golems/glazed/pkg/doc/tutorials/migrating-to-facade-packages.md`.
+- Confirmed the migration doc maps legacy Glazed layers/parameters APIs to the newer facade packages:
+  - `schema`
+  - `fields`
+  - `values`
+  - `sources`
+- Inspected scenariolog:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/scenariolog/go.mod`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/scenariolog/cmd/scenariolog/glazed_cmds.go`
+- Updated nested module dependency:
+  - `github.com/go-go-golems/glazed v0.7.3` -> `v1.0.5`
+  - `go 1.24.2` / `toolchain go1.24.9` -> `go 1.25.7`
+- Ran:
+  - `cd scenariolog && go test ./... -count=1`
+  - `cd scenariolog && go build -tags sqlite_fts5 -o /tmp/scenariolog-local ./cmd/scenariolog`
+  - `go build -tags sqlite_fts5 -o /tmp/docmgr-ignore ./cmd/docmgr`
+  - `DOCMGR_PATH=/tmp/docmgr-ignore SCENARIOLOG_PATH=/tmp/scenariolog-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-full-fts`
+
+### Why
+
+- The full scenario runner refused to proceed when `SCENARIOLOG_PATH` was unset and then failed to build scenariolog because the nested module's Glazed dependency was too old for its imports.
+- The scenario suite is the intended end-to-end validation harness for the new ignore policy scenario.
+
+### What worked
+
+- Bumping Glazed to `v1.0.5` fixed the facade import errors without source-code changes in scenariolog.
+- `scenariolog` tests passed.
+- `scenariolog` built with `-tags sqlite_fts5`.
+- The full `test-scenarios/testing-doc-manager/run-all.sh` suite passed when `docmgr` was built with `-tags sqlite_fts5`.
+- Step 21 (`21-ignore-policy`) ran and passed inside the full scenario harness.
+
+### What didn't work
+
+- First full scenario attempt after fixing scenariolog failed at step 05 with:
+  - `Error: fts5 not available (docs_fts missing)`
+- Root cause:
+  - I built `/tmp/docmgr-ignore` without `-tags sqlite_fts5`.
+- Fix:
+  - Rebuilt docmgr with `go build -tags sqlite_fts5 -o /tmp/docmgr-ignore ./cmd/docmgr` and reran the suite.
+
+### What I learned
+
+- `scenariolog` was not broken by DOCMGR-IGNORE-001; it had dependency drift against Glazed's facade-package migration.
+- The full scenario suite requires both helper binaries to be pinned and built correctly:
+  - `SCENARIOLOG_PATH=/tmp/scenariolog-local`
+  - `DOCMGR_PATH=/tmp/docmgr-ignore`
+  - docmgr needs `-tags sqlite_fts5` because search scenarios require FTS.
+
+### What was tricky to build
+
+- The first error looked like an ignore/scenario issue, but it was a nested module dependency problem. The second error looked like a search bug, but it was a build-tag problem.
+- Keeping these distinct prevented unnecessary changes to search or ignore code.
+
+### What warrants a second pair of eyes
+
+- Whether `scenariolog` should track the main docmgr module's Glazed version through a workspace or explicit maintenance policy.
+- Whether `run-all.sh` should build docmgr itself with `-tags sqlite_fts5` when `DOCMGR_PATH` is unset, or document the tag more prominently.
+- Whether the nested module should retain `go 1.25.7` or match the main module's exact Go/toolchain policy.
+
+### What should be done in the future
+
+- Consider a CI job that builds scenariolog and runs the scenario suite with `sqlite_fts5` enabled.
+- Consider documenting the exact scenario build commands near `run-all.sh`.
+
+### Code review instructions
+
+- Review only the nested module dependency changes:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/scenariolog/go.mod`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/scenariolog/go.sum`
+- Validate with:
+  - `cd scenariolog && go test ./... -count=1`
+  - `cd scenariolog && go build -tags sqlite_fts5 -o /tmp/scenariolog-local ./cmd/scenariolog`
+  - `go build -tags sqlite_fts5 -o /tmp/docmgr-ignore ./cmd/docmgr`
+  - `DOCMGR_PATH=/tmp/docmgr-ignore SCENARIOLOG_PATH=/tmp/scenariolog-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario-full-fts`
+
+### Technical details
+
+The original build failure was:
+
+```text
+cmd/scenariolog/glazed_cmds.go:11:2: no required module provides package github.com/go-go-golems/glazed/pkg/cmds/fields
+cmd/scenariolog/glazed_cmds.go:12:2: no required module provides package github.com/go-go-golems/glazed/pkg/cmds/schema
+cmd/scenariolog/glazed_cmds.go:13:2: no required module provides package github.com/go-go-golems/glazed/pkg/cmds/values
+```
+
+Successful final scenario output ended with:
+
+```text
+[scenariolog] step=...-step-21 exit=0 ...
+[ok] Scenario completed at /tmp/docmgr-scenario-full-fts/acme-chat-app
+```

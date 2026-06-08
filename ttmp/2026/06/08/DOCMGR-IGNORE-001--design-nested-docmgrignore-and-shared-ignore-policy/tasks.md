@@ -86,3 +86,11 @@
 - [x] Run `docmgr --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30` unless intentionally skipped.
 - [x] Update diary after each implementation phase.
 - [x] Commit at appropriate implementation boundaries.
+
+### Phase 10 — Scenario harness repair
+
+- [x] Read Glazed migration guide for facade package imports.
+- [x] Bump nested `scenariolog` module from Glazed v0.7.3 to v1.0.5.
+- [x] Run `go test ./...` inside `scenariolog`.
+- [x] Build `scenariolog` with `-tags sqlite_fts5`.
+- [x] Run full `test-scenarios/testing-doc-manager/run-all.sh` with pinned `docmgr` and `scenariolog` binaries.

@@ -900,11 +900,39 @@ func containsString(list []string, s string) bool {
 	return false
 }
 
-// matchesAnyGlob checks if path matches any of the provided glob patterns
+// matchesAnyGlob checks if path matches any of the provided ignore patterns.
+// In addition to filepath.Match globs, simple directory names such as
+// "node_modules/" or "dist/" match any path segment so .docmgrignore behaves
+// like users expect from gitignore-style directory ignores.
 func matchesAnyGlob(patterns []string, path string) bool {
+	path = filepath.Clean(strings.TrimSpace(path))
+	if path == "" || path == "." {
+		return false
+	}
 	for _, p := range patterns {
 		p = normalizeIgnorePattern(p)
+		if p == "" {
+			continue
+		}
+		if matchesSimplePathSegmentPattern(p, path) {
+			return true
+		}
 		if ok, _ := filepath.Match(p, path); ok {
+			return true
+		}
+	}
+	return false
+}
+
+func matchesSimplePathSegmentPattern(pattern string, path string) bool {
+	if strings.ContainsAny(pattern, "*?[") || strings.ContainsAny(pattern, "/"+string(os.PathSeparator)) {
+		return false
+	}
+	if filepath.Base(path) == pattern {
+		return true
+	}
+	for _, segment := range strings.Split(filepath.ToSlash(path), "/") {
+		if segment == pattern {
 			return true
 		}
 	}

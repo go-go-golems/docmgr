@@ -712,3 +712,93 @@ DOCMGR_PATH=/tmp/docmgr-ignore bash ./02-init-ticket.sh "$ROOT"
 DOCMGR_PATH=/tmp/docmgr-ignore bash ./03-create-docs-and-meta.sh "$ROOT"
 DOCMGR_PATH=/tmp/docmgr-ignore bash ./21-ignore-policy.sh "$ROOT"
 ```
+
+## Step 8: Final validation
+
+This step ran the broad validation pass after the workspace ignore implementation, doctor cutover, explanation command, docs, and scenario coverage were committed. The full Go test suite passed, and the DOCMGR-IGNORE-001 ticket doctor check passed with the locally built binary.
+
+The only remaining validation caveat is scenario infrastructure: the full `run-all.sh` path currently fails while building the nested `scenariolog` helper due to stale Glazed imports, so I validated the new ignore scenario directly with the pinned local `docmgr` binary.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 2)
+
+**Assistant interpretation:** Finish implementation validation and keep ticket bookkeeping current.
+
+**Inferred user intent:** Leave the branch in a reviewable, tested state with clear evidence of what passed and what remains external to this ticket.
+
+**Commit (code):** pending — this step records final validation bookkeeping only.
+
+### What I did
+
+- Ran full Go tests:
+  - `go test ./... -count=1`
+- Built local binary:
+  - `go build -o /tmp/docmgr-ignore ./cmd/docmgr`
+- Ran ticket doctor:
+  - `/tmp/docmgr-ignore --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30`
+- Updated `tasks.md` to check off full Go test and ticket doctor validation.
+
+### Why
+
+- The implementation touches workspace construction, indexing, document walking, doctor validation, command wiring, docs, and scenarios. A full package test pass is important before handoff.
+- Running doctor on the active ticket verifies the updated docs remain valid under the new ignore engine.
+
+### What worked
+
+- `go test ./... -count=1` passed.
+- Ticket doctor output:
+  - `DOCMGR-IGNORE-001 — ✅ All checks passed`
+
+### What didn't work
+
+- Full scenario runner still fails before reaching the ignore policy scenario because `scenariolog` cannot build:
+  - `no required module provides package github.com/go-go-golems/glazed/pkg/cmds/fields`
+  - `no required module provides package github.com/go-go-golems/glazed/pkg/cmds/schema`
+  - `no required module provides package github.com/go-go-golems/glazed/pkg/cmds/values`
+- This appears unrelated to DOCMGR-IGNORE-001 and should be handled as a separate scenariolog/dependency maintenance issue.
+
+### What I learned
+
+- The new ignore implementation is covered at multiple levels: unit tests, workspace integration tests, command smoke, direct scenario smoke, and full Go tests.
+- The active ticket itself validates cleanly under the local binary.
+
+### What was tricky to build
+
+- The main tricky issue found during validation was file-level nested ignore handling; this was fixed before the final validation pass.
+- The remaining tricky issue is external test harness health, not ignore behavior.
+
+### What warrants a second pair of eyes
+
+- Review source labeling in `ignore explain`: nested matches currently report the repository matcher source name even though `go-gitignore` provides pattern position details. The decision is correct, but source display can be improved.
+- Review whether the built-in ignore list should be configurable or documented as non-negotiable ingest policy.
+
+### What should be done in the future
+
+- Repair `test-scenarios/testing-doc-manager/run-all.sh` / `scenariolog` dependency drift so full scenario runs include `21-ignore-policy.sh` automatically.
+- Consider adding prose-oriented bare output for `docmgr ignore explain`.
+- Optionally upload the updated ticket bundle to reMarkable again.
+
+### Code review instructions
+
+- Review commits in order:
+  1. `87886a0 DOCMGR-IGNORE-001: design shared ignore policy`
+  2. `55fff68 Add go-gitignore backed docmgr ignore matcher`
+  3. `8b95d7b Apply docmgr ignores during workspace indexing`
+  4. `050d9e6 Use workspace ignores in doctor`
+  5. `e29b36b Add docmgr ignore explain command`
+  6. `4894f5c Document and test workspace ignore policy`
+- Validate with:
+  - `go test ./... -count=1`
+  - `go build -o /tmp/docmgr-ignore ./cmd/docmgr`
+  - `/tmp/docmgr-ignore --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30`
+
+### Technical details
+
+Successful validation commands:
+
+```bash
+go test ./... -count=1
+go build -o /tmp/docmgr-ignore ./cmd/docmgr
+/tmp/docmgr-ignore --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30
+```

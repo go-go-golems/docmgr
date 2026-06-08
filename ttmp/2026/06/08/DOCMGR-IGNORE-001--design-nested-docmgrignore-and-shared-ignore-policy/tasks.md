@@ -81,8 +81,8 @@
 ### Phase 9 — Validation and delivery
 
 - [x] Run focused unit tests for `internal/ignore`, `internal/workspace`, and `pkg/commands`.
-- [ ] Run full `go test ./...` if feasible.
+- [x] Run full `go test ./...` if feasible.
 - [x] Run relevant `test-scenarios/testing-doc-manager` smoke tests.
-- [ ] Run `docmgr --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30` unless intentionally skipped.
+- [x] Run `docmgr --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30` unless intentionally skipped.
 - [x] Update diary after each implementation phase.
 - [x] Commit at appropriate implementation boundaries.

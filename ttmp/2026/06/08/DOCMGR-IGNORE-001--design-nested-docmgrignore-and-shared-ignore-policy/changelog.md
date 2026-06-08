@@ -100,3 +100,13 @@ Updated ignore docs and scenario coverage; added file-level WalkDocuments skip s
 - /home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-how-to-setup.md — Documented workspace-wide ignore behavior
 - /home/manuel/code/wesen/go-go-golems/docmgr/test-scenarios/testing-doc-manager/21-ignore-policy.sh — New ignore policy scenario
 
+
+## 2026-06-08
+
+Final validation passed: go test ./... and local-binary docmgr doctor for DOCMGR-IGNORE-001 both succeeded; full scenario runner remains blocked by unrelated scenariolog dependency drift.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md — Recorded final validation evidence and scenariolog caveat
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off final validation tasks
+

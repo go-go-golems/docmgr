@@ -13,21 +13,21 @@
 
 ### Phase 1 — Dependency and package skeleton
 
-- [ ] Add `github.com/denormal/go-gitignore` to `go.mod` / `go.sum`.
-- [ ] Create `internal/ignore` package.
-- [ ] Define `LoadOptions`, `Matcher`, `Decision`, and source metadata types.
-- [ ] Add built-in ignore defaults (`.git/`, `node_modules/`, `.pnpm/`, `dist/`, `build/`, `coverage/`, `.venv/`, `__pycache__/`).
-- [ ] Add root/docs-root `.docmgrignore` loading.
-- [ ] Add table tests for root/docs-root loading and missing ignore files.
+- [x] Add `github.com/denormal/go-gitignore` to `go.mod` / `go.sum`.
+- [x] Create `internal/ignore` package.
+- [x] Define `LoadOptions`, `Matcher`, `Decision`, and source metadata types.
+- [x] Add built-in ignore defaults (`.git/`, `node_modules/`, `.pnpm/`, `dist/`, `build/`, `coverage/`, `.venv/`, `__pycache__/`).
+- [x] Add root/docs-root `.docmgrignore` loading.
+- [x] Add table tests for root/docs-root loading and missing ignore files.
 
 ### Phase 2 — Matching semantics
 
-- [ ] Implement `Matcher.Match(path string, isDir bool) Decision` using `go-gitignore`.
-- [ ] Normalize absolute, repo-relative, and docs-root-relative candidate paths before matching.
-- [ ] Test `node_modules/` matches nested path segments and descendants.
-- [ ] Test `node_modules/` does not match substring directories like `my-node_modules-cache`.
-- [ ] Test `dist/`, `.git/`, `**/draft-*.md`, and anchored patterns used in docs.
-- [ ] Test built-in ignores independently from `.docmgrignore` files.
+- [x] Implement `Matcher.Match(path string, isDir bool) Decision` using `go-gitignore`.
+- [x] Normalize absolute, repo-relative, and docs-root-relative candidate paths before matching.
+- [x] Test `node_modules/` matches nested path segments and descendants.
+- [x] Test `node_modules/` does not match substring directories like `my-node_modules-cache`.
+- [x] Test `dist/`, `.git/`, `**/draft-*.md`, and anchored patterns used in docs.
+- [x] Test built-in ignores independently from `.docmgrignore` files.
 
 ### Phase 3 — Workspace ownership
 
@@ -56,10 +56,10 @@
 
 ### Phase 6 — Nested `.docmgrignore`
 
-- [ ] Discover nested `.docmgrignore` files under docs root.
+- [x] Discover nested `.docmgrignore` files under docs root.
 - [ ] Use built-ins and root/docs-root rules while discovering nested ignore files to avoid walking ignored dependency trees.
-- [ ] Scope nested ignore files to their containing directory subtree.
-- [ ] Add tests for ticket-local and `scripts/`-local `.docmgrignore` files.
+- [x] Scope nested ignore files to their containing directory subtree.
+- [x] Add tests for ticket-local and `scripts/`-local `.docmgrignore` files.
 - [ ] Add tests for parent + nested precedence, including negation if supported by `go-gitignore` composition.
 
 ### Phase 7 — CLI explanation command

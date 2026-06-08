@@ -34,3 +34,15 @@ Pivoted the ignore-system guide to a direct workspace-owned go-gitignore cutover
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md — Recorded design pivot and implementation setup
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Detailed phase-by-phase implementation checklist
 
+
+## 2026-06-08
+
+Implemented internal/ignore with go-gitignore-backed matching, built-in defaults, root/docs/nested .docmgrignore coverage, and focused tests.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/go.mod — Added go-gitignore dependency
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore.go — New go-gitignore-backed matcher wrapper
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore_test.go — Matcher semantics and nested .docmgrignore tests
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off completed package and matching tasks
+

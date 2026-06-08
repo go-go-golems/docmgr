@@ -242,3 +242,110 @@ Key files:
 - `/home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/design-doc/01-nested-docmgrignore-and-shared-ignore-policy-implementation-guide.md`
 - `/home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md`
 - `/home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md`
+
+## Step 3: Add `internal/ignore` backed by `go-gitignore`
+
+This step implemented the first concrete slice of the ignore-system cutover. I added `github.com/denormal/go-gitignore`, created `internal/ignore`, and wrapped the dependency with docmgr-specific load options, built-in ignore patterns, path normalization, match decisions, and trace metadata.
+
+The tests cover the behavior that triggered this ticket: nested dependency directories such as `scripts/node_modules` are ignored, substring lookalikes are not ignored, docs-root `.docmgrignore` files work, repository-root `.docmgrignore` files work, nested `.docmgrignore` files are scoped to their subtree, and docs-root-relative paths resolve predictably.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 2)
+
+**Assistant interpretation:** Continue implementing the direct `go-gitignore` plan and record progress as tasks are completed.
+
+**Inferred user intent:** Build the shared ignore system in reviewable phases with tests, task checks, diary entries, and commits.
+
+**Commit (code):** pending — this step will be committed as the Phase 1/2 implementation boundary.
+
+### What I did
+
+- Added dependency:
+  - `github.com/denormal/go-gitignore v0.0.0-20180930084346-ae8ad1d07817`
+- Created:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore.go`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore_test.go`
+- Implemented:
+  - `LoadOptions`
+  - `Matcher`
+  - `Decision`
+  - `TraceStep`
+  - built-in ignore patterns
+  - root/docs-root/repository matcher loading
+  - `Matcher.Match(path, isDir)`
+  - docs-root-relative path resolution
+- Updated `tasks.md` to check off completed Phase 1/2 items and completed nested `.docmgrignore` coverage.
+- Ran:
+  - `go test ./internal/ignore -count=1`
+
+### Why
+
+- This creates the reusable package needed before workspace ownership and index-time pruning can be implemented.
+- It proves `go-gitignore` can handle repository-root, docs-root, and nested `.docmgrignore` behavior with a small docmgr wrapper.
+
+### What worked
+
+- `go-gitignore.NewRepositoryWithFile(base, ".docmgrignore")` supports nested `.docmgrignore` files, so docmgr does not need to manually discover every nested ignore file for matching semantics.
+- The dependency exposes `Match.Position()`, including file and line data, which can support a useful future `docmgr ignore explain` command.
+- Focused tests pass with:
+  - `ok github.com/go-go-golems/docmgr/internal/ignore`
+
+### What didn't work
+
+- The first built-in pattern attempt used simple entries such as `node_modules/`. In a single-file matcher created with `gitignore.New(...)`, that matched the directory itself but not descendants.
+- Exact failure example:
+  - Command: `go test ./internal/ignore -count=1`
+  - Failure: `node_modules/pkg/README.md` was not ignored by the built-in matcher.
+- Fix:
+  - Kept simple directory entries for directory matching.
+  - Added explicit recursive built-in patterns such as `**/node_modules/**`, `**/.pnpm/**`, and `**/dist/**`.
+
+### What I learned
+
+- Repository matchers and single-file matchers have different practical behavior for descendant matching. Repository matching recursively checks parent ignore state, while the single built-in matcher needed explicit recursive patterns.
+- The wrapper should avoid relying on filesystem `os.Stat` for paths that may be checked during scans; using `Absolute(path, isDir)` keeps the caller in control of directory/file state.
+
+### What was tricky to build
+
+- Path resolution needed to support absolute paths and docs-root-relative paths without accidentally treating arbitrary relative paths as repo-root-relative. The wrapper first resolves non-absolute paths against `DocsRoot`, which matches docmgr command usage.
+- Combining multiple sources required preserving final-decision semantics: built-ins are evaluated before repository/doc `.docmgrignore` matchers, and later matches can replace the decision.
+
+### What warrants a second pair of eyes
+
+- Whether built-ins should be overrideable by user negation patterns. The current wrapper allows later repository/doc matches to override final decisions, but directory pruning may still make re-inclusion under built-in-ignored directories impossible in practice.
+- Whether `Matcher.resolvePath` should also explicitly recognize repo-root-relative paths before docs-root-relative paths.
+- Whether loading only a repository matcher is sufficient when `DocsRoot` is under `RepoRoot`, or whether a separate docs-root matcher should always be added for clearer source labels.
+
+### What should be done in the future
+
+- Wire the matcher into `Workspace` ownership.
+- Prune ignored directories before indexing.
+- Replace doctor-local helpers with `ws.IgnoreMatcher()`.
+
+### Code review instructions
+
+- Start with `internal/ignore/ignore.go` and verify path/source composition.
+- Then read `internal/ignore/ignore_test.go` to understand the required semantics.
+- Validate with:
+  - `go test ./internal/ignore -count=1`
+
+### Technical details
+
+Important API details from `go-gitignore`:
+
+```go
+gitignore.NewRepositoryWithFile(base, ".docmgrignore")
+match := matcher.Absolute(absPath, isDir)
+match.Ignore()
+match.String()
+match.Position()
+```
+
+Key behavior encoded in tests:
+
+- built-in dependency/build directories are ignored;
+- `my-node_modules-cache` is not ignored;
+- docs-root `.docmgrignore` supports recursive and anchored patterns;
+- repository-root `.docmgrignore` can target `ttmp/**` paths;
+- nested `.docmgrignore` under `scripts/` applies only to that subtree.

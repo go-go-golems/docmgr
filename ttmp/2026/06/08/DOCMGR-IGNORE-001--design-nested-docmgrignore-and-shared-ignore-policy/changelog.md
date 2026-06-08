@@ -122,3 +122,15 @@ Repaired scenariolog by aligning nested Glazed dependency with facade-package im
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md — Recorded scenariolog repair and full scenario validation
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Added and checked scenario harness repair tasks
 
+
+## 2026-06-08
+
+Addressed PR #40 review: duplicate-index filesystem walk now honors file-level ignore decisions before appending index.md files.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor.go — Applied file-level skip predicate in duplicate index scan
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor_test.go — Regression test for ignored duplicate index.md files
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/reference/01-investigation-diary.md — Recorded PR review fix
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Added PR #40 review follow-up checklist
+

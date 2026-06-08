@@ -281,8 +281,8 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to discover workspace: %w", err)
 	}
 	ignoreMatcher := ws.IgnoreMatcher()
-	skipFn := func(relPath, base string) bool {
-		if containsString(settings.IgnoreDirs, base) {
+	shouldSkipPath := func(relPath, base string, isDir bool) bool {
+		if isDir && containsString(settings.IgnoreDirs, base) {
 			return true
 		}
 		full := relPath
@@ -295,10 +295,13 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		if matchesDoctorIgnoreGlob(settings.IgnoreGlobs, base) || matchesDoctorIgnoreGlob(settings.IgnoreGlobs, full) {
 			return true
 		}
-		if ignoreMatcher != nil && ignoreMatcher.Ignore(full, true) {
+		if ignoreMatcher != nil && ignoreMatcher.Ignore(full, isDir) {
 			return true
 		}
 		return false
+	}
+	skipFn := func(relPath, base string) bool {
+		return shouldSkipPath(relPath, base, true)
 	}
 	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
@@ -387,7 +390,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		hasIssues := false
 
 		// Check for unique index.md (should only be one per ticket root)
-		indexFiles := findIndexFiles(ticketPath, skipFn)
+		indexFiles := findIndexFiles(ticketPath, shouldSkipPath)
 		if len(indexFiles) > 1 {
 			hasIssues = true
 			row := types.NewRow(
@@ -848,18 +851,22 @@ func matchesTicketDir(ticketID string, base string) bool {
 		strings.HasPrefix(base, ticketID+"-")
 }
 
-// findIndexFiles recursively searches for all index.md files in a directory tree.
-func findIndexFiles(rootPath string, skipDir func(relPath, baseName string) bool) []string {
+// findIndexFiles recursively searches for all non-ignored index.md files in a directory tree.
+func findIndexFiles(rootPath string, shouldSkipPath func(path, baseName string, isDir bool) bool) []string {
 	var indexFiles []string
 
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors, continue walking
 		}
+		base := filepath.Base(path)
 		if info.IsDir() {
-			if skipDir != nil && skipDir(path, filepath.Base(path)) {
+			if shouldSkipPath != nil && shouldSkipPath(path, base, true) {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		if shouldSkipPath != nil && shouldSkipPath(path, base, false) {
 			return nil
 		}
 		if !info.IsDir() && info.Name() == "index.md" {

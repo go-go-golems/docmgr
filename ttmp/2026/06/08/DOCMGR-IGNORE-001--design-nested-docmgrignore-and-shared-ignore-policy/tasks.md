@@ -94,3 +94,10 @@
 - [x] Run `go test ./...` inside `scenariolog`.
 - [x] Build `scenariolog` with `-tags sqlite_fts5`.
 - [x] Run full `test-scenarios/testing-doc-manager/run-all.sh` with pinned `docmgr` and `scenariolog` binaries.
+
+### Phase 11 — PR #40 review follow-up
+
+- [x] Fetch PR #40 review comments.
+- [x] Fix duplicate-index scan to apply file-level ignore decisions before appending `index.md`.
+- [x] Add regression test for ignored duplicate `index.md` files.
+- [x] Run focused doctor command tests.

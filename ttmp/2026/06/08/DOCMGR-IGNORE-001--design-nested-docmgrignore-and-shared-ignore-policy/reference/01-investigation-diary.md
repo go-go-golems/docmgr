@@ -912,3 +912,89 @@ Successful final scenario output ended with:
 [scenariolog] step=...-step-21 exit=0 ...
 [ok] Scenario completed at /tmp/docmgr-scenario-full-fts/acme-chat-app
 ```
+
+## Step 10: Address PR #40 review comment for duplicate index scans
+
+This step addressed the automated review comment on PR #40. The reviewer correctly pointed out that duplicate-index detection skipped ignored directories but still appended every `index.md` file it found. That meant an ignored file such as `design-doc/index.md` could still trigger a `duplicate_index` warning even though the workspace index had already pruned it.
+
+The fix was to make the duplicate-index walker accept a path-level skip predicate with an `isDir` flag and call it for both directories and files. The doctor scan still prunes ignored directories with `filepath.SkipDir`, but now also checks file-level ignore decisions before appending `index.md` to the duplicate list.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Address code review comments on https://github.com/go-go-golems/docmgr/pull/40"
+
+**Assistant interpretation:** Fetch PR #40 review comments, apply the requested fix, add regression coverage, validate, update ticket diary/bookkeeping, and commit.
+
+**Inferred user intent:** Resolve review feedback so the PR no longer reports duplicate-index findings for ignored index files.
+
+**Commit (code):** pending — this step will commit the PR review fix.
+
+### What I did
+
+- Fetched PR review comments with:
+  - `gh pr view 40 --json ...`
+  - `gh api repos/go-go-golems/docmgr/pulls/40/comments --paginate`
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor.go`:
+  - changed `skipFn` into a `shouldSkipPath(path, base, isDir)` predicate;
+  - kept a directory-only wrapper for `FindTicketScaffoldsMissingIndex`;
+  - changed `findIndexFiles` to call the skip predicate for directories and files;
+  - skipped ignored files before appending `index.md`.
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor_test.go`:
+  - added `TestFindIndexFilesSkipsIgnoredIndexFiles`.
+- Ran:
+  - `go test ./pkg/commands -run 'TestFindIndexFilesSkipsIgnoredIndexFiles|TestDoctorReturnsErrorForInvalidVocabulary' -count=1`
+
+### Why
+
+- The workspace index correctly prunes ignored files, but duplicate-index detection is a separate filesystem walk and must honor the same file-level ignore decision.
+- Without this fix, users could still see `duplicate_index` warnings for ignored `index.md` files.
+
+### What worked
+
+- The new regression test proves ignored `index.md` files are not returned by `findIndexFiles`.
+- The existing invalid-vocabulary doctor test still passes.
+
+### What didn't work
+
+- N/A for this step. The review comment was specific and the change was localized.
+
+### What I learned
+
+- Any filesystem walk outside the workspace index needs both directory-level and file-level ignore handling. Directory-only pruning is insufficient for patterns that target files directly.
+
+### What was tricky to build
+
+- The subtle part was preserving the existing missing-index scan API, which only accepts a directory skip callback, while enhancing duplicate-index scanning with file-level skip decisions. I kept a wrapper for missing-index detection and passed the richer predicate only to `findIndexFiles`.
+
+### What warrants a second pair of eyes
+
+- Confirm that `--ignore-dir` remains directory-only by design; the new predicate only applies `ignore-dir` when `isDir` is true.
+- Confirm whether `--ignore-glob` should continue matching basenames and full paths for files and directories.
+
+### What should be done in the future
+
+- Consider introducing a shared doctor filesystem-skip helper if more doctor-specific walks are added.
+
+### Code review instructions
+
+- Review `findIndexFiles` and `TestFindIndexFilesSkipsIgnoredIndexFiles` together.
+- Validate with:
+  - `go test ./pkg/commands -run 'TestFindIndexFilesSkipsIgnoredIndexFiles|TestDoctorReturnsErrorForInvalidVocabulary' -count=1`
+
+### Technical details
+
+The PR comment was:
+
+```text
+Honor file ignore rules when finding duplicate indexes
+```
+
+The code now calls:
+
+```go
+if shouldSkipPath != nil && shouldSkipPath(path, base, false) {
+    return nil
+}
+```
+
+before appending `index.md`.

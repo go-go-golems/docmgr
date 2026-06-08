@@ -349,3 +349,92 @@ Key behavior encoded in tests:
 - docs-root `.docmgrignore` supports recursive and anchored patterns;
 - repository-root `.docmgrignore` can target `ttmp/**` paths;
 - nested `.docmgrignore` under `scripts/` applies only to that subtree.
+
+## Step 4: Make Workspace own ignore policy and prune ignored docs during indexing
+
+This step moved ignore behavior from a standalone package toward the core workspace flow. `Workspace` now owns an `internal/ignore.Matcher`, exposes it through `IgnoreMatcher()`, and loads it during workspace construction. `Workspace.InitIndex` now passes a skip predicate into `documents.WalkDocuments` so ignored directories are skipped before any Markdown below them is parsed.
+
+The key validation is an index-builder test that creates invalid Markdown under `scripts/node_modules` and another invalid Markdown file under a normal `reference/` directory. The ignored dependency README is not indexed at all, while the normal broken reference document is still indexed with `parse_ok=0`, preserving repair diagnostics for real docs.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 2)
+
+**Assistant interpretation:** Continue the direct hard-cutover implementation by wiring the matcher into workspace ownership and indexing.
+
+**Inferred user intent:** Ensure ignored files disappear before parsing/indexing, not merely from doctor output.
+
+**Commit (code):** pending — this step will be committed as the workspace/index pruning boundary.
+
+### What I did
+
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/workspace.go`:
+  - added `ignore *docignore.Matcher` to `Workspace`;
+  - added `IgnoreMatcher()` accessor;
+  - loaded the matcher in `NewWorkspaceFromContext`.
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder.go`:
+  - passed the workspace matcher into `ingestWorkspaceDocs`;
+  - combined `DefaultIngestSkipDir` with matcher-based skip decisions in `documents.WithSkipDir`.
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder_test.go`:
+  - added workspace matcher ownership test;
+  - added index pruning test for ignored invalid Markdown under `scripts/node_modules`.
+- Ran:
+  - `go test ./internal/ignore ./internal/workspace -count=1`
+
+### Why
+
+- This is the core behavior change: ignored paths are pruned before `ReadDocumentWithFrontmatter`, preventing dependency Markdown from becoming docmgr parse diagnostics.
+- Making `Workspace` own the matcher gives list/search/status/export the same behavior once they use `InitIndex`.
+
+### What worked
+
+- Focused workspace and ignore tests pass.
+- The existing parse-error behavior for non-ignored broken docs remains intact.
+- Missing `.docmgrignore` files are non-fatal because the matcher can load with built-ins and an empty repository ignore hierarchy.
+
+### What didn't work
+
+- The first index-builder edit accidentally inserted `documents.WithSkipDir(...)` inside a `paths.NewResolver(...)` call because a broad exact-text replacement matched the wrong `})` block. I inspected the surrounding code and repaired the resolver block plus the final `WalkDocuments` options.
+- After wiring the matcher into `WalkDocuments`, tests exposed a `go-gitignore` panic when matching the docs root path itself:
+  - panic: `slice bounds out of range` in `github.com/denormal/go-gitignore.(*ignore).Absolute`
+  - cause: `Absolute` assumes `path` is below `base`, not equal to `base`.
+  - fix: `Matcher.Match` now skips a source when `abs == source.base`.
+
+### What I learned
+
+- `WalkDocuments` calls skip predicates for the root directory too, so ignore matchers must safely handle root paths.
+- Index-time pruning is now testable without going through doctor: checking the SQLite `docs` table is enough to prove ignored files never entered the index.
+
+### What was tricky to build
+
+- The main tricky point was preserving two skip layers: hard canonical skips from `DefaultIngestSkipDir` and user-configurable ignores from `internal/ignore`. The implementation keeps both and applies hard skips first.
+- Another subtle point is avoiding `os.Stat` in matcher calls from traversal. The walker already knows whether the entry is a directory, so `Match(path, true)` can call `go-gitignore.Absolute(abs, true)` directly.
+
+### What warrants a second pair of eyes
+
+- Whether `NewWorkspaceFromContext` should use `context.Background()` for ignore loading or whether the constructor should eventually accept a context.
+- Whether `ingestWorkspaceDocs` should accept the matcher interface or the full `Workspace` to reduce signature drift.
+- Whether built-in ignores should be represented as a separate source or folded into generated `.docmgrignore` content.
+
+### What should be done in the future
+
+- Replace doctor-local ignore helpers and post-filtering.
+- Ensure doctor's missing-index and duplicate-index walks use `ws.IgnoreMatcher()`.
+- Add package command tests for the doctor cutover.
+
+### Code review instructions
+
+- Start in `internal/workspace/workspace.go` to inspect matcher construction.
+- Then review `internal/workspace/index_builder.go` to confirm pruning happens at `WalkDocuments` time.
+- Finally review `internal/workspace/index_builder_test.go` for behavior coverage.
+- Validate with:
+  - `go test ./internal/ignore ./internal/workspace -count=1`
+
+### Technical details
+
+Important test invariant:
+
+```sql
+SELECT COUNT(*) FROM docs WHERE path LIKE '%/node_modules/%'; -- must be 0
+SELECT COUNT(*) FROM docs WHERE path LIKE '%/reference/zz-broken.md' AND parse_ok=0; -- must be 1
+```

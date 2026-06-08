@@ -137,7 +137,7 @@ func (m *Matcher) Match(path string, isDir bool) Decision {
 	abs := m.resolvePath(path)
 	decision := Decision{Path: filepath.ToSlash(abs), IsDir: isDir}
 	for _, src := range m.sources {
-		if src.gi == nil || !isWithin(src.base, abs) {
+		if src.gi == nil || !isWithin(src.base, abs) || filepath.Clean(abs) == filepath.Clean(src.base) {
 			decision.Trace = append(decision.Trace, TraceStep{SourceKind: src.kind, SourceName: src.name})
 			continue
 		}

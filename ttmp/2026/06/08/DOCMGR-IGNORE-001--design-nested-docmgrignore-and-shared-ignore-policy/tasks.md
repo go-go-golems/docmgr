@@ -31,19 +31,19 @@
 
 ### Phase 3 — Workspace ownership
 
-- [ ] Add `ignore *ignore.Matcher` field to `internal/workspace.Workspace`.
-- [ ] Add `IgnoreMatcher() *ignore.Matcher` accessor.
-- [ ] Load the matcher during `DiscoverWorkspace` / `NewWorkspaceFromContext`.
-- [ ] Ensure missing `.docmgrignore` files are non-fatal.
-- [ ] Add workspace construction tests covering matcher presence and defaults.
+- [x] Add `ignore *ignore.Matcher` field to `internal/workspace.Workspace`.
+- [x] Add `IgnoreMatcher() *ignore.Matcher` accessor.
+- [x] Load the matcher during `DiscoverWorkspace` / `NewWorkspaceFromContext`.
+- [x] Ensure missing `.docmgrignore` files are non-fatal.
+- [x] Add workspace construction tests covering matcher presence and defaults.
 
 ### Phase 4 — Index-time pruning
 
-- [ ] Wire `Workspace.IgnoreMatcher()` into `Workspace.InitIndex` / `ingestWorkspaceDocs`.
-- [ ] Combine existing `DefaultIngestSkipDir` with matcher-based skip decisions.
-- [ ] Ensure ignored directories are pruned before `ReadDocumentWithFrontmatter`.
-- [ ] Add an index builder test where invalid Markdown in `scripts/node_modules` is not indexed.
-- [ ] Verify non-ignored invalid Markdown still appears with `IncludeErrors=true`.
+- [x] Wire `Workspace.IgnoreMatcher()` into `Workspace.InitIndex` / `ingestWorkspaceDocs`.
+- [x] Combine existing `DefaultIngestSkipDir` with matcher-based skip decisions.
+- [x] Ensure ignored directories are pruned before `ReadDocumentWithFrontmatter`.
+- [x] Add an index builder test where invalid Markdown in `scripts/node_modules` is not indexed.
+- [x] Verify non-ignored invalid Markdown still appears with `IncludeErrors=true`.
 
 ### Phase 5 — Doctor hard cutover
 

@@ -185,6 +185,88 @@ LIMIT 1
 	}
 }
 
+func TestWorkspaceOwnsIgnoreMatcher(t *testing.T) {
+	repoRoot := t.TempDir()
+	docsRoot := filepath.Join(repoRoot, "ttmp")
+	if err := os.MkdirAll(docsRoot, 0o755); err != nil {
+		t.Fatalf("mkdir docs root: %v", err)
+	}
+	writeFile(t, filepath.Join(docsRoot, ".docmgrignore"), "scratch/\n")
+
+	ws, err := NewWorkspaceFromContext(WorkspaceContext{
+		Root:      docsRoot,
+		ConfigDir: repoRoot,
+		RepoRoot:  repoRoot,
+	})
+	if err != nil {
+		t.Fatalf("NewWorkspaceFromContext: %v", err)
+	}
+	if ws.IgnoreMatcher() == nil {
+		t.Fatalf("expected workspace ignore matcher")
+	}
+	if decision := ws.IgnoreMatcher().Match(filepath.Join(docsRoot, "TICKET", "scratch", "notes.md"), false); !decision.Ignored {
+		t.Fatalf("expected workspace matcher to load docs-root .docmgrignore, decision=%+v", decision)
+	}
+}
+
+func TestWorkspaceInitIndex_PrunesIgnoredDocsBeforeParsing(t *testing.T) {
+	ctx := context.Background()
+	repoRoot := t.TempDir()
+	docsRoot := filepath.Join(repoRoot, "ttmp")
+	ticketDir := filepath.Join(docsRoot, "2026", "06", "08", "DOC-1--ignore")
+
+	writeFile(t, filepath.Join(ticketDir, "index.md"), `---
+Title: Ignore Demo
+Ticket: DOC-1
+Status: active
+Topics: [docmgr]
+DocType: index
+Intent: long-term
+---
+
+# Ignore Demo
+`)
+	writeFile(t, filepath.Join(ticketDir, "scripts", "node_modules", "pkg", "README.md"), `# Package README without frontmatter
+`)
+	writeFile(t, filepath.Join(ticketDir, "reference", "zz-broken.md"), `---
+Title: Broken
+Ticket: DOC-1
+DocType: reference
+Topics: [docmgr
+---
+
+# Broken
+`)
+
+	ws, err := NewWorkspaceFromContext(WorkspaceContext{
+		Root:      docsRoot,
+		ConfigDir: repoRoot,
+		RepoRoot:  repoRoot,
+	})
+	if err != nil {
+		t.Fatalf("NewWorkspaceFromContext: %v", err)
+	}
+	if err := ws.InitIndex(ctx, BuildIndexOptions{}); err != nil {
+		t.Fatalf("InitIndex: %v", err)
+	}
+
+	var ignoredCount int
+	if err := ws.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM docs WHERE path LIKE '%/node_modules/%'`).Scan(&ignoredCount); err != nil {
+		t.Fatalf("count ignored docs: %v", err)
+	}
+	if ignoredCount != 0 {
+		t.Fatalf("expected ignored node_modules markdown to be pruned before parsing, got %d indexed docs", ignoredCount)
+	}
+
+	var brokenCount int
+	if err := ws.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM docs WHERE path LIKE '%/reference/zz-broken.md' AND parse_ok=0`).Scan(&brokenCount); err != nil {
+		t.Fatalf("count non-ignored broken docs: %v", err)
+	}
+	if brokenCount != 1 {
+		t.Fatalf("expected non-ignored broken markdown to remain indexed with parse_ok=0, got %d", brokenCount)
+	}
+}
+
 func writeFile(t *testing.T, path string, contents string) {
 	t.Helper()
 	dir := filepath.Dir(path)

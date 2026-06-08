@@ -46,3 +46,16 @@ Implemented internal/ignore with go-gitignore-backed matching, built-in defaults
 - /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore_test.go — Matcher semantics and nested .docmgrignore tests
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off completed package and matching tasks
 
+
+## 2026-06-08
+
+Made Workspace own the ignore matcher and pruned ignored directories during index ingestion before frontmatter parsing.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore.go — Root-path guard for go-gitignore Absolute
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder.go — Index-time pruning with DefaultIngestSkipDir plus ignore matcher
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder_test.go — Workspace matcher and ignored dependency pruning tests
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/workspace.go — Workspace-owned ignore matcher construction and accessor
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off workspace ownership and index pruning tasks
+

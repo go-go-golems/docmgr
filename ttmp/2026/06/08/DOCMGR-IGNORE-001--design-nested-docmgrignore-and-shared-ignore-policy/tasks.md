@@ -47,12 +47,12 @@
 
 ### Phase 5 — Doctor hard cutover
 
-- [ ] Remove doctor-local `.docmgrignore` loading helpers (`loadDocmgrIgnore`, `matchesAnyGlob`, `normalizeIgnorePattern`, etc.).
-- [ ] Remove doctor post-filtering of `QueryDocs` results for ignored paths.
-- [ ] Use `ws.IgnoreMatcher()` for `FindTicketScaffoldsMissingIndex` skip callback.
-- [ ] Use `ws.IgnoreMatcher()` for duplicate `index.md` scan pruning.
-- [ ] Preserve `doctor --doc` explicit single-file validation even when a file is normally ignored.
-- [ ] Replace old doctor ignore regression test with workspace/doctor integration tests.
+- [x] Remove doctor-local `.docmgrignore` loading helpers (`loadDocmgrIgnore`, `matchesAnyGlob`, `normalizeIgnorePattern`, etc.).
+- [x] Remove doctor post-filtering of `QueryDocs` results for ignored paths.
+- [x] Use `ws.IgnoreMatcher()` for `FindTicketScaffoldsMissingIndex` skip callback.
+- [x] Use `ws.IgnoreMatcher()` for duplicate `index.md` scan pruning.
+- [x] Preserve `doctor --doc` explicit single-file validation even when a file is normally ignored.
+- [x] Replace old doctor ignore regression test with workspace/doctor integration tests.
 
 ### Phase 6 — Nested `.docmgrignore`
 

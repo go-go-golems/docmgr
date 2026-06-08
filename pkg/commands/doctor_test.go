@@ -11,32 +11,6 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
 )
 
-func TestDoctorIgnorePatternMatchesNestedDirectorySegments(t *testing.T) {
-	patterns := []string{".git/", "node_modules/", "dist/"}
-
-	cases := []struct {
-		name string
-		path string
-		want bool
-	}{
-		{name: "direct directory", path: "node_modules", want: true},
-		{name: "nested package path", path: "2026/06/08/TICKET/scripts/node_modules/playwright/README.md", want: true},
-		{name: "absolute nested path", path: filepath.Join(string(filepath.Separator), "repo", "ttmp", "ticket", "scripts", "node_modules", ".pnpm", "pkg", "README.md"), want: true},
-		{name: "dist segment", path: "ticket/scripts/dist/bundle.js", want: true},
-		{name: "not a segment substring", path: "ticket/scripts/my-node_modules-cache/README.md", want: false},
-		{name: "normal doc", path: "ticket/design-doc/01-plan.md", want: false},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := matchesAnyGlob(patterns, tc.path)
-			if got != tc.want {
-				t.Fatalf("matchesAnyGlob(%q) = %v, want %v", tc.path, got, tc.want)
-			}
-		})
-	}
-}
-
 func TestDoctorReturnsErrorForInvalidVocabulary(t *testing.T) {
 	tmp := t.TempDir()
 	repo := filepath.Join(tmp, "repo")

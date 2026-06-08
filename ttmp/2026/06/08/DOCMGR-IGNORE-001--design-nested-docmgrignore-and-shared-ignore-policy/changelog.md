@@ -59,3 +59,14 @@ Made Workspace own the ignore matcher and pruned ignored directories during inde
 - /home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/workspace.go — Workspace-owned ignore matcher construction and accessor
 - /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off workspace ownership and index pruning tasks
 
+
+## 2026-06-08
+
+Cut doctor over to workspace-owned .docmgrignore behavior, removed doctor-local ignore loading helpers, and kept CLI ignore flags as explicit command filters.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor.go — Doctor hard cutover to Workspace.IgnoreMatcher
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor_test.go — Removed obsolete helper-level regression test
+- /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/06/08/DOCMGR-IGNORE-001--design-nested-docmgrignore-and-shared-ignore-policy/tasks.md — Checked off doctor hard-cutover tasks
+

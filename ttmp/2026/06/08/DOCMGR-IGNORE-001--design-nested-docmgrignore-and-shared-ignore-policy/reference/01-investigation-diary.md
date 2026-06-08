@@ -438,3 +438,90 @@ Important test invariant:
 SELECT COUNT(*) FROM docs WHERE path LIKE '%/node_modules/%'; -- must be 0
 SELECT COUNT(*) FROM docs WHERE path LIKE '%/reference/zz-broken.md' AND parse_ok=0; -- must be 1
 ```
+
+## Step 5: Cut doctor over to workspace-owned ignores
+
+This step removed the doctor-specific `.docmgrignore` loading path. Doctor now relies on the workspace-owned matcher for `.docmgrignore` behavior, and the workspace index already prunes ignored paths before `QueryDocs` runs. The remaining command-level filtering is limited to explicit legacy CLI flags, `--ignore-dir` and `--ignore-glob`.
+
+This is the hard cutover the revised design called for: `.docmgrignore` no longer means “doctor may hide a row after indexing.” It means the workspace index does not ingest that path during normal scans.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 2)
+
+**Assistant interpretation:** Continue step-by-step implementation, replacing doctor's old local ignore system with the workspace-owned matcher.
+
+**Inferred user intent:** Remove duplicate ignore semantics and make doctor use the same ignore behavior as list/search/index-backed commands.
+
+**Commit (code):** pending — this step will be committed as the doctor hard-cutover boundary.
+
+### What I did
+
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor.go`:
+  - removed repository/docs-root `.docmgrignore` loading from doctor;
+  - removed `loadDocmgrIgnore`, `matchesAnyGlob`, `matchesSimplePathSegmentPattern`, `normalizeIgnorePattern`, and `shouldSkipDoctorDoc`;
+  - used `ws.IgnoreMatcher()` in the missing-index skip callback;
+  - used the same skip callback for duplicate `index.md` scanning;
+  - removed `.docmgrignore`-based post-filtering of `QueryDocs` results;
+  - retained explicit CLI `--ignore-dir` / `--ignore-glob` filtering as command-specific compatibility behavior.
+- Updated `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/doctor_test.go`:
+  - removed the old helper-level matcher test because the helper no longer exists and behavior is now covered in `internal/ignore` / `internal/workspace` tests.
+- Ran:
+  - `go test ./internal/ignore ./internal/workspace ./pkg/commands -count=1`
+
+### Why
+
+- Doctor-local ignore loading duplicated behavior that now belongs to `Workspace`.
+- Keeping post-filtering would preserve the old bug shape: ignored files could still be parsed and indexed before being hidden from doctor output.
+
+### What worked
+
+- The focused package set passes after the refactor.
+- `doctor --doc` remains before workspace discovery and therefore still validates explicitly named files regardless of workspace ignore policy.
+- Legacy CLI ignore flags remain available without being confused with `.docmgrignore` loading.
+
+### What didn't work
+
+- The first duplicate-index scan wiring reused a skip function that expected docs-root-relative paths, while `findIndexFiles` walks from a ticket directory. That would have checked the wrong path for nested ticket subdirectories.
+- Fix:
+  - `skipFn` now accepts absolute paths as well as docs-root-relative paths.
+  - `findIndexFiles` passes the actual walked path to the skip callback.
+
+### What I learned
+
+- The same skip function can safely serve `FindTicketScaffoldsMissingIndex` and duplicate-index scanning if it handles both absolute and relative inputs.
+- It is useful to keep CLI `--ignore-glob` behavior separate from `.docmgrignore` behavior. The former is an explicit command override; the latter is now workspace ingest policy.
+
+### What was tricky to build
+
+- Removing post-filtering while preserving CLI filters required a small distinction: `QueryDocs` results are no longer filtered for `.docmgrignore`, but they may still be filtered if the user passes command-specific ignore flags.
+- Another tricky point was avoiding over-removal. Doctor still needs helper logic for `--ignore-glob`, even though `.docmgrignore` pattern parsing moved to `internal/ignore`.
+
+### What warrants a second pair of eyes
+
+- Whether `--ignore-glob` should eventually be removed from doctor or folded into `internal/ignore.LoadOptions` as command overrides.
+- Whether a specific doctor command test should be added in addition to the workspace integration test for ignored dependency Markdown.
+- Whether duplicate-index scanning should migrate from `filepath.Walk` to `filepath.WalkDir` for consistency.
+
+### What should be done in the future
+
+- Add `docmgr ignore explain`.
+- Update user-facing docs to describe workspace-wide ignore behavior.
+- Add scenario tests for ignored dependency Markdown and nested `.docmgrignore`.
+
+### Code review instructions
+
+- Review the top half of `pkg/commands/doctor.go` to confirm workspace discovery happens before workspace scan operations.
+- Review the helper section near `findIndexFiles` and `shouldSkipDoctorCLIPath` to confirm only CLI flags are handled there.
+- Validate with:
+  - `go test ./internal/ignore ./internal/workspace ./pkg/commands -count=1`
+
+### Technical details
+
+The old `.docmgrignore` helpers are gone from doctor:
+
+```bash
+rg -n "loadDocmgrIgnore|matchesAnyGlob|matchesSimplePathSegmentPattern|normalizeIgnorePattern|shouldSkipDoctorDoc" pkg/commands/doctor.go
+```
+
+The remaining helper `matchesDoctorIgnoreGlob` is only for explicit `--ignore-glob` command-line compatibility.

@@ -237,7 +237,8 @@ The SQLite database has three main tables that work together:
 When `InitIndex()` is called, here's the step-by-step process:
 
 1. **Walk documents**: `documents.WalkDocuments()` traverses the docs root
-   - Recursively visits every `.md` file
+   - Applies workspace-owned ignore policy (`internal/ignore`) and canonical hard skips before parsing
+   - Recursively visits every non-ignored `.md` file
    - Skips directories starting with `_` (like `_templates/`)
    - Can be customized with skip functions
 
@@ -684,6 +685,11 @@ The `RelatedFiles` type (`pkg/models/document.go`) handles both formats automati
 Document walking provides a callback-based API for traversing the documentation tree. It's used by indexing, validation, and discovery operations that need to process all markdown files.
 
 **Why this matters:** Many operations need to visit every document in the workspace. Instead of each command implementing its own file traversal logic, `WalkDocuments()` provides a consistent, tested way to iterate through all markdown files. Think of it like a `for` loop over all documents.
+
+### Workspace ignore policy
+
+Workspace discovery constructs a shared ignore matcher from `internal/ignore`. The matcher is backed by `github.com/denormal/go-gitignore`, includes built-in dependency/build excludes, and reads `.docmgrignore` files from the repository/docs hierarchy, including nested ticket or `scripts/` directories. `Workspace.InitIndex` uses this matcher through `documents.WithSkipDir`, so ignored paths are pruned before `ReadDocumentWithFrontmatter` runs. Commands such as doctor, list, search, status, and SQLite export therefore share one source of ignore truth. Use `docmgr ignore explain <path>` to inspect the final decision for a path.
+
 
 **WalkDocuments function** (`internal/documents/walk.go`):
 

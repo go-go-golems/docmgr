@@ -11,6 +11,38 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
 )
 
+func TestFindIndexFilesSkipsIgnoredIndexFiles(t *testing.T) {
+	tmp := t.TempDir()
+	ticketDir := filepath.Join(tmp, "DOC-1--demo")
+	writeDoctorTestFile(t, filepath.Join(ticketDir, "index.md"), "root")
+	writeDoctorTestFile(t, filepath.Join(ticketDir, "design-doc", "index.md"), "ignored duplicate")
+	writeDoctorTestFile(t, filepath.Join(ticketDir, "reference", "index.md"), "real duplicate")
+
+	ignoredFile := filepath.Clean(filepath.Join(ticketDir, "design-doc", "index.md"))
+	indexFiles := findIndexFiles(ticketDir, func(path, baseName string, isDir bool) bool {
+		return !isDir && filepath.Clean(path) == ignoredFile
+	})
+
+	if len(indexFiles) != 2 {
+		t.Fatalf("expected 2 non-ignored index files, got %d: %v", len(indexFiles), indexFiles)
+	}
+	for _, path := range indexFiles {
+		if filepath.Clean(path) == ignoredFile {
+			t.Fatalf("ignored index file was returned: %v", indexFiles)
+		}
+	}
+}
+
+func writeDoctorTestFile(t *testing.T, path string, contents string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(path), err)
+	}
+	if err := os.WriteFile(path, []byte(contents), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
 func TestDoctorReturnsErrorForInvalidVocabulary(t *testing.T) {
 	tmp := t.TempDir()
 	repo := filepath.Join(tmp, "repo")

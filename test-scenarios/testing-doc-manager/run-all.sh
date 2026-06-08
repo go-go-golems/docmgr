@@ -91,5 +91,6 @@ step 13 "13-template-schema-output" "./13-template-schema-output.sh" "${ROOT_DIR
 step 14 "14-path-normalization" "./14-path-normalization.sh" "${ROOT_DIR}"
 step 19 "19-export-sqlite" "./19-export-sqlite.sh" "${ROOT_DIR}"
 step 20 "20-skills-smoke" "./20-skills-smoke.sh" "${ROOT_DIR}"
+step 21 "21-ignore-policy" "./21-ignore-policy.sh" "${ROOT_DIR}"
 
 echo "[ok] Scenario completed at ${ROOT_DIR}/acme-chat-app"

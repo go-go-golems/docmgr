@@ -424,8 +424,11 @@ Doctor checks:
 `--fail-on` controls exit behavior for CI or pre-commit checks.
 
 **Ignore configuration:**
-- The command respects a `.docmgrignore` file at the repository root or at the docs root (`ttmp/`)
-- Common patterns: `.git/`, `_templates/`, `_guidelines/`, `archive/`, date-based tickets like `2023-*/`
+- Ignore behavior is workspace-wide, not doctor-only: the workspace index prunes ignored paths before frontmatter parsing.
+- The matcher is backed by `github.com/denormal/go-gitignore` and uses `.docmgrignore` files in the repository/docs hierarchy, including nested ticket or `scripts/` directories.
+- Built-in dependency/build skips include `.git/`, `node_modules/`, `.pnpm/`, `dist/`, `build/`, `coverage/`, `.venv/`, and `__pycache__/`.
+- Common user patterns: `_templates/`, `_guidelines/`, `archive/`, date-based tickets like `2023-*/`, and recursive drafts such as `**/draft-*.md`.
+- Debug decisions with `docmgr ignore explain <path>` or `docmgr ignore explain --trace <path>`.
 
 ### 4.13 Export workspace index (SQLite)
 

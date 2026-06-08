@@ -215,25 +215,6 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// Track highest severity encountered to support --fail-on
 	highestSeverity := 0 // 0=ok,1=warning,2=error
 
-	// Load .docmgrignore patterns and merge with provided ignore-globs
-	// NOTE: doctor historically supports ad-hoc ignore-globs on top of the canonical ingest skip policy.
-	// The workspace index is built using the canonical policy; we apply ignore-globs as a post-filter
-	// over QueryDocs results so doctor output matches prior behavior.
-	// 1) Try repository root
-	repoRoot, _ := workspace.FindRepositoryRoot()
-	if repoRoot != "" {
-		if patterns, err := loadDocmgrIgnore(repoRoot); err == nil {
-			settings.IgnoreGlobs = append(settings.IgnoreGlobs, patterns...)
-		}
-	}
-	// 2) Also try docs root (settings.Root), to support non-git environments
-	// Avoid double-loading if paths are identical
-	if settings.Root != "" && filepath.Clean(settings.Root) != filepath.Clean(repoRoot) {
-		if patterns, err := loadDocmgrIgnore(settings.Root); err == nil {
-			settings.IgnoreGlobs = append(settings.IgnoreGlobs, patterns...)
-		}
-	}
-
 	// Load vocabulary for validation. Invalid vocabulary is a workspace problem,
 	// but it should surface as a normal command error rather than a panic.
 	vocab, err := LoadVocabulary()
@@ -272,21 +253,9 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		statusValidText = strings.Join(statusList, ", ")
 	}
 
-	skipFn := func(relPath, base string) bool {
-		if containsString(settings.IgnoreDirs, base) {
-			return true
-		}
-		full := filepath.Join(settings.Root, relPath)
-		if relPath == "." {
-			full = settings.Root
-		}
-		if matchesAnyGlob(settings.IgnoreGlobs, base) || matchesAnyGlob(settings.IgnoreGlobs, full) {
-			return true
-		}
-		return false
-	}
-
-	// Single-file mode: validate one doc and return.
+	// Single-file mode: validate one explicitly requested doc and return. This
+	// intentionally ignores workspace ignore policy: if the user names a file,
+	// doctor validates that file directly.
 	if settings.Doc != "" {
 		docPath := settings.Doc
 		if !filepath.IsAbs(docPath) {
@@ -310,6 +279,29 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
 	if err != nil {
 		return fmt.Errorf("failed to discover workspace: %w", err)
+	}
+	ignoreMatcher := ws.IgnoreMatcher()
+	shouldSkipPath := func(relPath, base string, isDir bool) bool {
+		if isDir && containsString(settings.IgnoreDirs, base) {
+			return true
+		}
+		full := relPath
+		if !filepath.IsAbs(full) {
+			full = filepath.Join(settings.Root, relPath)
+			if relPath == "." {
+				full = settings.Root
+			}
+		}
+		if matchesDoctorIgnoreGlob(settings.IgnoreGlobs, base) || matchesDoctorIgnoreGlob(settings.IgnoreGlobs, full) {
+			return true
+		}
+		if ignoreMatcher != nil && ignoreMatcher.Ignore(full, isDir) {
+			return true
+		}
+		return false
+	}
+	skipFn := func(relPath, base string) bool {
+		return shouldSkipPath(relPath, base, true)
 	}
 	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
 		return fmt.Errorf("failed to initialize workspace index: %w", err)
@@ -372,13 +364,18 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to query docs: %w", err)
 	}
 
-	// Post-filter based on ignore globs/dirs.
-	filtered := make([]workspace.DocHandle, 0, len(qr.Docs))
-	for _, h := range qr.Docs {
-		if shouldSkipDoctorDoc(settings.Root, h.Path, settings.IgnoreDirs, settings.IgnoreGlobs) {
-			continue
+	// The workspace index already prunes .docmgrignore matches before parsing.
+	// Preserve explicit doctor CLI --ignore-dir/--ignore-glob as a command-level
+	// filter for callers that still use those flags.
+	filtered := qr.Docs
+	if len(settings.IgnoreDirs) > 0 || len(settings.IgnoreGlobs) > 0 {
+		filtered = make([]workspace.DocHandle, 0, len(qr.Docs))
+		for _, h := range qr.Docs {
+			if shouldSkipDoctorCLIPath(settings.Root, h.Path, settings.IgnoreDirs, settings.IgnoreGlobs) {
+				continue
+			}
+			filtered = append(filtered, h)
 		}
-		filtered = append(filtered, h)
 	}
 
 	// Group by ticket directory inferred from ttmp layout.
@@ -393,7 +390,7 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		hasIssues := false
 
 		// Check for unique index.md (should only be one per ticket root)
-		indexFiles := findIndexFiles(ticketPath, settings.IgnoreDirs, settings.IgnoreGlobs)
+		indexFiles := findIndexFiles(ticketPath, shouldSkipPath)
 		if len(indexFiles) > 1 {
 			hasIssues = true
 			row := types.NewRow(
@@ -817,7 +814,7 @@ func inferTicketDirAndID(docsRoot string, absDocPath string, h workspace.DocHand
 	return ticketDir, ticketID
 }
 
-func shouldSkipDoctorDoc(docsRoot string, absPath string, ignoreDirNames []string, ignoreGlobs []string) bool {
+func shouldSkipDoctorCLIPath(docsRoot string, absPath string, ignoreDirNames []string, ignoreGlobs []string) bool {
 	absPath = filepath.Clean(strings.TrimSpace(absPath))
 	if absPath == "" {
 		return true
@@ -826,9 +823,7 @@ func shouldSkipDoctorDoc(docsRoot string, absPath string, ignoreDirNames []strin
 	if containsString(ignoreDirNames, base) {
 		return true
 	}
-	// Apply globs to both the absolute path and the docs-root-relative path (if possible),
-	// plus the basename for convenience.
-	if matchesAnyGlob(ignoreGlobs, base) || matchesAnyGlob(ignoreGlobs, absPath) {
+	if matchesDoctorIgnoreGlob(ignoreGlobs, base) || matchesDoctorIgnoreGlob(ignoreGlobs, absPath) {
 		return true
 	}
 	docsRoot = filepath.Clean(strings.TrimSpace(docsRoot))
@@ -836,7 +831,7 @@ func shouldSkipDoctorDoc(docsRoot string, absPath string, ignoreDirNames []strin
 		if rel, err := filepath.Rel(docsRoot, absPath); err == nil {
 			rel = filepath.Clean(rel)
 			if rel != "." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != ".." {
-				if matchesAnyGlob(ignoreGlobs, rel) {
+				if matchesDoctorIgnoreGlob(ignoreGlobs, rel) {
 					return true
 				}
 			}
@@ -856,24 +851,22 @@ func matchesTicketDir(ticketID string, base string) bool {
 		strings.HasPrefix(base, ticketID+"-")
 }
 
-// findIndexFiles recursively searches for all index.md files in a directory tree
-func findIndexFiles(rootPath string, ignoreDirNames []string, ignoreGlobs []string) []string {
+// findIndexFiles recursively searches for all non-ignored index.md files in a directory tree.
+func findIndexFiles(rootPath string, shouldSkipPath func(path, baseName string, isDir bool) bool) []string {
 	var indexFiles []string
 
 	err := filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip errors, continue walking
 		}
-		// Skip ignored directories
+		base := filepath.Base(path)
 		if info.IsDir() {
-			base := filepath.Base(path)
-			if containsString(ignoreDirNames, base) || matchesAnyGlob(ignoreGlobs, base) || matchesAnyGlob(ignoreGlobs, path) {
+			if shouldSkipPath != nil && shouldSkipPath(path, base, true) {
 				return filepath.SkipDir
 			}
 			return nil
 		}
-		// Skip ignored files
-		if matchesAnyGlob(ignoreGlobs, info.Name()) || matchesAnyGlob(ignoreGlobs, path) {
+		if shouldSkipPath != nil && shouldSkipPath(path, base, false) {
 			return nil
 		}
 		if !info.IsDir() && info.Name() == "index.md" {
@@ -900,45 +893,21 @@ func containsString(list []string, s string) bool {
 	return false
 }
 
-// matchesAnyGlob checks if path matches any of the provided glob patterns
-func matchesAnyGlob(patterns []string, path string) bool {
+func matchesDoctorIgnoreGlob(patterns []string, path string) bool {
+	path = filepath.Clean(strings.TrimSpace(path))
+	if path == "" || path == "." {
+		return false
+	}
 	for _, p := range patterns {
-		p = normalizeIgnorePattern(p)
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
 		if ok, _ := filepath.Match(p, path); ok {
 			return true
 		}
 	}
 	return false
-}
-
-// normalizeIgnorePattern trims whitespace and trailing separators to make simple
-// directory entries like ".git/" match both names and paths.
-func normalizeIgnorePattern(p string) string {
-	p = strings.TrimSpace(p)
-	for len(p) > 0 && (p[len(p)-1] == '/' || p[len(p)-1] == os.PathSeparator) {
-		p = p[:len(p)-1]
-	}
-	return p
-}
-
-// loadDocmgrIgnore reads ignore patterns from <repoRoot>/.docmgrignore.
-// Lines starting with '#' are comments; empty lines are skipped.
-func loadDocmgrIgnore(repoRoot string) ([]string, error) {
-	path := filepath.Join(repoRoot, ".docmgrignore")
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	lines := strings.Split(string(b), "\n")
-	var patterns []string
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" || strings.HasPrefix(l, "#") {
-			continue
-		}
-		patterns = append(patterns, l)
-	}
-	return patterns, nil
 }
 
 func missingRequiredFields(doc *models.Document) []string {

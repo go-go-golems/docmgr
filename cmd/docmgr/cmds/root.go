@@ -5,6 +5,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/changelog"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/configcmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/doc"
+	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/importcmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/list"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/meta"
@@ -74,6 +75,9 @@ Helpful docs (built-in):
 		return nil, err
 	}
 	if err := importcmd.Attach(rootCmd); err != nil {
+		return nil, err
+	}
+	if err := ignorecmd.Attach(rootCmd); err != nil {
 		return nil, err
 	}
 	if err := configcmd.Attach(rootCmd); err != nil {

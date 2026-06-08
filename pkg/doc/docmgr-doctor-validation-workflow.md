@@ -44,13 +44,12 @@ Input discovery determines which files to validate. The strategy differs by comm
 - Discovers the workspace (docs root + config + repo root) via `workspace.DiscoverWorkspace` (see `internal/workspace/workspace.go`)
 - Builds a temporary in-memory workspace index via `Workspace.InitIndex` (see `internal/workspace/index_builder.go`)
   - Ingestion applies the canonical skip policy (for example `.meta/` and `_*/` like `_templates/` / `_guidelines/`) — see `internal/workspace/skip_policy.go`
+  - Ingestion also applies the workspace-owned `.docmgrignore` matcher before frontmatter parsing, so ignored dependency/generated Markdown is not indexed.
 - Queries the indexed doc set via `Workspace.QueryDocs` (see `internal/workspace/query_docs.go`)
   - `doctor` requests `IncludeErrors=true` so parse-error docs are available as `DocHandle{ReadErr: ...}` for repair workflows
   - `doctor` requests `IncludeDiagnostics=true` so QueryDocs can emit structured diagnostics (for example parse-skip and normalization fallback)
 - Detects “ticket scaffolds missing index.md” separately via `workspace.FindTicketScaffoldsMissingIndex` (see `internal/workspace/discovery.go`)
-- Respects `.docmgrignore` and `--ignore-glob` as a compatibility layer:
-  - the index uses the canonical ingestion policy, and
-  - `doctor` applies ignore globs/dirs as a **post-filter** over QueryDocs results so behavior matches legacy expectations (see `pkg/commands/doctor.go`)
+- Respects `.docmgrignore` through the shared workspace matcher, not a doctor-only post-filter. Explicit `--ignore-dir` / `--ignore-glob` flags remain doctor command filters for compatibility.
 
 **Doctor single-file mode (`--doc`):**
 - Validates exactly one file specified by `--doc` path
@@ -343,7 +342,7 @@ return severityOK, nil
    - optional field and vocabulary warnings
    - `RelatedFiles` existence checks (doc-anchored path normalization)
    - stale docs (`LastUpdated` older than `--stale-after` days)
-6. Applies `.docmgrignore`/`--ignore-glob`/`--ignore-dir` as a post-filter over QueryDocs results (compatibility behavior).
+6. Uses the workspace-owned `.docmgrignore` matcher during index ingestion; explicit `--ignore-glob` / `--ignore-dir` flags are applied as doctor command filters.
 7. Optionally writes diagnostics JSON (`--diagnostics-json`)
 8. Exits with error code if `--fail-on` threshold is met
 

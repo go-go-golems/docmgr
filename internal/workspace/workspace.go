@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"path/filepath"
 
+	docignore "github.com/go-go-golems/docmgr/internal/ignore"
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/pkg/errors"
 )
@@ -18,6 +19,7 @@ import (
 type Workspace struct {
 	ctx      WorkspaceContext
 	resolver *paths.Resolver
+	ignore   *docignore.Matcher
 	db       *sql.DB
 	// ftsAvailable indicates whether this workspace index instance has an FTS table.
 	// It is set during InitIndex after best-effort FTS table creation.
@@ -112,9 +114,20 @@ func NewWorkspaceFromContext(ctx WorkspaceContext) (*Workspace, error) {
 		RepoRoot:  ctx.RepoRoot,
 	})
 
+	ignoreMatcher, err := docignore.Load(context.Background(), docignore.LoadOptions{
+		RepoRoot:       ctx.RepoRoot,
+		DocsRoot:       ctx.Root,
+		IncludeBuiltin: true,
+		IncludeNested:  true,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "load docmgr ignore policy")
+	}
+
 	return &Workspace{
 		ctx:      ctx,
 		resolver: resolver,
+		ignore:   ignoreMatcher,
 	}, nil
 }
 
@@ -126,6 +139,11 @@ func (w *Workspace) Context() WorkspaceContext {
 // Resolver returns the resolver used for normalizing paths.
 func (w *Workspace) Resolver() *paths.Resolver {
 	return w.resolver
+}
+
+// IgnoreMatcher returns the workspace-owned ignore matcher.
+func (w *Workspace) IgnoreMatcher() *docignore.Matcher {
+	return w.ignore
 }
 
 // DB returns the in-memory SQLite database backing this workspace (if initialized).

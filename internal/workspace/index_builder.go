@@ -62,7 +62,7 @@ func (w *Workspace) InitIndex(ctx context.Context, opts BuildIndexOptions) error
 		}
 	}
 
-	if err := ingestWorkspaceDocs(ctx, db, w.ctx, opts, ftsOK); err != nil {
+	if err := ingestWorkspaceDocs(ctx, db, w.ctx, w.ignore, opts, ftsOK); err != nil {
 		_ = db.Close()
 		return err
 	}
@@ -72,7 +72,9 @@ func (w *Workspace) InitIndex(ctx context.Context, opts BuildIndexOptions) error
 	return nil
 }
 
-func ingestWorkspaceDocs(ctx context.Context, db *sql.DB, wctx WorkspaceContext, opts BuildIndexOptions, ftsOK bool) error {
+func ingestWorkspaceDocs(ctx context.Context, db *sql.DB, wctx WorkspaceContext, ignoreMatcher interface {
+	Ignore(path string, isDir bool) bool
+}, opts BuildIndexOptions, ftsOK bool) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return errors.Wrap(err, "begin ingest tx")
@@ -279,8 +281,19 @@ VALUES (?, ?, ?, ?, ?, ?)
 		}
 
 		return nil
-	}, documents.WithSkipDir(func(_ string, d fs.DirEntry) bool {
-		return DefaultIngestSkipDir("", d)
+	}, documents.WithSkipDir(func(path string, d fs.DirEntry) bool {
+		if DefaultIngestSkipDir(path, d) {
+			return true
+		}
+		if ignoreMatcher != nil && ignoreMatcher.Ignore(path, true) {
+			return true
+		}
+		return false
+	}), documents.WithSkipFile(func(path string, d fs.DirEntry) bool {
+		if ignoreMatcher != nil && ignoreMatcher.Ignore(path, false) {
+			return true
+		}
+		return false
 	}))
 
 	if walkErr != nil {

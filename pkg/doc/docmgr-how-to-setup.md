@@ -528,7 +528,7 @@ ttmp/LEGACY-*/
 **/scratch-*.md
 ```
 
-**Doctor automatically respects `.docmgrignore`** from both repository root and docs root. No `--ignore-glob` flags needed.
+**Docmgr automatically respects `.docmgrignore`** as workspace-wide ingest policy. The workspace matcher is backed by `github.com/denormal/go-gitignore`, loads `.docmgrignore` from the repository hierarchy (including the docs root and nested ticket/script directories), and prunes ignored paths before Markdown frontmatter parsing. This affects doctor, list, search, status, and other index-backed commands. Use `docmgr ignore explain <path>` to debug which rule ignored or included a path.
 
 ---
 

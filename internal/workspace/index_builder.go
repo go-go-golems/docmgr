@@ -289,6 +289,11 @@ VALUES (?, ?, ?, ?, ?, ?)
 			return true
 		}
 		return false
+	}), documents.WithSkipFile(func(path string, d fs.DirEntry) bool {
+		if ignoreMatcher != nil && ignoreMatcher.Ignore(path, false) {
+			return true
+		}
+		return false
 	}))
 
 	if walkErr != nil {

@@ -84,3 +84,19 @@ Added docmgr ignore explain command with structured output and fixed repo-relati
 - /home/manuel/code/wesen/go-go-golems/docmgr/internal/ignore/ignore_test.go — Path resolution regression test
 - /home/manuel/code/wesen/go-go-golems/docmgr/pkg/commands/ignore_explain.go — New ignore decision explanation command
 
+
+## 2026-06-08
+
+Updated ignore docs and scenario coverage; added file-level WalkDocuments skip support after scenario exposed nested .docmgrignore file patterns still being parsed.
+
+### Related Files
+
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/documents/walk.go — Added WithSkipFile traversal hook
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder.go — Applied ignore matcher to files before frontmatter parsing
+- /home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder_test.go — Added file-level nested ignore pruning coverage
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-cli-guide.md — Documented ignore explain and built-ins
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-codebase-architecture.md — Added workspace ignore policy architecture note
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-doctor-validation-workflow.md — Updated doctor validation ignore flow
+- /home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-how-to-setup.md — Documented workspace-wide ignore behavior
+- /home/manuel/code/wesen/go-go-golems/docmgr/test-scenarios/testing-doc-manager/21-ignore-policy.sh — New ignore policy scenario
+

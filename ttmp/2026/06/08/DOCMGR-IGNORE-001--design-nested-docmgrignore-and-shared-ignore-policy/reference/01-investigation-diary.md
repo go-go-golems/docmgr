@@ -611,3 +611,104 @@ Successful smoke output included:
   "source_kind": "builtin"
 }
 ```
+
+## Step 7: Update docs, add scenario coverage, and fix file-level ignore pruning
+
+This step updated the user-facing documentation and added an end-to-end scenario for the exact class of bug that motivated the ticket. The scenario creates invalid Markdown below `scripts/node_modules` and below a `scripts/local-cache` directory controlled by a nested `.docmgrignore`, verifies both with `docmgr ignore explain`, and then runs `doctor --fail-on error` to ensure ignored files do not surface as frontmatter errors.
+
+The scenario initially found a real gap: index-time directory pruning skipped ignored directories, but did not skip individual ignored files when the parent directory itself was not ignored. I fixed this by extending `documents.WalkDocuments` with `WithSkipFile` and applying the workspace ignore matcher before frontmatter parsing.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 2)
+
+**Assistant interpretation:** Continue implementation through docs/scenario validation and check off completed work as it passes.
+
+**Inferred user intent:** Ensure the new ignore behavior is documented and protected by a reproducible end-to-end smoke test.
+
+**Commit (code):** pending — this step will be committed as the docs/scenario/file-level skip boundary.
+
+### What I did
+
+- Updated docs:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-how-to-setup.md`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-cli-guide.md`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-doctor-validation-workflow.md`
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/pkg/doc/docmgr-codebase-architecture.md`
+- Added scenario:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/test-scenarios/testing-doc-manager/21-ignore-policy.sh`
+- Wired scenario into:
+  - `/home/manuel/code/wesen/go-go-golems/docmgr/test-scenarios/testing-doc-manager/run-all.sh`
+- Added file-level traversal skip support:
+  - `documents.WithSkipFile` in `/home/manuel/code/wesen/go-go-golems/docmgr/internal/documents/walk.go`
+  - `WithSkipFile` usage in `/home/manuel/code/wesen/go-go-golems/docmgr/internal/workspace/index_builder.go`
+- Extended workspace test coverage for nested `.docmgrignore` file-level ignores.
+- Ran:
+  - `go test ./internal/documents ./internal/ignore ./internal/workspace ./pkg/commands -count=1`
+  - direct scenario setup plus `21-ignore-policy.sh` with `/tmp/docmgr-ignore`.
+
+### Why
+
+- Directory pruning alone does not cover patterns like `*.md` in a nested `.docmgrignore`; files must be checked before parsing too.
+- The docs needed to stop describing `.docmgrignore` as doctor-only and explain workspace-wide ingest behavior.
+
+### What worked
+
+- The direct scenario passed after adding file-level skip support.
+- Doctor output for the scenario ends with:
+  - `✅ All checks passed`
+- `ignore explain` reports both generated files as ignored.
+
+### What didn't work
+
+- Full scenario runner failed before reaching this scenario because the nested `scenariolog` module has stale Glazed imports:
+  - `no required module provides package github.com/go-go-golems/glazed/pkg/cmds/fields`
+  - same for `schema` and `values`
+- Workaround:
+  - Built `/tmp/docmgr-ignore` directly.
+  - Ran the setup scripts and `21-ignore-policy.sh` directly without scenariolog.
+- The first direct scenario failed because `scripts/local-cache/bad.md` was still parsed. Root cause: only directories had skip predicates. Fix: add `WithSkipFile`.
+
+### What I learned
+
+- Nested `.docmgrignore` support needs both directory and file-level checks. A nested file pattern can ignore files under a directory that itself remains traversable.
+- Scenario tests are valuable even after unit tests pass because they exercise the interaction between `ignore explain`, indexing, and doctor.
+
+### What was tricky to build
+
+- The tricky runtime invariant is that ignored files must be filtered before `ReadDocumentWithFrontmatter`, not merely before query output. `WithSkipFile` places that check at the correct point in `WalkDocuments`.
+- Another tricky point is scenario infrastructure: `run-all.sh` currently depends on a nested scenariolog build that fails independently of this ticket.
+
+### What warrants a second pair of eyes
+
+- Whether `WithSkipFile` should run before or after the `.md` extension check. It currently runs before extension filtering so ignore policy can skip arbitrary files early.
+- Whether `run-all.sh` should be repaired separately so the new scenario is exercised in the full suite.
+- Whether scenario `21-ignore-policy.sh` should assert exact `pattern_file` once source labeling is improved.
+
+### What should be done in the future
+
+- Run full `go test ./...`.
+- Run `docmgr doctor` on DOCMGR-IGNORE-001 with the local binary.
+- Consider uploading the updated guide bundle again if the final docs should be on reMarkable.
+
+### Code review instructions
+
+- Review `internal/documents/walk.go` first to understand the new file skip hook.
+- Review `internal/workspace/index_builder.go` to confirm matcher checks happen before parsing.
+- Review `test-scenarios/testing-doc-manager/21-ignore-policy.sh` for end-to-end expectations.
+- Validate with the direct scenario command sequence recorded in this diary.
+
+### Technical details
+
+Direct scenario command sequence:
+
+```bash
+go build -o /tmp/docmgr-ignore ./cmd/docmgr
+cd test-scenarios/testing-doc-manager
+ROOT=/tmp/docmgr-ignore-direct2
+DOCMGR_PATH=/tmp/docmgr-ignore bash ./00-reset.sh "$ROOT"
+DOCMGR_PATH=/tmp/docmgr-ignore bash ./01-create-mock-codebase.sh "$ROOT"
+DOCMGR_PATH=/tmp/docmgr-ignore bash ./02-init-ticket.sh "$ROOT"
+DOCMGR_PATH=/tmp/docmgr-ignore bash ./03-create-docs-and-meta.sh "$ROOT"
+DOCMGR_PATH=/tmp/docmgr-ignore bash ./21-ignore-policy.sh "$ROOT"
+```

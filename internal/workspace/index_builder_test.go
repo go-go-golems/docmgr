@@ -228,6 +228,9 @@ Intent: long-term
 `)
 	writeFile(t, filepath.Join(ticketDir, "scripts", "node_modules", "pkg", "README.md"), `# Package README without frontmatter
 `)
+	writeFile(t, filepath.Join(ticketDir, "scripts", "local-cache", ".docmgrignore"), "*.md\n")
+	writeFile(t, filepath.Join(ticketDir, "scripts", "local-cache", "bad.md"), `# Local generated markdown without frontmatter
+`)
 	writeFile(t, filepath.Join(ticketDir, "reference", "zz-broken.md"), `---
 Title: Broken
 Ticket: DOC-1
@@ -251,7 +254,7 @@ Topics: [docmgr
 	}
 
 	var ignoredCount int
-	if err := ws.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM docs WHERE path LIKE '%/node_modules/%'`).Scan(&ignoredCount); err != nil {
+	if err := ws.DB().QueryRowContext(ctx, `SELECT COUNT(*) FROM docs WHERE path LIKE '%/node_modules/%' OR path LIKE '%/scripts/local-cache/bad.md'`).Scan(&ignoredCount); err != nil {
 		t.Fatalf("count ignored docs: %v", err)
 	}
 	if ignoredCount != 0 {

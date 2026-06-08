@@ -57,10 +57,10 @@
 ### Phase 6 — Nested `.docmgrignore`
 
 - [x] Discover nested `.docmgrignore` files under docs root.
-- [ ] Use built-ins and root/docs-root rules while discovering nested ignore files to avoid walking ignored dependency trees.
+- [x] Use built-ins and root/docs-root rules while discovering nested ignore files to avoid walking ignored dependency trees.
 - [x] Scope nested ignore files to their containing directory subtree.
 - [x] Add tests for ticket-local and `scripts/`-local `.docmgrignore` files.
-- [ ] Add tests for parent + nested precedence, including negation if supported by `go-gitignore` composition.
+- [x] Add tests for parent + nested precedence, including negation if supported by `go-gitignore` composition.
 
 ### Phase 7 — CLI explanation command
 
@@ -71,18 +71,18 @@
 
 ### Phase 8 — Docs and scenarios
 
-- [ ] Update `pkg/doc/docmgr-how-to-setup.md` for `go-gitignore`-backed behavior and nested `.docmgrignore`.
-- [ ] Update `pkg/doc/docmgr-cli-guide.md` so ignore behavior is workspace-wide, not doctor-only.
-- [ ] Update `pkg/doc/docmgr-doctor-validation-workflow.md` to remove post-filter-only wording.
-- [ ] Update `pkg/doc/docmgr-codebase-architecture.md` with the ignore engine in workspace/indexing architecture.
-- [ ] Add a scenario test for ignored `scripts/node_modules` invalid Markdown.
-- [ ] Add a scenario test for nested `.docmgrignore`.
+- [x] Update `pkg/doc/docmgr-how-to-setup.md` for `go-gitignore`-backed behavior and nested `.docmgrignore`.
+- [x] Update `pkg/doc/docmgr-cli-guide.md` so ignore behavior is workspace-wide, not doctor-only.
+- [x] Update `pkg/doc/docmgr-doctor-validation-workflow.md` to remove post-filter-only wording.
+- [x] Update `pkg/doc/docmgr-codebase-architecture.md` with the ignore engine in workspace/indexing architecture.
+- [x] Add a scenario test for ignored `scripts/node_modules` invalid Markdown.
+- [x] Add a scenario test for nested `.docmgrignore`.
 
 ### Phase 9 — Validation and delivery
 
-- [ ] Run focused unit tests for `internal/ignore`, `internal/workspace`, and `pkg/commands`.
+- [x] Run focused unit tests for `internal/ignore`, `internal/workspace`, and `pkg/commands`.
 - [ ] Run full `go test ./...` if feasible.
-- [ ] Run relevant `test-scenarios/testing-doc-manager` smoke tests.
+- [x] Run relevant `test-scenarios/testing-doc-manager` smoke tests.
 - [ ] Run `docmgr --root /home/manuel/code/wesen/go-go-golems/docmgr/ttmp doctor --ticket DOCMGR-IGNORE-001 --stale-after 30` unless intentionally skipped.
-- [ ] Update diary after each implementation phase.
-- [ ] Commit at appropriate implementation boundaries.
+- [x] Update diary after each implementation phase.
+- [x] Commit at appropriate implementation boundaries.

@@ -13,7 +13,8 @@ import (
 type WalkDocumentFunc func(path string, doc *models.Document, body string, readErr error) error
 
 type walkConfig struct {
-	skipDir func(path string, d fs.DirEntry) bool
+	skipDir  func(path string, d fs.DirEntry) bool
+	skipFile func(path string, d fs.DirEntry) bool
 }
 
 // WalkOption customizes the behavior of WalkDocuments.
@@ -23,6 +24,14 @@ type WalkOption func(*walkConfig)
 func WithSkipDir(skip func(path string, d fs.DirEntry) bool) WalkOption {
 	return func(cfg *walkConfig) {
 		cfg.skipDir = skip
+	}
+}
+
+// WithSkipFile configures a predicate that, when it returns true, skips the file
+// before parsing frontmatter.
+func WithSkipFile(skip func(path string, d fs.DirEntry) bool) WalkOption {
+	return func(cfg *walkConfig) {
+		cfg.skipFile = skip
 	}
 }
 
@@ -45,6 +54,9 @@ func WalkDocuments(root string, fn WalkDocumentFunc, opts ...WalkOption) error {
 			if cfg.skipDir != nil && cfg.skipDir(path, d) {
 				return fs.SkipDir
 			}
+			return nil
+		}
+		if cfg.skipFile != nil && cfg.skipFile(path, d) {
 			return nil
 		}
 		if strings.ToLower(filepath.Ext(d.Name())) != ".md" {

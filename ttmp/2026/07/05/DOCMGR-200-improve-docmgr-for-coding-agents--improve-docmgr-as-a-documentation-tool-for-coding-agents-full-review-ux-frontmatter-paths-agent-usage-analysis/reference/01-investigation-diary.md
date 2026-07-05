@@ -240,3 +240,43 @@ Wrote the full design doc (14 sections: mental model, subsystem tour with mermai
 - Start with the design doc's executive summary and the "life of a related file" walkthrough (section 4.4); validate claims against `internal/paths/resolver.go` and `pkg/commands/relate.go`.
 - Reproduce any statistic with the query commands under `scripts/query-commands/` (exact invocations in design doc Appendix B).
 - Reproduce the comma-split bug: `docmgr doc relate --doc <any> --file-note "/abs/path:note with, a comma"` and inspect the stored Note.
+
+## Step 6: go-minitrace field report
+
+Per user follow-up, wrote a second full deliverable: a field report and assessment of go-minitrace itself, in the same evidence-anchored style. Combined three streams: (a) the first-person friction log from Steps 3-4 (nine numbered items with exact errors), (b) a new empirical fidelity probe, and (c) a deep file:line-anchored source review of the go-minitrace repo.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Also write a detailed report and assessment on your work with go-minitrace itself, what you struggled with, what was good, what you would like to improve, what you think is fundamentally misshapen, what should be added, the CLI ergonomics, how the JS API was, if the data schema is good or could be improved, if transcript information was missing from the various provider transforms, etc... Write it in the same style and in depth as the other one and also upload to remarkable."
+
+**Assistant interpretation:** Produce `analysis/01-go-minitrace-field-report-...md`: strengths, friction log, CLI ergonomics, JS API assessment, schema + adapter-fidelity analysis (what provider transforms drop), misshapen architecture, prioritized improvements; upload to reMarkable alongside the docmgr guide.
+
+**Inferred user intent:** Turn this project's heavy dogfooding of go-minitrace into an actionable improvement backlog for that tool too.
+
+### What I did
+- Wrote `scripts/query-commands/docmgr/fidelity.js`: NULL/empty rates per analytically important column per framework (`sources/minitrace-fidelity.json`).
+- Ran ergonomic probes (`discover codex` column set, `preview session`, `help --all` size).
+- Dispatched a source review of `~/code/wesen/go-go-golems/go-minitrace` (adapters, schema/normalization, JS runtime, CLI, manifests, docs accuracy).
+- Wrote the 12-section report in `analysis/`.
+
+### What worked
+- The fidelity probe + source review cross-validated perfectly. Every empirical anomaly got a root cause: pi/claude `duration_ms` 100% NULL because both adapters overwrite the tool-call emit timestamp with the result timestamp (pi/convert.go:430, claudecode/convert.go:199) and never derive deltas; claude-code drops the entire `toolUseResult` object (stdout/stderr/interrupted) - `grep -rn toolUseResult pkg/adapters` finds nothing; codex is the only adapter with exit_code/duration because it *scrapes them from the tool output text* (codex/convert.go:969-1028); the ~10KB result cap we measured is go-minitrace's own `TruncateLimit = 10240` (util.go:19).
+
+### What didn't work
+- First fidelity run failed with `Error: Too many arguments` - the self-named single-verb JS file collapses `docmgr fidelity fidelity` to `docmgr fidelity` and the error names neither the resolved path nor candidates (now friction item F5 in the report).
+- Third live docmgr bug reproduction: relating the go-minitrace source files (a sibling of the repo, outside it) stored `../../../../../../../../../../code/wesen/go-go-golems/go-minitrace/...` chains in the report's frontmatter - the exact cross-repo relate behavior the design doc's D1 section predicts. Left in place deliberately as first-party evidence.
+
+### What I learned
+- The source review surfaced correctness bugs beyond our observations: codex exec-format tool calls share one aliased `EmittingTurnIndex` pointer (codex/convert.go:541); `TruncateContent` computes full_bytes/full_hash after pre-capping at 40KiB (util.go:161-163) so provenance fields lie for big outputs; `WriteManifests` builds manifests only from the current invocation (archive.go:92-251) - the manifest-drift caveat in the analysis skill is structural; JS commands pay an unconditional DuckDB preload they never use (command_runtime.go:86-99).
+- About a third of the minitrace schema has no writer at all (Outcome, Coordination, Handover, time_since_last_user, tool_tokens...) - matches our measured `outcome_success` 100% NULL.
+
+### What warrants a second pair of eyes
+- The claude-code `turns.thinking` 100% NULL measurement conflicts with mapping code existing at claudecode/convert.go:254-256 - either current Claude Code JSONL moved thinking or our sample lacks it; flagged in the report as needing investigation.
+- Success semantics are not cross-framework comparable (codex exit_code==0 vs pi/claude !is_error incl. user interrupts) - the docmgr report's cross-framework failure rates carry this caveat.
+
+### What should be done in the future
+- The report's section 10 is a prioritized P0-P3 backlog for go-minitrace (timestamp preservation, toolUseResult mapping, --source-session everywhere, discover --with-cwd, JS error envelopes, fidelity-matrix help page, single query engine).
+
+### Code review instructions
+- Read `analysis/01-go-minitrace-field-report-assessment-from-the-docmgr-usage-mining-project.md` sections 8-9 first (fidelity + misshapen); verify anchors against `~/code/wesen/go-go-golems/go-minitrace`.
+- Re-run the fidelity matrix: `go-minitrace query commands docmgr fidelity --query-repository scripts/query-commands --archive-glob '<work>/archive/*/active/*/*.minitrace.json'`.

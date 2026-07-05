@@ -14,3 +14,12 @@ Investigation complete: four file:line-anchored codebase reviews; go-minitrace p
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/design-doc/01-improving-docmgr-for-coding-agents-analysis-design-and-implementation-guide.md — Primary deliverable
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/reference/01-investigation-diary.md — Chronological diary (steps 1-5)
 
+
+## 2026-07-05
+
+Second deliverable: go-minitrace field report (analysis/01-...) - strengths + 9-item friction log + CLI ergonomics + JS API assessment + measured adapter-fidelity matrix with source-anchored root causes (toolUseResult dropped; emit timestamps overwritten; codex scrapes timing from output text; dual query stack with DuckDB toll) + prioritized P0-P3 backlog.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/analysis/01-go-minitrace-field-report-assessment-from-the-docmgr-usage-mining-project.md — The report
+

@@ -116,12 +116,12 @@ Every command's logic lives in `pkg/commands/*.go` as a **glazed command**; cobr
 
 ```mermaid
 flowchart LR
-    A[cobra root<br/>cmd/docmgr/cmds/root.go] --> B[group Attach()<br/>cmd/docmgr/cmds/*/]
-    B --> C[common.BuildCommand<br/>dual-mode wrapper]
-    C --> D[glazed command<br/>pkg/commands/*.go]
-    D --> E[workspace layer<br/>internal/workspace]
-    E --> F[(SQLite index<br/>in-memory, per-run)]
-    E --> G[[files: ttmp/**]]
+    A["cobra root<br/>cmd/docmgr/cmds/root.go"] --> B["group Attach<br/>cmd/docmgr/cmds/*/"]
+    B --> C["common.BuildCommand<br/>dual-mode wrapper"]
+    C --> D["glazed command<br/>pkg/commands/*.go"]
+    D --> E["workspace layer<br/>internal/workspace"]
+    E --> F[("SQLite index<br/>in-memory, per-run")]
+    E --> G[["files: ttmp/**"]]
 ```
 
 The full command inventory (30+ verbs across `ticket`, `doc`, `task`, `changelog`, `meta`, `vocab`, `skill`, `import`, `ignore`, `config`, `template`, `validate`, `api`, workspace lifecycle) is in the CLI review; the notable structural facts:
@@ -166,13 +166,13 @@ sequenceDiagram
 
     A->>R: --file-note "/abs/path:note"
     R->>R: split at FIRST ':' or '=' (relate.go:457-459)
-    R->>N: Normalize(path) — doc-anchored resolver
-    N->>N: try anchors: repo → doc → config → docsRoot → docsParent<br/>first base where file EXISTS wins (resolver.go:90-131)
-    N-->>R: Canonical = repoRel ∥ docsRel ∥ docRel ∥ abs (resolver.go:311)
+    R->>N: Normalize(path) - doc-anchored resolver
+    N->>N: try anchors repo, doc, config, docsRoot, docsParent<br/>first base where file EXISTS wins (resolver.go:90-131)
+    N-->>R: Canonical = repoRel or docsRel or docRel or abs (resolver.go:311)
     R->>F: rewrite ALL entries canonicalized + sorted (relate.go:606-619)
-    X->>F: separately, index uses NormalizeNoFS —<br/>FIRST valid base wins, no existence check (normalization.go:31)
-    Dr->>F: doctor re-Normalizes; doc-anchor may NOT escape repo (resolver.go:110-114)
-    UI->>F: UI assumes repo-relative: /file?root=repo&path=… (RelatedFilesList.tsx:37)
+    X->>F: separately, index uses NormalizeNoFS -<br/>FIRST valid base wins, no existence check (normalization.go:31)
+    Dr->>F: doctor re-Normalizes - doc-anchor may NOT escape repo (resolver.go:110-114)
+    UI->>F: UI assumes repo-relative /file?root=repo&path=... (RelatedFilesList.tsx:37)
 ```
 
 `NormalizedPath` holds **six representations** of one string (`Original, OriginalClean, Canonical, Abs, RepoRelative, DocsRelative, DocRelative` + `Anchor`, `Exists` — resolver.go:39-49). Concrete failure modes, each verified:

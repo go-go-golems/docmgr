@@ -1,0 +1,422 @@
+[
+{
+  "column": "duration_ms",
+  "framework": "claude-code",
+  "null_pct": 100,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "exit_code",
+  "framework": "claude-code",
+  "null_pct": 100,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "error",
+  "framework": "claude-code",
+  "null_pct": 96.4,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "success",
+  "framework": "claude-code",
+  "null_pct": 0,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "justification",
+  "framework": "claude-code",
+  "null_pct": 100,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "file_path",
+  "framework": "claude-code",
+  "null_pct": 58.4,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "operation_type",
+  "framework": "claude-code",
+  "null_pct": 0,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "timestamp",
+  "framework": "claude-code",
+  "null_pct": 0,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "result",
+  "framework": "claude-code",
+  "null_pct": 1.7,
+  "rows": 5285,
+  "table": "tool_calls"
+}
+, {
+  "column": "duration_ms",
+  "framework": "codex",
+  "null_pct": 16.4,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "exit_code",
+  "framework": "codex",
+  "null_pct": 4.5,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "error",
+  "framework": "codex",
+  "null_pct": 95.5,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "success",
+  "framework": "codex",
+  "null_pct": 0,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "justification",
+  "framework": "codex",
+  "null_pct": 99.8,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "file_path",
+  "framework": "codex",
+  "null_pct": 82,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "operation_type",
+  "framework": "codex",
+  "null_pct": 0,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "timestamp",
+  "framework": "codex",
+  "null_pct": 0,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "result",
+  "framework": "codex",
+  "null_pct": 0.2,
+  "rows": 94286,
+  "table": "tool_calls"
+}
+, {
+  "column": "duration_ms",
+  "framework": "pi",
+  "null_pct": 100,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "exit_code",
+  "framework": "pi",
+  "null_pct": 100,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "error",
+  "framework": "pi",
+  "null_pct": 95.4,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "success",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "justification",
+  "framework": "pi",
+  "null_pct": 100,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "file_path",
+  "framework": "pi",
+  "null_pct": 50.8,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "operation_type",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "timestamp",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "result",
+  "framework": "pi",
+  "null_pct": 0.2,
+  "rows": 99036,
+  "table": "tool_calls"
+}
+, {
+  "column": "input_tokens",
+  "framework": "claude-code",
+  "null_pct": 6.4,
+  "rows": 10385,
+  "table": "turns"
+}
+, {
+  "column": "output_tokens",
+  "framework": "claude-code",
+  "null_pct": 6.4,
+  "rows": 10385,
+  "table": "turns"
+}
+, {
+  "column": "thinking",
+  "framework": "claude-code",
+  "null_pct": 100,
+  "rows": 10385,
+  "table": "turns"
+}
+, {
+  "column": "timestamp",
+  "framework": "claude-code",
+  "null_pct": 0,
+  "rows": 10385,
+  "table": "turns"
+}
+, {
+  "column": "model",
+  "framework": "claude-code",
+  "null_pct": 6.4,
+  "rows": 10385,
+  "table": "turns"
+}
+, {
+  "column": "input_tokens",
+  "framework": "codex",
+  "null_pct": 20.2,
+  "rows": 17393,
+  "table": "turns"
+}
+, {
+  "column": "output_tokens",
+  "framework": "codex",
+  "null_pct": 20.2,
+  "rows": 17393,
+  "table": "turns"
+}
+, {
+  "column": "thinking",
+  "framework": "codex",
+  "null_pct": 34.4,
+  "rows": 17393,
+  "table": "turns"
+}
+, {
+  "column": "timestamp",
+  "framework": "codex",
+  "null_pct": 0,
+  "rows": 17393,
+  "table": "turns"
+}
+, {
+  "column": "model",
+  "framework": "codex",
+  "null_pct": 18,
+  "rows": 17393,
+  "table": "turns"
+}
+, {
+  "column": "input_tokens",
+  "framework": "pi",
+  "null_pct": 8.8,
+  "rows": 96994,
+  "table": "turns"
+}
+, {
+  "column": "output_tokens",
+  "framework": "pi",
+  "null_pct": 8.8,
+  "rows": 96994,
+  "table": "turns"
+}
+, {
+  "column": "thinking",
+  "framework": "pi",
+  "null_pct": 63.8,
+  "rows": 96994,
+  "table": "turns"
+}
+, {
+  "column": "timestamp",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 96994,
+  "table": "turns"
+}
+, {
+  "column": "model",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 96994,
+  "table": "turns"
+}
+, {
+  "column": "model",
+  "framework": "claude-code",
+  "null_pct": 0,
+  "rows": 54,
+  "table": "sessions"
+}
+, {
+  "column": "git_branch",
+  "framework": "claude-code",
+  "null_pct": 29.6,
+  "rows": 54,
+  "table": "sessions"
+}
+, {
+  "column": "working_directory",
+  "framework": "claude-code",
+  "null_pct": 29.6,
+  "rows": 54,
+  "table": "sessions"
+}
+, {
+  "column": "duration_seconds",
+  "framework": "claude-code",
+  "null_pct": 0,
+  "rows": 54,
+  "table": "sessions"
+}
+, {
+  "column": "outcome_success",
+  "framework": "claude-code",
+  "null_pct": 100,
+  "rows": 54,
+  "table": "sessions"
+}
+, {
+  "column": "system_prompt",
+  "framework": "claude-code",
+  "null_pct": 100,
+  "rows": 54,
+  "table": "sessions"
+}
+, {
+  "column": "model",
+  "framework": "codex",
+  "null_pct": 3.1,
+  "rows": 98,
+  "table": "sessions"
+}
+, {
+  "column": "git_branch",
+  "framework": "codex",
+  "null_pct": 100,
+  "rows": 98,
+  "table": "sessions"
+}
+, {
+  "column": "working_directory",
+  "framework": "codex",
+  "null_pct": 0,
+  "rows": 98,
+  "table": "sessions"
+}
+, {
+  "column": "duration_seconds",
+  "framework": "codex",
+  "null_pct": 0,
+  "rows": 98,
+  "table": "sessions"
+}
+, {
+  "column": "outcome_success",
+  "framework": "codex",
+  "null_pct": 100,
+  "rows": 98,
+  "table": "sessions"
+}
+, {
+  "column": "system_prompt",
+  "framework": "codex",
+  "null_pct": 10.2,
+  "rows": 98,
+  "table": "sessions"
+}
+, {
+  "column": "model",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 88,
+  "table": "sessions"
+}
+, {
+  "column": "git_branch",
+  "framework": "pi",
+  "null_pct": 100,
+  "rows": 88,
+  "table": "sessions"
+}
+, {
+  "column": "working_directory",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 88,
+  "table": "sessions"
+}
+, {
+  "column": "duration_seconds",
+  "framework": "pi",
+  "null_pct": 0,
+  "rows": 88,
+  "table": "sessions"
+}
+, {
+  "column": "outcome_success",
+  "framework": "pi",
+  "null_pct": 100,
+  "rows": 88,
+  "table": "sessions"
+}
+, {
+  "column": "system_prompt",
+  "framework": "pi",
+  "null_pct": 100,
+  "rows": 88,
+  "table": "sessions"
+}
+]

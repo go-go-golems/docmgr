@@ -13,7 +13,7 @@ Intent: long-term
 Owners: []
 RelatedFiles: []
 ExternalSources: []
-Summary: ""
+Summary: Full evidence-based review of docmgr plus empirical mining of 240 coding-agent sessions (go-minitrace) to design improvements for agent-facing UX, frontmatter path handling, doctor, UI parity, and an LLM-in-docmgr subsystem. Companion deliverable - a go-minitrace field report.
 LastUpdated: 2026-07-05T18:28:00.646175498-04:00
 WhatFor: ""
 WhenToUse: ""
@@ -23,7 +23,12 @@ WhenToUse: ""
 
 ## Overview
 
-<!-- Provide a brief overview of the ticket, its goals, and current status -->
+Investigation ticket for making docmgr a first-class documentation tool for coding agents. Two deliverables:
+
+1. `design-doc/01-improving-docmgr-for-coding-agents-analysis-design-and-implementation-guide.md` — intern-ready guide: architecture tour, evidence from four code reviews plus go-minitrace mining of 139 sessions / 14,166 docmgr tool calls, gap analysis, design (path anchors, agent CLI contract, doctor overhaul, UI parity, `docmgr ai`), phased plan.
+2. `analysis/01-go-minitrace-field-report-...md` — field report and assessment of go-minitrace itself from this project's usage (CLI ergonomics, JS API, schema, adapter fidelity).
+
+Working evidence lives in `reference/01-investigation-diary.md` (chronological, includes two live bug reproductions), `scripts/` (corpus tooling + JS query commands), and `sources/` (saved analysis JSON).
 
 ## Key Links
 

@@ -1,0 +1,1402 @@
+[
+{
+  "calls": 2314,
+  "failure_rate": 1.4,
+  "failures": 32,
+  "framework": "pi",
+  "invocation": "doctor"
+}
+, {
+  "calls": 1511,
+  "failure_rate": 4.1,
+  "failures": 62,
+  "framework": "pi",
+  "invocation": "doc relate"
+}
+, {
+  "calls": 1109,
+  "failure_rate": 1.5,
+  "failures": 17,
+  "framework": "pi",
+  "invocation": "changelog update"
+}
+, {
+  "calls": 1076,
+  "failure_rate": 2.6,
+  "failures": 28,
+  "framework": "pi",
+  "invocation": "task add"
+}
+, {
+  "calls": 951,
+  "failure_rate": 0.3,
+  "failures": 3,
+  "framework": "codex",
+  "invocation": "doctor"
+}
+, {
+  "calls": 914,
+  "failure_rate": 3.2,
+  "failures": 29,
+  "framework": "codex",
+  "invocation": "doc relate"
+}
+, {
+  "calls": 839,
+  "failure_rate": 3,
+  "failures": 25,
+  "framework": "pi",
+  "invocation": "doc add"
+}
+, {
+  "calls": 667,
+  "failure_rate": 0.1,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "changelog update"
+}
+, {
+  "calls": 594,
+  "failure_rate": 0.8,
+  "failures": 5,
+  "framework": "pi",
+  "invocation": "task check"
+}
+, {
+  "calls": 583,
+  "failure_rate": 3.3,
+  "failures": 19,
+  "framework": "codex",
+  "invocation": "doc add"
+}
+, {
+  "calls": 509,
+  "failure_rate": 3.7,
+  "failures": 19,
+  "framework": "codex",
+  "invocation": "task list"
+}
+, {
+  "calls": 454,
+  "failure_rate": 7.5,
+  "failures": 34,
+  "framework": "pi",
+  "invocation": "vocab add"
+}
+, {
+  "calls": 431,
+  "failure_rate": 0.9,
+  "failures": 4,
+  "framework": "pi",
+  "invocation": "task list"
+}
+, {
+  "calls": 407,
+  "failure_rate": 1.2,
+  "failures": 5,
+  "framework": "codex",
+  "invocation": "task check"
+}
+, {
+  "calls": 395,
+  "failure_rate": 2.8,
+  "failures": 11,
+  "framework": "pi",
+  "invocation": "ticket create-ticket"
+}
+, {
+  "calls": 386,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "task add"
+}
+, {
+  "calls": 361,
+  "failure_rate": 4.2,
+  "failures": 15,
+  "framework": "codex",
+  "invocation": "ticket list"
+}
+, {
+  "calls": 304,
+  "failure_rate": 22.7,
+  "failures": 69,
+  "framework": "codex",
+  "invocation": "validate frontmatter"
+}
+, {
+  "calls": 277,
+  "failure_rate": 0.4,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "ticket create-ticket"
+}
+, {
+  "calls": 206,
+  "failure_rate": 3.9,
+  "failures": 8,
+  "framework": "pi",
+  "invocation": "status"
+}
+, {
+  "calls": 198,
+  "failure_rate": 0.5,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "doc list"
+}
+, {
+  "calls": 190,
+  "failure_rate": 23.2,
+  "failures": 44,
+  "framework": "pi",
+  "invocation": "validate frontmatter"
+}
+, {
+  "calls": 179,
+  "failure_rate": 1.1,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "vocab add"
+}
+, {
+  "calls": 176,
+  "failure_rate": 1.7,
+  "failures": 3,
+  "framework": "pi",
+  "invocation": "doc list"
+}
+, {
+  "calls": 167,
+  "failure_rate": 2.4,
+  "failures": 4,
+  "framework": "pi",
+  "invocation": "ticket list"
+}
+, {
+  "calls": 150,
+  "failure_rate": 3.3,
+  "failures": 5,
+  "framework": "codex",
+  "invocation": "status"
+}
+, {
+  "calls": 106,
+  "failure_rate": 1.9,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "ticket close"
+}
+, {
+  "calls": 85,
+  "failure_rate": 1.2,
+  "failures": 1,
+  "framework": "claude-code",
+  "invocation": "changelog update"
+}
+, {
+  "calls": 65,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "doctor"
+}
+, {
+  "calls": 62,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "doc relate"
+}
+, {
+  "calls": 59,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "vocab list"
+}
+, {
+  "calls": 58,
+  "failure_rate": 3.4,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "ticket tickets"
+}
+, {
+  "calls": 57,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "task add"
+}
+, {
+  "calls": 55,
+  "failure_rate": 9.1,
+  "failures": 5,
+  "framework": "codex",
+  "invocation": "list tickets"
+}
+, {
+  "calls": 55,
+  "failure_rate": 1.8,
+  "failures": 1,
+  "framework": "pi",
+  "invocation": "ticket close"
+}
+, {
+  "calls": 52,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "doc add"
+}
+, {
+  "calls": 48,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "task check"
+}
+, {
+  "calls": 48,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ticket"
+}
+, {
+  "calls": 44,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "vocab list"
+}
+, {
+  "calls": 33,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket"
+}
+, {
+  "calls": 32,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "vocab add"
+}
+, {
+  "calls": 27,
+  "failure_rate": 3.7,
+  "failures": 1,
+  "framework": "pi",
+  "invocation": "doctor and"
+}
+, {
+  "calls": 24,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "task list"
+}
+, {
+  "calls": 22,
+  "failure_rate": 9.1,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "task remove"
+}
+, {
+  "calls": 20,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "ticket create-ticket"
+}
+, {
+  "calls": 17,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doc search"
+}
+, {
+  "calls": 17,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "task"
+}
+, {
+  "calls": 17,
+  "failure_rate": 5.9,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "import file"
+}
+, {
+  "calls": 16,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "task"
+}
+, {
+  "calls": 16,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "meta update"
+}
+, {
+  "calls": 14,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "status"
+}
+, {
+  "calls": 13,
+  "failure_rate": 15.4,
+  "failures": 2,
+  "framework": "pi",
+  "invocation": "ticket tickets"
+}
+, {
+  "calls": 13,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "import file"
+}
+, {
+  "calls": 12,
+  "failure_rate": 58.3,
+  "failures": 7,
+  "framework": "codex",
+  "invocation": "ticket show"
+}
+, {
+  "calls": 10,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "doc"
+}
+, {
+  "calls": 10,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ticket and"
+}
+, {
+  "calls": 9,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "changelog"
+}
+, {
+  "calls": 9,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "meta"
+}
+, {
+  "calls": 8,
+  "failure_rate": 12.5,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "help ticket"
+}
+, {
+  "calls": 8,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "list docs"
+}
+, {
+  "calls": 8,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "validation"
+}
+, {
+  "calls": 7,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doctor and"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "vocab list"
+}
+, {
+  "calls": 6,
+  "failure_rate": 16.7,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "list"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "meta update"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doc"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "list tickets"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "validation and"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "init"
+}
+, {
+  "calls": 6,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ignore explain"
+}
+, {
+  "calls": 5,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "help doc"
+}
+, {
+  "calls": 5,
+  "failure_rate": 40,
+  "failures": 2,
+  "framework": "pi",
+  "invocation": "ticket create"
+}
+, {
+  "calls": 5,
+  "failure_rate": 40,
+  "failures": 2,
+  "framework": "pi",
+  "invocation": "doc search"
+}
+, {
+  "calls": 5,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "task remove"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "configure"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "help changelog"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket move"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "workspace"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "metadata"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "and uploaded"
+}
+, {
+  "calls": 4,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "validation before"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "ticket"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "task remove"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "meta"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "help"
+}
+, {
+  "calls": 3,
+  "failure_rate": 66.7,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "changelog list"
+}
+, {
+  "calls": 3,
+  "failure_rate": 33.3,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "task edit"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "list"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "config"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ticket structure"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "doctor successfully"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "doctor after"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "diary current"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "vocabulary entries"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "hygiene"
+}
+, {
+  "calls": 3,
+  "failure_rate": 33.3,
+  "failures": 1,
+  "framework": "pi",
+  "invocation": "changelog upd"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "doctor check"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "tasks and"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "and available"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ticket show"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "hygiene and"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "frontmatter and"
+}
+, {
+  "calls": 3,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ticket workspace"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "task"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "ticket list"
+}
+, {
+  "calls": 2,
+  "failure_rate": 100,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "doc show"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "help create-ticket"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "config"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket workspace"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "help task"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "metadata links"
+}
+, {
+  "calls": 2,
+  "failure_rate": 100,
+  "failures": 2,
+  "framework": "codex",
+  "invocation": "doctor ttmp"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "config show"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "skill"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "search"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "help doc"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "config show"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "validation passed"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "tasks"
+}
+, {
+  "calls": 2,
+  "failure_rate": 100,
+  "failures": 2,
+  "framework": "pi",
+  "invocation": "doc validate"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "and diary"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "source"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "ticket for"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "root"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "topic vocabulary"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "tickets"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "frontmatter"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "validation passes"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "task edit"
+}
+, {
+  "calls": 2,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "doctor passed"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "doc list"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "frontmatter to"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "task conventions"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "scan sources"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "docs"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "init"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "bookkeeping"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "ticket create"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "ticket for"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "as a"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "for coding"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "template e"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "template derived"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "doctor clean"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "invocation": "ticket creation"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket while"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "while keeping"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "root"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "metadata"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "validation"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "bookkeeping and"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "setup and"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "hygiene checks"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "structure from"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket plus"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "comma"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "emitted a"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticke"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "related-file links"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "and re"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "workspace and"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "validation path"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "version"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "import"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "parse error"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "search"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doc-types list"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "changelog show"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket and"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "help validate"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "checks"
+}
+, {
+  "calls": 1,
+  "failure_rate": 100,
+  "failures": 1,
+  "framework": "codex",
+  "invocation": "meta show"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket create"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "init"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket with"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "relate"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket dedicated"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doctor gate"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "structure before"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "root to"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doctor report"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "guideline and"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doc re"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doctor warnings"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "doctor validation"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "scaffolding and"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "task uncheck"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "ticket rename-ticket"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "invocation": "do"
+}
+, {
+  "calls": 1,
+  "failure_rate": 100,
+  "failures": 1,
+  "framework": "pi",
+  "invocation": "changelog add"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "docto"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "add relation"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "doctor known"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "preamble behavior"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "api"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "import"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "export-sqlite"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "changelog"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "template"
+}
+, {
+  "calls": 1,
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "invocation": "help ticket"
+}
+]

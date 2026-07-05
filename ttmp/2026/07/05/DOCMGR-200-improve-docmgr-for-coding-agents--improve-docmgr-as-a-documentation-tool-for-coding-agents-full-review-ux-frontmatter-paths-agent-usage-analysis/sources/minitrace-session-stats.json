@@ -1,0 +1,23 @@
+[
+{
+  "avg_duration_ms": null,
+  "docmgr_calls": 8049,
+  "failed_calls": 194,
+  "framework": "pi",
+  "sessions": 74
+}
+, {
+  "avg_duration_ms": 611,
+  "docmgr_calls": 5819,
+  "failed_calls": 185,
+  "framework": "codex",
+  "sessions": 48
+}
+, {
+  "avg_duration_ms": null,
+  "docmgr_calls": 298,
+  "failed_calls": 3,
+  "framework": "claude-code",
+  "sessions": 17
+}
+]

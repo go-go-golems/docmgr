@@ -1,0 +1,282 @@
+[
+{
+  "avg_bytes": 3106,
+  "calls": 508,
+  "invocation": "ticket create-ticket",
+  "max_bytes": 10252,
+  "total_mb": 1.5
+}
+, {
+  "avg_bytes": 758,
+  "calls": 1999,
+  "invocation": "doctor",
+  "max_bytes": 10252,
+  "total_mb": 1.44
+}
+, {
+  "avg_bytes": 1704,
+  "calls": 774,
+  "invocation": "doc add",
+  "max_bytes": 10238,
+  "total_mb": 1.26
+}
+, {
+  "avg_bytes": 1725,
+  "calls": 643,
+  "invocation": "task list",
+  "max_bytes": 10252,
+  "total_mb": 1.06
+}
+, {
+  "avg_bytes": 2487,
+  "calls": 390,
+  "invocation": "ticket list",
+  "max_bytes": 10252,
+  "total_mb": 0.93
+}
+, {
+  "avg_bytes": 564,
+  "calls": 1498,
+  "invocation": "doc relate",
+  "max_bytes": 9408,
+  "total_mb": 0.81
+}
+, {
+  "avg_bytes": 470,
+  "calls": 1090,
+  "invocation": "changelog update",
+  "max_bytes": 6206,
+  "total_mb": 0.49
+}
+, {
+  "avg_bytes": 1430,
+  "calls": 334,
+  "invocation": "status",
+  "max_bytes": 10252,
+  "total_mb": 0.46
+}
+, {
+  "avg_bytes": 603,
+  "calls": 762,
+  "invocation": "task check",
+  "max_bytes": 10252,
+  "total_mb": 0.44
+}
+, {
+  "avg_bytes": 1011,
+  "calls": 390,
+  "invocation": "task add",
+  "max_bytes": 10252,
+  "total_mb": 0.38
+}
+, {
+  "avg_bytes": 4511,
+  "calls": 76,
+  "invocation": "ticket",
+  "max_bytes": 10244,
+  "total_mb": 0.33
+}
+, {
+  "avg_bytes": 891,
+  "calls": 302,
+  "invocation": "vocab add",
+  "max_bytes": 6812,
+  "total_mb": 0.26
+}
+, {
+  "avg_bytes": 1196,
+  "calls": 215,
+  "invocation": "doc list",
+  "max_bytes": 10248,
+  "total_mb": 0.25
+}
+, {
+  "avg_bytes": 2943,
+  "calls": 67,
+  "invocation": "ticket tickets",
+  "max_bytes": 10252,
+  "total_mb": 0.19
+}
+, {
+  "avg_bytes": 488,
+  "calls": 306,
+  "invocation": "validate frontmatter",
+  "max_bytes": 10252,
+  "total_mb": 0.14
+}
+, {
+  "avg_bytes": 1111,
+  "calls": 110,
+  "invocation": "ticket close",
+  "max_bytes": 7825,
+  "total_mb": 0.12
+}
+, {
+  "avg_bytes": 2395,
+  "calls": 53,
+  "invocation": "list tickets",
+  "max_bytes": 10252,
+  "total_mb": 0.12
+}
+, {
+  "avg_bytes": 1507,
+  "calls": 77,
+  "invocation": "vocab list",
+  "max_bytes": 6403,
+  "total_mb": 0.11
+}
+, {
+  "avg_bytes": 3033,
+  "calls": 31,
+  "invocation": "task",
+  "max_bytes": 8615,
+  "total_mb": 0.09
+}
+, {
+  "avg_bytes": 3909,
+  "calls": 19,
+  "invocation": "doc search",
+  "max_bytes": 10176,
+  "total_mb": 0.07
+}
+, {
+  "avg_bytes": 3120,
+  "calls": 17,
+  "invocation": "doc",
+  "max_bytes": 7670,
+  "total_mb": 0.05
+}
+, {
+  "avg_bytes": 836,
+  "calls": 59,
+  "invocation": "do",
+  "max_bytes": 6411,
+  "total_mb": 0.05
+}
+, {
+  "avg_bytes": 2936,
+  "calls": 18,
+  "invocation": "ti",
+  "max_bytes": 10186,
+  "total_mb": 0.05
+}
+, {
+  "avg_bytes": 2491,
+  "calls": 15,
+  "invocation": "ticket create",
+  "max_bytes": 5693,
+  "total_mb": 0.04
+}
+, {
+  "avg_bytes": 3101,
+  "calls": 14,
+  "invocation": "ticket show",
+  "max_bytes": 7585,
+  "total_mb": 0.04
+}
+, {
+  "avg_bytes": 1093,
+  "calls": 29,
+  "invocation": "changelog",
+  "max_bytes": 2767,
+  "total_mb": 0.03
+}
+, {
+  "avg_bytes": 1112,
+  "calls": 24,
+  "invocation": "task remove",
+  "max_bytes": 10027,
+  "total_mb": 0.03
+}
+, {
+  "avg_bytes": 2562,
+  "calls": 13,
+  "invocation": "task l",
+  "max_bytes": 8922,
+  "total_mb": 0.03
+}
+, {
+  "avg_bytes": 1031,
+  "calls": 35,
+  "invocation": "task c",
+  "max_bytes": 6356,
+  "total_mb": 0.03
+}
+, {
+  "avg_bytes": 1564,
+  "calls": 12,
+  "invocation": "meta update",
+  "max_bytes": 4347,
+  "total_mb": 0.02
+}
+, {
+  "avg_bytes": 1326,
+  "calls": 18,
+  "invocation": "import file",
+  "max_bytes": 2609,
+  "total_mb": 0.02
+}
+, {
+  "avg_bytes": 1148,
+  "calls": 16,
+  "invocation": "d",
+  "max_bytes": 2887,
+  "total_mb": 0.02
+}
+, {
+  "avg_bytes": 401,
+  "calls": 16,
+  "invocation": "validate fro",
+  "max_bytes": 1068,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 508,
+  "calls": 19,
+  "invocation": "ta",
+  "max_bytes": 1623,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 496,
+  "calls": 11,
+  "invocation": "ch",
+  "max_bytes": 2037,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 562,
+  "calls": 12,
+  "invocation": "va",
+  "max_bytes": 975,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 614,
+  "calls": 17,
+  "invocation": "changelog upd",
+  "max_bytes": 5065,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 829,
+  "calls": 14,
+  "invocation": "doct",
+  "max_bytes": 2659,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 570,
+  "calls": 13,
+  "invocation": "doc re",
+  "max_bytes": 1898,
+  "total_mb": 0.01
+}
+, {
+  "avg_bytes": 564,
+  "calls": 15,
+  "invocation": "change",
+  "max_bytes": 1070,
+  "total_mb": 0.01
+}
+]

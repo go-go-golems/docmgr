@@ -8,4 +8,4 @@
 - [x] Write intern-level analysis/design/implementation guide (incl. docmgr ai design)
 - [x] Maintain investigation diary
 - [x] Validate with doctor, commit, upload bundle to reMarkable
-- [ ] go-minitrace field report written and uploaded to reMarkable
+- [x] go-minitrace field report written and uploaded to reMarkable

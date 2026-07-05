@@ -11,13 +11,20 @@ Topics:
 DocType: reference
 Intent: ticket-specific
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/03-stage-and-convert.sh
+      Note: Session staging + minitrace conversion pipeline built in Step 3
+    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/query-commands/docmgr/usage.js
+      Note: JS analysis verbs (command-freq / error-summary / retry-chains / session-stats) from Step 3
+    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/minitrace-command-freq.json
+      Note: Raw per-framework frequency data behind Step 4 findings
 ExternalSources: []
 Summary: Chronological diary of the DOCMGR-200 investigation - codebase review fan-out, go-minitrace JS analysis of agent sessions, and findings.
 LastUpdated: 2026-07-05T18:50:00-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 # Diary
 
@@ -57,7 +64,71 @@ Created the DOCMGR-200 ticket workspace and split the codebase review into four 
 ### Code review instructions
 - The four review reports are summarized and cited throughout the design doc (`design-doc/01-...md`); spot-check any claim via its file:line anchor in the docmgr repo.
 
-## Step 2: go-minitrace corpus discovery and conversion pipeline
+### Technical details
+- Exact setup commands:
+  - `docmgr ticket create-ticket --ticket DOCMGR-200-improve-docmgr-for-coding-agents --title "Improve docmgr as a documentation tool for coding agents: full review, UX, frontmatter paths, agent-usage analysis" --topics docmgr,ux,cli,documentation,tooling`
+  - `docmgr doc add --ticket DOCMGR-200-improve-docmgr-for-coding-agents --doc-type design-doc --title "Improving docmgr for coding agents: analysis, design, and implementation guide"`
+  - `docmgr doc add --ticket DOCMGR-200-improve-docmgr-for-coding-agents --doc-type reference --title "Investigation diary"`
+- Repo size at review time: 258 Go files / ~35,007 LOC (main module), React SPA under `ui/`, separate `scenariolog` module, 53 existing tickets / 232 docs in `ttmp/`.
+- Vocabulary already contained suitable topics (docmgr, ux, cli, documentation, tooling), so no `vocab add` was needed at setup time.
+
+## Step 2: Codebase review findings (four parallel reviews)
+
+The four scoped reviews returned dense, file:line-anchored reports. This step records their headline findings so the diary is self-contained; the design doc integrates and cites them in full.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 1)
+
+### What I did
+- Collected and cross-checked the four reports (CLI surface; core internals/paths; web UI + HTTP API; peripheral subsystems + tests + docs accuracy).
+
+### Key findings per track
+
+**CLI surface** (cmd/, pkg/commands):
+- Three exit-0 silent failures: malformed `--file-note` silently skipped (`pkg/commands/relate.go:460-462`); `meta update` prints per-file errors but returns nil (`pkg/commands/meta_update.go:297-305`); `changelog update` without `--entry` writes an empty dated heading (`pkg/commands/changelog.go:65`).
+- fts5 build-tag trap: default `go build` → `Error: fts5 not available (docs_fts missing)` on any text query (`internal/workspace/query_docs.go:36-37`); only the Makefile builds `-tags sqlite_fts5`.
+- `ignore explain` human mode is broken: `Error: no non-Glaze run method implemented for *commands.IgnoreExplainCommand` (only `RunIntoGlazeProcessor` implemented, wired as dual-mode).
+- Doctor issue numbering stuck at `1)` (counter resets per taxonomy: `pkg/diagnostics/render/render.go:19` vs `adapter.go:99-119`); doctor's suggested `vocab add --category doctype` command is invalid twice over (bad category, missing required `--description`).
+- Fresh `init` + first ticket immediately fails doctor (vocabulary not seeded by default but create-ticket writes vocab-checked values).
+- Naming: `ticket create-ticket`/`rename-ticket` stutter; `ticket tickets` canonical vs `doc list`; same op spelled 2-4 ways (root + workspace group, `list` group, `search` alias).
+- Dead code: `pkg/commands/list.go` (`NewListCommand`) never registered.
+- Output noise: 3-line root/config/vocabulary banner on every command; unconditional reminder nags on task/changelog mutations; `doctor --all` = 112 KB on this repo.
+
+**Core internals / paths** (pkg/models, internal/paths, internal/workspace):
+- `models.Document` has no `omitempty`; rewrites materialize all 13 keys incl. `LastUpdated: 0001-01-01T00:00:00Z`. RelatedFiles unmarshal silently drops malformed entries (`pkg/models/document.go:341`).
+- `NormalizedPath` carries six representations; `Normalize` picks the first anchor where the file exists among repo/doc/config/docsRoot/docsParent (`internal/paths/resolver.go:90-131`); `NormalizeNoFS` (used by the index) picks the first valid base - the two can disagree for the same string.
+- Absolute inputs short-circuit with `Exists=true` and are never stat'd (resolver.go:86-88).
+- Cross-repo relate writes `../../../../glazed/...` doc-relative entries that doctor then can't resolve (doc anchor must stay inside repo, resolver.go:110-114) - the tool contradicts itself; UI 403s the same entries (`internal/httpapi/path_safety.go:48-53`, `RelatedFilesList.tsx:37` assumes repo-relative).
+- `PreprocessYAML` has a dead nested-structure guard (`pkg/frontmatter/frontmatter.go:56` checks prefix after TrimLeft) so indented block-scalar lines can be rewritten at read time.
+- tasks.md IDs are positional and recomputed each parse (`internal/tasksmd/tasksmd.go:84-97`).
+- Doctor validates RelatedFiles/vocab/staleness only on index.md (doctor.go:411-630); `is_sources_path` is a dead column (computed, stored, never filtered).
+- `go.work` never consulted; RepoRoot has two different definitions (`config.go:297-323` incl. legacy `doc/` marker vs `resolver.go:385-401`).
+
+**Web UI / HTTP API** (ui/, internal/httpapi, internal/web):
+- 20 REST routes under `/api/v1`; reads from an in-memory snapshot, no file watching, manual `POST /index/refresh`.
+- UI is read-mostly: exactly two write endpoints (task check, task add - section hardcoded to TODO). No doc create/edit, no meta update, no relate, no doctor, no changelog.
+- Mermaid renders only in the graph tab; doc bodies use a bare `MarkdownBlock` (no component overrides) - diagrams in docs are invisible; relative doc links and images break.
+- Careful path-traversal defenses in `path_safety.go` (normalization + EvalSymlinks + NUL checks) with tests.
+- Hygiene: `StatusBadge` copy-pasted 5x, duplicate legacy CSS selectors, dev-port 3001 hardcoded in error hints while embedded serve defaults to 8787, changelog tab is a link stub.
+
+**Peripheral subsystems**:
+- Search is SQLite FTS5, not bleve; sibling repos goja-bleve/goja-text/go-go-goja have zero integration with docmgr.
+- Skills subsystem (1,447 LOC) active and tested; templates stable; verb `.templ` output templates niche but working (9 verbs, `--print-template-schema`).
+- scenariolog: separate module, needs `GOWORK=off`, glazed pinned v1.0.5 vs main v1.3.6.
+- Tests: all green in 3 configs, but CI runs untagged tests only - the FTS5 production path and the 22-scenario E2E suite never run in CI.
+- Docs drift: README broken code fence + missing features (API/UI/skills); AGENT.md describes a different repo (ttmp/YYYY-MM-DD/, doc/, bun+templ); CONTRIBUTING points at nonexistent `pkg/commands/config.go` and obsolete glazed APIs; `test-api.sh` is dead (pre-`/api/v1` routes).
+
+### What worked
+- Requiring file:line anchors in each report made cross-checking cheap; several claims (silent failures, fts5 error, doctor numbering) were verified by the reviewers actually running the commands in sandboxes.
+
+### What didn't work
+- N/A - all four reviews completed.
+
+### What warrants a second pair of eyes
+- The `PreprocessYAML` dead-guard claim (frontmatter.go:56) and the `Exists=true` short-circuit (resolver.go:86-88) are the two most consequential internals claims; re-verify before building on them.
+
+## Step 3: go-minitrace corpus discovery and conversion pipeline
 
 Started with raw `rg` greps over the three native transcript stores to size the corpus, then - after user feedback - pivoted to a proper go-minitrace pipeline: stage a top-usage sample of sessions into store-shaped trees, convert to minitrace archives, and do all real analysis as reusable JS query commands stored in this ticket's `scripts/query-commands/`.
 
@@ -105,7 +176,7 @@ Started with raw `rg` greps over the three native transcript stores to size the 
 - Re-run everything: `scripts/03-stage-and-convert.sh <hits-dir> <work-dir> 50 20`, then any `go-minitrace query commands docmgr <group> <verb> --query-repository scripts/query-commands --archive-glob '<work>/archive/*/active/*/*.minitrace.json'`.
 - Saved outputs in `sources/minitrace-*.json`.
 
-## Step 3: Findings from the session mining
+## Step 4: Findings from the session mining
 
 The numbers align remarkably well with the static review. Sample (139 sessions with docmgr activity, 14,166 docmgr tool calls): pi 8,049 calls / 74 sessions, codex 5,819 / 48, claude-code 298 / 17.
 
@@ -133,22 +204,39 @@ The numbers align remarkably well with the static review. Sample (139 sessions w
 ### What should be done in the future
 - The design doc turns these findings into prioritized improvements (silent-failure fixes, path-anchor scheme, verb aliases for what agents guess, output slimming) plus a design for LLM functionality inside docmgr itself (per user follow-up request).
 
-## Step 4: Design doc, bookkeeping, upload
+## Step 5: Design doc, bookkeeping, and two live bug reproductions
 
-(Filled in as the step completes; see changelog.)
+Wrote the full design doc (14 sections: mental model, subsystem tour with mermaid diagrams, evidence tables, gap analysis G1-G12, design D1-D8 with four decision records, phased plan P0-P5, testing strategy, go-minitrace appendix, reproduction commands, key-file reference). While doing routine docmgr bookkeeping for this very ticket, docmgr reproduced two of the documented bugs on its own maintainers' workflow - the best possible validation of the analysis.
 
 ### Prompt Context
 
-**User prompt (verbatim):** "you can also investigate say, adding llm functionality to docmgr itself, to maybe alleviate the need to do loops in the top-level LLM harness."
+**User prompt (verbatim):** "you can also investigate say, adding llm functionality to docmgr itself, to maybe alleviate the need to do loops in the top-level LLM harness." - and: "write the diary as you go, not just at the end. So fill it out now, in detail, for all the investigation you already did"
 
-**Assistant interpretation:** Add a design investigation for embedding LLM calls in docmgr (auto-relate, summarization, changelog drafting, doc QA) so the expensive top-level agent doesn't burn turns on bookkeeping loops.
+**Assistant interpretation:** Add a design investigation for embedding LLM calls in docmgr (auto-relate, summarization, changelog drafting, frontmatter repair, doc QA) so the expensive top-level agent doesn't burn turns on bookkeeping loops; and keep the diary current during the work.
 
-**Inferred user intent:** Reduce agent-context cost and retry loops by moving mechanical-but-fuzzy documentation chores into docmgr with a cheap model.
+**Inferred user intent:** Reduce agent-context cost and retry loops by moving mechanical-but-fuzzy documentation chores into docmgr with a cheap model; keep the investigation auditable in real time.
 
 ### What I did
-- Wrote `design-doc/01-improving-docmgr-for-coding-agents-analysis-design-and-implementation-guide.md` (architecture walkthrough, evidence, gap analysis, decision records, phased implementation plan, LLM-in-docmgr design).
-- Related key files, updated changelog and tasks, ran `docmgr doctor`, committed, uploaded the bundle to reMarkable.
+- Wrote `design-doc/01-improving-docmgr-for-coding-agents-analysis-design-and-implementation-guide.md` in four passes (sections 1-5 orientation/architecture; 6 evidence; 7-8 gaps/design incl. `docmgr ai` as D7 with a decision record on where LLM calls live; 9-14 plan/testing/risks/appendices).
+- Bookkeeping: `docmgr doc relate` (7 file-notes on the design doc, 3 on the diary), `task add` x5 + `task check`, `changelog update`, `docmgr doctor --ticket DOCMGR-200-...`.
+
+### What worked
+- The design doc integrates all five evidence streams (4 reviews + minitrace) with every claim anchored; the `docmgr ai` design reuses the existing suggest/apply pattern from `doc relate --suggest/--apply-suggestions` as its guard-rail model.
+
+### What didn't work (live bug reproductions!)
+- **Comma-split file-notes**: `docmgr doc relate --file-note ".../resolver.go:...trickiness (sections 4.4, 8.1)"` stored the note truncated to "...(sections 4.4" - glazed parses the repeatable flag as a comma-separated stringList, and the post-comma fragment " 8.1)..." (no colon) was **silently dropped with exit 0** - exactly the G1 silent-failure bug documented hours earlier. Fixed the notes by editing frontmatter directly; added the reproduction to the design doc's G1 row.
+- **Positional task-ID trap**: `docmgr task check --id 1,2,3,4` checked the scaffolded placeholder "Add tasks here" as ID 1 instead of my first real task; after `task remove --id 1` all IDs shifted again - exactly the D5/G8 instability. The scaffold placeholder also counts as an open task in `list tickets` until manually removed.
+
+### What I learned
+- Dogfooding the bookkeeping loop on the tool's own repo is the fastest way to hit the agent-facing bugs; both reproductions are now cited as first-party evidence in the design doc.
+
+### What warrants a second pair of eyes
+- The comma-split behavior means every historical `--file-note` containing a comma has a truncated note in frontmatter across all 53 tickets in this repo (and other repos) - worth a one-off audit query before/with the D1 migration.
+
+### What should be done in the future
+- P0 fix list in design doc section 9 (the comma-split fix joins it: make `--file-note` a repeatable plain string, not a comma list).
 
 ### Code review instructions
-- Start with the design doc's executive summary and the "life of a related file" walkthrough; validate claims against `internal/paths/resolver.go` and `pkg/commands/relate.go`.
-- Reproduce any statistic with the query commands under `scripts/query-commands/` (exact invocations in the doc's appendix).
+- Start with the design doc's executive summary and the "life of a related file" walkthrough (section 4.4); validate claims against `internal/paths/resolver.go` and `pkg/commands/relate.go`.
+- Reproduce any statistic with the query commands under `scripts/query-commands/` (exact invocations in design doc Appendix B).
+- Reproduce the comma-split bug: `docmgr doc relate --doc <any> --file-note "/abs/path:note with, a comma"` and inspect the stored Note.

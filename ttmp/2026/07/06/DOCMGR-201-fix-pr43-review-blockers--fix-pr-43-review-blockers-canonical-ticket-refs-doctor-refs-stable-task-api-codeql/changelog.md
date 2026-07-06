@@ -39,3 +39,13 @@ Step 4: Fixed local embed/public generation for release hooks: Dagger UI build e
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/Makefile — goreleaser depends on ui-build
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/web/generate_build.go — Non-interactive Dagger UI build fix
 
+
+## 2026-07-06
+
+Step 5: Addressed CodeQL server.go path-taint trace by validating HTTP search file/dir filters before constructing SearchQuery; unsafe traversal, absolute paths, and anchored schemes now return 400.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/server.go — HTTP search file/dir filter validation
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/server_test.go — Regression coverage for unsafe search path filters
+

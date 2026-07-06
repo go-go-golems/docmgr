@@ -13,6 +13,10 @@ Owners: []
 RelatedFiles:
     - Path: repo://Makefile
       Note: Step 4 local goreleaser now builds UI assets first
+    - Path: repo://internal/httpapi/server.go
+      Note: Step 5 CodeQL HTTP path filter validation
+    - Path: repo://internal/httpapi/server_test.go
+      Note: Step 5 unsafe search path filter tests
     - Path: repo://internal/httpapi/tickets.go
       Note: Step 2 stable task ref HTTP API
     - Path: repo://internal/paths/resolver.go
@@ -34,6 +38,7 @@ LastUpdated: 2026-07-06T11:40:00-04:00
 WhatFor: Follow the DOCMGR-201 implementation work and reproduce its validation steps.
 WhenToUse: Use when reviewing or continuing the PR 43 blocker fixes.
 ---
+
 
 
 
@@ -305,3 +310,77 @@ The first attempt to generate assets also exposed a second local-only problem: t
 ### Technical details
 - `internal/web/embed/public/` remains ignored by `.gitignore`.
 - Successful local `make goreleaser` output ended with `release succeeded after 8s`.
+
+## Step 5: Address server.go CodeQL path-taint trace
+
+GitHub's CodeQL trace moved to `internal/httpapi/server.go` and showed URL query parameters flowing into `searchsvc.SearchQuery.File` / `Dir`. Those fields are reverse-lookup filters, not direct file-open requests, but they eventually pass through path-normalization helpers, so the HTTP boundary now validates and canonicalizes them before they enter the shared search layer.
+
+The fix deliberately narrows the HTTP search API to relative lexical path filters. CLI users can still use richer local path forms; the browser/HTTP endpoint does not need absolute paths or anchored schemes for search filters.
+
+### Prompt Context
+
+**User prompt (verbatim):** "in server.go : 
+Uncontrolled data used in path expression
+Step 1 selection of URL
+Source
+internal/httpapi/server.go:186
+        Topics:              splitCSV(r.URL.Query().Get(\"topics\")),
+        DocType:             strings.TrimSpace(r.URL.Query().Get(\"docType\")),
+        Status:              strings.TrimSpace(r.URL.Query().Get(\"status\")),
+        File:                strings.TrimSpace(r.URL.Query().Get(\"file\")),
+        Dir:                 strings.TrimSpace(r.URL.Query().Get(\"dir\")),
+        ExternalSource:      strings.TrimSpace(r.URL.Query().Get(\"externalSource\")),
+        Since:               strings.TrimSpace(r.URL.Query().Get(\"since\")),
+Step 2 call to Query
+internal/httpapi/server.go:186
+        Topics:              splitCSV(r.URL.Query().Get(\"topics\")),
+        DocType:             strings.TrimSpace(r.URL.Query().Get(\"docType\")),
+        Status:              strings.TrimSpace(r.URL.Query().Get(\"status\")),
+        File:                strings.TrimSpace(r.URL.Query().Get(\"file\")),
+        Dir:                 strings.TrimSpace(r.URL.Query().Get(\"dir\")),
+        ExternalSource:      strings.TrimSpace(r.URL.Query().Get(\"externalSource\")),
+        Since:               strings.TrimSpace(r.URL.Query().Get(\"since\")),"
+
+**Assistant interpretation:** The latest CodeQL path-injection trace points at HTTP `file`/`dir` query parameters in `handleSearchDocs`; validate/sanitize those parameters at the HTTP boundary.
+
+**Inferred user intent:** Resolve the remaining CodeQL alert in PR 43 without weakening the search functionality agents and UI need.
+
+**Commit (code):** pending — this step will be committed after validation.
+
+### What I did
+- Added `cleanSearchPathFilter` in `internal/httpapi/server.go` and use it for `file` and `dir` before constructing `searchsvc.SearchQuery`.
+- The validator rejects NULs, overly long filters, absolute paths, Windows absolute paths, anchored schemes (`repo://`, etc.), and parent-directory traversal.
+- It normalizes backslashes to slashes and applies lexical `path.Clean` so safe HTTP filters become stable repo-relative strings.
+- Added `TestServer_SearchPathFiltersRejectUnsafeValuesBeforeIndex` so bad `file`/`dir` inputs return `400 Bad Request` before index access.
+
+### Why
+- The HTTP endpoint is a remote-ish boundary even when bound to localhost. It should not accept arbitrary filesystem-looking path filters when those strings later pass through path normalizers.
+- The search filters only need repo/workspace-relative lexical matching for UI usage; rejecting absolute/anchored forms over HTTP is an acceptable contract tightening.
+
+### What worked
+- `go test ./internal/httpapi -count=1` passed.
+- `go test ./... -count=1` passed.
+
+### What didn't work
+- N/A.
+
+### What I learned
+- The CodeQL source selection points at the struct literal because the query parameters were copied directly into `SearchQuery`. Moving validation before the struct construction makes the trust boundary explicit.
+
+### What was tricky to build
+- The value is not actually used as a direct open/read path by `server.go`; it is a reverse lookup string. The fix therefore had to preserve useful relative filters while removing path forms that look like filesystem control inputs.
+
+### What warrants a second pair of eyes
+- Confirm that no UI caller depends on absolute or anchored path search filters over HTTP. The CLI remains the correct place for those local-trust forms.
+- Recheck CodeQL after push; if the trace persists, the next move may be an explicit CodeQL suppression with the explanation that the sanitized value is used for matching, not file access.
+
+### What should be done in the future
+- Document HTTP search `file`/`dir` filters as relative-only in `pkg/doc/docmgr-http-api.md`.
+
+### Code review instructions
+- Review `internal/httpapi/server.go` around `handleSearchDocs` and `cleanSearchPathFilter`.
+- Review `internal/httpapi/server_test.go` for unsafe path-filter rejection.
+- Validate with `go test ./internal/httpapi -count=1` and `go test ./... -count=1`.
+
+### Technical details
+- Unsafe examples covered: `../secret.txt`, `/etc`, `repo://pkg/foo.go`, `C:/Windows/win.ini`.

@@ -329,13 +329,16 @@ func querySuffixRel(raw string) string {
 	return rel
 }
 
-// queryPathAbsKey resolves a query input to its absolute path key.
+// queryPathAbsKey resolves a query input to its absolute path key without
+// touching the filesystem. Query filters are lookup keys only; existence-based
+// anchor selection belongs to indexing persisted RelatedFiles, not to HTTP/CLI
+// search inputs.
 func queryPathAbsKey(resolver *paths.Resolver, raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" || resolver == nil {
 		return ""
 	}
-	n := resolver.Resolve(raw)
+	n := resolver.ResolveNoFS(raw)
 	return filepath.ToSlash(strings.TrimSpace(n.Abs))
 }
 

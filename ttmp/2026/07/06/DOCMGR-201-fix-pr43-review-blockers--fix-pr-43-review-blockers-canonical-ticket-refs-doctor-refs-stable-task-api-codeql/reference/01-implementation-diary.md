@@ -18,13 +18,19 @@ RelatedFiles:
     - Path: repo://internal/httpapi/server_test.go
       Note: Step 5 unsafe search path filter tests
     - Path: repo://internal/httpapi/tickets.go
-      Note: Step 2 stable task ref HTTP API
+      Note: |-
+        Step 2 stable task ref HTTP API
+        Step 6 canonical ticket IDs for HTTP get/docs/graph
+    - Path: repo://internal/httpapi/tickets_test.go
+      Note: Step 6 short-ref regression coverage
     - Path: repo://internal/paths/resolver.go
       Note: Step 2 CodeQL alert mitigation
     - Path: repo://internal/tasksmd/tasksmd.go
       Note: Step 2 stable task ref helper
     - Path: repo://internal/web/generate_build.go
       Note: Step 4 non-interactive embed asset generation
+    - Path: repo://internal/workspace/query_docs_sql.go
+      Note: Step 6 no-filesystem search query key normalization
     - Path: repo://pkg/commands/add.go
       Note: Step 2 canonical doc add fix
     - Path: repo://pkg/commands/doctor.go
@@ -38,6 +44,7 @@ LastUpdated: 2026-07-06T11:40:00-04:00
 WhatFor: Follow the DOCMGR-201 implementation work and reproduce its validation steps.
 WhenToUse: Use when reviewing or continuing the PR 43 blocker fixes.
 ---
+
 
 
 
@@ -384,3 +391,65 @@ internal/httpapi/server.go:186
 
 ### Technical details
 - Unsafe examples covered: `../secret.txt`, `/etc`, `repo://pkg/foo.go`, `C:/Windows/win.ini`.
+
+## Step 6: Finish PR review comments and remove search-query Stat taint
+
+I rechecked the PR review threads and current check-run details after the previous push. Most workflow jobs were green, but the synthetic `CodeQL` status still failed because alert 10 remained open on `internal/paths/resolver.go`, and the Codex review thread about fuzzy ticket refs was still unresolved for HTTP ticket docs/stats/graph paths.
+
+This step fixes the remaining concrete review item and changes reverse lookup query-key generation so search filters no longer call the filesystem-aware resolver path. Persisted `RelatedFiles` indexing still uses existence-based resolution; search inputs are now treated as lookup keys only.
+
+### Prompt Context
+
+**User prompt (verbatim):** "did you address the code review comments here: https://github.com/go-go-golems/docmgr/pull/43
+
+we also still seem to have : https://github.com/go-go-golems/docmgr/pull/43/checks?check_run_id=85441659630"
+
+**Assistant interpretation:** Verify PR 43 review threads and the failing CodeQL check, then fix any remaining review/check blockers.
+
+**Inferred user intent:** Get PR 43 to a mergeable state by addressing both automated review comments and the remaining CodeQL failure.
+
+**Commit (code):** pending — this step will be committed after validation.
+
+### What I did
+- Queried PR 43 review threads with `gh api graphql`; found two unresolved threads:
+  - the original CodeQL path-injection review comment on `internal/paths/resolver.go`, now outdated but still represented by the failing CodeQL check;
+  - a Codex comment saying HTTP ticket docs/stats/graph handlers should continue with `res.TicketID` after fuzzy resolution.
+- Queried check run `85441659630`; it failed because alert 10 still reported `go/path-injection` at `internal/paths/resolver.go:636` (`os.Stat`).
+- Updated `internal/httpapi/tickets.go` so `tickets/get`, `tickets/docs`, and `tickets/graph` use the canonical resolved ticket ID for stats, doc queries, graph building, and response payloads.
+- Updated `internal/httpapi/tickets_test.go` to cover forgiving ticket prefixes for summary stats, docs, and graph responses.
+- Updated `internal/workspace/query_docs_sql.go` so reverse lookup query filters use `resolver.ResolveNoFS` instead of `resolver.Resolve`, avoiding filesystem `os.Stat` for HTTP/CLI search query inputs.
+
+### Why
+- The Codex review was correct: resolving a short ticket ref but querying with the raw ref can produce empty docs/stats/graphs.
+- Query filters are lookup keys, not persisted file references. The existence-based resolver is appropriate while indexing related files, but search-time query normalization should not touch the filesystem.
+
+### What worked
+- `go test ./internal/httpapi ./internal/workspace -count=1` passed.
+- `go test ./... -count=1` passed.
+
+### What didn't work
+- The previous HTTP `file`/`dir` validation alone did not clear the CodeQL status; the alert instance showed the sink was still `pathExists` / `os.Stat` in the resolver.
+
+### What I learned
+- `gh pr checks` showed workflow `Analyze` passing but the separate `CodeQL` code-scanning status failing. The failing status is driven by open code-scanning alert 10, not by a failed analysis job.
+- The alert instance for PR 43 had moved to `internal/paths/resolver.go:636`, which made the remaining `Resolve` → `os.Stat` search-query path clear.
+
+### What was tricky to build
+- The resolver has two legitimate modes: existence-based persisted-path normalization and no-filesystem lookup-key normalization. The fix had to preserve `Resolve` for indexing persisted `RelatedFiles` while switching only query filter key generation to `ResolveNoFS`.
+- The ticket ref bug was subtle because handlers validated via `tickets.Resolve` successfully, then reused the raw short ref later.
+
+### What warrants a second pair of eyes
+- Confirm that switching query key generation to `ResolveNoFS` does not remove expected search results for ambiguous legacy bare paths. Suffix matching remains available for relative filters, and exact absolute matching remains deterministic.
+- Recheck CodeQL after push; if alert 10 still remains open, inspect the latest alert instance before considering an explanatory suppression.
+
+### What should be done in the future
+- Add API documentation stating ticket endpoints return canonical ticket IDs even when callers pass forgiving refs.
+
+### Code review instructions
+- Start with `internal/httpapi/tickets.go` and verify all post-`tickets.Resolve` query/build calls use `res.TicketID` where the operation expects a canonical ticket ID.
+- Review `internal/workspace/query_docs_sql.go::queryPathAbsKey` and confirm search filters use no-filesystem normalization.
+- Validate with `go test ./internal/httpapi ./internal/workspace -count=1` and `go test ./... -count=1`.
+
+### Technical details
+- PR review thread query: `gh api graphql ... reviewThreads ...`.
+- Check-run inspection: `gh api repos/go-go-golems/docmgr/check-runs/85441659630` and `/annotations`.

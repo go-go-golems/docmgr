@@ -59,11 +59,18 @@ RelatedFiles:
 
 	// Summary
 	{
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/get?ticket=TST-123", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/get?ticket=TST-12", nil)
 		rr := httptest.NewRecorder()
 		s.Handler().ServeHTTP(rr, req)
 		if rr.Code != http.StatusOK {
 			t.Fatalf("tickets/get: expected %d, got %d (%s)", http.StatusOK, rr.Code, rr.Body.String())
+		}
+		var got ticketGetResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+			t.Fatalf("tickets/get short ref decode: %v", err)
+		}
+		if got.Ticket != "TST-123" || got.Stats.DocsTotal == 0 {
+			t.Fatalf("tickets/get short ref used raw ticket instead of canonical ticket: %+v", got)
 		}
 	}
 
@@ -74,6 +81,23 @@ RelatedFiles:
 		s.Handler().ServeHTTP(rr, req)
 		if rr.Code != http.StatusOK {
 			t.Fatalf("tickets/docs: expected %d, got %d (%s)", http.StatusOK, rr.Code, rr.Body.String())
+		}
+	}
+
+	// Docs with a forgiving ticket prefix must query by the resolved canonical ID.
+	{
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/docs?ticket=TST-12&pageSize=50", nil)
+		rr := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("tickets/docs short ref: expected %d, got %d (%s)", http.StatusOK, rr.Code, rr.Body.String())
+		}
+		var got ticketDocsResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+			t.Fatalf("tickets/docs short ref decode: %v", err)
+		}
+		if got.Ticket != "TST-123" || got.Total == 0 {
+			t.Fatalf("tickets/docs short ref used raw ticket instead of canonical ticket: %+v", got)
 		}
 	}
 
@@ -131,11 +155,18 @@ RelatedFiles:
 
 	// Graph
 	{
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/graph?ticket=TST-123&direction=TD", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/tickets/graph?ticket=TST-12&direction=TD", nil)
 		rr := httptest.NewRecorder()
 		s.Handler().ServeHTTP(rr, req)
 		if rr.Code != http.StatusOK {
 			t.Fatalf("tickets/graph: expected %d, got %d (%s)", http.StatusOK, rr.Code, rr.Body.String())
+		}
+		var got ticketGraphResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
+			t.Fatalf("tickets/graph short ref decode: %v", err)
+		}
+		if got.Ticket != "TST-123" {
+			t.Fatalf("tickets/graph short ref used raw ticket instead of canonical ticket: %+v", got)
 		}
 	}
 }

@@ -49,3 +49,14 @@ Step 5: Addressed CodeQL server.go path-taint trace by validating HTTP search fi
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/server.go — HTTP search file/dir filter validation
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/server_test.go — Regression coverage for unsafe search path filters
 
+
+## 2026-07-06
+
+Step 6: Addressed remaining PR review thread by using canonical resolved ticket IDs in HTTP docs/stats/graph paths, and removed search-query filesystem Stat taint by using ResolveNoFS for reverse lookup query keys.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/tickets.go — Uses canonical ticket IDs after forgiving HTTP ticket resolution
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/tickets_test.go — Regression coverage for short ticket refs in get/docs/graph
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/workspace/query_docs_sql.go — Search query key generation no longer touches filesystem
+

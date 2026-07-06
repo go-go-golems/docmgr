@@ -64,7 +64,8 @@ func (s *Server) handleTicketsGet(w http.ResponseWriter, r *http.Request) error 
 			return err
 		}
 
-		docsTotal, relatedFilesTotal, err := ticketDocStats(r.Context(), ws, ticketID)
+		canonicalTicketID := res.TicketID
+		docsTotal, relatedFilesTotal, err := ticketDocStats(r.Context(), ws, canonicalTicketID)
 		if err != nil {
 			return err
 		}
@@ -79,7 +80,7 @@ func (s *Server) handleTicketsGet(w http.ResponseWriter, r *http.Request) error 
 		}
 
 		resp = ticketGetResponse{
-			Ticket:    ticketID,
+			Ticket:    canonicalTicketID,
 			Title:     strings.TrimSpace(res.IndexDoc.Title),
 			Status:    strings.TrimSpace(res.IndexDoc.Status),
 			Intent:    strings.TrimSpace(res.IndexDoc.Intent),
@@ -169,7 +170,8 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 
 	var resp ticketDocsResponse
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
-		if _, err := tickets.Resolve(r.Context(), ws, ticketID); err != nil {
+		res, err := tickets.Resolve(r.Context(), ws, ticketID)
+		if err != nil {
 			if errors.Is(err, tickets.ErrNotFound) {
 				return NewHTTPError(http.StatusNotFound, "not_found", "ticket not found", map[string]any{"field": "ticket", "value": ticketID})
 			}
@@ -178,9 +180,10 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 			}
 			return err
 		}
+		canonicalTicketID := res.TicketID
 
 		qr, err := ws.QueryDocs(r.Context(), workspace.DocQuery{
-			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
+			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: canonicalTicketID},
 			Options: workspace.DocQueryOptions{
 				IncludeBody:         false,
 				IncludeErrors:       false,
@@ -248,7 +251,7 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 		}
 
 		resp = ticketDocsResponse{
-			Ticket:     ticketID,
+			Ticket:     canonicalTicketID,
 			Total:      total,
 			Results:    items,
 			NextCursor: next,
@@ -502,7 +505,8 @@ func (s *Server) handleTicketsGraph(w http.ResponseWriter, r *http.Request) erro
 
 	var resp ticketGraphResponse
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
-		if _, err := tickets.Resolve(r.Context(), ws, ticketID); err != nil {
+		res, err := tickets.Resolve(r.Context(), ws, ticketID)
+		if err != nil {
 			if errors.Is(err, tickets.ErrNotFound) {
 				return NewHTTPError(http.StatusNotFound, "not_found", "ticket not found", map[string]any{"field": "ticket", "value": ticketID})
 			}
@@ -511,13 +515,14 @@ func (s *Server) handleTicketsGraph(w http.ResponseWriter, r *http.Request) erro
 			}
 			return err
 		}
+		canonicalTicketID := res.TicketID
 
-		mermaid, stats, err := ticketgraph.BuildMermaid(r.Context(), ws, ticketID, direction, includeArchived, includeScripts, includeControl)
+		mermaid, stats, err := ticketgraph.BuildMermaid(r.Context(), ws, canonicalTicketID, direction, includeArchived, includeScripts, includeControl)
 		if err != nil {
 			return NewHTTPError(http.StatusBadRequest, "invalid_argument", err.Error(), nil)
 		}
 		resp = ticketGraphResponse{
-			Ticket:    ticketID,
+			Ticket:    canonicalTicketID,
 			Direction: direction,
 			Mermaid:   mermaid,
 			Stats:     stats,

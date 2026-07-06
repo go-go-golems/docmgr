@@ -24,7 +24,9 @@ RelatedFiles:
     - Path: repo://internal/httpapi/tickets_test.go
       Note: Step 6 short-ref regression coverage
     - Path: repo://internal/paths/resolver.go
-      Note: Step 2 CodeQL alert mitigation
+      Note: |-
+        Step 2 CodeQL alert mitigation
+        Step 7 separate no-filesystem anchored resolver path for CodeQL
     - Path: repo://internal/tasksmd/tasksmd.go
       Note: Step 2 stable task ref helper
     - Path: repo://internal/web/generate_build.go
@@ -44,6 +46,7 @@ LastUpdated: 2026-07-06T11:40:00-04:00
 WhatFor: Follow the DOCMGR-201 implementation work and reproduce its validation steps.
 WhenToUse: Use when reviewing or continuing the PR 43 blocker fixes.
 ---
+
 
 
 
@@ -453,3 +456,60 @@ we also still seem to have : https://github.com/go-go-golems/docmgr/pull/43/chec
 ### Technical details
 - PR review thread query: `gh api graphql ... reviewThreads ...`.
 - Check-run inspection: `gh api repos/go-go-golems/docmgr/check-runs/85441659630` and `/annotations`.
+
+## Step 7: Separate anchored no-filesystem resolver path for CodeQL
+
+After Step 6, all workflow jobs passed except the synthetic CodeQL code-scanning status. The latest alert instance still pointed to `internal/paths/resolver.go:636` (`os.Stat`), which indicated CodeQL could still connect search-query taint to the resolver's filesystem-aware path even though search code was calling `ResolveNoFS`.
+
+The remaining issue was the shared `resolveAnchored(a, stat bool)` helper. Humans can see `stat=false` prevents `os.Stat`, but CodeQL can be conservative around boolean-controlled helper branches. I split anchored resolution into separate filesystem and no-filesystem functions so the no-filesystem call graph contains no `pathExists`/`os.Stat` branch.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 6)
+
+**Assistant interpretation:** Continue fixing the still-failing CodeQL status after the first review-comment fix push.
+
+**Inferred user intent:** Clear PR 43's remaining CodeQL blocker without changing trusted persisted-path indexing semantics.
+
+**Commit (code):** pending — this step will be committed after validation.
+
+### What I did
+- Rechecked PR checks after pushing Step 6; all normal workflow jobs passed, but `CodeQL` failed again at check run `85456924373`.
+- Inspected the new CodeQL check annotations and alert instances; PR 43 still had alert 10 at `internal/paths/resolver.go:636`.
+- Refactored `internal/paths/resolver.go`:
+  - `resolveAnchored` now always uses the filesystem-aware `buildResult` path;
+  - `resolveAnchoredNoFS` now always uses `buildResultWithExists(..., false)`;
+  - shared anchor target calculation moved into `anchoredTarget`;
+  - unresolved anchor handling moved into `unresolvedAnchoredPath`.
+
+### Why
+- Search-time normalization must have a call graph that never reaches `os.Stat`; a boolean flag was too easy for static analysis to treat as possibly true.
+- Persisted related-file indexing still needs existence-based resolution, so the filesystem-aware resolver path remains intact for `Resolve` / `Normalize`.
+
+### What worked
+- `go test ./internal/paths ./internal/httpapi ./internal/workspace -count=1` passed.
+- `go test ./... -count=1` passed.
+
+### What didn't work
+- The prior `queryPathAbsKey` switch to `ResolveNoFS` was semantically right but not enough for CodeQL because the no-filesystem helper still shared a boolean-controlled branch with the filesystem helper.
+
+### What I learned
+- For security-sensitive paths, separate helper functions are clearer for both readers and static analyzers than a `stat bool` parameter controlling sink reachability.
+
+### What was tricky to build
+- The refactor needed to keep anchored path round-tripping exactly the same for both resolver modes while removing only the static-analysis path to `os.Stat` from `NormalizeNoFS`.
+
+### What warrants a second pair of eyes
+- Verify anchored path behavior did not change for `repo://`, `ws://`, `docs://`, `doc://`, and `abs://` forms.
+- Recheck CodeQL after push; if it still fails, inspect whether another no-filesystem caller still shares a filesystem-aware helper.
+
+### What should be done in the future
+- Prefer distinct `Foo` / `FooNoFS` call graphs over boolean flags for code that must prove no filesystem access.
+
+### Code review instructions
+- Review `internal/paths/resolver.go` around `resolveAnchored`, `resolveAnchoredNoFS`, and `anchoredTarget`.
+- Validate with `go test ./internal/paths ./internal/httpapi ./internal/workspace -count=1` and `go test ./... -count=1`.
+
+### Technical details
+- Failing check after Step 6: `CodeQL fail https://github.com/go-go-golems/docmgr/runs/85456924373`.
+- Alert instance: `refs/pull/43/merge`, `internal/paths/resolver.go:636`, `go/path-injection`.

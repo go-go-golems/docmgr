@@ -60,3 +60,12 @@ Step 6: Addressed remaining PR review thread by using canonical resolved ticket 
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/httpapi/tickets_test.go — Regression coverage for short ticket refs in get/docs/graph
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/workspace/query_docs_sql.go — Search query key generation no longer touches filesystem
 
+
+## 2026-07-06
+
+Step 7: Split anchored no-filesystem resolver path from filesystem-aware resolver path so search-query normalization cannot reach os.Stat through a boolean-controlled helper.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/paths/resolver.go — Separate ResolveNoFS anchored call graph from filesystem Stat path
+

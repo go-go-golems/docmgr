@@ -104,7 +104,38 @@ func (r *Resolver) ResolveNoFS(raw string) NormalizedPath {
 
 // resolveAnchored resolves an explicitly anchored path. Anchors are explicit,
 // so no containment checks apply: doc:// MAY escape the repository.
-func (r *Resolver) resolveAnchored(a AnchoredPath, stat bool) NormalizedPath {
+func (r *Resolver) resolveAnchored(a AnchoredPath) NormalizedPath {
+	canonical, anchor, absPath := r.anchoredTarget(a)
+	if absPath == "" {
+		return unresolvedAnchoredPath(canonical, anchor)
+	}
+
+	n := r.buildResult(absPath, anchor)
+	// Anchored strings are canonical by construction and must round-trip.
+	n.Original = canonical
+	n.OriginalClean = canonical
+	n.Canonical = canonical
+	return n
+}
+
+// resolveAnchoredNoFS resolves an explicitly anchored path without filesystem
+// access. Keep this separate from resolveAnchored instead of using a boolean
+// flag so tainted search-query inputs cannot appear to flow into os.Stat.
+func (r *Resolver) resolveAnchoredNoFS(a AnchoredPath) NormalizedPath {
+	canonical, anchor, absPath := r.anchoredTarget(a)
+	if absPath == "" {
+		return unresolvedAnchoredPath(canonical, anchor)
+	}
+
+	n := r.buildResultWithExists(absPath, anchor, false)
+	// Anchored strings are canonical by construction and must round-trip.
+	n.Original = canonical
+	n.OriginalClean = canonical
+	n.Canonical = canonical
+	return n
+}
+
+func (r *Resolver) anchoredTarget(a AnchoredPath) (string, Anchor, string) {
 	var base string
 	var anchor Anchor
 	var absPath string
@@ -137,28 +168,17 @@ func (r *Resolver) resolveAnchored(a AnchoredPath, stat bool) NormalizedPath {
 		absPath = filepath.Clean(filepath.Join(base, filepath.FromSlash(a.Rel)))
 	}
 
-	canonical := a.String()
-	if absPath == "" {
-		// Anchor base unknown (e.g. docs:// without a docs root).
-		return NormalizedPath{
-			Original:      canonical,
-			OriginalClean: canonical,
-			Canonical:     canonical,
-			Anchor:        anchor,
-		}
-	}
+	return a.String(), anchor, absPath
+}
 
-	var n NormalizedPath
-	if stat {
-		n = r.buildResult(absPath, anchor)
-	} else {
-		n = r.buildResultWithExists(absPath, anchor, false)
+func unresolvedAnchoredPath(canonical string, anchor Anchor) NormalizedPath {
+	// Anchor base unknown (e.g. docs:// without a docs root).
+	return NormalizedPath{
+		Original:      canonical,
+		OriginalClean: canonical,
+		Canonical:     canonical,
+		Anchor:        anchor,
 	}
-	// Anchored strings are canonical by construction and must round-trip.
-	n.Original = canonical
-	n.OriginalClean = canonical
-	n.Canonical = canonical
-	return n
 }
 
 // Normalize resolves a raw path string into a NormalizedPath.
@@ -168,7 +188,7 @@ func (r *Resolver) resolveAnchored(a AnchoredPath, stat bool) NormalizedPath {
 // guessing behavior.
 func (r *Resolver) Normalize(raw string) NormalizedPath {
 	if a, ok := ParseAnchored(raw); ok {
-		return r.resolveAnchored(a, true)
+		return r.resolveAnchored(a)
 	}
 	result := NormalizedPath{
 		Original:      raw,
@@ -240,7 +260,7 @@ func (r *Resolver) Normalize(raw string) NormalizedPath {
 // without turning them into filesystem reads.
 func (r *Resolver) NormalizeNoFS(raw string) NormalizedPath {
 	if a, ok := ParseAnchored(raw); ok {
-		return r.resolveAnchored(a, false)
+		return r.resolveAnchoredNoFS(a)
 	}
 	result := NormalizedPath{
 		Original:      raw,

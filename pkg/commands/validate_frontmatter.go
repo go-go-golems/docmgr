@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
-	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
@@ -44,13 +42,20 @@ func NewValidateFrontmatterCommand() (*ValidateFrontmatterCommand, error) {
 			cmds.WithShort("Validate YAML frontmatter for a document"),
 			cmds.WithLong(`Validates YAML frontmatter for a single markdown file.
 
+NOTE: 'docmgr doctor --fix' is the primary path for fixing frontmatter issues:
+it applies the same safe auto-fixes as '--auto-fix' here (plus anchor
+migration) across a whole ticket or workspace and re-validates afterwards.
+Use this command for a focused check of a single file.
+
 If parsing fails, the command surfaces a diagnostics taxonomy (line/column/snippet when available).
-Use this before running doctor when iterating on frontmatter edits.
 
 Examples:
   docmgr validate frontmatter --doc ttmp/2025/11/29/DOC-1234/index.md
   docmgr validate frontmatter --doc ttmp/.../index.md --suggest-fixes
   docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix
+
+  # Fix a whole ticket in one go (preferred)
+  docmgr doctor --ticket DOC-1234 --fix
 `),
 			cmds.WithFlags(
 				fields.New(
@@ -92,10 +97,9 @@ func (c *ValidateFrontmatterCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	docPath := settings.Doc
-	if !filepath.IsAbs(docPath) {
-		root := workspace.ResolveRoot(settings.Root)
-		docPath = filepath.Join(root, docPath)
+	docPath, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+	if err != nil {
+		return err
 	}
 
 	renderer := docmgr.NewRenderer()
@@ -128,10 +132,9 @@ func (c *ValidateFrontmatterCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	docPath := settings.Doc
-	if !filepath.IsAbs(docPath) {
-		root := workspace.ResolveRoot(settings.Root)
-		docPath = filepath.Join(root, docPath)
+	docPath, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+	if err != nil {
+		return err
 	}
 
 	renderer := docmgr.NewRenderer()

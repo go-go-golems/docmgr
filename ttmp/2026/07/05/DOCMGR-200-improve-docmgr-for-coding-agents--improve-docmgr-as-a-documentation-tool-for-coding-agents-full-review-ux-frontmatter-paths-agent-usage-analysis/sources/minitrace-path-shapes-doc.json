@@ -1,0 +1,130 @@
+[
+{
+  "failure_rate": 7.6,
+  "failures": 54,
+  "framework": "pi",
+  "sample": "ttmp/2026/02/08/VM-011-RTK-QUERY-STATE-MIGRATION--port-vm-system-ui-state-management-to-redux-toolkit-rtk-query/analysis",
+  "shape": "ttmp-prefixed",
+  "uses": 715
+}
+, {
+  "failure_rate": 3.9,
+  "failures": 26,
+  "framework": "pi",
+  "sample": "reference/01-diary.md",
+  "shape": "bare-relative",
+  "uses": 667
+}
+, {
+  "failure_rate": 14,
+  "failures": 55,
+  "framework": "codex",
+  "sample": "ttmp/2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/reference/01-diary.md",
+  "shape": "ttmp-prefixed",
+  "uses": 392
+}
+, {
+  "failure_rate": 2.5,
+  "failures": 9,
+  "framework": "codex",
+  "sample": "/home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5/ttmp/2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-",
+  "shape": "absolute-with-ttmp",
+  "uses": 367
+}
+, {
+  "failure_rate": 5.6,
+  "failures": 16,
+  "framework": "pi",
+  "sample": "/home/manuel/code/wesen/2026-04-23--pyxis/ttmp/2026/04/29/PYXIS-PRODUCTION-ARGOCD-GLAZED--turn-pyxis-into-a-deployed-gla",
+  "shape": "absolute-with-ttmp",
+  "uses": 284
+}
+, {
+  "failure_rate": 16.2,
+  "failures": 30,
+  "framework": "codex",
+  "sample": "esp32-s3-m5/ttmp/2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/reference/02-prior-art-and-r",
+  "shape": "bare-relative",
+  "uses": 185
+}
+, {
+  "failure_rate": 11.1,
+  "failures": 12,
+  "framework": "codex",
+  "sample": "2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/design-doc/01-phase-1-design-device-hosted-we",
+  "shape": "docs-root-relative(date)",
+  "uses": 108
+}
+, {
+  "failure_rate": 18,
+  "failures": 11,
+  "framework": "pi",
+  "sample": "2026/04/20/GCB-003--deploy-codebase-browser-as-an-example-page-on-codebase-browser-yolo-scapegoat-dev/design-doc/01-impl",
+  "shape": "docs-root-relative(date)",
+  "uses": 61
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "$TD/design-doc/01-pad-zoomable-ui-analysis-design-and-implementation-guide.md",
+  "shape": "bare-relative",
+  "uses": 54
+}
+, {
+  "failure_rate": 13.3,
+  "failures": 2,
+  "framework": "pi",
+  "sample": "./ttmp/2026/04/20/DISCORD-BOT-004--simplify-to-a-single-javascript-bot-per-process/reference/02-diary.md",
+  "shape": "dot-relative",
+  "uses": 15
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "sample": ".../reference/01-diary.md",
+  "shape": "parent-relative",
+  "uses": 7
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "ttmp/2026/06/21/GRID-CALLOUT-002--click-to-expand-definition-callouts-with-reflow/reference/01-diary.md",
+  "shape": "ttmp-prefixed",
+  "uses": 4
+}
+, {
+  "failure_rate": 25,
+  "failures": 1,
+  "framework": "codex",
+  "sample": "/home/manuel/workspaces/2026-02-21/entity-extraction-js/2026-02-18--cozodb-extraction/2026/02/21/CO-08-INPUT-CONFORMANCE",
+  "shape": "absolute-other",
+  "uses": 4
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "/home/manuel/workspaces/2026-07-03/pi-extension-prompto/2026-04-21--pi-extensions/ttmp/2026/07/03/PROMPTO-PI-EXT--prompt",
+  "shape": "absolute-with-ttmp",
+  "uses": 2
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "2026/07/03/PROMPTO-PI-EXT--prompt-form-expansion-plugin-for-pi-prompto-inspired/reference/01-investigation-diary.md",
+  "shape": "docs-root-relative(date)",
+  "uses": 1
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "sample": "/abs/path/to/playbooks/02-png-sketch-to-storybook-organism-runbook.md",
+  "shape": "absolute-other",
+  "uses": 1
+}
+]

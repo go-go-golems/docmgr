@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/go-go-golems/docmgr/internal/ticketgraph"
 	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
-	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
 type ticketStats struct {
@@ -64,7 +64,8 @@ func (s *Server) handleTicketsGet(w http.ResponseWriter, r *http.Request) error 
 			return err
 		}
 
-		docsTotal, relatedFilesTotal, err := ticketDocStats(r.Context(), ws, ticketID)
+		canonicalTicketID := res.TicketID
+		docsTotal, relatedFilesTotal, err := ticketDocStats(r.Context(), ws, canonicalTicketID)
 		if err != nil {
 			return err
 		}
@@ -79,7 +80,7 @@ func (s *Server) handleTicketsGet(w http.ResponseWriter, r *http.Request) error 
 		}
 
 		resp = ticketGetResponse{
-			Ticket:    ticketID,
+			Ticket:    canonicalTicketID,
 			Title:     strings.TrimSpace(res.IndexDoc.Title),
 			Status:    strings.TrimSpace(res.IndexDoc.Status),
 			Intent:    strings.TrimSpace(res.IndexDoc.Intent),
@@ -105,14 +106,14 @@ func (s *Server) handleTicketsGet(w http.ResponseWriter, r *http.Request) error 
 }
 
 type ticketDocItem struct {
-	Path         string               `json:"path"`
-	Title        string               `json:"title"`
-	DocType      string               `json:"docType"`
-	Status       string               `json:"status"`
-	Topics       []string             `json:"topics"`
-	Summary      string               `json:"summary"`
-	LastUpdated  *time.Time           `json:"lastUpdated,omitempty"`
-	RelatedFiles []models.RelatedFile `json:"relatedFiles"`
+	Path         string            `json:"path"`
+	Title        string            `json:"title"`
+	DocType      string            `json:"docType"`
+	Status       string            `json:"status"`
+	Topics       []string          `json:"topics"`
+	Summary      string            `json:"summary"`
+	LastUpdated  *time.Time        `json:"lastUpdated,omitempty"`
+	RelatedFiles []relatedFileItem `json:"relatedFiles"`
 }
 
 type ticketDocsResponse struct {
@@ -169,7 +170,8 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 
 	var resp ticketDocsResponse
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
-		if _, err := tickets.Resolve(r.Context(), ws, ticketID); err != nil {
+		res, err := tickets.Resolve(r.Context(), ws, ticketID)
+		if err != nil {
 			if errors.Is(err, tickets.ErrNotFound) {
 				return NewHTTPError(http.StatusNotFound, "not_found", "ticket not found", map[string]any{"field": "ticket", "value": ticketID})
 			}
@@ -178,15 +180,17 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 			}
 			return err
 		}
+		canonicalTicketID := res.TicketID
 
 		qr, err := ws.QueryDocs(r.Context(), workspace.DocQuery{
-			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
+			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: canonicalTicketID},
 			Options: workspace.DocQueryOptions{
 				IncludeBody:         false,
 				IncludeErrors:       false,
 				IncludeDiagnostics:  false,
 				IncludeArchivedPath: includeArchived,
 				IncludeScriptsPath:  includeScripts,
+				IncludeSourcesPath:  true,
 				IncludeControlDocs:  includeControl,
 				OrderBy:             orderBy,
 			},
@@ -242,12 +246,12 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 				Topics:       append([]string{}, h.Doc.Topics...),
 				Summary:      strings.TrimSpace(h.Doc.Summary),
 				LastUpdated:  lastUpdated,
-				RelatedFiles: append([]models.RelatedFile{}, h.Doc.RelatedFiles...),
+				RelatedFiles: resolveRelatedFiles(ws, h.Path, h.Doc.RelatedFiles),
 			})
 		}
 
 		resp = ticketDocsResponse{
-			Ticket:     ticketID,
+			Ticket:     canonicalTicketID,
 			Total:      total,
 			Results:    items,
 			NextCursor: next,
@@ -334,9 +338,29 @@ func (s *Server) handleTicketsTasks(w http.ResponseWriter, r *http.Request) erro
 }
 
 type ticketTasksCheckRequest struct {
-	Ticket  string `json:"ticket"`
-	IDs     []int  `json:"ids"`
-	Checked bool   `json:"checked"`
+	Ticket  string   `json:"ticket"`
+	Refs    []string `json:"refs,omitempty"`
+	IDs     []int    `json:"ids,omitempty"` // legacy positional IDs
+	Checked bool     `json:"checked"`
+}
+
+func normalizeTaskCheckRefs(refs []string, ids []int) []string {
+	out := make([]string, 0, len(refs)+len(ids))
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref != "" {
+			out = append(out, ref)
+		}
+	}
+	if len(out) > 0 {
+		return out
+	}
+	for _, id := range ids {
+		if id > 0 {
+			out = append(out, strconv.Itoa(id))
+		}
+	}
+	return out
 }
 
 func (s *Server) handleTicketsTasksCheck(w http.ResponseWriter, r *http.Request) error {
@@ -352,8 +376,9 @@ func (s *Server) handleTicketsTasksCheck(w http.ResponseWriter, r *http.Request)
 	if req.Ticket == "" {
 		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "missing ticket", map[string]any{"field": "ticket"})
 	}
-	if len(req.IDs) == 0 {
-		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "missing ids", map[string]any{"field": "ids"})
+	refs := normalizeTaskCheckRefs(req.Refs, req.IDs)
+	if len(refs) == 0 {
+		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "missing refs", map[string]any{"field": "refs"})
 	}
 
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
@@ -377,7 +402,7 @@ func (s *Server) handleTicketsTasksCheck(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			return err
 		}
-		updated, err := tasksmd.ToggleChecked(lines, req.IDs, req.Checked)
+		updated, err := tasksmd.ToggleCheckedByRefs(lines, refs, req.Checked)
 		if err != nil {
 			return NewHTTPError(http.StatusBadRequest, "invalid_argument", err.Error(), nil)
 		}
@@ -480,7 +505,8 @@ func (s *Server) handleTicketsGraph(w http.ResponseWriter, r *http.Request) erro
 
 	var resp ticketGraphResponse
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
-		if _, err := tickets.Resolve(r.Context(), ws, ticketID); err != nil {
+		res, err := tickets.Resolve(r.Context(), ws, ticketID)
+		if err != nil {
 			if errors.Is(err, tickets.ErrNotFound) {
 				return NewHTTPError(http.StatusNotFound, "not_found", "ticket not found", map[string]any{"field": "ticket", "value": ticketID})
 			}
@@ -489,13 +515,14 @@ func (s *Server) handleTicketsGraph(w http.ResponseWriter, r *http.Request) erro
 			}
 			return err
 		}
+		canonicalTicketID := res.TicketID
 
-		mermaid, stats, err := ticketgraph.BuildMermaid(r.Context(), ws, ticketID, direction, includeArchived, includeScripts, includeControl)
+		mermaid, stats, err := ticketgraph.BuildMermaid(r.Context(), ws, canonicalTicketID, direction, includeArchived, includeScripts, includeControl)
 		if err != nil {
 			return NewHTTPError(http.StatusBadRequest, "invalid_argument", err.Error(), nil)
 		}
 		resp = ticketGraphResponse{
-			Ticket:    ticketID,
+			Ticket:    canonicalTicketID,
 			Direction: direction,
 			Mermaid:   mermaid,
 			Stats:     stats,
@@ -541,6 +568,7 @@ func ticketDocStats(ctx context.Context, ws *workspace.Workspace, ticketID strin
 			IncludeDiagnostics:  false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},
@@ -557,10 +585,11 @@ func ticketDocStats(ctx context.Context, ws *workspace.Workspace, ticketID strin
 		}
 		docsTotal++
 		docResolver := paths.NewResolver(paths.ResolverOptions{
-			DocsRoot:  ws.Context().Root,
-			ConfigDir: ws.Context().ConfigDir,
-			RepoRoot:  ws.Context().RepoRoot,
-			DocPath:   h.Path,
+			DocsRoot:      ws.Context().Root,
+			ConfigDir:     ws.Context().ConfigDir,
+			RepoRoot:      ws.Context().RepoRoot,
+			WorkspaceRoot: ws.Context().WorkspaceRoot,
+			DocPath:       h.Path,
 		})
 		for _, rf := range h.Doc.RelatedFiles {
 			key := canonicalizeForStats(docResolver, rf.Path)
@@ -578,12 +607,13 @@ func canonicalizeForStats(resolver *paths.Resolver, raw string) string {
 	if raw == "" || resolver == nil {
 		return ""
 	}
-	n := resolver.NormalizeNoFS(raw)
+	// Dedupe by resolved absolute path (one resolver for anchored + legacy forms).
+	n := resolver.ResolveNoFS(raw)
 	switch {
+	case strings.TrimSpace(n.Abs) != "":
+		return filepath.ToSlash(strings.TrimSpace(n.Abs))
 	case strings.TrimSpace(n.Canonical) != "":
 		return filepath.ToSlash(strings.TrimSpace(n.Canonical))
-	case strings.TrimSpace(n.RepoRelative) != "":
-		return filepath.ToSlash(strings.TrimSpace(n.RepoRelative))
 	case strings.TrimSpace(n.OriginalClean) != "":
 		return filepath.ToSlash(strings.TrimSpace(n.OriginalClean))
 	default:

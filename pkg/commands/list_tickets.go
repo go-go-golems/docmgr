@@ -70,15 +70,15 @@ Columns:
 
 Examples:
   # Human output
-  docmgr list tickets
-  docmgr list tickets --ticket MEN-3475
-  docmgr list tickets --status active
+  docmgr ticket list
+  docmgr ticket list --ticket MEN-3475
+  docmgr ticket list --status active
 
   # Scriptable (paths only)
-  docmgr list tickets --with-glaze-output --select path
+  docmgr ticket list --with-glaze-output --select path
 
   # CSV of selected fields without headers
-  docmgr list tickets --with-glaze-output --output csv --with-headers=false --fields ticket,path
+  docmgr ticket list --with-glaze-output --output csv --with-headers=false --fields ticket,path
 `),
 			cmds.WithFlags(
 				fields.New(
@@ -260,7 +260,7 @@ func (c *ListTicketsCommand) Run(
 	if abs, err := filepath.Abs(settings.Root); err == nil {
 		rootDisplay = abs
 	}
-	if rootDisplay != "" {
+	if rootDisplay != "" && VerboseEnabled() {
 		fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", rootDisplay)
 	}
 
@@ -403,6 +403,7 @@ func queryTicketIndexDocs(ctx context.Context, rootOverride string, ticketFilter
 			IncludeErrors:       false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByLastUpdated,
 			Reverse:             true,

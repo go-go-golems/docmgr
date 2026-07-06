@@ -2,6 +2,7 @@ package docmgrrules
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
@@ -41,6 +42,44 @@ func TestVocabularySuggestionRule_MatchAndRender(t *testing.T) {
 	}
 	if res.Headline == "" || len(res.Actions) == 0 {
 		t.Fatalf("expected headline and actions, got %+v", res)
+	}
+}
+
+func TestVocabularySuggestionRule_RemediationUsesValidCategories(t *testing.T) {
+	rule := &VocabularySuggestionRule{}
+	fieldToCategory := map[string]string{
+		"Topics":  "topics",
+		"DocType": "docTypes",
+		"Intent":  "intent",
+		"Status":  "status",
+	}
+
+	for field, wantCategory := range fieldToCategory {
+		tax := &core.Taxonomy{
+			Tool:     "docmgr",
+			Stage:    docmgrctx.StageVocabulary,
+			Symptom:  docmgrctx.SymptomUnknownValue,
+			Path:     field,
+			Severity: core.SeverityWarning,
+			Context: &docmgrctx.VocabularyContext{
+				File:  "doc.md",
+				Field: field,
+				Value: "custom",
+			},
+		}
+
+		res, err := rule.Render(context.Background(), tax)
+		if err != nil {
+			t.Fatalf("render failed for %s: %v", field, err)
+		}
+		args := res.Actions[0].Args
+		joined := strings.Join(args, " ")
+		if !strings.Contains(joined, "--category "+wantCategory+" ") {
+			t.Fatalf("expected category %q for field %s, got args %v", wantCategory, field, args)
+		}
+		if !strings.Contains(joined, "--description") {
+			t.Fatalf("expected --description in remediation for field %s, got args %v", field, args)
+		}
 	}
 }
 

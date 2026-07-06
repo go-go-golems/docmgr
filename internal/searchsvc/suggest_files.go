@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 )
 
@@ -34,25 +35,12 @@ func SuggestFiles(ctx context.Context, ws *workspace.Workspace, q SuggestFilesQu
 	// Find ticket directory if specified (for git/ripgrep heuristics).
 	ticketDir := ws.Context().Root
 	if strings.TrimSpace(q.Ticket) != "" {
-		idxRes, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(q.Ticket)},
-			Filters: workspace.DocFilters{DocType: "index"},
-			Options: workspace.DocQueryOptions{
-				IncludeErrors:       false,
-				IncludeDiagnostics:  false,
-				IncludeArchivedPath: true,
-				IncludeScriptsPath:  true,
-				IncludeControlDocs:  true,
-				OrderBy:             workspace.OrderByPath,
-			},
-		})
+		res, err := tickets.Resolve(ctx, ws, q.Ticket)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve ticket directory: %w", err)
+			return nil, err
 		}
-		if len(idxRes.Docs) != 1 || strings.TrimSpace(idxRes.Docs[0].Path) == "" {
-			return nil, fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(q.Ticket))
-		}
-		ticketDir = filepath.Dir(filepath.FromSlash(idxRes.Docs[0].Path))
+		q.Ticket = res.TicketID
+		ticketDir = res.TicketDirAbs
 	}
 
 	// Collect search terms from query and topics.
@@ -93,6 +81,7 @@ func SuggestFiles(ctx context.Context, ws *workspace.Workspace, q SuggestFilesQu
 			IncludeDiagnostics:  false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},

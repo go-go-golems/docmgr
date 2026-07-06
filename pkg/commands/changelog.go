@@ -3,11 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/go-go-golems/docmgr/internal/searchsvc"
 	"github.com/go-go-golems/docmgr/internal/workspace"
@@ -22,13 +20,11 @@ import (
 type ChangelogUpdateCommand struct{ *cmds.CommandDescription }
 
 type ChangelogUpdateSettings struct {
-	Ticket        string `glazed:"ticket"`
-	Root          string `glazed:"root"`
-	ChangelogFile string `glazed:"changelog-file"`
-	Title         string `glazed:"title"`
-	Entry         string `glazed:"entry"`
-	// Deprecated: kept only to emit a friendly migration error if provided
-	Files            []string `glazed:"files"`
+	Ticket           string   `glazed:"ticket"`
+	Root             string   `glazed:"root"`
+	ChangelogFile    string   `glazed:"changelog-file"`
+	Title            string   `glazed:"title"`
+	Entry            string   `glazed:"entry"`
 	FileNotes        []string `glazed:"file-note"`
 	Suggest          bool     `glazed:"suggest"`
 	ApplySuggestions bool     `glazed:"apply-suggestions"`
@@ -63,7 +59,6 @@ Examples:
 			fields.New("changelog-file", fields.TypeString, fields.WithHelp("Path to changelog.md (overrides --ticket)"), fields.WithDefault("")),
 			fields.New("title", fields.TypeString, fields.WithHelp("Optional entry title"), fields.WithDefault("")),
 			fields.New("entry", fields.TypeString, fields.WithHelp("Entry text to append"), fields.WithDefault("")),
-			fields.New("files", fields.TypeStringList, fields.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"), fields.WithDefault([]string{})),
 			fields.New("file-note", fields.TypeStringList, fields.WithHelp("Repeatable path-to-note mapping (path:note or path=note)"), fields.WithDefault([]string{})),
 			fields.New("suggest", fields.TypeBool, fields.WithHelp("Suggest related files using heuristics (git + ripgrep + existing docs)"), fields.WithDefault(false)),
 			fields.New("apply-suggestions", fields.TypeBool, fields.WithHelp("Apply suggested files to this changelog entry"), fields.WithDefault(false)),
@@ -82,11 +77,6 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	s := &ChangelogUpdateSettings{}
 	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
-	}
-
-	// Enforce deprecation: --files is no longer supported for changelog updates.
-	if len(s.Files) > 0 {
-		return fmt.Errorf("--files has been removed from 'docmgr changelog update'. Use repeated --file-note 'path:note' instead. Example: docmgr changelog update --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
 	}
 
 	// Resolve changelog path
@@ -149,6 +139,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 				IncludeErrors:       false,
 				IncludeArchivedPath: true,
 				IncludeScriptsPath:  true,
+				IncludeSourcesPath:  true,
 				IncludeControlDocs:  true,
 				OrderBy:             workspace.OrderByPath,
 			},
@@ -235,7 +226,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		}
 
 		// If not applying and no explicit files provided, print suggestions and exit
-		if !s.ApplySuggestions && len(s.Files) == 0 && len(s.FileNotes) == 0 {
+		if !s.ApplySuggestions && len(s.FileNotes) == 0 {
 			var keys []string
 			for f := range suggestions {
 				if f != "" {
@@ -270,29 +261,13 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Build file->note map from provided file-notes
-	noteMap := map[string]string{}
-	for _, m := range s.FileNotes {
-		str := strings.TrimSpace(m)
-		if str == "" {
-			continue
-		}
-		var key, val string
-		if i := strings.IndexAny(str, ":="); i >= 0 {
-			key = strings.TrimSpace(str[:i])
-			val = strings.TrimSpace(str[i+1:])
-		} else {
-			continue
-		}
-		if key != "" {
-			noteMap[key] = val
-		}
+	noteMap, err := parseFileNotes(s.FileNotes)
+	if err != nil {
+		return err
 	}
 
-	// Validate that provided file-note mappings contain non-empty notes
-	for p, n := range noteMap {
-		if strings.TrimSpace(n) == "" {
-			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
-		}
+	if strings.TrimSpace(s.Entry) == "" {
+		return fmt.Errorf("--entry is required and must not be empty")
 	}
 
 	// Build final list of related files to include in the entry from noteMap only
@@ -319,55 +294,10 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Ensure changelog file exists; create if missing with header
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		_ = os.MkdirAll(filepath.Dir(changelogPath), 0755)
-		// minimal header
-		_ = os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0644)
-	}
-
-	// Compose entry
-	today := time.Now().Format("2006-01-02")
-	heading := "## " + today
-	if strings.TrimSpace(s.Title) != "" {
-		heading += " - " + s.Title
-	}
-
-	var sb strings.Builder
-	sb.WriteString("\n")
-	sb.WriteString(heading)
-	sb.WriteString("\n\n")
-	if strings.TrimSpace(s.Entry) != "" {
-		sb.WriteString(s.Entry)
-		sb.WriteString("\n\n")
-	}
-	if len(final) > 0 {
-		sb.WriteString("### Related Files\n\n")
-		// stable order
-		var files []string
-		for f := range final {
-			files = append(files, f)
-		}
-		sort.Strings(files)
-		for _, f := range files {
-			note := strings.TrimSpace(final[f])
-			if note != "" {
-				sb.WriteString("- " + f + " — " + note + "\n")
-			} else {
-				sb.WriteString("- " + f + "\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
-
-	// Append to changelog
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
+	// Compose and append the entry (shared primitive with the HTTP API).
+	today, err := AppendChangelogEntry(changelogPath, s.Title, s.Entry, final)
 	if err != nil {
-		return fmt.Errorf("failed to open changelog.md: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(sb.String()); err != nil {
-		return fmt.Errorf("failed to write changelog entry: %w", err)
+		return err
 	}
 
 	row := types.NewRow(
@@ -389,11 +319,6 @@ func (c *ChangelogUpdateCommand) Run(
 	s := &ChangelogUpdateSettings{}
 	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse settings: %w", err)
-	}
-
-	// Enforce deprecation: --files is no longer supported for changelog updates.
-	if len(s.Files) > 0 {
-		return fmt.Errorf("--files has been removed from 'docmgr changelog update'. Use repeated --file-note 'path:note' instead. Example: docmgr changelog update --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
 	}
 
 	// Resolve changelog path
@@ -423,7 +348,7 @@ func (c *ChangelogUpdateCommand) Run(
 	// Suggestions: if requested without apply/files, print suggestions and exit
 	type reasonSet map[string]bool
 	suggestions := map[string]reasonSet{}
-	if s.Suggest && !s.ApplySuggestions && len(s.Files) == 0 && len(s.FileNotes) == 0 {
+	if s.Suggest && !s.ApplySuggestions && len(s.FileNotes) == 0 {
 		searchRoot := s.Root
 		if s.ChangelogFile == "" && s.Ticket != "" {
 			ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: s.Root})
@@ -474,27 +399,13 @@ func (c *ChangelogUpdateCommand) Run(
 	}
 
 	// Build file-note map
-	noteMap := map[string]string{}
-	for _, m := range s.FileNotes {
-		str := strings.TrimSpace(m)
-		if str == "" {
-			continue
-		}
-		var key, val string
-		if i := strings.IndexAny(str, ":="); i >= 0 {
-			key = strings.TrimSpace(str[:i])
-			val = strings.TrimSpace(str[i+1:])
-		}
-		if key != "" {
-			noteMap[key] = val
-		}
+	noteMap, err := parseFileNotes(s.FileNotes)
+	if err != nil {
+		return err
 	}
 
-	// Validate notes are present for provided mappings
-	for p, n := range noteMap {
-		if strings.TrimSpace(n) == "" {
-			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
-		}
+	if strings.TrimSpace(s.Entry) == "" {
+		return fmt.Errorf("--entry is required and must not be empty")
 	}
 
 	// Final list (from noteMap only)
@@ -506,55 +417,13 @@ func (c *ChangelogUpdateCommand) Run(
 		}
 	}
 
-	// Ensure file exists
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		_ = os.MkdirAll(filepath.Dir(changelogPath), 0755)
-		_ = os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0644)
+	// Compose and append the entry (shared primitive with the HTTP API).
+	if _, err := AppendChangelogEntry(changelogPath, s.Title, s.Entry, final); err != nil {
+		return err
 	}
 
-	today := time.Now().Format("2006-01-02")
-	heading := "## " + today
-	if strings.TrimSpace(s.Title) != "" {
-		heading += " - " + s.Title
-	}
-
-	var sb strings.Builder
-	sb.WriteString("\n")
-	sb.WriteString(heading)
-	sb.WriteString("\n\n")
-	if strings.TrimSpace(s.Entry) != "" {
-		sb.WriteString(s.Entry)
-		sb.WriteString("\n\n")
-	}
-	if len(final) > 0 {
-		sb.WriteString("### Related Files\n\n")
-		var files []string
-		for f := range final {
-			files = append(files, f)
-		}
-		sort.Strings(files)
-		for _, f := range files {
-			note := strings.TrimSpace(final[f])
-			if note != "" {
-				sb.WriteString("- " + f + " — " + note + "\n")
-			} else {
-				sb.WriteString("- " + f + "\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
-
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open changelog.md: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(sb.String()); err != nil {
-		return fmt.Errorf("failed to write changelog entry: %w", err)
-	}
-
-	fmt.Printf("Changelog updated: %s\n", changelogPath)
-	fmt.Println("Reminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.")
+	fmt.Printf("changelog updated: %s\n", changelogPath)
+	printReminder("Reminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.")
 	return nil
 }
 

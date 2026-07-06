@@ -72,6 +72,7 @@ func BuildMermaid(ctx context.Context, ws *workspace.Workspace, ticketID string,
 			IncludeControlDocs:  includeControlDocs,
 			IncludeArchivedPath: includeArchived,
 			IncludeScriptsPath:  includeScripts,
+			IncludeSourcesPath:  true,
 			OrderBy:             workspace.OrderByPath,
 		},
 	})
@@ -124,10 +125,11 @@ func addDocAndEdges(ws *workspace.Workspace, g *graph, edgeSet map[string]struct
 	}
 
 	docResolver := paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  ws.Context().Root,
-		ConfigDir: ws.Context().ConfigDir,
-		RepoRoot:  ws.Context().RepoRoot,
-		DocPath:   filepath.FromSlash(docPathAbs),
+		DocsRoot:      ws.Context().Root,
+		ConfigDir:     ws.Context().ConfigDir,
+		RepoRoot:      ws.Context().RepoRoot,
+		WorkspaceRoot: ws.Context().WorkspaceRoot,
+		DocPath:       filepath.FromSlash(docPathAbs),
 	})
 
 	for _, rf := range doc.RelatedFiles {

@@ -83,6 +83,7 @@ func countAllDocs(ctx context.Context, ws *workspace.Workspace) (int, error) {
 			IncludeDiagnostics:  false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 			Reverse:             false,

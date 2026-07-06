@@ -253,6 +253,8 @@ Frontmatter validation is fully integrated with docmgr's diagnostics taxonomy sy
 
 The validation verb (`docmgr validate frontmatter`) can attach fix suggestions to the taxonomy context, which the rule renderer then surfaces to users. This design allows the same error taxonomy to be used both for reporting (via doctor/list/search) and for interactive fixing (via the validation verb with `--suggest-fixes` or `--auto-fix`).
 
+`docmgr doctor --fix` reuses the same fix engine (`generateFixes` + `applyAutoFix` via `autoFixDocFrontmatter` in `pkg/commands/doctor.go`) across all documents of a ticket or workspace, and additionally migrates legacy `RelatedFiles` paths to explicit anchored paths (`repo://`, `ws://`, `docs://`, `abs://`; `doctor --fix-anchors` runs that migration alone). The anchored-path model — schemes, the tightest-containing-anchor write rule, and the shared resolver in `internal/paths` — is documented in `docmgr help path-anchors`.
+
 For details on how to extend the diagnostics system, add new rules, or understand the taxonomy architecture, see:
 ```
 docmgr help diagnostics-taxonomy-and-rules

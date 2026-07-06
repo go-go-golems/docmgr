@@ -33,16 +33,17 @@ The commands below initialize a documentation workspace with seeded vocabulary, 
 docmgr status --summary-only
 # If error "root directory does not exist", proceed with init
 
-# 2) Initialize the docs root with seeded vocabulary
-# Creates ttmp/, vocabulary.yaml (with defaults), templates, and guidelines
-docmgr init --seed-vocabulary
+# 2) Initialize the docs root
+# Creates ttmp/, vocabulary.yaml (seeded with defaults), templates, and guidelines.
+# Vocabulary seeding is on by default; pass --seed-vocabulary=false to skip it.
+docmgr init
 
 # 3) Verify initialization
 docmgr vocab list  # Should show seeded topics (chat, backend, websocket)
 
 # 4) Create a ticket workspace under ttmp/
 # Creates a dedicated directory with index, tasks, changelog, and standard subfolders.
-docmgr ticket create-ticket --ticket MEN-4242 \
+docmgr ticket create --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket
 
@@ -56,12 +57,19 @@ docmgr doc add --ticket MEN-4242 --doc-type playbook   --title "Smoke Tests for 
 
 # 6) Update metadata on the ticket index
 # Owners and Summary improve discoverability; RelatedFiles enable reverse lookup.
-INDEX_MD=$(find ttmp -type f -path "*/MEN-4242--*/index.md" -print -quit)
-test -n "$INDEX_MD"
-docmgr meta update --doc "$INDEX_MD" --field Owners          --value "manuel,alex"
-docmgr meta update --doc "$INDEX_MD" --field Summary         --value "Unify chat HTTP paths and stabilize WebSocket flows."
-docmgr meta update --doc "$INDEX_MD" --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
-docmgr meta update --doc "$INDEX_MD" --field RelatedFiles    --value "backend/chat/api/register.go,backend/chat/ws/manager.go,web/src/store/api/chatApi.ts"
+# With --ticket and no --doc, meta update targets the ticket's index.md.
+# --doc also accepts many forms (absolute, cwd/repo/docs-root-relative, or a
+# workspace-unique suffix); --ticket accepts the ID, a unique prefix, or a
+# pasted workspace directory path.
+docmgr meta update --ticket MEN-4242 --field Owners  --value "manuel,alex"
+docmgr meta update --ticket MEN-4242 --field Summary --value "Unify chat HTTP paths and stabilize WebSocket flows."
+docmgr meta update --ticket MEN-4242 --field ExternalSources --value "https://example.com/rfc/chat-api,https://example.com/ws-lifecycle"
+
+# Relate code files with notes; paths are stored as anchored paths
+# (repo://..., ws://..., docs://..., abs://...) — see `docmgr help path-anchors`.
+docmgr doc relate --ticket MEN-4242 \
+  --file-note "backend/chat/api/register.go:Registers API routes" \
+  --file-note "backend/chat/ws/manager.go:WebSocket lifecycle management"
 
 # 7) Validate the workspace
 # Check for missing fields, staleness, and broken file references.
@@ -71,9 +79,9 @@ docmgr doctor --root ttmp --stale-after 30 --fail-on error
 
 ### Output modes (human vs structured)
 
-Many verbs now support dual output modes:
+All verbs (including every mutating verb) support dual output modes:
 
-- Default: human-friendly text (ideal for terminals and LLM prompts)
+- Default: human-friendly text (ideal for terminals and LLM prompts). Successful mutations print a single line (for example `created MEN-4242 at ttmp/2026/07/06/MEN-4242--...`).
 - Structured: enable with `--with-glaze-output`, then select format via `--output json|yaml|csv|table`
 
 Examples:
@@ -86,6 +94,15 @@ docmgr ticket list
 docmgr ticket list --with-glaze-output --output json
 docmgr doc search --query websocket --with-glaze-output --output yaml
 ```
+
+Two related output rules:
+
+- The workspace banner (docs root / config / vocabulary paths) and coaching
+  reminders only print with the global `--verbose` flag; default output stays
+  terse so it is cheap to include in LLM contexts.
+- Failures exit non-zero with an actionable error on stderr (for example a
+  malformed `--file-note`, an empty `--entry`, or a failed `meta update`), so
+  scripts and agents can rely on exit codes instead of parsing output.
 
 ## 3. Core Concepts
 
@@ -128,6 +145,11 @@ Each document starts with YAML frontmatter. This lightweight contract makes docs
 - Owners, RelatedFiles, ExternalSources, Summary, LastUpdated
 
 `meta update` edits frontmatter safely and updates `LastUpdated` for you.
+
+`RelatedFiles` entries are stored as *anchored paths* with an explicit scheme
+(`repo://pkg/foo.go`, `ws://member/pkg/foo.go`, `docs://2026/.../doc.md`,
+`abs:///abs/path`). Legacy bare paths still resolve, and `docmgr doctor
+--fix-anchors` migrates them. See `docmgr help path-anchors`.
 
 ### 3.4 Vocabulary
 
@@ -179,29 +201,39 @@ docmgr vocab add --category docTypes --slug adr --description "Architecture Deci
 Run this once per repository (or shared parent) to create the docs root with vocabulary, templates, guidelines, and a default `.docmgrignore`.
 
 ```bash
-# Recommended: seed with common defaults
-docmgr init --seed-vocabulary
-
-# Or initialize with empty vocabulary
+# Default: seeds vocabulary.yaml with common defaults
 docmgr init
+
+# Initialize with an empty vocabulary instead
+docmgr init --seed-vocabulary=false
 
 # Force re-scaffold templates/guidelines
 docmgr init --force
 ```
 
-Creates the `ttmp/` directory if missing, and scaffolds `_templates/` and `_guidelines/`. With `--seed-vocabulary`, populates `vocabulary.yaml` with common topics (chat, backend, websocket), doc types (design-doc, reference, playbook), and intents (long-term).
+Creates the `ttmp/` directory if missing, and scaffolds `_templates/` and `_guidelines/`. Vocabulary seeding is on by default and populates `vocabulary.yaml` with common topics (chat, backend, websocket), doc types (design-doc, reference, playbook), intents, and statuses. Built-in doc types, intents, and statuses are always recognized by `doctor` even when they are missing from `vocabulary.yaml`.
 
 ### 4.3 Create a Ticket Workspace
 
 Run this when you start a ticket. It creates a consistent place to capture thinking and decisions.
 ```bash
-docmgr ticket create-ticket --ticket MEN-4242 \
+docmgr ticket create --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket \
   [--force]
 ```
 
-Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` under a standard structure.
+Creates the ticket directory with `index.md`, and `tasks.md`/`changelog.md` under a standard structure. (`ticket create-ticket` is retained as an alias for the old spelling; `ticket rename` similarly replaces `rename-ticket`, and `ticket list` replaces `ticket tickets`.)
+
+#### 4.3.0 Show a Ticket
+
+`ticket show` prints a compact overview of a single ticket (status, topics, task counts, documents, latest changelog date):
+
+```bash
+docmgr ticket show MEN-4242
+```
+
+Ticket references are forgiving everywhere `--ticket` is accepted: the exact ID, a unique prefix (`MEN-42`), or a pasted workspace directory path (`2026/07/06/MEN-4242--normalize-chat-api-paths`) all resolve to the same ticket.
 
 #### 4.3.1 Move a Legacy Ticket to the Current Template
 
@@ -346,6 +378,10 @@ Key endpoints:
 - `GET /api/v1/healthz`
 - `GET /api/v1/search/docs` (cursor pagination via `pageSize` + `cursor`)
 - `POST /api/v1/index/refresh` (explicit refresh)
+- Write paths: `POST /api/v1/docs/meta`, `POST /api/v1/docs/relate`, `POST /api/v1/tickets/changelog`, task add/check
+- `GET /api/v1/workspace/doctor` (health report), `GET /api/v1/files/raw` (raw file/asset bytes)
+
+See `docmgr help http-api` for the full route list and payloads.
 
 ### 4.9 Relate Files
 
@@ -369,6 +405,16 @@ docmgr doc relate --ticket MEN-4242 --remove-files old/file.go
 
 Notes explain WHY each file matters, turning file lists into navigation maps.
 
+Path and note semantics:
+
+- Input paths may be absolute or relative; relate resolves them and persists an
+  anchored path (`repo://...`, `ws://...`, `docs://...`, or `abs://...`) so the
+  entry stays unambiguous no matter where it is read from. It never writes
+  `../` chains. See `docmgr help path-anchors`.
+- `--file-note` uses the form `path:note` (or `path=note`). The note may
+  contain commas and additional colons; only the first separator splits path
+  from note. A malformed value (no separator) is an error and exits 1.
+
 ### 4.10 Changelog
 
 Track progress and decisions in `changelog.md`:
@@ -387,41 +433,71 @@ docmgr changelog update --ticket MEN-4242 \
 Manage concrete steps in `tasks.md`:
 
 ```bash
-# Add tasks
+# Add tasks (each new task gets a stable ID)
 docmgr task add --ticket MEN-4242 --text "Update API docs"
+# -> Task v0sv added to .../tasks.md
 
-# Check off tasks
+# List tasks (shows stable IDs)
+docmgr task list --ticket MEN-4242
+# -> [v0sv] [ ] Update API docs
+
+# Check off tasks by stable ID or 1-based position
+docmgr task check --ticket MEN-4242 --id v0sv
 docmgr task check --ticket MEN-4242 --id 1,2
 
-# List tasks
-docmgr task list --ticket MEN-4242
+# Edit / remove / uncheck also accept stable IDs or positions
+docmgr task edit --ticket MEN-4242 --id v0sv --text "Update API and CLI docs"
+docmgr task uncheck --ticket MEN-4242 --id v0sv
+
+# Stamp stable IDs onto hand-written task lists that lack them
+docmgr task migrate --ticket MEN-4242
 ```
+
+Stable task IDs are persisted as invisible HTML comments (`<!-- t:v0sv -->`) at
+the end of each task line, so they survive reordering and edits — prefer them
+over positions in scripts. When an unknown ID is given, the command exits 1
+and prints the current task table so you can pick the right ID.
 
 ### 4.12 Doctor (Validation)
 
 Run `doctor` during development and reviews. It's a safety net to catch drift (stale docs), broken relationships (missing files), and inconsistent metadata (unknown vocabulary).
 
 ```bash
-# Typical validation
+# Typical validation (multi-ticket runs print a one-line-per-ticket rollup)
 docmgr doctor --all --stale-after 30 --fail-on error
+
+# Full per-issue report instead of the rollup
+docmgr doctor --all --details
+
+# Validate a specific ticket (single-ticket runs always show details)
+docmgr doctor --ticket MEN-4242
+
+# Apply safe fixes: frontmatter auto-repair (with .bak backups) + anchor migration
+docmgr doctor --ticket MEN-4242 --fix
+
+# Only migrate legacy RelatedFiles paths to explicit anchors
+docmgr doctor --ticket MEN-4242 --fix-anchors
+
+# Also check imported material under sources/ (skipped by default)
+docmgr doctor --ticket MEN-4242 --include-sources
 
 # Ignore specific paths using glob patterns
 docmgr doctor --ignore-glob "ttmp/*/design-doc/index.md" --fail-on warning
-
-# Validate specific ticket
-docmgr doctor --ticket MEN-4242
 ```
 
-Doctor checks:
+Doctor checks **all documents** in each ticket workspace (not just `index.md`):
 
 - Presence and validity of `index.md`
 - Multiple `index.md` files under a single ticket
 - Staleness via `LastUpdated` (configurable threshold)
 - Required fields (Title, Ticket, Status, Topics)
-- Unknown `Topics`, `DocType`, and `Intent` (validated against vocabulary)
-- `RelatedFiles` existence on disk
+- Unknown `Topics`, `DocType`, and `Intent` (validated against vocabulary; built-in doc types, intents, and statuses are always recognized)
+- `RelatedFiles` existence on disk (anchored and legacy paths)
 
-`--fail-on` controls exit behavior for CI or pre-commit checks.
+Documents under `sources/` (imported external material) are skipped unless
+`--include-sources` is passed. Multi-ticket runs print a per-ticket rollup
+summary by default; use `--details` for the full report. `--fail-on` controls
+exit behavior for CI or pre-commit checks.
 
 **Ignore configuration:**
 - Ignore behavior is workspace-wide, not doctor-only: the workspace index prunes ignored paths before frontmatter parsing.
@@ -458,13 +534,14 @@ What the exported DB contains:
 For docmgr contributors or power users: use a temporary root to avoid touching your repo during tests. The following matrix exercises both human-friendly output (default) and structured outputs (with `--with-glaze-output`).
 
 ```bash
-# Build
-go build -o /tmp/docmgr ./cmd/docmgr
+# Build (the sqlite_fts5 tag enables full-text search; without it --query errors
+# with a hint to rebuild with the tag)
+go build -tags sqlite_fts5 -o /tmp/docmgr ./cmd/docmgr
 
 # Create temp root and seed a workspace
 ROOT=$(mktemp -d /tmp/docmgr-tests-XXXXXXXX)
 /tmp/docmgr init --root "$ROOT"
-/tmp/docmgr ticket create-ticket --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
+/tmp/docmgr ticket create --ticket TST-1000 --title "Dual Mode Test" --topics demo,test --root "$ROOT"
 /tmp/docmgr doc add  --ticket TST-1000 --doc-type design-doc --title "Design One" --root "$ROOT"
 
 # list tickets

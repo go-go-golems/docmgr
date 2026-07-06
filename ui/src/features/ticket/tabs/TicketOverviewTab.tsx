@@ -5,7 +5,7 @@ import { EmptyState } from '../../../components/EmptyState'
 import { MarkdownBlock } from '../../../components/MarkdownBlock'
 import type { TicketDocItem, TicketGetResponse } from '../../../services/docmgrApi'
 
-type OpenTask = { id: number; text: string; checked: boolean }
+type OpenTask = { id: number; stableId?: string; text: string; checked: boolean }
 
 export function TicketOverviewTab({
   ticket,
@@ -34,7 +34,7 @@ export function TicketOverviewTab({
   indexDocError?: unknown
   indexBody?: string
   onSetTab: (tab: 'documents' | 'tasks') => void
-  onCheckTask: (args: { ticket: string; ids: number[]; checked: boolean }) => Promise<unknown>
+  onCheckTask: (args: { ticket: string; refs: string[]; checked: boolean }) => Promise<unknown>
   checkTaskLoading: boolean
   formatDate: (iso?: string) => string
 }) {
@@ -150,20 +150,23 @@ export function TicketOverviewTab({
               <div className="text-muted">No open tasks.</div>
             ) : (
               <div className="vstack gap-2">
-                {openTasks.map((it) => (
-                  <label key={it.id} className="d-flex gap-2 align-items-start">
-                    <input
-                      type="checkbox"
-                      checked={it.checked}
-                      onChange={(e) => void onCheckTask({ ticket, ids: [it.id], checked: e.target.checked })}
-                      disabled={checkTaskLoading}
-                    />
-                    <span>
-                      <span className="text-muted me-2">#{it.id}</span>
-                      {it.text}
-                    </span>
-                  </label>
-                ))}
+                {openTasks.map((it) => {
+                  const taskRef = it.stableId ?? String(it.id)
+                  return (
+                    <label key={taskRef} className="d-flex gap-2 align-items-start">
+                      <input
+                        type="checkbox"
+                        checked={it.checked}
+                        onChange={(e) => void onCheckTask({ ticket, refs: [taskRef], checked: e.target.checked })}
+                        disabled={checkTaskLoading}
+                      />
+                      <span>
+                        <span className="text-muted me-2">#{taskRef}</span>
+                        {it.text}
+                      </span>
+                    </label>
+                  )
+                })}
                 <button className="btn btn-sm btn-outline-secondary align-self-start" onClick={() => onSetTab('tasks')}>
                   View all tasks
                 </button>
@@ -180,7 +183,7 @@ export function TicketOverviewTab({
             {indexDocError ? (
               <ApiErrorAlert title="Failed to load index.md" error={indexDocError} />
             ) : indexBody ? (
-              <MarkdownBlock markdown={indexBody} />
+              <MarkdownBlock markdown={indexBody} docPath={ticketData?.indexPath} />
             ) : (
               <EmptyState title="No content." />
             )}

@@ -191,4 +191,24 @@ func (c *TicketMoveCommand) applyMove(ctx context.Context, settings *TicketMoveS
 	}, nil
 }
 
+// Run implements cmds.BareCommand with a one-line success summary.
+func (c *TicketMoveCommand) Run(
+	ctx context.Context,
+	pl *values.Values,
+) error {
+	settings := &TicketMoveSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	result, err := c.applyMove(ctx, settings)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("moved %s: %s -> %s\n", result.Ticket, result.SourcePath, result.DestPath)
+	return nil
+}
+
 var _ cmds.GlazeCommand = &TicketMoveCommand{}
+var _ cmds.BareCommand = &TicketMoveCommand{}

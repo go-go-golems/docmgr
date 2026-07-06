@@ -1,0 +1,322 @@
+[
+{
+  "count": 63,
+  "detail": "",
+  "error_class": "file-not-found",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5 \u0026\u0026 docmgr validate frontmatter --doc ttmp/2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/design-do",
+  "sample_error": "Error: open /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5/ttmp/ttmp/2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/design-doc/01-phase-1-design-device-hosted-web-js-ide-preact-zustand-microquickjs-over-rest.md: no such file or directory\nError: ope"
+}
+, {
+  "count": 47,
+  "detail": "",
+  "error_class": "other",
+  "framework": "pi",
+  "sample_command": "docmgr doctor --root ./ttmp --ticket CSSVD-FLEX-JS-API --stale-after 30 \u0026\u0026 git add README.md examples/verbs/README.md examples/verbs/low-level-inspect.js internal/cssvisualdiff/doc/topics/javascript-a",
+  "sample_error": "## Doctor Report (1 findings)\n\n### CSSVD-FLEX-JS-API\n\n- ✅ All checks passed\n\nfatal: pathspec 'docs' did not match any files\n\n\nCommand exited with code 128\n## Doctor Report (1 findings)\n\n### CSSVD-FLEX-JS-API\n\n- ✅ All checks passed\n\nfatal: pathspec 'docs' did not match any files\n\n\nCommand exited with"
+}
+, {
+  "count": 37,
+  "detail": "",
+  "error_class": "frontmatter-parse",
+  "framework": "pi",
+  "sample_command": "cd /home/manuel/code/wesen/2026-04-20--js-discord-bot \u0026\u0026 docmgr doc relate --doc ttmp/2026/04/21/CODEQUAL-2026-0421--code-quality-review-js-discord-bot/design-doc/01-js-discord-bot-code-quality-report",
+  "sample_error": "Error: document has invalid frontmatter (fix before relating files): /home/manuel/code/wesen/2026-04-20--js-discord-bot/ttmp/2026/04/21/CODEQUAL-2026-0421--code-quality-review-js-discord-bot/design-doc/01-js-discord-bot-code-quality-report.md: taxonomy: docmgr.frontmatter.parse/yaml_syntax: /home/ma"
+}
+, {
+  "count": 33,
+  "detail": "",
+  "error_class": "file-not-found",
+  "framework": "pi",
+  "sample_command": "cd /home/manuel/code/wesen/2026-04-09--screencast-studio \u0026\u0026 docmgr validate frontmatter --doc ttmp/2026/04/13/SCS-0012--gstreamer-migration-deep-analysis-experiments-and-intern-guide/design-doc/03-scr",
+  "sample_error": "Error: open /home/manuel/code/wesen/2026-04-09--screencast-studio/ttmp/ttmp/2026/04/13/SCS-0012--gstreamer-migration-deep-analysis-experiments-and-intern-guide/design-doc/03-screencast-studio-system-explanation-and-gstreamer-migration-postmortem-for-interns.md: no such file or directory\n\n\nCommand ex"
+}
+, {
+  "count": 32,
+  "detail": "",
+  "error_class": "other",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2025-10-30/implement-openai-responses-api/pinocchio \u0026\u0026 DOCMGR_CONFIG=/tmp/docmgr-pinocchio.yaml docmgr doc relate --doc 2026/02/11/PIN-20260211-EXTRACT-PERSISTENCE-PKG--extr",
+  "sample_error": "Error: expected exactly 1 doc for --doc \"2026/02/11/PIN-20260211-EXTRACT-PERSISTENCE-PKG--extract-persistence-stores-from-webchat-into-shared-package/analysis/01-analysis-extract-chat-persistence-stores-from-pkg-webchat.md\", got 0\nError: expected exactly 1 doc for --doc \"2026/02/11/PIN-20260211-EXTR"
+}
+, {
+  "count": 28,
+  "detail": "",
+  "error_class": "docs-root",
+  "framework": "pi",
+  "sample_command": "docmgr doc relate \\\n  --doc \"ttmp/2026/02/08/VM-011-RTK-QUERY-STATE-MIGRATION--port-vm-system-ui-state-management-to-redux-toolkit-rtk-query/analysis/01-rtk-query-migration-analysis-and-implementation",
+  "sample_error": "Error: expected exactly 1 doc for --doc \"ttmp/2026/02/08/VM-011-RTK-QUERY-STATE-MIGRATION--port-vm-system-ui-state-management-to-redux-toolkit-rtk-query/analysis/01-rtk-query-migration-analysis-and-implementation-plan.md\", got 0\n\n\nCommand exited with code 1\nError: expected exactly 1 doc for --doc \"t"
+}
+, {
+  "count": 20,
+  "detail": "",
+  "error_class": "frontmatter-parse",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5 \u0026\u0026 docmgr validate frontmatter --doc 2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/tasks.md --sug",
+  "sample_error": "1) [error] YAML/frontmatter syntax error\nFile: /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5/ttmp/2026/01/20/0048-CARDPUTER-JS-WEB--cardputer-web-js-ide-preact-microquickjs/tasks.md\nProblem: frontmatter delimiters '---' not found\n\nSuggested fixes:\n  1. Normalize frontmatter "
+}
+, {
+  "count": 20,
+  "detail": "",
+  "error_class": "ticket-not-found",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5 \u0026\u0026 docmgr task list --ticket 0055-MQJS-SERVICE-COMPONENT--reusable-queue-owned-microquickjs-service-eval-callbacks-event-flush",
+  "sample_error": "Error: failed to load tasks from file: failed to resolve tasks file: ticket not found: 0055-MQJS-SERVICE-COMPONENT--reusable-queue-owned-microquickjs-service-eval-callbacks-event-flush\nError: failed to load tasks from file: failed to resolve tasks file: ticket not found: 0055-MQJS-SERVICE-COMPONENT-"
+}
+, {
+  "count": 15,
+  "detail": "",
+  "error_class": "ticket-ambiguous",
+  "framework": "pi",
+  "sample_command": "cd le-chat \u0026\u0026 docmgr doc add --ticket EVT-STREAM-010 --doc-type reference --title \"Diary\"",
+  "sample_error": "Error: failed to find ticket directory: ambiguous ticket index doc for EVT-STREAM-010 (got 2)\n\n\nCommand exited with code 1\nError: failed to find ticket directory: ambiguous ticket index doc for EVT-STREAM-010 (got 2)\n\n\nCommand exited with code 1"
+}
+, {
+  "count": 9,
+  "detail": "--ticket",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr ticket show --ticket BOBA-006-COMPLETION-OVERLAY-LIPGLOSS-V2",
+  "sample_error": "Error: unknown flag: --ticket\n\n  # ticket - Ticket workspace management                                      \n                                                                              \n  Ticket workspace management: create tickets, list them, and manage lifecycle\n  operations.                   "
+}
+, {
+  "count": 7,
+  "detail": "",
+  "error_class": "docs-root",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5 \u0026\u0026 docmgr doc relate --doc ttmp/2026/01/21/0055-MQJS-SERVICE-COMPONENT--reusable-queue-owned-microquickjs-service-eval-callbac",
+  "sample_error": "Error: expected exactly 1 doc for --doc \"ttmp/2026/01/21/0055-MQJS-SERVICE-COMPONENT--reusable-queue-owned-microquickjs-service-eval-callbacks-event-flush/reference/01-diary.md\", got 0\nError: expected exactly 1 doc for --doc \"ttmp/2026/01/21/0055-MQJS-SERVICE-COMPONENT--reusable-queue-owned-microqui"
+}
+, {
+  "count": 7,
+  "detail": "--plain",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr ticket list --plain",
+  "sample_error": "Error: unknown flag: --plain\n\n  # tickets - List ticket workspaces                                          \n                                                                              \n  Lists all ticket workspaces in the root directory.                          \n                                 "
+}
+, {
+  "count": 7,
+  "detail": "",
+  "error_class": "ticket-not-found",
+  "framework": "pi",
+  "sample_command": "docmgr doc list --ticket CSSVD-GOJA-JS-API \u0026\u0026 docmgr task list --ticket CSSVD-GOJA-JS-API",
+  "sample_error": "No documents found.\nError: failed to load tasks from file: failed to resolve tasks file: ticket not found: CSSVD-GOJA-JS-API\n\n\nCommand exited with code 1\nNo documents found.\nError: failed to load tasks from file: failed to resolve tasks file: ticket not found: CSSVD-GOJA-JS-API\n\n\nCommand exited with"
+}
+, {
+  "count": 6,
+  "detail": "",
+  "error_class": "vocabulary-warning",
+  "framework": "pi",
+  "sample_command": "docmgr doctor --ticket PYXIS-VISUAL-DIFF-CLEANUP --stale-after 30 || true\nfind prototype-design/visual-comparisons/cssvd-js -maxdepth 1 -type f 2\u003e/dev/null || true\ngit status --short\ncss-visual-diff v",
+  "sample_error": "1) [warning] Unknown vocabulary value for Topics\nFile: /home/manuel/code/wesen/2026-04-23--pyxis/ttmp/2026/04/25/PYXIS-VISUAL-DIFF-CLEANUP--consolidate-prototype-design-visual-diff-workflows/index.md\nField: Topics\nValue: \"automation,frontend,pyxis,storybook,visual-diff\"\nKnown values: chat, backend, "
+}
+, {
+  "count": 5,
+  "detail": "--status",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "cd ~/workspaces/2026-04-10/pinocchiorc/pinocchio \u0026\u0026 docmgr task add --ticket PI-LOCAL-PROFILES --text \"Review analysis document and confirm approach (Option A - Glazed extension)\" --status open",
+  "sample_error": "Error: unknown flag: --status\n\n  # add - Add a task to tasks.md                                              \n                                                                              \n  Add a new checkbox task to the ticket's tasks.md.                           \n                                "
+}
+, {
+  "count": 4,
+  "detail": "--limit",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr status --summary-only \u0026\u0026 docmgr ticket list --limit 20",
+  "sample_error": "root=/home/manuel/workspaces/2026-02-23/add-profile-registry/geppetto/ttmp config=/home/manuel/workspaces/2026-02-23/add-profile-registry/.ttmp.yaml vocabulary=/home/manuel/workspaces/2026-02-23/add-profile-registry/geppetto/ttmp/vocabulary.yaml tickets=99 stale=21 docs=276 (design 30 / reference 11"
+}
+, {
+  "count": 4,
+  "detail": "--file",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "docmgr doc relate --ticket VM-011-RTK-QUERY-STATE-MIGRATION --doc reference/01-diary.md \\\n  --file \"/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/lib/types.ts\" --not",
+  "sample_error": "Error: unknown flag: --file\n\n  # relate - Relate code files to a document or ticket                        \n                                                                              \n  Update RelatedFiles in a document's frontmatter or the ticket index.        \n                                  "
+}
+, {
+  "count": 4,
+  "detail": "",
+  "error_class": "invalid-argument",
+  "framework": "pi",
+  "sample_command": "cd /home/manuel/code/wesen/2026-04-19--go-codebase-browser \u0026\u0026 docmgr task check --ticket GCB-013 --id 1.1",
+  "sample_error": "Error: invalid argument \"1.1\" for \"--id\" flag: strconv.Atoi: parsing \"1.1\": invalid syntax\n\n  # check - Mark a task as done                                               \n                                                                              \n  Mark a checkbox task as completed in tasks.md.  "
+}
+, {
+  "count": 3,
+  "detail": "--status",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr task list --ticket HC-031-VM-PLUGIN-DSL --status open",
+  "sample_error": "Error: unknown flag: --status\n\n  # list - List tasks from tasks.md                                           \n                                                                              \n  List checkbox tasks found in the ticket's tasks.md.                         \n                                "
+}
+, {
+  "count": 3,
+  "detail": "--index",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr task check --ticket HC-01-EXTRACT-WEBCHAT --index 44 --yes",
+  "sample_error": "Error: unknown flag: --index\n\n  # check - Mark a task as done                                               \n                                                                              \n  Mark a checkbox task as completed in tasks.md.                              \n                                 "
+}
+, {
+  "count": 3,
+  "detail": "--format",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2026-02-22/add-gepa-optimizer/go-go-gepa \u0026\u0026 docmgr ticket list --ticket GEPA-12-ARC-AGI-OS-BACKEND-MODULE --format json",
+  "sample_error": "Error: unknown flag: --format\n\n  # tickets - List ticket workspaces                                          \n                                                                              \n  Lists all ticket workspaces in the root directory.                          \n                                "
+}
+, {
+  "count": 3,
+  "detail": "",
+  "error_class": "ticket-ambiguous",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2026-03-02/deliver-mento-1/temporal-relationships \u0026\u0026 docmgr doc add --ticket MEN-TR-018 --doc-type design-doc --title \"SEM WebSocket streaming cutover: replace RTK Query WS ",
+  "sample_error": "Error: failed to find ticket directory: ambiguous ticket index doc for MEN-TR-018 (got 2)\nError: failed to find ticket directory: ambiguous ticket index doc for MEN-TR-018 (got 2)"
+}
+, {
+  "count": 3,
+  "detail": "--title",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "docmgr ticket create \\\n  --title \"mvdan-sh Deep Dive: Parser, AST, Printer, Expand, Interp Architecture Intern Onboarding Guide\" \\\n  --description \"Comprehensive analysis of mvdan.cc/sh/v3 — a Go libr",
+  "sample_error": "Error: unknown flag: --title\n\n  # ticket - Ticket workspace management                                      \n                                                                              \n  Ticket workspace management: create tickets, list them, and manage lifecycle\n  operations.                    "
+}
+, {
+  "count": 2,
+  "detail": "",
+  "error_class": "docs-root",
+  "framework": "claude-code",
+  "sample_command": "TICKET=/home/manuel/code/wesen/2026-05-20--book-ocr/ttmp/2026/07/03/BOOK-OCR-WILENSKY-PILOT-001--second-book-pilot-wilensky-planning-and-understanding-with-text-layer-plugin-strategies\npython3 - \"$TIC",
+  "sample_error": "Exit code 1\naddendum inserted\nReminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.\nOK: uploaded BOOK-OCR-WILENSKY-PILOT-001 Wilensky Pilot Guide.pdf -\u003e /ai/2026/07/03/BOOK-OCR-WILENSKY-PILOT-001\n(eval):59: no matche"
+}
+, {
+  "count": 2,
+  "detail": "",
+  "error_class": "vocabulary-warning",
+  "framework": "codex",
+  "sample_command": "docmgr status --summary-only \u0026\u0026 docmgr ticket create-ticket --ticket GOJA-024-SMALLTALK-INSPECTOR --title \"Smalltalk Inspector\" --topics go,goja,tui \u0026\u0026 docmgr import file --file /tmp/smalltalk-js-edit",
+  "sample_error": "root=/home/manuel/workspaces/2026-02-14/smalltalk-inspector/go-go-goja/ttmp config=/home/manuel/workspaces/2026-02-14/smalltalk-inspector/.ttmp.yaml vocabulary=/home/manuel/workspaces/2026-02-14/smalltalk-inspector/go-go-goja/ttmp/vocabulary.yaml tickets=11 stale=1 docs=25 (design 0 / reference 13 /"
+}
+, {
+  "count": 1,
+  "detail": "",
+  "error_class": "other",
+  "framework": "claude-code",
+  "sample_command": "docmgr changelog update --ticket PROMPTO-PI-EXT --entry \"Published deep-dive project report to the go-go-parc Obsidian vault (PROJ - Prompto Pi Extension, vault commit 00b5980, pushed)\" \u003e/dev/null 2\u003e\u0026",
+  "sample_error": "Exit code 128\nfatal: not a git repository (or any of the parent directories): .git\nExit code 128\nfatal: not a git repository (or any of the parent directories): .git"
+}
+, {
+  "count": 1,
+  "detail": "--all",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5 \u0026\u0026 docmgr ticket list --all --status active",
+  "sample_error": "Error: unknown flag: --all\n\n  # tickets - List ticket workspaces                                          \n                                                                              \n  Lists all ticket workspaces in the root directory.                          \n                                   "
+}
+, {
+  "count": 1,
+  "detail": "--doc",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr doc show --doc /home/manuel/workspaces/2026-02-04/pvd-properties/pvd-properties/ttmp/2026/02/05/PVD-010-DATA-ANALYSIS-DOCUMENTATION--data-analysis-documentation/design-doc/01-data-analysis-docu",
+  "sample_error": "Error: unknown flag: --doc\n\n  # doc - Document workspace operations                                       \n                                                                              \n  Document workspace operations: create docs, list/search, and maintain       \n  relationships to code.           "
+}
+, {
+  "count": 1,
+  "detail": "--prefix",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr ticket list --prefix REF --root .",
+  "sample_error": "Error: unknown flag: --prefix\n\n  # tickets - List ticket workspaces                                          \n                                                                              \n  Lists all ticket workspaces in the root directory.                          \n                                "
+}
+, {
+  "count": 1,
+  "detail": "--tickets",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "DOCMGR_CONFIG=/tmp/docmgr-pinocchio.yaml docmgr list --tickets",
+  "sample_error": "Error: unknown flag: --tickets\n\n  # list - List tickets or documents                                          \n                                                                              \n  Convenience listing commands.                                               \n                               "
+}
+, {
+  "count": 1,
+  "detail": "",
+  "error_class": "invalid-argument",
+  "framework": "codex",
+  "sample_command": "cd /home/manuel/workspaces/2026-02-14/hypercard-add-webchat/2026-02-12--hypercard-react \u0026\u0026 docmgr task check --ticket HC-033-ADD-WEBCHAT-INTEGRATION --id F2.5.1,F2.5.2,F2.5.3,F2.5.4,F2.5.5,F2.5.6,F2.5",
+  "sample_error": "Error: invalid argument \"F2.5.1,F2.5.2,F2.5.3,F2.5.4,F2.5.5,F2.5.6,F2.5.7\" for \"--id\" flag: strconv.Atoi: parsing \"F2.5.1\": invalid syntax\n\n  # check - Mark a task as done                                               \n                                                                              \n  "
+}
+, {
+  "count": 1,
+  "detail": "--json",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr ticket show HC-037 --json",
+  "sample_error": "Error: unknown flag: --json\n\n  # ticket - Ticket workspace management                                      \n                                                                              \n  Ticket workspace management: create tickets, list them, and manage lifecycle\n  operations.                     "
+}
+, {
+  "count": 1,
+  "detail": "--root",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr help ticket --root /home/manuel/workspaces/2026-02-23/add-profile-registry/geppetto",
+  "sample_error": "Error: unknown flag: --root\n\n  # help - Help about any command or topic                                    \n                                                                              \n  Help provides help for any command and topic in the application.            \n                                  "
+}
+, {
+  "count": 1,
+  "detail": "--path",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "docmgr doc show --path ttmp/2026/02/24/GP-21-PROFILE-REGISTRY-CORE--profile-registry-core/reference/01-diary.md",
+  "sample_error": "Error: unknown flag: --path\n\n  # doc - Document workspace operations                                       \n                                                                              \n  Document workspace operations: create docs, list/search, and maintain       \n  relationships to code.          "
+}
+, {
+  "count": 1,
+  "detail": "--related-file",
+  "error_class": "unknown-flag",
+  "framework": "codex",
+  "sample_command": "cd temporal-relationships \u0026\u0026 docmgr doc relate --ticket MEN-TR-005 --doc design-doc/03-inference-result-implementation-plan-runinferencewithresult-wrapper-and-metadata-contract-migration.md --doc refe",
+  "sample_error": "Error: unknown flag: --related-file\n\n  # relate - Relate code files to a document or ticket                        \n                                                                              \n  Update RelatedFiles in a document's frontmatter or the ticket index.        \n                          "
+}
+, {
+  "count": 1,
+  "detail": "--ticket",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "docmgr changelog add --ticket VM-011-RTK-QUERY-STATE-MIGRATION --entry \"Completed full RTK Query migration: all pages use hooks, deleted vmService.ts and 6 dead files. Net -3622 lines. tsc + vite buil",
+  "sample_error": "Error: unknown flag: --ticket\n\n  # changelog - Manage changelog entries                                      \n                                                                              \n  Append dated entries to a ticket changelog.md.                              \n                                "
+}
+, {
+  "count": 1,
+  "detail": "--name",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "cd /home/manuel/code/wesen/2026-04-23--pyxis \u0026\u0026 docmgr vocab add --category topics --slug design-system --name \"Design System\" --description \"Reusable UI component systems, tokens, taxonomy, and desig",
+  "sample_error": "Error: unknown flag: --name\n\n  # add - Add a vocabulary entry                                              \n                                                                              \n  Adds a new entry to the workspace vocabulary file.                          \n                                  "
+}
+, {
+  "count": 1,
+  "detail": "--summary",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "cd go-go-os-frontend \u0026\u0026 docmgr ticket create-ticket --ticket os-shell-public-package --title \"Extract and publish public os-shell package\" --topics npm,react,desktop,design-system --summary \"Make @go-",
+  "sample_error": "\u001b[mdirenv: loading ~/workspaces/2026-05-11/npm-packages-go-go-os/.envrc\ndirenv: export +NPM_TOKEN\nError: unknown flag: --summary\n\n  # create-ticket - Create a new ticket workspace under the docs root         \n                                                                              \n  Creates a "
+}
+, {
+  "count": 1,
+  "detail": "--reason",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "cd /home/manuel/workspaces/2026-05-24/add-js-providers \u0026\u0026 docmgr ticket close XGOJA-011 --reason \"Implemented xgoja HTTP/Express provider, Discord outbound runtime API, generated example, tests, live ",
+  "sample_error": "\u001b[mdirenv: loading ~/workspaces/2026-05-24/add-js-providers/.envrc\ndirenv: export +DISCORD_APPLICATION_ID +DISCORD_BOT_TOKEN +DISCORD_CLIENT_ID +DISCORD_CLIENT_SECRET +DISCORD_GUILD_ID +DISCORD_PUBLIC_KEY\nError: unknown flag: --reason\n\n  # close - Close a ticket by updating status, optional intent, "
+}
+, {
+  "count": 1,
+  "detail": "--limit",
+  "error_class": "unknown-flag",
+  "framework": "pi",
+  "sample_command": "cd go-go-goja \u0026\u0026 docmgr ticket list --limit 5",
+  "sample_error": "\u001b[mdirenv: loading ~/workspaces/2026-05-24/add-js-providers/.envrc\ndirenv: export +DISCORD_APPLICATION_ID +DISCORD_BOT_TOKEN +DISCORD_CLIENT_ID +DISCORD_CLIENT_SECRET +DISCORD_GUILD_ID +DISCORD_PUBLIC_KEY\nError: unknown flag: --limit\n\n  # tickets - List ticket workspaces                             "
+}
+]

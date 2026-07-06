@@ -36,8 +36,9 @@ func ActionTickets() carapace.Action {
 				DocType: "index",
 			},
 			Options: workspace.DocQueryOptions{
-				IncludeErrors: true,
-				OrderBy:       workspace.OrderByPath,
+				IncludeErrors:      true,
+				IncludeSourcesPath: true,
+				OrderBy:            workspace.OrderByPath,
 			},
 		})
 		if err != nil {

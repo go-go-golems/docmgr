@@ -35,7 +35,7 @@ func (r *VocabularySuggestionRule) Render(ctx context.Context, t *core.Taxonomy)
 		{
 			Label:   "Add to vocabulary",
 			Command: "docmgr",
-			Args:    []string{"vocab", "add", "--category", strings.ToLower(payload.Field), "--slug", payload.Value},
+			Args:    []string{"vocab", "add", "--category", vocabularyCategoryForField(payload.Field), "--slug", payload.Value, "--description", `"TODO"`},
 		},
 		{
 			Label:   "List vocabulary",
@@ -50,4 +50,19 @@ func (r *VocabularySuggestionRule) Render(ctx context.Context, t *core.Taxonomy)
 		Severity: t.Severity,
 		Actions:  actions,
 	}, nil
+}
+
+// vocabularyCategoryForField maps frontmatter field names to the categories
+// accepted by `docmgr vocab add` (topics, docTypes, intent, status).
+func vocabularyCategoryForField(field string) string {
+	switch strings.ToLower(strings.TrimSpace(field)) {
+	case "doctype", "doctypes", "doc-type", "doc-types":
+		return "docTypes"
+	case "intent":
+		return "intent"
+	case "status":
+		return "status"
+	default:
+		return "topics"
+	}
 }

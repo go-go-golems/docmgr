@@ -16,6 +16,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace"
+	"github.com/go-go-golems/docmgr/pkg/commands"
 	"github.com/go-go-golems/docmgr/pkg/completion"
 	"github.com/go-go-golems/glazed/pkg/help"
 	help_cmd "github.com/go-go-golems/glazed/pkg/help/cmd"
@@ -36,7 +37,18 @@ Helpful docs (built-in):
   - Quick usage:          docmgr help how-to-use
   - Initial setup guide:  docmgr help how-to-setup
   - List all embedded docs: docmgr help --all`,
+		// main.go already prints the error returned by Execute; silence cobra's
+		// own copy so errors are printed exactly once.
+		SilenceErrors: true,
+		// Propagate --verbose to bare-mode output (workspace banner, reminders).
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if v, err := cmd.Flags().GetBool("verbose"); err == nil {
+				commands.SetVerbose(v)
+			}
+		},
 	}
+	//glazedclilint:ignore global persistent flag on the plain Cobra root; not a Glazed command
+	rootCmd.PersistentFlags().Bool("verbose", false, "Show workspace banner and coaching output (off by default)")
 
 	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)
 

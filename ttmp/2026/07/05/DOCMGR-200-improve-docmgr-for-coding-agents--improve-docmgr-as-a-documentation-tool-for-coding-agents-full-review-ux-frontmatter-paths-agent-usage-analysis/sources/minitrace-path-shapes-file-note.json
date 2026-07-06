@@ -1,0 +1,98 @@
+[
+{
+  "failure_rate": 3.2,
+  "failures": 175,
+  "framework": "pi",
+  "sample": "/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system-ui/client/src/components/AppShell.tsx:New shared app ",
+  "shape": "absolute-other",
+  "uses": 5544
+}
+, {
+  "failure_rate": 3.2,
+  "failures": 120,
+  "framework": "codex",
+  "sample": "/home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5/0017-atoms3r-web-ui/main/http_server.cpp:Concrete",
+  "shape": "absolute-other",
+  "uses": 3809
+}
+, {
+  "failure_rate": 3.2,
+  "failures": 80,
+  "framework": "pi",
+  "sample": "$ROOT/internal/cssvisualdiff/dsl/scripts/compare.js:Current built-in compare-region JS verb and legacy API shape",
+  "shape": "bare-relative",
+  "uses": 2512
+}
+, {
+  "failure_rate": 1.3,
+  "failures": 17,
+  "framework": "codex",
+  "sample": "/home/manuel/workspaces/2025-12-21/echo-base-documentation/esp32-s3-m5/ttmp/vocabulary.yaml:Added QuickJS/JS/REST topics",
+  "shape": "absolute-with-ttmp",
+  "uses": 1268
+}
+, {
+  "failure_rate": 2.2,
+  "failures": 22,
+  "framework": "pi",
+  "sample": "/home/manuel/code/wesen/corporate-headquarters/vm-system/vm-system/ttmp/2026/02/08/VM-010-REDESIGN-VM-SYSTEM-UI--redesig",
+  "shape": "absolute-with-ttmp",
+  "uses": 1005
+}
+, {
+  "failure_rate": 5.2,
+  "failures": 26,
+  "framework": "codex",
+  "sample": "cmd/refactorio/api.go:Switch to v1 command decoding and remove deprecated section helpers",
+  "shape": "bare-relative",
+  "uses": 499
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "$ABS/design-doc/01-pad-zoomable-ui-analysis-design-and-implementation-guide.md:Primary intern-ready analysis/design/impl",
+  "shape": "bare-relative",
+  "uses": 134
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "/home/manuel/code/others/maths/mathematics_in_lean/mathematics_in_lean.pdf:The shipped PDF output whose typography we wa",
+  "shape": "absolute-other",
+  "uses": 111
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "sample": "../../../../../../../2026-02-18--cozodb-extraction/cozo-extraction-tui/cmd/cozo-tui/main.go:Explicit --embed-* and --see",
+  "shape": "parent-relative",
+  "uses": 31
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "codex",
+  "sample": "ttmp/2026/02/05/REF-008-API-CONTRACT-ALIGNMENT--ui-api-contract-alignment-clean-cutover/tasks.md:Track and check complet",
+  "shape": "ttmp-prefixed",
+  "uses": 29
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "claude-code",
+  "sample": "/home/manuel/code/wesen/2026-06-23--seven-sketches-discussion/ttmp/2026/06/23/SEVEN-SKETCHES-CH2--seven-sketches-ch-2-st",
+  "shape": "absolute-with-ttmp",
+  "uses": 17
+}
+, {
+  "failure_rate": 0,
+  "failures": 0,
+  "framework": "pi",
+  "sample": "ttmp/2026/04/21/CODEQUAL-2026-0421--code-quality-review-js-discord-bot/design-doc/01-js-discord-bot-code-quality-report.",
+  "shape": "ttmp-prefixed",
+  "uses": 8
+}
+]

@@ -36,3 +36,25 @@ func TestServer_IndexNotReady(t *testing.T) {
 		t.Fatalf("expected %d, got %d (%s)", http.StatusServiceUnavailable, rr.Code, rr.Body.String())
 	}
 }
+
+func TestServer_SearchPathFiltersRejectUnsafeValuesBeforeIndex(t *testing.T) {
+	t.Parallel()
+
+	mgr := NewIndexManager("ttmp")
+	s := NewServer(mgr, ServerOptions{})
+
+	cases := []string{
+		"/api/v1/search/docs?file=../secret.txt",
+		"/api/v1/search/docs?dir=/etc",
+		"/api/v1/search/docs?file=repo://pkg/foo.go",
+		"/api/v1/search/docs?file=C:/Windows/win.ini",
+	}
+	for _, path := range cases {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rr := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("%s: expected %d, got %d (%s)", path, http.StatusBadRequest, rr.Code, rr.Body.String())
+		}
+	}
+}

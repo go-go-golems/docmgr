@@ -41,8 +41,10 @@ docmgr (root)
 │   ├── list
 │   └── add
 ├── ticket
-│   ├── create-ticket
+│   ├── create
+│   ├── show
 │   ├── list
+│   ├── rename
 │   └── close
 └── skill (new)
     ├── list

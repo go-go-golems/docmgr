@@ -195,17 +195,8 @@ func (c *VocabAddCommand) Run(
 		return err
 	}
 
-	fmt.Printf("Docs root: `%s`\n", result.Root)
-	if result.ConfigPath != "" {
-		fmt.Printf("Config: `%s`\n", result.ConfigPath)
-	}
-	if result.VocabularyPath != "" {
-		fmt.Printf("Vocabulary: `%s`\n", result.VocabularyPath)
-	}
-	fmt.Printf("\nVocabulary entry added:\n")
-	fmt.Printf("- Category: %s\n", result.Category)
-	fmt.Printf("- Slug: %s\n", result.Slug)
-	fmt.Printf("- Description: %s\n", result.Description)
+	printWorkspaceBanner(result.Root, result.ConfigPath, result.VocabularyPath)
+	fmt.Printf("vocabulary entry added: %s/%s (%s)\n", result.Category, result.Slug, result.Description)
 
 	return nil
 }

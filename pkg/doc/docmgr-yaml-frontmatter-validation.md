@@ -18,21 +18,25 @@ This page explains how to diagnose and fix YAML/frontmatter issues in docmgr usi
 
 ## When you see a YAML/frontmatter error
 If a command reports `yaml_syntax` or `frontmatter parse` errors:
-- Run `docmgr validate frontmatter --doc <path>` to see line/col, snippet, and suggestions.
+- **Primary fix path:** `docmgr doctor --ticket <TICKET> --fix` applies safe auto-fixes across all docs in the ticket (creating `<path>.bak` backups), migrates legacy `RelatedFiles` paths to explicit anchors, and re-validates.
+- For a single file: run `docmgr validate frontmatter --doc <path>` to see line/col, snippet, and suggestions.
 - For hints: `docmgr validate frontmatter --doc <path> --suggest-fixes`
-- To attempt repair: `docmgr validate frontmatter --doc <path> --auto-fix` (creates `<path>.bak`)
+- To attempt single-file repair: `docmgr validate frontmatter --doc <path> --auto-fix` (creates `<path>.bak`)
 
 ## Common issues and fixes
-- Missing closing `---`: add a closing delimiter or let `--auto-fix` rewrite it.
+- Missing closing `---`: add a closing delimiter or let `doctor --fix` / `--auto-fix` rewrite it.
 - Unquoted colons/hashes: quote the value (`'text: with colon'`) or use block scalars.
 - Stray delimiter lines inside frontmatter: remove extra `---` lines; auto-fix will scrub them.
 - Plain text inside frontmatter (no `:`): move it into the body or let auto-fix peel trailing non-key lines.
+- Legacy bare `RelatedFiles` paths: run `docmgr doctor --fix-anchors` to migrate them to anchored paths (`repo://`, `ws://`, `docs://`, `abs://`); see `docmgr help path-anchors`.
 
 ## Commands to remember
-- Validate: `docmgr validate frontmatter --doc <file>`
+- Fix a whole ticket (frontmatter + anchors): `docmgr doctor --ticket <TICKET> --fix`
+- Anchor migration only: `docmgr doctor --ticket <TICKET> --fix-anchors`
+- Validate one file: `docmgr validate frontmatter --doc <file>`
 - Suggest: `docmgr validate frontmatter --doc <file> --suggest-fixes`
-- Auto-fix: `docmgr validate frontmatter --doc <file> --auto-fix`
-- Doctor (workspace scan): `docmgr doctor --ticket <TICKET>` (will report invalid frontmatter and point to validation)
+- Auto-fix one file: `docmgr validate frontmatter --doc <file> --auto-fix`
+- Doctor (workspace scan): `docmgr doctor --ticket <TICKET>` (checks all docs in the ticket and points to validation; multi-ticket runs print a per-ticket rollup, add `--details` for everything)
 
 ## Implementation references
 - For full details, see the technical reference: `docmgr help yaml-frontmatter-validation-reference`

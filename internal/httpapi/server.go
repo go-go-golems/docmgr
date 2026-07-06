@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -46,8 +47,13 @@ func NewServer(mgr *IndexManager, opts ServerOptions) *Server {
 	s.mux.HandleFunc("/api/v1/search/docs", s.wrap(s.handleSearchDocs))
 	s.mux.HandleFunc("/api/v1/search/files", s.wrap(s.handleSearchFiles))
 	s.mux.HandleFunc("/api/v1/docs/get", s.wrap(s.handleDocsGet))
+	s.mux.HandleFunc("/api/v1/docs/meta", s.wrap(s.handleDocsMeta))
+	s.mux.HandleFunc("/api/v1/docs/relate", s.wrap(s.handleDocsRelate))
 	s.mux.HandleFunc("/api/v1/files/get", s.wrap(s.handleFilesGet))
+	s.mux.HandleFunc("/api/v1/files/raw", s.wrap(s.handleFilesRaw))
+	s.mux.HandleFunc("/api/v1/workspace/doctor", s.wrap(s.handleWorkspaceDoctor))
 	s.mux.HandleFunc("/api/v1/tickets/get", s.wrap(s.handleTicketsGet))
+	s.mux.HandleFunc("/api/v1/tickets/changelog", s.wrap(s.handleTicketsChangelog))
 	s.mux.HandleFunc("/api/v1/tickets/docs", s.wrap(s.handleTicketsDocs))
 	s.mux.HandleFunc("/api/v1/tickets/tasks", s.wrap(s.handleTicketsTasks))
 	s.mux.HandleFunc("/api/v1/tickets/tasks/check", s.wrap(s.handleTicketsTasksCheck))
@@ -198,6 +204,14 @@ func (s *Server) handleSearchDocs(w http.ResponseWriter, r *http.Request) error 
 	}
 
 	reverse := parseBoolDefault(r.URL.Query().Get("reverse"), false)
+	fileFilter, err := cleanSearchPathFilter(r.URL.Query().Get("file"), "file")
+	if err != nil {
+		return err
+	}
+	dirFilter, err := cleanSearchPathFilter(r.URL.Query().Get("dir"), "dir")
+	if err != nil {
+		return err
+	}
 
 	q := searchsvc.SearchQuery{
 		TextQuery:           strings.TrimSpace(r.URL.Query().Get("query")),
@@ -206,8 +220,8 @@ func (s *Server) handleSearchDocs(w http.ResponseWriter, r *http.Request) error 
 		Topics:              splitCSV(r.URL.Query().Get("topics")),
 		DocType:             strings.TrimSpace(r.URL.Query().Get("docType")),
 		Status:              strings.TrimSpace(r.URL.Query().Get("status")),
-		File:                strings.TrimSpace(r.URL.Query().Get("file")),
-		Dir:                 strings.TrimSpace(r.URL.Query().Get("dir")),
+		File:                fileFilter,
+		Dir:                 dirFilter,
 		ExternalSource:      strings.TrimSpace(r.URL.Query().Get("externalSource")),
 		Since:               strings.TrimSpace(r.URL.Query().Get("since")),
 		Until:               strings.TrimSpace(r.URL.Query().Get("until")),
@@ -416,6 +430,52 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
+}
+
+// cleanSearchPathFilter validates the HTTP file/dir search filters before the
+// values enter the shared search service. These filters are reverse-lookup
+// strings, not file-open requests; keep them lexical, repo-relative, and local
+// so they cannot be confused with filesystem paths by downstream code or
+// security scanners.
+func cleanSearchPathFilter(raw string, field string) (string, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "", nil
+	}
+	if len(raw) > 4096 || strings.ContainsRune(raw, 0) {
+		return "", NewHTTPError(http.StatusBadRequest, "invalid_argument", "invalid path filter", map[string]any{
+			"field": field,
+		})
+	}
+	// HTTP search accepts repo/workspace-style relative filters only. Absolute
+	// paths and anchored schemes remain available to the CLI where local file
+	// access is explicit and trusted.
+	if strings.Contains(raw, "://") || strings.HasPrefix(raw, "/") || looksLikeWindowsAbs(raw) {
+		return "", NewHTTPError(http.StatusBadRequest, "invalid_argument", "path filter must be relative", map[string]any{
+			"field": field,
+		})
+	}
+	slash := strings.ReplaceAll(raw, "\\", "/")
+	cleaned := path.Clean(slash)
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") || containsParentSegment(cleaned) {
+		return "", NewHTTPError(http.StatusBadRequest, "invalid_argument", "path filter must stay within the workspace", map[string]any{
+			"field": field,
+		})
+	}
+	return cleaned, nil
+}
+
+func looksLikeWindowsAbs(s string) bool {
+	return len(s) >= 3 && ((s[0] >= 'A' && s[0] <= 'Z') || (s[0] >= 'a' && s[0] <= 'z')) && s[1] == ':' && (s[2] == '/' || s[2] == '\\')
+}
+
+func containsParentSegment(s string) bool {
+	for _, part := range strings.Split(s, "/") {
+		if part == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) error {

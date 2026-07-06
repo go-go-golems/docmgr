@@ -143,6 +143,7 @@ func (c *LayoutFixCommand) applyLayoutFix(ctx context.Context, settings *LayoutF
 				IncludeDiagnostics:  false,
 				IncludeArchivedPath: false,
 				IncludeScriptsPath:  false,
+				IncludeSourcesPath:  true,
 				IncludeControlDocs:  true,
 				OrderBy:             workspace.OrderByPath,
 			},

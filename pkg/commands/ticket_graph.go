@@ -334,6 +334,7 @@ func (b *ticketGraphBuilder) addTicketDocsDepth0(ctx context.Context) error {
 			IncludeControlDocs:  b.settings.IncludeControlDocs,
 			IncludeArchivedPath: b.settings.IncludeArchived,
 			IncludeScriptsPath:  b.settings.IncludeScriptsPath,
+			IncludeSourcesPath:  true,
 			OrderBy:             workspace.OrderByPath,
 		},
 	})
@@ -386,6 +387,7 @@ func (b *ticketGraphBuilder) expandTransitive(ctx context.Context) error {
 					IncludeControlDocs:  b.settings.IncludeControlDocs,
 					IncludeArchivedPath: b.settings.IncludeArchived,
 					IncludeScriptsPath:  b.settings.IncludeScriptsPath,
+					IncludeSourcesPath:  true,
 					OrderBy:             workspace.OrderByPath,
 				},
 			})
@@ -534,10 +536,11 @@ func (b *ticketGraphBuilder) addDocAndEdges(docPath string, doc *models.Document
 func (b *ticketGraphBuilder) docResolver(docPath string) *paths.Resolver {
 	docPathAbs := filepath.ToSlash(filepath.Clean(docPath))
 	return paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  b.ws.Context().Root,
-		DocPath:   filepath.FromSlash(docPathAbs),
-		ConfigDir: b.ws.Context().ConfigDir,
-		RepoRoot:  b.ws.Context().RepoRoot,
+		DocsRoot:      b.ws.Context().Root,
+		DocPath:       filepath.FromSlash(docPathAbs),
+		ConfigDir:     b.ws.Context().ConfigDir,
+		RepoRoot:      b.ws.Context().RepoRoot,
+		WorkspaceRoot: b.ws.Context().WorkspaceRoot,
 	})
 }
 

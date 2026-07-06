@@ -36,27 +36,22 @@ The system tries each method in order until it finds a valid docs root:
 
 1. **`--root` flag**: Explicit command-line argument (highest priority)
    - Example: `docmgr doc list --root /path/to/docs`
+   - Absolute paths are used as-is; relative paths are anchored on the current working directory
    - Use when: You need to override the default location
 
-2. **`.ttmp.yaml` in current directory**: Configuration file with `root:` field
-   - Example: `.ttmp.yaml` contains `root: custom-docs`
-   - Use when: Your project uses a non-standard docs directory name
+2. **`.ttmp.yaml` config file**: Found via the `DOCMGR_CONFIG` environment variable (explicit path override) or by walking up the directory tree from the current directory
+   - Example: `.ttmp.yaml` contains `root: custom-docs` (relative `root:` values resolve relative to the config file's directory)
+   - Use when: Your project uses a non-standard docs directory name or a multi-repo layout
 
-3. **`.ttmp.yaml` in parent directories**: Walks up the directory tree
-   - Example: Running from `project/src/` finds `.ttmp.yaml` in `project/`
-   - Use when: Working in subdirectories of a configured project
-
-4. **`DOCMGR_ROOT` environment variable**: System-wide or session setting
-   - Example: `export DOCMGR_ROOT=/shared/docs`
-   - Use when: You have a shared documentation location across projects
-
-5. **Git repository root**: Automatically finds `<git-root>/ttmp`
+3. **Git repository root**: Automatically falls back to `<git-root>/ttmp`
    - Example: Running from anywhere in a git repo finds `ttmp/` at repo root
    - Use when: Working in a standard git repository structure
 
-6. **Default fallback**: `ttmp` in current directory
-   - Example: Creates `ttmp/` if it doesn't exist
+4. **Default fallback**: `ttmp` in current directory
+   - Example: `<cwd>/ttmp`
    - Use when: No other configuration is found
+
+Set `DOCMGR_DEBUG=1` to log each step of the resolution on stderr.
 
 **Visual flow:**
 
@@ -64,22 +59,15 @@ The system tries each method in order until it finds a valid docs root:
 Command Execution
     │
     ├─→ Try --root flag
+    │   └─→ Provided? Use it ✓
+    │
+    ├─→ Find .ttmp.yaml (DOCMGR_CONFIG override, else walk up from cwd)
+    │   └─→ Found with root:? Resolve relative to config file ✓
+    │
+    ├─→ Find git root, use <git-root>/ttmp
     │   └─→ Found? Use it ✓
     │
-    ├─→ Try .ttmp.yaml (current dir)
-    │   └─→ Found? Use root: field ✓
-    │
-    ├─→ Walk up tree for .ttmp.yaml
-    │   └─→ Found? Use root: field ✓
-    │
-    ├─→ Check DOCMGR_ROOT env var
-    │   └─→ Set? Use it ✓
-    │
-    ├─→ Find git root, check for ttmp/
-    │   └─→ Found? Use it ✓
-    │
-    └─→ Default to ./ttmp
-        └─→ Use current directory ✓
+    └─→ Default to <cwd>/ttmp ✓
 ```
 
 **Implementation:**
@@ -197,10 +185,10 @@ The SQLite database has three main tables that work together:
 - Purpose: Documents can have multiple topics, topics can appear in many documents
 - Example: A document about "API Design" might have topics: `[api, architecture, backend]`
 
-**3. `related_files` table** - File references with normalized paths:
-- Stores: doc_id, file paths in multiple formats, optional notes
+**3. `related_files` table** - File references resolved through the anchored-path resolver:
+- Stores: doc_id, the anchor scheme, the raw frontmatter path, the resolved absolute path (single matching key), a repo-relative form for display, and the optional note
 - Purpose: Enable reverse lookups (find docs referencing a file)
-- Normalization: Same file can be referenced as absolute, relative, or repo-relative path
+- Resolution: Anchored paths (`repo://`, `ws://`, `docs://`, `doc://`, `abs://`) resolve directly; legacy bare paths fall back to the historical guessing logic (see `docmgr help path-anchors`)
 
 **Visual schema:**
 
@@ -225,9 +213,10 @@ The SQLite database has three main tables that work together:
 │ doc_topics   │  │ related_files    │
 ├──────────────┤  ├──────────────────┤
 │ doc_id (FK)  │  │ doc_id (FK)      │
-│ topic        │  │ norm_repo_rel     │
-└──────────────┘  │ norm_docs_rel    │
+│ topic        │  │ anchor           │
+└──────────────┘  │ raw_path         │
                   │ norm_abs         │
+                  │ norm_repo_rel    │
                   │ note             │
                   └──────────────────┘
 ```
@@ -252,10 +241,10 @@ When `InitIndex()` is called, here's the step-by-step process:
    - Optional fields: Status, Topics, RelatedFiles, etc.
    - Missing fields don't block indexing
 
-4. **Normalize paths**: Related files are normalized to multiple representations
-   - Converts absolute paths to repo-relative
-   - Handles both absolute and relative path formats
-   - Stores multiple representations for flexible matching
+4. **Resolve paths**: Related files are resolved through the shared anchored-path resolver (`internal/paths`)
+   - Anchored paths (`repo://`, `ws://`, `docs://`, `doc://`, `abs://`) resolve against their explicit base
+   - Legacy bare paths resolve through the historical multi-anchor fallback
+   - One resolved absolute path per entry is stored as the single matching key
 
 5. **Insert into SQLite**: Documents, topics, and related files are inserted
    - Uses transactions for atomicity
@@ -268,56 +257,19 @@ When `InitIndex()` is called, here's the step-by-step process:
 - **Build time**: Scales linearly with number of documents (~1-5ms per document)
 - **Query time**: Sub-millisecond for most queries (thanks to indexes)
 
-**Path normalization** (`internal/paths/normalization.go`):
+**Anchored path resolution** (`internal/paths/anchored.go`, `internal/paths/resolver.go`):
 
-One of the trickiest parts of indexing is handling file paths. The same file might be referenced in different ways:
+One of the trickiest parts of indexing is handling file paths. Historically a bare string like `pkg/foo.go` could mean "relative to the repo root", "relative to the doc", or "relative to the docs root", and docmgr stored up to six normalized representations to guess its way through. Paths v2 (design doc DOCMGR-200 §8.1) replaced that with **explicit anchors** and **one resolver**:
 
-- Absolute: `/home/user/project/backend/api/user.go`
-- Repo-relative: `backend/api/user.go`
-- Docs-relative: `../../backend/api/user.go`
+- New writes (`doc relate`, `changelog --file-note`) persist an anchored path chosen by the tightest-containing-anchor rule:
+  - `repo://backend/api/user.go` — relative to the repository root
+  - `ws://member/pkg/foo.go` — relative to a go.work workspace member (the workspace root is detected via `go.work`)
+  - `docs://2026/.../doc.md` — relative to the docs root
+  - `abs:///home/user/x.go` — absolute escape hatch
+- Legacy bare paths still resolve through the historical fallback order, so old documents keep working; `docmgr doctor --fix-anchors` migrates them.
+- The index stores `{anchor, raw_path, norm_abs, norm_repo_rel}` per entry: `norm_abs` (the resolved absolute path) is the single matching key, `norm_repo_rel` is kept for display, and `raw_path`/`anchor` preserve what the frontmatter actually said.
 
-**Solution**: Store multiple normalized representations for each file:
-
-- **`norm_repo_rel`**: Repository-relative path (preferred canonical key)
-  - Example: `backend/api/user.go`
-  - Used for: Most queries and matching
-
-- **`norm_docs_rel`**: Docs-root relative path
-  - Example: `../../backend/api/user.go` (if doc is in `ttmp/2025/12/19/`)
-  - Used for: Fallback matching
-
-- **`norm_abs`**: Absolute path
-  - Example: `/home/user/project/backend/api/user.go`
-  - Used for: Final fallback and display
-
-- **`norm_canonical`**: Best-effort canonical key (prefers repo_rel)
-  - Example: `backend/api/user.go`
-  - Used for: Primary matching key
-
-**Why multiple representations?**
-
-This allows queries to match files regardless of how they were referenced in frontmatter. When a user searches for `backend/api/user.go`, the query can match:
-- Documents that reference it as absolute path
-- Documents that reference it as relative path
-- Documents that reference it as repo-relative path
-
-**Example:**
-
-```yaml
-# Document A (in ttmp/2025/12/19/TICKET-001/)
-RelatedFiles:
-  - Path: /home/user/project/backend/api/user.go  # Absolute
-
-# Document B (in ttmp/2025/12/20/TICKET-002/)
-RelatedFiles:
-  - Path: ../../backend/api/user.go  # Relative
-
-# Document C (in ttmp/2025/12/21/TICKET-003/)
-RelatedFiles:
-  - Path: backend/api/user.go  # Repo-relative
-```
-
-All three documents will match a query for `backend/api/user.go` because the normalization stores all representations.
+Reverse lookup (`doc search --file/--dir`) matches against the resolved absolute path (with small compatibility fallbacks such as basename/suffix matching), so a query finds the doc regardless of how the file was originally referenced. See `docmgr help path-anchors` for the user-facing model.
 
 ## Ticket Workspace Structure
 
@@ -522,7 +474,7 @@ Owners: [alice, bob]
 Status: active
 Intent: long-term
 RelatedFiles:
-  - Path: backend/api/user.go
+  - Path: repo://backend/api/user.go
     Note: Main API implementation
 Summary: Design document for user service API
 LastUpdated: 2025-12-19T10:00:00Z
@@ -666,7 +618,7 @@ RelatedFiles:
 
 ```yaml
 RelatedFiles:
-  - Path: backend/api/user.go
+  - Path: repo://backend/api/user.go
     Note: Main API implementation
   - Path: frontend/components/User.tsx
     Note: Frontend component consuming the API
@@ -818,7 +770,7 @@ A query consists of three parts: scope, filters, and options:
 	        Reverse:             true,
 	    },
 	})
-	```
+```
 
 **Query components:**
 

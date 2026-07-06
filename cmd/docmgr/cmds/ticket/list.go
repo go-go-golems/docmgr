@@ -22,8 +22,9 @@ func newListCommand() (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Allow `docmgr ticket list` as an alias to `docmgr ticket tickets`
-	cobraCmd.Aliases = append(cobraCmd.Aliases, "list")
+	// Canonical spelling is `ticket list` (matching `doc list`); keep `tickets` as an alias.
+	cobraCmd.Use = "list"
+	cobraCmd.Aliases = append(cobraCmd.Aliases, "tickets")
 	carapace.Gen(cobraCmd).FlagCompletion(carapace.ActionMap{
 		"root":   completion.ActionDirectories(),
 		"ticket": completion.ActionTickets(),

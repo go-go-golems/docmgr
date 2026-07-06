@@ -6,12 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/templates"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
@@ -42,10 +45,103 @@ type DoctorSettings struct {
 	StaleAfterDays  int      `glazed:"stale-after"`
 	FailOn          string   `glazed:"fail-on"`
 	DiagnosticsJSON string   `glazed:"diagnostics-json"`
+	Fix             bool     `glazed:"fix"`
+	FixAnchors      bool     `glazed:"fix-anchors"`
+	Details         bool     `glazed:"details"`
+	IncludeSources  bool     `glazed:"include-sources"`
 	// Schema printing flags (human mode only)
 	PrintTemplateSchema bool   `glazed:"print-template-schema"`
 	SchemaFormat        string `glazed:"schema-format"`
 }
+
+// Built-in vocabulary values doctor always treats as known, so a fresh
+// workspace produces zero unknown_* warnings for scaffold defaults. DocTypes
+// cover the embedded template/scaffold set (internal/templates/embedded).
+var (
+	doctorBuiltinDocTypes = []string{
+		"index", "design-doc", "reference", "playbook", "analysis", "til",
+		"skill", "log", "code-review", "script", "task-list", "tutorial",
+		"working-note",
+	}
+	doctorBuiltinIntents = []string{
+		"long-term", "ticket-specific", "only-during-ticket", "throwaway", "short-term",
+	}
+	doctorBuiltinStatuses = []string{
+		"draft", "active", "review", "complete", "archived",
+	}
+)
+
+// doctorVocab bundles the known vocabulary sets used for unknown_* checks.
+type doctorVocab struct {
+	topicSet    map[string]struct{}
+	topicList   []string
+	docTypeSet  map[string]struct{}
+	docTypeList []string
+	intentSet   map[string]struct{}
+	intentList  []string
+	statusSet   map[string]struct{}
+	statusList  []string
+	// configured is true when a vocabulary file exists on disk. When false,
+	// doctor emits a single info-level 'no vocabulary configured' finding
+	// instead of per-value unknown_* warnings.
+	configured bool
+}
+
+func newDoctorVocab(vocab *models.Vocabulary) *doctorVocab {
+	dv := &doctorVocab{
+		topicSet:   map[string]struct{}{},
+		docTypeSet: map[string]struct{}{},
+		intentSet:  map[string]struct{}{},
+		statusSet:  map[string]struct{}{},
+	}
+	add := func(set map[string]struct{}, list *[]string, slug string) {
+		slug = strings.TrimSpace(slug)
+		if slug == "" {
+			return
+		}
+		if _, ok := set[slug]; ok {
+			return
+		}
+		set[slug] = struct{}{}
+		*list = append(*list, slug)
+	}
+	for _, it := range vocab.Topics {
+		add(dv.topicSet, &dv.topicList, it.Slug)
+	}
+	for _, it := range vocab.DocTypes {
+		add(dv.docTypeSet, &dv.docTypeList, it.Slug)
+	}
+	for _, it := range vocab.Intent {
+		add(dv.intentSet, &dv.intentList, it.Slug)
+	}
+	for _, it := range vocab.Status {
+		add(dv.statusSet, &dv.statusList, it.Slug)
+	}
+	// Built-ins are always known.
+	for _, s := range doctorBuiltinDocTypes {
+		add(dv.docTypeSet, &dv.docTypeList, s)
+	}
+	for _, s := range doctorBuiltinIntents {
+		add(dv.intentSet, &dv.intentList, s)
+	}
+	for _, s := range doctorBuiltinStatuses {
+		add(dv.statusSet, &dv.statusList, s)
+	}
+	if path, err := workspace.ResolveVocabularyPath(); err == nil {
+		if _, statErr := os.Stat(path); statErr == nil {
+			dv.configured = true
+		}
+	}
+	return dv
+}
+
+// vocabRemediation renders the canonical remediation hint for an unknown
+// vocabulary value.
+func vocabRemediation(category string) string {
+	return fmt.Sprintf("add via 'docmgr vocab add --category %s --slug <slug> --description \"TODO\"' (valid categories: topics, docTypes, intent, status)", category)
+}
+
+const doctorNoVocabularyMessage = "no vocabulary configured; skipping unknown-value checks (run 'docmgr init' to seed defaults or 'docmgr vocab add --category <topics|docTypes|intent|status> --slug <slug> --description \"TODO\"')"
 
 func NewDoctorCommand() (*DoctorCommand, error) {
 	return &DoctorCommand{
@@ -59,34 +155,52 @@ ignore; lines starting with # are treated as comments.
 
 Common findings (doctor message ⇒ likely cause ⇒ how to fix):
   • invalid_frontmatter — YAML block can’t be parsed. Ensure the file starts with '---',
-    quote strings containing ':' or '#', and use 'docmgr meta update' to rewrite fields safely.
+    quote strings containing ':' or '#', and use 'docmgr meta update' to rewrite fields safely
+    (or run 'docmgr doctor --fix' to apply safe auto-fixes).
   • missing_required_fields — Title/Summary/DocType/etc. are missing. Run
     'docmgr meta update --ticket T --field FieldName --value ...' (or edit frontmatter) to add them.
-  • missing_index — Ticket directories without index.md. Re-run 'docmgr ticket create-ticket'
+  • missing_index — Ticket directories without index.md. Re-run 'docmgr ticket create'
     or copy the template back into place.
   • unknown_topics / unknown_status — Value not present in vocabulary.yaml. Either add it via
-    'docmgr vocab add --category topics --slug your-topic' (or status/doc-type) or update the doc’s fields.
-  • stale — LastUpdated is older than '--stale-after' days (default 30). Review the doc, make an update,
-    or pass '--stale-after N' if the cadence should be different for this run.
+    'docmgr vocab add --category topics --slug your-topic --description "TODO"'
+    (valid categories: topics, docTypes, intent, status) or update the doc’s fields.
+  • stale — No document in the ticket was updated within '--stale-after' days (default 30).
+    Review the ticket, make an update, or pass '--stale-after N' for a different cadence.
+
+Scope and output:
+  • RelatedFiles, vocabulary, and staleness checks run on every document in a ticket,
+    not just index.md. Staleness is per ticket: it fires only when no doc was updated recently.
+  • Documents under sources/ are skipped by default (imported material); opt in with '--include-sources'.
+  • Multi-ticket runs print a one-line rollup per ticket; pass '--details' (or '--ticket ID')
+    for the full per-issue report.
 
 Tips:
+  • '--fix' applies safe fixes: frontmatter auto-repair (same fixes as
+    'validate frontmatter --auto-fix', with .bak backups) and anchor migration.
+  • '--fix-anchors' migrates only legacy RelatedFiles paths to explicit anchors
+    (repo://pkg/foo.go, ws://<member>/<rel> for go.work siblings, docs://..., abs:///...).
+    Only entries that resolve to an existing file are rewritten; the rest are left
+    as legacy with an 'anchor_migration_skipped' warning.
   • Use '--fail-on warning' (or 'error') to make CI fail when issues are detected.
   • '--diagnostics-json path' captures rule results as JSON (use '-' for stdout) for CI/automation.
   • '--ignore-glob' is handy for suppressing known noisy paths; the command also reads patterns from
     both repository and docs-root .docmgrignore files.
 
 Examples:
-  # Validate a specific ticket workspace
+  # Validate a specific ticket workspace (full details by default)
   docmgr doctor --ticket MEN-3475
 
-  # Validate all tickets
+  # Validate all tickets (rollup summary; add --details for everything)
   docmgr doctor --all
+
+  # Apply safe fixes (frontmatter auto-repair + anchor migration)
+  docmgr doctor --ticket MEN-3475 --fix
 
   # Tighten staleness and fail CI on warnings
   docmgr doctor --all --stale-after 14 --fail-on warning
 
   # Ignore multiple dirs/globs (repeat the flags)
-  docmgr doctor --all --ignore-dir archive --ignore-dir sources --ignore-glob "*.bak" --ignore-glob "*.tmp"
+  docmgr doctor --all --ignore-dir archive --ignore-glob "*.bak" --ignore-glob "*.tmp"
 
   # Emit diagnostics JSON for scripts/CI
   docmgr doctor --ticket MEN-3475 --diagnostics-json - --with-glaze-output --output json
@@ -158,6 +272,30 @@ Examples:
 					fields.WithHelp("Write diagnostics rule output to JSON (file path or '-' for stdout)"),
 					fields.WithDefault(""),
 				),
+				fields.New(
+					"fix",
+					fields.TypeBool,
+					fields.WithHelp("Apply safe fixes: frontmatter auto-repair (creates .bak backups) and anchor migration, then re-validate."),
+					fields.WithDefault(false),
+				),
+				fields.New(
+					"fix-anchors",
+					fields.TypeBool,
+					fields.WithHelp("Migrate legacy RelatedFiles paths to explicit anchors (repo://, ws://, docs://, abs://). Subset of --fix. Entries that don't resolve to an existing file are left as-is with a warning."),
+					fields.WithDefault(false),
+				),
+				fields.New(
+					"details",
+					fields.TypeBool,
+					fields.WithHelp("Print the full per-issue report instead of the per-ticket rollup (single-ticket runs always show details)."),
+					fields.WithDefault(false),
+				),
+				fields.New(
+					"include-sources",
+					fields.TypeBool,
+					fields.WithHelp("Also check documents under sources/ (imported material; skipped by default)."),
+					fields.WithDefault(false),
+				),
 			),
 		),
 	}, nil
@@ -176,12 +314,18 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// Apply config root if present
 	settings.Root = workspace.ResolveRoot(settings.Root)
 
-	// Optional diagnostics collector for JSON output
-	var diagRenderer *docmgr.Renderer
+	// Diagnostics renderer: collects for JSON output when requested, and
+	// stays text-silent in rollup mode so multi-ticket runs really are
+	// summary-first (the per-finding text otherwise streams to stderr).
+	detailMode := settings.Details ||
+		strings.TrimSpace(settings.Doc) != "" ||
+		(strings.TrimSpace(settings.Ticket) != "" && !settings.All)
+	rendererOpts := []docmgr.Option{docmgr.WithTextOutput(detailMode)}
 	if settings.DiagnosticsJSON != "" {
-		diagRenderer = docmgr.NewRenderer(docmgr.WithCollector())
-		ctx = docmgr.ContextWithRenderer(ctx, diagRenderer)
+		rendererOpts = append(rendererOpts, docmgr.WithCollector())
 	}
+	diagRenderer := docmgr.NewRenderer(rendererOpts...)
+	ctx = docmgr.ContextWithRenderer(ctx, diagRenderer)
 
 	// If only printing template schema, skip all other processing and output
 	if settings.PrintTemplateSchema {
@@ -224,44 +368,17 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	if vocab == nil {
 		return fmt.Errorf("failed to load vocabulary: vocabulary is nil")
 	}
-	topicSet := map[string]struct{}{}
-	topicList := make([]string, 0, len(vocab.Topics))
-	for _, it := range vocab.Topics {
-		topicSet[it.Slug] = struct{}{}
-		topicList = append(topicList, it.Slug)
-	}
-	docTypeSet := map[string]struct{}{}
-	docTypeList := make([]string, 0, len(vocab.DocTypes))
-	for _, it := range vocab.DocTypes {
-		docTypeSet[it.Slug] = struct{}{}
-		docTypeList = append(docTypeList, it.Slug)
-	}
-	intentSet := map[string]struct{}{}
-	intentList := make([]string, 0, len(vocab.Intent))
-	for _, it := range vocab.Intent {
-		intentSet[it.Slug] = struct{}{}
-		intentList = append(intentList, it.Slug)
-	}
-	statusSet := map[string]struct{}{}
-	statusList := make([]string, 0, len(vocab.Status))
-	for _, it := range vocab.Status {
-		statusSet[it.Slug] = struct{}{}
-		statusList = append(statusList, it.Slug)
-	}
-	statusValidText := "none defined (add via 'docmgr vocab add --category status --slug <slug>')"
-	if len(statusList) > 0 {
-		statusValidText = strings.Join(statusList, ", ")
-	}
+	dv := newDoctorVocab(vocab)
 
 	// Single-file mode: validate one explicitly requested doc and return. This
 	// intentionally ignores workspace ignore policy: if the user names a file,
 	// doctor validates that file directly.
 	if settings.Doc != "" {
-		docPath := settings.Doc
-		if !filepath.IsAbs(docPath) {
-			docPath = filepath.Join(settings.Root, docPath)
+		docPath, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+		if err != nil {
+			return err
 		}
-		sev, err := validateSingleDoc(ctx, docPath, topicSet, topicList, docTypeSet, docTypeList, intentSet, intentList, statusSet, statusList, statusValidText, gp)
+		sev, err := validateSingleDoc(ctx, docPath, dv, gp)
 		highestSeverity = maxInt(highestSeverity, sev)
 		if diagRenderer != nil && settings.DiagnosticsJSON != "" {
 			if err := writeDiagnosticsJSON(diagRenderer, settings.DiagnosticsJSON); err != nil {
@@ -337,10 +454,17 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceMissingIndex(missing))
 	}
 
-	// Determine scope: default is repo-wide unless --ticket is provided.
+	// Determine scope: default is repo-wide unless --ticket is provided. Ticket
+	// refs use the same forgiving resolver as the other user-facing ticket
+	// commands before ScopeTicket compiles to an exact ticket_id SQL predicate.
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	requestedTicket := strings.TrimSpace(settings.Ticket)
+	if requestedTicket != "" {
+		res, err := tickets.Resolve(ctx, ws, requestedTicket)
+		if err != nil {
+			return fmt.Errorf("failed to resolve ticket %q: %w", requestedTicket, err)
+		}
+		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: res.TicketID}
 	}
 	if settings.All {
 		scope = workspace.Scope{Kind: workspace.ScopeRepo}
@@ -352,8 +476,10 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			IncludeErrors:      true,
 			IncludeDiagnostics: true,
 			// Doctor historically scans "everything"; opt into visibility for the special path tags.
+			// sources/ docs (imported material) are skipped unless --include-sources.
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  settings.IncludeSources,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},
@@ -380,14 +506,166 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 
 	// Group by ticket directory inferred from ttmp layout.
 	tickets := groupDoctorDocsByTicket(settings.Root, filtered)
+	if requestedTicket != "" && !settings.All && len(tickets) == 0 {
+		return fmt.Errorf("doctor checked zero documents for ticket %q", requestedTicket)
+	}
 
-	// Per-ticket validations.
+	// Safe fixes (--fix / --fix-anchors): rewrite documents before validation,
+	// then rebuild the index so the checks below see the fixed state.
+	// --fix = frontmatter auto-repair + anchor migration; --fix-anchors is the
+	// anchor-only subset (kept as an alias).
+	if settings.Fix || settings.FixAnchors {
+		migrated := false
+
+		// Frontmatter auto-repair (--fix only): same safe fixes as
+		// 'validate frontmatter --auto-fix', with .bak backups.
+		if settings.Fix {
+			for _, bucket := range tickets {
+				for _, h := range bucket.Docs {
+					if h.ReadErr == nil {
+						continue
+					}
+					fixed, fixes, fixErr := autoFixDocFrontmatter(h.Path)
+					if !fixed && fixErr == nil {
+						continue // no safe fix available; validation will report it
+					}
+					if fixed {
+						// The file changed on disk either way; re-index below.
+						migrated = true
+					}
+					if fixErr != nil {
+						row := types.NewRow(
+							types.MRP("ticket", bucket.TicketID),
+							types.MRP("issue", "frontmatter_fix_failed"),
+							types.MRP("severity", "warning"),
+							types.MRP("message", fmt.Sprintf("auto-fix did not produce parseable frontmatter: %v", fixErr)),
+							types.MRP("path", h.Path),
+						)
+						if err := gp.AddRow(ctx, row); err != nil {
+							return fmt.Errorf("failed to emit doctor row (frontmatter_fix_failed) for %s: %w", h.Path, err)
+						}
+						highestSeverity = maxInt(highestSeverity, 1)
+						continue
+					}
+					migrated = true
+					row := types.NewRow(
+						types.MRP("ticket", bucket.TicketID),
+						types.MRP("issue", "frontmatter_fixed"),
+						types.MRP("severity", "ok"),
+						types.MRP("message", fmt.Sprintf("auto-fixed frontmatter (%s); backup written to %s.bak", strings.Join(fixes, "; "), filepath.Base(h.Path))),
+						types.MRP("path", h.Path),
+					)
+					if err := gp.AddRow(ctx, row); err != nil {
+						return fmt.Errorf("failed to emit doctor row (frontmatter_fixed) for %s: %w", h.Path, err)
+					}
+				}
+			}
+		}
+
+		for _, bucket := range tickets {
+			for _, h := range bucket.Docs {
+				if h.ReadErr != nil || h.Doc == nil {
+					continue
+				}
+				changed, skipped, err := migrateDocAnchors(ws, h.Path)
+				if err != nil {
+					return fmt.Errorf("failed to migrate anchors for %s: %w", h.Path, err)
+				}
+				for _, skip := range skipped {
+					row := types.NewRow(
+						types.MRP("ticket", bucket.TicketID),
+						types.MRP("issue", "anchor_migration_skipped"),
+						types.MRP("severity", "warning"),
+						types.MRP("message", fmt.Sprintf("legacy related file left as-is (does not resolve to an existing file): %s", skip)),
+						types.MRP("path", h.Path),
+					)
+					if err := gp.AddRow(ctx, row); err != nil {
+						return fmt.Errorf("failed to emit doctor row (anchor_migration_skipped) for %s: %w", h.Path, err)
+					}
+					highestSeverity = maxInt(highestSeverity, 1)
+				}
+				if changed > 0 {
+					migrated = true
+					row := types.NewRow(
+						types.MRP("ticket", bucket.TicketID),
+						types.MRP("issue", "anchors_migrated"),
+						types.MRP("severity", "ok"),
+						types.MRP("message", fmt.Sprintf("migrated %d related file path(s) to explicit anchors", changed)),
+						types.MRP("path", h.Path),
+					)
+					if err := gp.AddRow(ctx, row); err != nil {
+						return fmt.Errorf("failed to emit doctor row (anchors_migrated) for %s: %w", h.Path, err)
+					}
+				}
+			}
+		}
+		if migrated {
+			// Re-index and re-query so validations reflect the rewritten docs.
+			if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+				return fmt.Errorf("failed to rebuild workspace index after anchor migration: %w", err)
+			}
+			qr, err = ws.QueryDocs(ctx, query)
+			if err != nil {
+				return fmt.Errorf("failed to query docs after anchor migration: %w", err)
+			}
+			filtered = qr.Docs
+			if len(settings.IgnoreDirs) > 0 || len(settings.IgnoreGlobs) > 0 {
+				filtered = make([]workspace.DocHandle, 0, len(qr.Docs))
+				for _, h := range qr.Docs {
+					if shouldSkipDoctorCLIPath(settings.Root, h.Path, settings.IgnoreDirs, settings.IgnoreGlobs) {
+						continue
+					}
+					filtered = append(filtered, h)
+				}
+			}
+			tickets = groupDoctorDocsByTicket(settings.Root, filtered)
+		}
+	}
+
+	// Vocabulary bootstrap: when no vocabulary file exists at all, emit ONE
+	// info-level finding and skip per-value unknown_* warnings entirely.
+	if !dv.configured {
+		row := types.NewRow(
+			types.MRP("ticket", ""),
+			types.MRP("issue", "no_vocabulary"),
+			types.MRP("severity", "info"),
+			types.MRP("message", doctorNoVocabularyMessage),
+			types.MRP("path", ""),
+		)
+		if err := gp.AddRow(ctx, row); err != nil {
+			return fmt.Errorf("failed to emit doctor row (no_vocabulary): %w", err)
+		}
+	}
+
+	// Per-ticket validations. RelatedFiles, vocabulary, and staleness checks
+	// run on every parsed document in the ticket; per-doc vocabulary findings
+	// are aggregated into one row per (ticket, category) to keep output sane.
 	prefixRe := regexp.MustCompile(`^(\d{2,3})-`)
 	for _, bucket := range tickets {
 		ticketPath := bucket.TicketDir
 		indexPath := filepath.Join(ticketPath, "index.md")
 
 		hasIssues := false
+		emit := func(issue string, severity string, message string, path string) error {
+			row := types.NewRow(
+				types.MRP("ticket", bucket.TicketID),
+				types.MRP("issue", issue),
+				types.MRP("severity", severity),
+				types.MRP("message", message),
+				types.MRP("path", path),
+			)
+			if err := gp.AddRow(ctx, row); err != nil {
+				return fmt.Errorf("failed to emit doctor row (%s) for %s: %w", issue, path, err)
+			}
+			switch severity {
+			case "error":
+				highestSeverity = maxInt(highestSeverity, 2)
+			case "warning":
+				highestSeverity = maxInt(highestSeverity, 1)
+			}
+			hasIssues = true
+			return nil
+		}
 
 		// Check for unique index.md (should only be one per ticket root)
 		indexFiles := findIndexFiles(ticketPath, shouldSkipPath)
@@ -407,73 +685,65 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 			highestSeverity = maxInt(highestSeverity, 1)
 		}
 
-		// Validate index doc (if present in the index).
-		if idx := bucket.IndexByPath[indexPath]; idx != nil {
-			if idx.ReadErr != nil {
-				hasIssues = true
-				row := types.NewRow(
-					types.MRP("ticket", bucket.TicketID),
-					types.MRP("issue", "invalid_frontmatter"),
-					types.MRP("severity", "error"),
-					types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", idx.ReadErr)),
-					types.MRP("path", indexPath),
-				)
-				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", bucket.TicketID, err)
+		// Aggregates across all docs in the ticket.
+		unknownVocab := newDoctorVocabAgg()
+		var newestUpdate time.Time
+		haveTimestamps := false
+
+		for _, h := range bucket.Docs {
+			// Only consider markdown files (index builder is md-only, but keep the guard).
+			if !strings.HasSuffix(strings.ToLower(filepath.Base(h.Path)), ".md") {
+				continue
+			}
+			dir := filepath.Dir(h.Path)
+			isRootLevel := filepath.Clean(dir) == filepath.Clean(ticketPath)
+			isIndex := isRootLevel && filepath.Base(h.Path) == "index.md"
+			// Skip root-level control files (no frontmatter by design).
+			if isRootLevel && !isIndex {
+				bn := filepath.Base(h.Path)
+				if bn == "README.md" || bn == "tasks.md" || bn == "changelog.md" {
+					continue
 				}
-				highestSeverity = maxInt(highestSeverity, 2)
+			}
+
+			// invalid frontmatter (index and non-index alike).
+			if h.ReadErr != nil {
 				// Re-parse to preserve taxonomy details when possible.
-				_, parseErr := readDocumentFrontmatter(indexPath)
+				_, parseErr := readDocumentFrontmatter(h.Path)
+				msgErr := h.ReadErr
 				if parseErr != nil {
-					renderFrontmatterParseTaxonomy(ctx, parseErr, indexPath)
-				} else {
-					renderFrontmatterParseTaxonomy(ctx, idx.ReadErr, indexPath)
+					msgErr = parseErr
 				}
-			} else if idx.Doc != nil {
-				doc := idx.Doc
-
-				// Staleness.
-				if !doc.LastUpdated.IsZero() {
-					daysSinceUpdate := time.Since(doc.LastUpdated).Hours() / 24
-					if daysSinceUpdate > float64(settings.StaleAfterDays) {
-						hasIssues = true
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "stale"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", fmt.Sprintf("LastUpdated is %.0f days old (threshold: %d days)", daysSinceUpdate, settings.StaleAfterDays)),
-							types.MRP("path", indexPath),
-							types.MRP("last_updated", doc.LastUpdated.Format("2006-01-02")),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceStale(indexPath, doc.LastUpdated, settings.StaleAfterDays))
-					}
+				if err := emit("invalid_frontmatter", "error", fmt.Sprintf("Failed to parse frontmatter: %v", msgErr), h.Path); err != nil {
+					return err
 				}
+				renderFrontmatterParseTaxonomy(ctx, msgErr, h.Path)
+				continue
+			}
+			if h.Doc == nil {
+				continue
+			}
+			doc := h.Doc
 
-				// Required fields.
+			// Staleness input: track the newest update across the ticket.
+			if !doc.LastUpdated.IsZero() {
+				haveTimestamps = true
+				if doc.LastUpdated.After(newestUpdate) {
+					newestUpdate = doc.LastUpdated
+				}
+			}
+
+			// Index-only structural checks (required/optional fields).
+			if isIndex {
 				if err := doc.Validate(); err != nil {
-					hasIssues = true
-					row := types.NewRow(
-						types.MRP("ticket", bucket.TicketID),
-						types.MRP("issue", "missing_required_fields"),
-						types.MRP("severity", "error"),
-						types.MRP("message", err.Error()),
-						types.MRP("path", indexPath),
-					)
-					if err := gp.AddRow(ctx, row); err != nil {
-						return fmt.Errorf("failed to emit doctor row (missing_required_fields) for %s: %w", bucket.TicketID, err)
+					if emitErr := emit("missing_required_fields", "error", err.Error(), h.Path); emitErr != nil {
+						return emitErr
 					}
-					highestSeverity = maxInt(highestSeverity, 2)
 					for _, field := range missingRequiredFields(doc) {
 						detail := fmt.Sprintf("%s is required", field)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(indexPath, field, detail, core.SeverityError))
+						docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(h.Path, field, detail, core.SeverityError))
 					}
 				}
-
-				// Optional fields.
 				optionalIssues := []struct {
 					field  string
 					detail string
@@ -490,201 +760,116 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 						detail string
 					}{field: "Topics", detail: "missing Topics"})
 				}
-
-				// Vocab checks.
-				var unknownTopics []string
-				for _, t := range doc.Topics {
-					if _, ok := topicSet[t]; !ok && t != "" {
-						unknownTopics = append(unknownTopics, t)
+				for _, issue := range optionalIssues {
+					if err := emit("missing_field", "warning", issue.detail, h.Path); err != nil {
+						return err
 					}
+					docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(h.Path, issue.field, issue.detail, core.SeverityWarning))
 				}
-				if len(unknownTopics) > 0 {
-					hasIssues = true
-					row := types.NewRow(
-						types.MRP("ticket", bucket.TicketID),
-						types.MRP("issue", "unknown_topics"),
-						types.MRP("severity", "warning"),
-						types.MRP("message", fmt.Sprintf("unknown topics: %v", unknownTopics)),
-						types.MRP("path", indexPath),
-					)
-					if err := gp.AddRow(ctx, row); err != nil {
-						return fmt.Errorf("failed to emit doctor row (unknown_topics) for %s: %w", bucket.TicketID, err)
+			}
+
+			// Vocabulary checks (all docs), aggregated per ticket+category.
+			if dv.configured {
+				for _, t := range doc.Topics {
+					if _, ok := dv.topicSet[t]; !ok && t != "" {
+						unknownVocab.add("topics", t)
+						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(h.Path, "Topics", t, dv.topicList))
 					}
-					highestSeverity = maxInt(highestSeverity, 1)
-					docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Topics", strings.Join(unknownTopics, ","), topicList))
 				}
 				if doc.DocType != "" {
-					if _, ok := docTypeSet[doc.DocType]; !ok {
-						hasIssues = true
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "unknown_doc_type"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", fmt.Sprintf("unknown docType: %s", doc.DocType)),
-							types.MRP("path", indexPath),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (unknown_doc_type) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "DocType", doc.DocType, docTypeList))
+					if _, ok := dv.docTypeSet[doc.DocType]; !ok {
+						unknownVocab.add("docTypes", doc.DocType)
+						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(h.Path, "DocType", doc.DocType, dv.docTypeList))
 					}
 				}
 				if doc.Intent != "" {
-					if _, ok := intentSet[doc.Intent]; !ok {
-						hasIssues = true
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "unknown_intent"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", fmt.Sprintf("unknown intent: %s", doc.Intent)),
-							types.MRP("path", indexPath),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (unknown_intent) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Intent", doc.Intent, intentList))
+					if _, ok := dv.intentSet[doc.Intent]; !ok {
+						unknownVocab.add("intent", doc.Intent)
+						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(h.Path, "Intent", doc.Intent, dv.intentList))
 					}
 				}
 				if doc.Status != "" {
-					if _, ok := statusSet[doc.Status]; !ok {
-						hasIssues = true
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "unknown_status"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status')", doc.Status, statusValidText)),
-							types.MRP("path", indexPath),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (unknown_status) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(indexPath, "Status", doc.Status, statusList))
+					if _, ok := dv.statusSet[doc.Status]; !ok {
+						unknownVocab.add("status", doc.Status)
+						docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(h.Path, "Status", doc.Status, dv.statusList))
 					}
 				}
+			}
 
-				// RelatedFiles existence checks using a doc-anchored resolver (Spec §7.3).
-				for _, rf := range doc.RelatedFiles {
-					if strings.TrimSpace(rf.Path) == "" {
-						continue
-					}
-					if strings.TrimSpace(rf.Note) == "" {
-						hasIssues = true
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "missing_related_file_note"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", fmt.Sprintf("related file has no Note: %s", rf.Path)),
-							types.MRP("path", indexPath),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (missing_related_file_note) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-					}
-
-					resolver := paths.NewResolver(paths.ResolverOptions{
-						DocsRoot:  ws.Context().Root,
-						DocPath:   indexPath,
-						ConfigDir: ws.Context().ConfigDir,
-						RepoRoot:  ws.Context().RepoRoot,
-					})
-					n := resolver.Normalize(rf.Path)
-					if !n.Exists {
-						hasIssues = true
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "missing_related_file"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", fmt.Sprintf("related file not found: %s", rf.Path)),
-							types.MRP("path", indexPath),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (missing_related_file) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewRelatedFileMissing(indexPath, rf.Path, rf.Note))
-					}
+			// RelatedFiles checks (all docs) using a doc-anchored resolver (Spec §7.3).
+			resolver := paths.NewResolver(paths.ResolverOptions{
+				DocsRoot:      ws.Context().Root,
+				DocPath:       h.Path,
+				ConfigDir:     ws.Context().ConfigDir,
+				RepoRoot:      ws.Context().RepoRoot,
+				WorkspaceRoot: ws.Context().WorkspaceRoot,
+			})
+			var missingNotes []string
+			for _, rf := range doc.RelatedFiles {
+				if strings.TrimSpace(rf.Path) == "" {
+					continue
 				}
+				if strings.TrimSpace(rf.Note) == "" {
+					missingNotes = append(missingNotes, rf.Path)
+				}
+				n := resolver.Resolve(rf.Path)
+				if !n.Exists {
+					if err := emit("missing_related_file", "warning", fmt.Sprintf("related file not found: %s", rf.Path), h.Path); err != nil {
+						return err
+					}
+					docmgr.RenderTaxonomy(ctx, docmgrctx.NewRelatedFileMissing(h.Path, rf.Path, rf.Note))
+				}
+			}
+			if len(missingNotes) > 0 {
+				if err := emit("missing_related_file_note", "warning", fmt.Sprintf("%d related file(s) have no Note: %s", len(missingNotes), summarizeList(missingNotes, 5)), h.Path); err != nil {
+					return err
+				}
+			}
 
-				if len(optionalIssues) > 0 {
-					hasIssues = true
-					for _, issue := range optionalIssues {
-						row := types.NewRow(
-							types.MRP("ticket", bucket.TicketID),
-							types.MRP("issue", "missing_field"),
-							types.MRP("severity", "warning"),
-							types.MRP("message", issue.detail),
-							types.MRP("path", indexPath),
-						)
-						if err := gp.AddRow(ctx, row); err != nil {
-							return fmt.Errorf("failed to emit doctor row (missing_field) for %s: %w", bucket.TicketID, err)
-						}
-						highestSeverity = maxInt(highestSeverity, 1)
-						docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(indexPath, issue.field, issue.detail, core.SeverityWarning))
+			// Numeric prefix policy (subdirectory files only).
+			if !isRootLevel {
+				bn := filepath.Base(h.Path)
+				if !prefixRe.MatchString(bn) {
+					if err := emit("missing_numeric_prefix", "warning", "file without numeric prefix", h.Path); err != nil {
+						return err
 					}
 				}
 			}
 		}
 
-		// Validate all markdown docs in the ticket bucket (invalid frontmatter + numeric prefix policy).
-		for _, h := range bucket.Docs {
-			// Only consider markdown files (index builder is md-only, but keep the guard).
-			if !strings.HasSuffix(strings.ToLower(filepath.Base(h.Path)), ".md") {
-				continue
+		// Aggregated unknown-vocabulary findings (one row per category).
+		for _, cat := range unknownVocab.categories() {
+			issue := map[string]string{
+				"topics":   "unknown_topics",
+				"docTypes": "unknown_doc_type",
+				"intent":   "unknown_intent",
+				"status":   "unknown_status",
+			}[cat]
+			msg := fmt.Sprintf("unknown %s value(s): %s; %s", cat, unknownVocab.describe(cat), vocabRemediation(cat))
+			if err := emit(issue, "warning", msg, ticketPath); err != nil {
+				return err
 			}
-			// Skip root-level control files.
-			dir := filepath.Dir(h.Path)
-			isRootLevel := filepath.Clean(dir) == filepath.Clean(ticketPath)
-			if isRootLevel {
-				bn := filepath.Base(h.Path)
-				if bn == "index.md" || bn == "README.md" || bn == "tasks.md" || bn == "changelog.md" {
-					continue
-				}
-			}
+		}
 
-			// invalid frontmatter
-			if h.ReadErr != nil && filepath.Base(h.Path) != "index.md" {
-				hasIssues = true
-				// Re-parse to preserve taxonomy details when possible.
-				_, parseErr := readDocumentFrontmatter(h.Path)
-				msgErr := h.ReadErr
-				if parseErr != nil {
-					msgErr = parseErr
-				}
+		// Staleness is a per-ticket concept: stale only when NO doc in the
+		// ticket was updated within the window.
+		if haveTimestamps {
+			daysSinceUpdate := time.Since(newestUpdate).Hours() / 24
+			if daysSinceUpdate > float64(settings.StaleAfterDays) {
 				row := types.NewRow(
 					types.MRP("ticket", bucket.TicketID),
-					types.MRP("issue", "invalid_frontmatter"),
-					types.MRP("severity", "error"),
-					types.MRP("message", fmt.Sprintf("Failed to parse frontmatter: %v", msgErr)),
-					types.MRP("path", h.Path),
+					types.MRP("issue", "stale"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("no document updated in %.0f days (threshold: %d days)", daysSinceUpdate, settings.StaleAfterDays)),
+					types.MRP("path", ticketPath),
+					types.MRP("last_updated", newestUpdate.Format("2006-01-02")),
 				)
 				if err := gp.AddRow(ctx, row); err != nil {
-					return fmt.Errorf("failed to emit doctor row (invalid_frontmatter) for %s: %w", h.Path, err)
+					return fmt.Errorf("failed to emit doctor row (stale) for %s: %w", bucket.TicketID, err)
 				}
-				highestSeverity = maxInt(highestSeverity, 2)
-				renderFrontmatterParseTaxonomy(ctx, msgErr, h.Path)
-			}
-
-			// numeric prefix policy (subdirectory files only).
-			if !isRootLevel {
-				bn := filepath.Base(h.Path)
-				if !prefixRe.MatchString(bn) {
-					hasIssues = true
-					row := types.NewRow(
-						types.MRP("ticket", bucket.TicketID),
-						types.MRP("issue", "missing_numeric_prefix"),
-						types.MRP("severity", "warning"),
-						types.MRP("message", "file without numeric prefix"),
-						types.MRP("path", h.Path),
-					)
-					if err := gp.AddRow(ctx, row); err != nil {
-						return fmt.Errorf("failed to emit doctor row (missing_numeric_prefix) for %s: %w", h.Path, err)
-					}
-					highestSeverity = maxInt(highestSeverity, 1)
-				}
+				highestSeverity = maxInt(highestSeverity, 1)
+				hasIssues = true
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceStale(indexPath, newestUpdate, settings.StaleAfterDays))
 			}
 		}
 
@@ -714,6 +899,146 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	return nil
+}
+
+// doctorVocabAgg aggregates unknown-vocabulary findings per category so that
+// a ticket with many docs sharing the same unknown value produces one row.
+type doctorVocabAgg struct {
+	order      []string
+	counts     map[string]map[string]int
+	valueOrder map[string][]string
+}
+
+func newDoctorVocabAgg() *doctorVocabAgg {
+	return &doctorVocabAgg{
+		counts:     map[string]map[string]int{},
+		valueOrder: map[string][]string{},
+	}
+}
+
+func (a *doctorVocabAgg) add(category string, value string) {
+	if _, ok := a.counts[category]; !ok {
+		a.counts[category] = map[string]int{}
+		a.order = append(a.order, category)
+	}
+	if _, ok := a.counts[category][value]; !ok {
+		a.valueOrder[category] = append(a.valueOrder[category], value)
+	}
+	a.counts[category][value]++
+}
+
+func (a *doctorVocabAgg) categories() []string {
+	return a.order
+}
+
+// describe renders "foo (3 docs), bar (1 doc)" for a category.
+func (a *doctorVocabAgg) describe(category string) string {
+	parts := make([]string, 0, len(a.valueOrder[category]))
+	for _, v := range a.valueOrder[category] {
+		n := a.counts[category][v]
+		unit := "docs"
+		if n == 1 {
+			unit = "doc"
+		}
+		parts = append(parts, fmt.Sprintf("%s (%d %s)", v, n, unit))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// summarizeList joins up to limit items, eliding the rest with a count.
+func summarizeList(items []string, limit int) string {
+	if len(items) <= limit {
+		return strings.Join(items, ", ")
+	}
+	return fmt.Sprintf("%s, … (%d more)", strings.Join(items[:limit], ", "), len(items)-limit)
+}
+
+// autoFixDocFrontmatter applies the same safe frontmatter fixes as
+// 'validate frontmatter --auto-fix' (quoting unsafe scalars, normalizing
+// delimiters, ...), writing a .bak backup first. It returns whether a fix was
+// written, the list of applied fixes, and an error when the fix was applied
+// but the document still fails to parse.
+func autoFixDocFrontmatter(path string) (bool, []string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return false, nil, err
+	}
+	fixes, fixedContent, err := generateFixes(raw)
+	if err != nil || fixedContent == nil {
+		// No safe fix available; leave the finding to validation.
+		return false, nil, nil
+	}
+	if err := applyAutoFix(path, raw, fixedContent); err != nil {
+		return false, nil, err
+	}
+	if _, _, parseErr := documents.ReadDocumentWithFrontmatter(path); parseErr != nil {
+		return true, fixes, fmt.Errorf("re-parse after auto-fix failed: %w", parseErr)
+	}
+	return true, fixes, nil
+}
+
+// migrateDocAnchors rewrites legacy (bare-string) RelatedFiles entries of one
+// document into explicit anchored form (repo://, ws://, docs://, abs://) using
+// the tightest-containing-anchor rule. Entries are only migrated when the
+// legacy resolution finds an existing file; ambiguous/missing entries are left
+// as legacy and reported in skipped. Already-anchored entries are untouched.
+func migrateDocAnchors(ws *workspace.Workspace, docPath string) (int, []string, error) {
+	doc, content, err := documents.ReadDocumentWithFrontmatter(docPath)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	resolver := paths.NewResolver(paths.ResolverOptions{
+		DocsRoot:      ws.Context().Root,
+		DocPath:       docPath,
+		ConfigDir:     ws.Context().ConfigDir,
+		RepoRoot:      ws.Context().RepoRoot,
+		WorkspaceRoot: ws.Context().WorkspaceRoot,
+	})
+
+	changed := 0
+	var skipped []string
+	for i, rf := range doc.RelatedFiles {
+		raw := strings.TrimSpace(rf.Path)
+		if raw == "" {
+			continue
+		}
+		if paths.IsAnchored(raw) {
+			continue
+		}
+		n := resolver.Resolve(raw)
+		abs := ""
+		if n.Exists {
+			abs = strings.TrimSpace(n.Abs)
+		}
+		if abs == "" && !filepath.IsAbs(raw) {
+			// Rescue pass for historical doc-relative ../ chains that escape
+			// the repo: the legacy resolver rejects them (containment guard),
+			// but for migration a plain doc-relative join is authoritative.
+			joined := filepath.Clean(filepath.Join(filepath.Dir(docPath), filepath.FromSlash(raw)))
+			if info, statErr := os.Stat(joined); statErr == nil && !info.IsDir() {
+				abs = joined
+			}
+		}
+		if abs == "" {
+			skipped = append(skipped, raw)
+			continue
+		}
+		anchored := resolver.AnchoredFor(abs).String()
+		if anchored == "" || anchored == raw {
+			continue
+		}
+		doc.RelatedFiles[i].Path = anchored
+		changed++
+	}
+
+	if changed == 0 {
+		return 0, skipped, nil
+	}
+	if err := documents.WriteDocumentWithFrontmatter(docPath, doc, content, true); err != nil {
+		return 0, skipped, err
+	}
+	return changed, skipped, nil
 }
 
 type doctorTicketBucket struct {
@@ -996,15 +1321,7 @@ type doctorRowCollector struct {
 func validateSingleDoc(
 	ctx context.Context,
 	docPath string,
-	topicSet map[string]struct{},
-	topicList []string,
-	docTypeSet map[string]struct{},
-	docTypeList []string,
-	intentSet map[string]struct{},
-	intentList []string,
-	statusSet map[string]struct{},
-	statusList []string,
-	statusValidText string,
+	dv *doctorVocab,
 	gp glazedMiddlewares.Processor,
 ) (int, error) {
 	highestSeverity := 0
@@ -1071,67 +1388,80 @@ func validateSingleDoc(
 		docmgr.RenderTaxonomy(ctx, docmgrctx.NewFrontmatterSchema(docPath, "Topics", "missing Topics", core.SeverityWarning))
 	}
 
-	// Vocabulary checks
-	if len(doc.Topics) > 0 {
-		var unknownTopics []string
-		for _, t := range doc.Topics {
-			if _, ok := topicSet[t]; !ok && t != "" {
-				unknownTopics = append(unknownTopics, t)
+	// Vocabulary checks. When no vocabulary file exists, emit one info-level
+	// finding instead of per-value unknown_* warnings.
+	if !dv.configured {
+		row := types.NewRow(
+			types.MRP("ticket", doc.Ticket),
+			types.MRP("issue", "no_vocabulary"),
+			types.MRP("severity", "info"),
+			types.MRP("message", doctorNoVocabularyMessage),
+			types.MRP("path", ""),
+		)
+		_ = gp.AddRow(ctx, row)
+	} else {
+		if len(doc.Topics) > 0 {
+			var unknownTopics []string
+			for _, t := range doc.Topics {
+				if _, ok := dv.topicSet[t]; !ok && t != "" {
+					unknownTopics = append(unknownTopics, t)
+				}
+			}
+			if len(unknownTopics) > 0 {
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "unknown_topics"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("unknown topics: %v; %s", unknownTopics, vocabRemediation("topics"))),
+					types.MRP("path", docPath),
+				)
+				_ = gp.AddRow(ctx, row)
+				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Topics", strings.Join(unknownTopics, ","), dv.topicList))
 			}
 		}
-		if len(unknownTopics) > 0 {
-			row := types.NewRow(
-				types.MRP("ticket", doc.Ticket),
-				types.MRP("issue", "unknown_topics"),
-				types.MRP("severity", "warning"),
-				types.MRP("message", fmt.Sprintf("unknown topics: %v", unknownTopics)),
-				types.MRP("path", docPath),
-			)
-			_ = gp.AddRow(ctx, row)
-			highestSeverity = maxInt(highestSeverity, 1)
-			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Topics", strings.Join(unknownTopics, ","), topicList))
+		if doc.DocType != "" {
+			if _, ok := dv.docTypeSet[doc.DocType]; !ok {
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "unknown_doc_type"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("unknown docType: %s; %s", doc.DocType, vocabRemediation("docTypes"))),
+					types.MRP("path", docPath),
+				)
+				_ = gp.AddRow(ctx, row)
+				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "DocType", doc.DocType, dv.docTypeList))
+			}
 		}
-	}
-	if doc.DocType != "" {
-		if _, ok := docTypeSet[doc.DocType]; !ok {
-			row := types.NewRow(
-				types.MRP("ticket", doc.Ticket),
-				types.MRP("issue", "unknown_doc_type"),
-				types.MRP("severity", "warning"),
-				types.MRP("message", fmt.Sprintf("unknown docType: %s", doc.DocType)),
-				types.MRP("path", docPath),
-			)
-			_ = gp.AddRow(ctx, row)
-			highestSeverity = maxInt(highestSeverity, 1)
-			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "DocType", doc.DocType, docTypeList))
+		if doc.Intent != "" {
+			if _, ok := dv.intentSet[doc.Intent]; !ok {
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "unknown_intent"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("unknown intent: %s; %s", doc.Intent, vocabRemediation("intent"))),
+					types.MRP("path", docPath),
+				)
+				_ = gp.AddRow(ctx, row)
+				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Intent", doc.Intent, dv.intentList))
+			}
 		}
-	}
-	if doc.Intent != "" {
-		if _, ok := intentSet[doc.Intent]; !ok {
-			row := types.NewRow(
-				types.MRP("ticket", doc.Ticket),
-				types.MRP("issue", "unknown_intent"),
-				types.MRP("severity", "warning"),
-				types.MRP("message", fmt.Sprintf("unknown intent: %s", doc.Intent)),
-				types.MRP("path", docPath),
-			)
-			_ = gp.AddRow(ctx, row)
-			highestSeverity = maxInt(highestSeverity, 1)
-			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Intent", doc.Intent, intentList))
-		}
-	}
-	if doc.Status != "" {
-		if _, ok := statusSet[doc.Status]; !ok {
-			row := types.NewRow(
-				types.MRP("ticket", doc.Ticket),
-				types.MRP("issue", "unknown_status"),
-				types.MRP("severity", "warning"),
-				types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status')", doc.Status, statusValidText)),
-				types.MRP("path", docPath),
-			)
-			_ = gp.AddRow(ctx, row)
-			highestSeverity = maxInt(highestSeverity, 1)
-			docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Status", doc.Status, statusList))
+		if doc.Status != "" {
+			if _, ok := dv.statusSet[doc.Status]; !ok {
+				statusValidText := strings.Join(dv.statusList, ", ")
+				row := types.NewRow(
+					types.MRP("ticket", doc.Ticket),
+					types.MRP("issue", "unknown_status"),
+					types.MRP("severity", "warning"),
+					types.MRP("message", fmt.Sprintf("unknown status: %s (valid values: %s; list via 'docmgr vocab list --category status'); %s", doc.Status, statusValidText, vocabRemediation("status"))),
+					types.MRP("path", docPath),
+				)
+				_ = gp.AddRow(ctx, row)
+				highestSeverity = maxInt(highestSeverity, 1)
+				docmgr.RenderTaxonomy(ctx, docmgrctx.NewVocabularyUnknown(docPath, "Status", doc.Status, dv.statusList))
+			}
 		}
 	}
 
@@ -1221,43 +1551,54 @@ func (c *DoctorCommand) Run(
 		grouped[ticket] = append(grouped[ticket], row)
 	}
 
-	var b strings.Builder
-	fmt.Fprintf(&b, "## Doctor Report (%d findings)\n\n", len(rows))
-	for _, ticket := range order {
-		fmt.Fprintf(&b, "### %s\n\n", ticket)
-		entries := grouped[ticket]
-		for _, row := range entries {
-			issue := getRowString(row, "issue")
-			severity := strings.ToUpper(getRowString(row, "severity"))
-			message := getRowString(row, "message")
-			path := getRowString(row, "path")
+	// Summary-first output: multi-ticket runs default to a one-line rollup per
+	// ticket. Single-ticket (--ticket) and single-doc (--doc) runs keep the
+	// full per-issue detail, as does --details.
+	detailMode := settings.Details ||
+		strings.TrimSpace(settings.Doc) != "" ||
+		(strings.TrimSpace(settings.Ticket) != "" && !settings.All)
 
-			if issue == "none" && severity == "OK" {
-				fmt.Fprintf(&b, "- ✅ %s\n", message)
-				continue
+	if detailMode {
+		var b strings.Builder
+		fmt.Fprintf(&b, "## Doctor Report (%d findings)\n\n", len(rows))
+		for _, ticket := range order {
+			fmt.Fprintf(&b, "### %s\n\n", ticket)
+			entries := grouped[ticket]
+			for _, row := range entries {
+				issue := getRowString(row, "issue")
+				severity := strings.ToUpper(getRowString(row, "severity"))
+				message := getRowString(row, "message")
+				path := getRowString(row, "path")
+
+				if issue == "none" && severity == "OK" {
+					fmt.Fprintf(&b, "- ✅ %s\n", message)
+					continue
+				}
+				if message == "" {
+					message = "(no message)"
+				}
+				if path != "" {
+					fmt.Fprintf(&b, "- [%s] %s — %s (path=%s)\n", severity, issue, message, path)
+				} else {
+					fmt.Fprintf(&b, "- [%s] %s — %s\n", severity, issue, message)
+				}
 			}
-			if message == "" {
-				message = "(no message)"
-			}
-			if path != "" {
-				fmt.Fprintf(&b, "- [%s] %s — %s (path=%s)\n", severity, issue, message, path)
-			} else {
-				fmt.Fprintf(&b, "- [%s] %s — %s\n", severity, issue, message)
-			}
+			fmt.Fprintln(&b)
 		}
-		fmt.Fprintln(&b)
-	}
 
-	content := b.String()
-	fd := os.Stdout.Fd()
-	if isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd) {
-		renderer, err := glamour.NewTermRenderer(
-			glamour.WithAutoStyle(),
-			glamour.WithWordWrap(0),
-		)
-		if err == nil {
-			if rendered, err := renderer.Render(content); err == nil {
-				fmt.Print(rendered)
+		content := b.String()
+		fd := os.Stdout.Fd()
+		if isatty.IsTerminal(fd) || isatty.IsCygwinTerminal(fd) {
+			renderer, err := glamour.NewTermRenderer(
+				glamour.WithAutoStyle(),
+				glamour.WithWordWrap(0),
+			)
+			if err == nil {
+				if rendered, err := renderer.Render(content); err == nil {
+					fmt.Print(rendered)
+				} else {
+					fmt.Print(content)
+				}
 			} else {
 				fmt.Print(content)
 			}
@@ -1265,7 +1606,7 @@ func (c *DoctorCommand) Run(
 			fmt.Print(content)
 		}
 	} else {
-		fmt.Print(content)
+		printDoctorRollup(order, grouped)
 	}
 
 	// Render postfix template if it exists
@@ -1332,6 +1673,100 @@ func (c *DoctorCommand) Run(
 	_ = templates.RenderVerbTemplate(verbCandidates, settings.Root, settingsMap, templateData)
 
 	return nil
+}
+
+// printDoctorRollup prints the multi-ticket summary: one line per ticket with
+// counts and top issue kinds, plus totals. Full detail stays behind --details.
+func printDoctorRollup(order []string, grouped map[string][]types.Row) {
+	type kindCount struct {
+		kind  string
+		count int
+	}
+
+	totalErrors := 0
+	totalWarnings := 0
+	ticketsWithErrors := 0
+	ticketsWithWarnings := 0
+	ticketsOK := 0
+	ticketsChecked := 0
+
+	// Global info-level findings (e.g. no_vocabulary) print once, first.
+	for _, ticket := range order {
+		for _, row := range grouped[ticket] {
+			if strings.EqualFold(getRowString(row, "severity"), "info") {
+				fmt.Printf("[INFO] %s\n", getRowString(row, "message"))
+			}
+		}
+	}
+
+	var lines []string
+	for _, ticket := range order {
+		entries := grouped[ticket]
+		errors := 0
+		warnings := 0
+		hasNonInfo := false
+		kinds := map[string]int{}
+		kindOrder := []string{}
+		for _, row := range entries {
+			severity := strings.ToLower(getRowString(row, "severity"))
+			issue := getRowString(row, "issue")
+			switch severity {
+			case "error":
+				errors++
+			case "warning":
+				warnings++
+			case "ok":
+				hasNonInfo = true
+				continue
+			default:
+				continue
+			}
+			hasNonInfo = true
+			if _, ok := kinds[issue]; !ok {
+				kindOrder = append(kindOrder, issue)
+			}
+			kinds[issue]++
+		}
+		// Groups that only carry global info findings (e.g. no_vocabulary)
+		// are not tickets; they were already printed above.
+		if !hasNonInfo {
+			continue
+		}
+		ticketsChecked++
+		if errors > 0 {
+			ticketsWithErrors++
+		} else if warnings > 0 {
+			ticketsWithWarnings++
+		} else {
+			ticketsOK++
+			continue
+		}
+		totalErrors += errors
+		totalWarnings += warnings
+
+		counts := make([]kindCount, 0, len(kindOrder))
+		for _, k := range kindOrder {
+			counts = append(counts, kindCount{kind: k, count: kinds[k]})
+		}
+		sort.SliceStable(counts, func(i, j int) bool { return counts[i].count > counts[j].count })
+		top := make([]string, 0, 3)
+		for i, kc := range counts {
+			if i >= 3 {
+				break
+			}
+			top = append(top, fmt.Sprintf("%s x%d", kc.kind, kc.count))
+		}
+		lines = append(lines, fmt.Sprintf("%s: %d error(s), %d warning(s) — top: %s", ticket, errors, warnings, strings.Join(top, ", ")))
+	}
+
+	for _, l := range lines {
+		fmt.Println(l)
+	}
+	fmt.Printf("%d ticket(s) checked: %d with errors, %d with warnings, %d ok (%d errors, %d warnings total)\n",
+		ticketsChecked, ticketsWithErrors, ticketsWithWarnings, ticketsOK, totalErrors, totalWarnings)
+	if totalErrors > 0 || totalWarnings > 0 {
+		fmt.Println("Run 'docmgr doctor --ticket <ID>' or add --details for full findings.")
+	}
 }
 
 func getRowString(row types.Row, field string) string {

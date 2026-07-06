@@ -56,8 +56,8 @@ Examples:
   # Initialize a specific root path
   docmgr init --root ttmp
 
-  # Seed the vocabulary with common defaults
-  docmgr init --root ttmp --seed-vocabulary
+  # Initialize without seeding the default vocabulary
+  docmgr init --root ttmp --seed-vocabulary=false
 `),
 			cmds.WithFlags(
 				fields.New(
@@ -75,8 +75,8 @@ Examples:
 				fields.New(
 					"seed-vocabulary",
 					fields.TypeBool,
-					fields.WithHelp("Seed a default vocabulary.yaml with common topics/docTypes/intent"),
-					fields.WithDefault(false),
+					fields.WithHelp("Seed a default vocabulary.yaml with common topics/docTypes/intent/status (default true; pass --seed-vocabulary=false to skip)"),
+					fields.WithDefault(true),
 				),
 			),
 		),

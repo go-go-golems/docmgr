@@ -129,35 +129,30 @@ CREATE TABLE IF NOT EXISTS doc_owners (
 `,
 		`CREATE INDEX IF NOT EXISTS idx_doc_owners_owner ON doc_owners(owner_lower);`,
 
-		// related_files: one row per RelatedFiles entry
+		// related_files: one row per RelatedFiles entry.
+		//
+		// Paths v2 (design doc DOCMGR-200 §8.1): one resolver produces one
+		// absolute path per entry; the previous six normalized representations
+		// collapsed into {anchor, raw_path, norm_abs} (+ norm_repo_rel for display).
 		`
 CREATE TABLE IF NOT EXISTS related_files (
     rf_id INTEGER PRIMARY KEY,
     doc_id INTEGER NOT NULL,
     note TEXT,                              -- optional note from RelatedFiles entry
 
-    -- Normalized path keys (multiple representations for reliable matching)
-    norm_canonical TEXT,                    -- canonical best-effort key (prefers repo_rel, then docs_rel, then doc_rel, then abs)
-    norm_repo_rel TEXT,                     -- repo-relative path (preferred canonical key)
-    norm_docs_rel TEXT,                     -- docs-root relative path (fallback)
-    norm_doc_rel TEXT,                      -- doc-relative path (fallback; may include ../)
-    norm_abs TEXT,                          -- absolute path (fallback)
-    norm_clean TEXT,                        -- cleaned relative path derived from raw_path (fallback)
-    anchor TEXT,                            -- which anchor was used (repo/doc/config/etc)
+    anchor TEXT,                            -- anchor that produced norm_abs (repo/ws/docs/doc/abs/config/...)
+    norm_abs TEXT,                          -- resolved absolute path (single matching key)
+    norm_repo_rel TEXT,                     -- repo-relative form when inside the repo (display)
 
-    -- Original raw path from frontmatter (for display/debugging)
+    -- Original raw path from frontmatter (anchored or legacy; for display/debugging)
     raw_path TEXT,
 
     FOREIGN KEY (doc_id) REFERENCES docs(doc_id) ON DELETE CASCADE
 );
 `,
 		`CREATE INDEX IF NOT EXISTS idx_related_files_doc_id ON related_files(doc_id);`,
-		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_canonical ON related_files(norm_canonical);`,
-		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_repo_rel ON related_files(norm_repo_rel);`,
-		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_docs_rel ON related_files(norm_docs_rel);`,
-		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_doc_rel ON related_files(norm_doc_rel);`,
 		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_abs ON related_files(norm_abs);`,
-		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_clean ON related_files(norm_clean);`,
+		`CREATE INDEX IF NOT EXISTS idx_related_files_norm_repo_rel ON related_files(norm_repo_rel);`,
 	}
 
 	for _, stmt := range ddl {

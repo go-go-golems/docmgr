@@ -1,33 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { ApiErrorAlert } from '../../components/ApiErrorAlert'
 import { EmptyState } from '../../components/EmptyState'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { timeAgo } from '../../lib/time'
+import { StatusBadge } from '../../components/StatusBadge'
 import {
   type WorkspaceTicketListItem,
   useGetWorkspaceFacetsQuery,
   useGetWorkspaceTicketsQuery,
 } from '../../services/docmgrApi'
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'active'
-      ? 'primary'
-      : status === 'review'
-        ? 'warning'
-        : status === 'complete'
-          ? 'success'
-          : status === 'draft'
-            ? 'secondary'
-            : 'secondary'
-  return (
-    <span className={`badge text-bg-${variant}`} style={{ fontWeight: 600 }}>
-      {status || 'unknown'}
-    </span>
-  )
-}
 
 function setParam(sp: URLSearchParams, key: string, value: string) {
   if (value.trim()) sp.set(key, value.trim())
@@ -84,6 +67,10 @@ function TicketRow({ t }: { t: WorkspaceTicketListItem }) {
 export function WorkspaceTicketsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [cursor, setCursor] = useState('')
+  // Local FTS input state, debounced (300ms) into the `q` URL param so each
+  // keystroke does not fire a search request.
+  const [qInput, setQInput] = useState(() => (searchParams.get('q') ?? '').trim())
+  const qDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const q = (searchParams.get('q') ?? '').trim()
   const status = (searchParams.get('status') ?? '').trim()
@@ -92,6 +79,21 @@ export function WorkspaceTicketsPage() {
   const intent = (searchParams.get('intent') ?? '').trim()
   const includeArchived = getParamBool(searchParams, 'archived', true)
   const includeStats = getParamBool(searchParams, 'stats', false)
+
+  useEffect(() => {
+    if (qInput.trim() === q) return
+    if (qDebounceRef.current) clearTimeout(qDebounceRef.current)
+    qDebounceRef.current = setTimeout(() => {
+      setCursor('')
+      const sp = new URLSearchParams(window.location.search)
+      setParam(sp, 'q', qInput)
+      setSearchParams(sp, { replace: true })
+    }, 300)
+    return () => {
+      if (qDebounceRef.current) clearTimeout(qDebounceRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qInput])
 
   const { data: facets, error: facetsError, isLoading: facetsLoading } = useGetWorkspaceFacetsQuery({
     includeArchived,
@@ -128,6 +130,7 @@ export function WorkspaceTicketsPage() {
 
   function onClear() {
     setCursor('')
+    setQInput('')
     setSearchParams(new URLSearchParams(), { replace: true })
   }
 
@@ -146,13 +149,8 @@ export function WorkspaceTicketsPage() {
               <label className="form-label">Query</label>
               <input
                 className="form-control"
-                value={q}
-                onChange={(e) => {
-                  setCursor('')
-                  const sp = new URLSearchParams(searchParams)
-                  setParam(sp, 'q', e.target.value)
-                  setSearchParams(sp, { replace: true })
-                }}
+                value={qInput}
+                onChange={(e) => setQInput(e.target.value)}
                 placeholder="FTS query (optional)"
               />
               <div className="form-text">Uses SQLite FTS5 `MATCH` syntax (when available).</div>

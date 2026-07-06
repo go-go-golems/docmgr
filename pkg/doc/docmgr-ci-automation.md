@@ -58,7 +58,7 @@ jobs:
           go-version: '1.21'
       
       - name: Install docmgr
-        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
+        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr/cmd/docmgr@latest
       
       - name: Validate documentation
         run: |
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Install docmgr
-        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
+        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr/cmd/docmgr@latest
       
       - name: Validate documentation
         run: |
@@ -139,7 +139,7 @@ validate-docs:
   stage: test
   image: golang:1.21
   script:
-    - go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
+    - go install -tags sqlite_fts5 github.com/go-go-golems/docmgr/cmd/docmgr@latest
     - docmgr doctor --all --stale-after 30 --fail-on error
   only:
     changes:
@@ -155,7 +155,7 @@ validate-docs:
   stage: test
   image: golang:1.21
   script:
-    - go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
+    - go install -tags sqlite_fts5 github.com/go-go-golems/docmgr/cmd/docmgr@latest
     - docmgr doctor --all --stale-after 30 --fail-on error || EXIT_CODE=$?
     - |
       if [ $EXIT_CODE -ne 0 ]; then
@@ -382,7 +382,7 @@ docmgr status --stale-after 7 --with-glaze-output --output json | \
 # Create similar tickets
 for i in {1..5}; do
     TICKET=PROJ-00$i
-    docmgr ticket create-ticket --ticket $TICKET --title "Feature $i" --topics backend
+    docmgr ticket create --ticket $TICKET --title "Feature $i" --topics backend
     docmgr doc add --ticket $TICKET --doc-type design-doc --title "Design $i"
 done
 
@@ -439,7 +439,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install docmgr
-        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
+        run: go install -tags sqlite_fts5 github.com/go-go-golems/docmgr/cmd/docmgr@latest
       - name: Generate report
         run: bash scripts/weekly-docs-report.sh
 ```
@@ -802,7 +802,7 @@ exit ${EXIT_CODE:-0}
 - name: Install docmgr
   run: |
     if [ ! -f ~/go/bin/docmgr ]; then
-      go install -tags sqlite_fts5 github.com/go-go-golems/docmgr@latest
+      go install -tags sqlite_fts5 github.com/go-go-golems/docmgr/cmd/docmgr@latest
     fi
 ```
 

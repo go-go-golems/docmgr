@@ -141,6 +141,7 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 			IncludeDiagnostics:  q.IncludeDiagnostics,
 			IncludeArchivedPath: q.IncludeArchivedPath,
 			IncludeScriptsPath:  q.IncludeScriptsPath,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  q.IncludeControlDocs,
 			OrderBy:             q.OrderBy,
 			Reverse:             q.Reverse,
@@ -275,10 +276,11 @@ func externalSourceMatch(externalSources []string, query string) bool {
 
 func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles models.RelatedFiles, fileQueryRaw string) ([]string, []string) {
 	docResolver := paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  ws.Context().Root,
-		DocPath:   docPath,
-		ConfigDir: ws.Context().ConfigDir,
-		RepoRoot:  ws.Context().RepoRoot,
+		DocsRoot:      ws.Context().Root,
+		DocPath:       docPath,
+		ConfigDir:     ws.Context().ConfigDir,
+		RepoRoot:      ws.Context().RepoRoot,
+		WorkspaceRoot: ws.Context().WorkspaceRoot,
 	})
 
 	fileQueryNorm := docResolver.NormalizeNoFS(fileQueryRaw)

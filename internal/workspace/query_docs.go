@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
 	"github.com/go-go-golems/docmgr/pkg/models"
@@ -34,7 +33,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 	}
 
 	if strings.TrimSpace(q.Filters.TextQuery) != "" && !w.ftsAvailable {
-		return DocQueryResult{}, ErrFTSNotAvailable
+		return DocQueryResult{}, errors.Wrap(ErrFTSNotAvailable, "full-text search requires SQLite FTS5, but this binary was built without it; rebuild with 'go build -tags sqlite_fts5' (see Makefile)")
 	}
 
 	var diags []core.Taxonomy
@@ -337,6 +336,7 @@ type DocQueryOptions struct {
 	IncludeArchivedPath bool
 	IncludeControlDocs  bool
 	IncludeScriptsPath  bool
+	IncludeSourcesPath  bool
 
 	IncludeDiagnostics bool
 }
@@ -488,43 +488,6 @@ func uniqueInt64(values ...int64) []int64 {
 		}
 		seen[v] = struct{}{}
 		out = append(out, v)
-	}
-	return out
-}
-
-// queryPathKeys returns comparable strings for matching query inputs against persisted norm_* columns.
-func queryPathKeys(resolver *paths.Resolver, raw string) []string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" || resolver == nil {
-		return nil
-	}
-	n := resolver.NormalizeNoFS(raw)
-	keys := []string{
-		strings.TrimSpace(n.Canonical),
-		strings.TrimSpace(n.RepoRelative),
-		strings.TrimSpace(n.DocsRelative),
-		strings.TrimSpace(n.DocRelative),
-		strings.TrimSpace(n.Abs),
-		strings.TrimSpace(normalizeCleanPath(raw)),
-		strings.TrimSpace(n.OriginalClean),
-	}
-	return uniqueNonEmptyStrings(keys...)
-}
-
-func uniqueNonEmptyStrings(values ...string) []string {
-	seen := map[string]struct{}{}
-	var out []string
-	for _, v := range values {
-		v = strings.TrimSpace(v)
-		if v == "" {
-			continue
-		}
-		k := filepath.ToSlash(v)
-		if _, ok := seen[k]; ok {
-			continue
-		}
-		seen[k] = struct{}{}
-		out = append(out, k)
 	}
 	return out
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/searchsvc"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -26,10 +27,8 @@ type RelateCommand struct {
 }
 
 type RelateSettings struct {
-	Ticket string `glazed:"ticket"`
-	Doc    string `glazed:"doc"`
-	// Deprecated: kept only to emit a friendly migration error if provided
-	Files            []string `glazed:"files"`
+	Ticket           string   `glazed:"ticket"`
+	Doc              string   `glazed:"doc"`
 	RemoveFiles      []string `glazed:"remove-files"`
 	FileNotes        []string `glazed:"file-note"`
 	Suggest          bool     `glazed:"suggest"`
@@ -94,13 +93,6 @@ Examples:
 					fields.TypeString,
 					fields.WithHelp("Path to a specific document to update"),
 					fields.WithDefault(""),
-				),
-				// Deprecated flag: still declared to provide a clearer migration error when used
-				fields.New(
-					"files",
-					fields.TypeStringList,
-					fields.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"),
-					fields.WithDefault([]string{}),
 				),
 				fields.New(
 					"remove-files",
@@ -183,16 +175,21 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	var ticketDir string
 
 	if settings.Doc != "" {
-		// ScopeDoc: normalize and verify doc exists in workspace index.
+		// Resolve the --doc reference forgivingly (absolute / repo-relative /
+		// docs-root-relative / unique suffix), then verify it via the index.
+		resolvedDoc, err := resolveDocRef(ctx, ws, settings.Root, settings.Doc)
+		if err != nil {
+			return err
+		}
 		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope:   workspace.Scope{Kind: workspace.ScopeDoc, DocPath: strings.TrimSpace(settings.Doc)},
-			Options: workspace.DocQueryOptions{IncludeErrors: true},
+			Scope:   workspace.Scope{Kind: workspace.ScopeDoc, DocPath: resolvedDoc},
+			Options: workspace.DocQueryOptions{IncludeErrors: true, IncludeSourcesPath: true},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to resolve --doc via workspace index: %w", err)
 		}
 		if len(res.Docs) != 1 {
-			return fmt.Errorf("expected exactly 1 doc for --doc %q, got %d", settings.Doc, len(res.Docs))
+			return fmt.Errorf("--doc %q resolved to %s, but it is not in the docs index (is it under the docs root?)", settings.Doc, resolvedDoc)
 		}
 		if res.Docs[0].ReadErr != nil {
 			return fmt.Errorf("document has invalid frontmatter (fix before relating files): %s: %v", res.Docs[0].Path, res.Docs[0].ReadErr)
@@ -202,38 +199,13 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		if settings.Ticket == "" {
 			return fmt.Errorf("must specify either --doc or --ticket")
 		}
-		// ScopeTicket: resolve ticket index doc via QueryDocs (DocType=index and basename index.md).
-		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
-			Filters: workspace.DocFilters{
-				DocType: "index",
-			},
-			Options: workspace.DocQueryOptions{IncludeErrors: true},
-		})
+		// Forgiving ticket resolution (exact ID, unique prefix, directory slug, ...).
+		ticketRes, err := tickets.Resolve(ctx, ws, settings.Ticket)
 		if err != nil {
-			return fmt.Errorf("failed to resolve ticket index via workspace index: %w", err)
+			return err
 		}
-		var candidates []workspace.DocHandle
-		for _, h := range res.Docs {
-			if filepath.Base(filepath.FromSlash(h.Path)) == "index.md" {
-				candidates = append(candidates, h)
-			}
-		}
-		if len(candidates) == 0 {
-			return fmt.Errorf("could not find index.md for ticket %q", settings.Ticket)
-		}
-		if len(candidates) > 1 {
-			paths := make([]string, 0, len(candidates))
-			for _, c := range candidates {
-				paths = append(paths, c.Path)
-			}
-			sort.Strings(paths)
-			return fmt.Errorf("found multiple index.md docs for ticket %q: %s", settings.Ticket, strings.Join(paths, ", "))
-		}
-		if candidates[0].ReadErr != nil {
-			return fmt.Errorf("ticket index has invalid frontmatter (fix before relating files): %s: %v", candidates[0].Path, candidates[0].ReadErr)
-		}
-		targetDocPath = candidates[0].Path
+		settings.Ticket = ticketRes.TicketID
+		targetDocPath = ticketRes.IndexPathAbs
 	}
 
 	targetDocPath = filepath.Clean(strings.TrimSpace(targetDocPath))
@@ -242,14 +214,17 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	}
 
 	resolver := paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  ws.Context().Root,
-		DocPath:   targetDocPath,
-		ConfigDir: ws.Context().ConfigDir,
-		RepoRoot:  ws.Context().RepoRoot,
+		DocsRoot:      ws.Context().Root,
+		DocPath:       targetDocPath,
+		ConfigDir:     ws.Context().ConfigDir,
+		RepoRoot:      ws.Context().RepoRoot,
+		WorkspaceRoot: ws.Context().WorkspaceRoot,
 	})
 
-	// Optional: collect suggestions
+	// Optional: collect suggestions (keyed by resolved absolute path; the
+	// anchored write/display form lives in suggestionPaths).
 	suggestions := map[string]reasonSet{}
+	suggestionPaths := map[string]string{}
 	// Optional notes from existing documents for the same file
 	existingNotes := map[string]map[string]bool{}
 	if settings.Suggest {
@@ -272,13 +247,13 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			// Only from git status (changed files)
 			if modified, staged, untracked, err := searchsvc.SuggestFilesFromGitStatus(searchRoot); err == nil {
 				for _, f := range modified {
-					addSuggestion(suggestions, resolver, f, "working tree modified")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "working tree modified")
 				}
 				for _, f := range staged {
-					addSuggestion(suggestions, resolver, f, "staged for commit")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "staged for commit")
 				}
 				for _, f := range untracked {
-					addSuggestion(suggestions, resolver, f, "untracked new file")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "untracked new file")
 				}
 			}
 		} else {
@@ -295,6 +270,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 					IncludeErrors:       false,
 					IncludeArchivedPath: true,
 					IncludeScriptsPath:  true,
+					IncludeSourcesPath:  true,
 					IncludeControlDocs:  true,
 					IncludeDiagnostics:  false,
 					OrderBy:             workspace.OrderByPath,
@@ -324,25 +300,28 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 						}
 					}
 					docResolver := paths.NewResolver(paths.ResolverOptions{
-						DocsRoot:  ws.Context().Root,
-						DocPath:   h.Path,
-						ConfigDir: ws.Context().ConfigDir,
-						RepoRoot:  ws.Context().RepoRoot,
+						DocsRoot:      ws.Context().Root,
+						DocPath:       h.Path,
+						ConfigDir:     ws.Context().ConfigDir,
+						RepoRoot:      ws.Context().RepoRoot,
+						WorkspaceRoot: ws.Context().WorkspaceRoot,
 					})
 					for _, rf := range h.Doc.RelatedFiles {
 						if strings.TrimSpace(rf.Path) == "" {
 							continue
 						}
-						canonical := canonicalizeWithResolver(docResolver, rf.Path)
-						if canonical == "" {
+						// Resolve with the source doc's resolver (doc-relative legacy
+						// entries), then key/anchor with the target resolver.
+						sourceKey := resolveKey(docResolver, rf.Path)
+						if sourceKey == "" {
 							continue
 						}
-						addSuggestion(suggestions, resolver, canonical, "referenced by documents")
-						if strings.TrimSpace(rf.Note) != "" {
-							if _, ok := existingNotes[canonical]; !ok {
-								existingNotes[canonical] = map[string]bool{}
+						key := addSuggestion(suggestions, suggestionPaths, resolver, sourceKey, "referenced by documents")
+						if key != "" && strings.TrimSpace(rf.Note) != "" {
+							if _, ok := existingNotes[key]; !ok {
+								existingNotes[key] = map[string]bool{}
 							}
-							existingNotes[canonical][rf.Note] = true
+							existingNotes[key][rf.Note] = true
 						}
 					}
 				}
@@ -355,24 +334,24 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 			terms = append(terms, settings.Topics...)
 			if files, err := searchsvc.SuggestFilesFromGit(searchRoot); err == nil {
 				for _, f := range files {
-					addSuggestion(suggestions, resolver, f, "recent commit activity")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "recent commit activity")
 				}
 			}
 			if files, err := searchsvc.SuggestFilesFromRipgrep(searchRoot, terms); err == nil {
 				label := fmt.Sprintf("content match: %s", searchsvc.FirstTerm(terms))
 				for _, f := range files {
-					addSuggestion(suggestions, resolver, f, label)
+					addSuggestion(suggestions, suggestionPaths, resolver, f, label)
 				}
 			}
 			if modified, staged, untracked, err := searchsvc.SuggestFilesFromGitStatus(searchRoot); err == nil {
 				for _, f := range modified {
-					addSuggestion(suggestions, resolver, f, "working tree modified")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "working tree modified")
 				}
 				for _, f := range staged {
-					addSuggestion(suggestions, resolver, f, "staged for commit")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "staged for commit")
 				}
 				for _, f := range untracked {
-					addSuggestion(suggestions, resolver, f, "untracked new file")
+					addSuggestion(suggestions, suggestionPaths, resolver, f, "untracked new file")
 				}
 			}
 		}
@@ -384,7 +363,9 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 				dedup = append(dedup, f)
 			}
 		}
-		sort.Strings(dedup)
+		sort.Slice(dedup, func(i, j int) bool {
+			return suggestionDisplay(suggestionPaths, dedup[i]) < suggestionDisplay(suggestionPaths, dedup[j])
+		})
 
 		// If we are not applying suggestions, just output them
 		if !settings.ApplySuggestions {
@@ -407,7 +388,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 					}
 				}
 				row := types.NewRow(
-					types.MRP("file", f),
+					types.MRP("file", suggestionDisplay(suggestionPaths, f)),
 					types.MRP("source", "suggested"),
 					types.MRP("reason", strings.Join(reasons, "; ")),
 				)
@@ -425,67 +406,51 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
-	// Build maps for add/remove with notes retained
+	// Build maps for add/remove with notes retained. Entries are keyed by
+	// their resolved absolute path so anchored, legacy and raw forms of the
+	// same file collapse into one entry. Existing entries keep their stored
+	// path form verbatim (legacy strings are preserved as-is; migration is a
+	// separate, explicit step: 'docmgr doctor --fix-anchors').
 	current := map[string]models.RelatedFile{}
 	for _, rf := range doc.RelatedFiles {
-		if rf.Path == "" {
+		trimmedPath := strings.TrimSpace(rf.Path)
+		if trimmedPath == "" {
 			continue
 		}
-		canonical := canonicalizeWithResolver(resolver, rf.Path)
-		if canonical == "" {
+		key := resolveKey(resolver, trimmedPath)
+		if key == "" {
 			continue
 		}
-		rf.Path = canonical
-		if existing, ok := current[canonical]; ok && strings.TrimSpace(rf.Note) != "" {
-			if merged, changed := appendNote(existing.Note, rf.Note); changed {
-				existing.Note = merged
-				current[canonical] = existing
+		rf.Path = trimmedPath
+		if existing, ok := current[key]; ok {
+			if strings.TrimSpace(rf.Note) != "" {
+				if merged, changed := appendNote(existing.Note, rf.Note); changed {
+					existing.Note = merged
+					current[key] = existing
+				}
 			}
 			continue
 		}
-		current[canonical] = rf
+		current[key] = rf
 	}
 
 	// Parse provided file-note mappings
-	rawNotes := map[string]string{}
-	for _, m := range settings.FileNotes {
-		s := strings.TrimSpace(m)
-		if s == "" {
-			continue
-		}
-		var key, val string
-		if i := strings.IndexAny(s, ":="); i >= 0 {
-			key = strings.TrimSpace(s[:i])
-			val = strings.TrimSpace(s[i+1:])
-		} else {
-			// No delimiter, skip
-			continue
-		}
-		if key != "" {
-			rawNotes[key] = strings.TrimSpace(val)
-		}
+	rawNotes, err := parseFileNotes(settings.FileNotes)
+	if err != nil {
+		return err
 	}
 
-	// Enforce deprecation: --files is no longer supported for additions
-	// We keep the flag definition at the CLI layer for a friendlier error.
-	// If any values are provided, fail fast with guidance.
-	if len(settings.Files) > 0 {
-		return fmt.Errorf("--files has been removed from 'docmgr doc relate'. Use repeated --file-note 'path:note' instead. Example: docmgr doc relate --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
-	}
-
-	// Validate that all provided file-note mappings contain a non-empty note
-	for p, n := range rawNotes {
-		if strings.TrimSpace(n) == "" {
-			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
-		}
-	}
-
-	// Canonicalize provided paths
+	// Resolve provided paths to identity keys; new entries are written with an
+	// explicit anchor (tightest containing anchor rule).
 	noteMap := map[string]string{}
+	writePaths := map[string]string{}
 	for rawPath, note := range rawNotes {
-		key := canonicalizeWithResolver(resolver, rawPath)
+		key := resolveKey(resolver, rawPath)
 		if key == "" {
 			continue
+		}
+		if _, ok := writePaths[key]; !ok {
+			writePaths[key] = anchoredForWrite(resolver, rawPath)
 		}
 		if existing, ok := noteMap[key]; ok {
 			if merged, changed := appendNote(existing, note); changed {
@@ -502,15 +467,15 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	unchangedNotes := []string{}
 	seenUnchanged := map[string]struct{}{}
 	for _, rf := range settings.RemoveFiles {
-		canonical := canonicalizeWithResolver(resolver, rf)
-		if canonical == "" {
-			canonical = filepath.ToSlash(strings.TrimSpace(rf))
+		key := resolveKey(resolver, rf)
+		if key == "" {
+			key = filepath.ToSlash(strings.TrimSpace(rf))
 		}
-		if canonical == "" {
+		if key == "" {
 			continue
 		}
-		if _, ok := current[canonical]; ok {
-			delete(current, canonical)
+		if _, ok := current[key]; ok {
+			delete(current, key)
 			removedCount++
 		} else {
 			skippedRemovals++
@@ -520,23 +485,23 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	// Apply additions / updates from file-note mappings only
 	addedCount := 0
 	updatedCount := 0
-	for path, note := range noteMap {
-		if rf, ok := current[path]; ok {
+	for key, note := range noteMap {
+		if rf, ok := current[key]; ok {
 			if strings.TrimSpace(note) != "" {
 				merged, changed := appendNote(rf.Note, note)
 				if changed {
 					rf.Note = merged
-					current[path] = rf
+					current[key] = rf
 					updatedCount++
 				} else {
-					if _, seen := seenUnchanged[path]; !seen {
-						unchangedNotes = append(unchangedNotes, path)
-						seenUnchanged[path] = struct{}{}
+					if _, seen := seenUnchanged[key]; !seen {
+						unchangedNotes = append(unchangedNotes, rf.Path)
+						seenUnchanged[key] = struct{}{}
 					}
 				}
 			}
 		} else {
-			current[path] = models.RelatedFile{Path: path, Note: note}
+			current[key] = models.RelatedFile{Path: writePaths[key], Note: note}
 			addedCount++
 		}
 	}
@@ -555,7 +520,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 				if note == "" {
 					note = strings.Join(reasonList, "; ")
 				}
-				current[f] = models.RelatedFile{Path: f, Note: note}
+				current[f] = models.RelatedFile{Path: suggestionDisplay(suggestionPaths, f), Note: note}
 				addedCount++
 			} else if note := noteMap[f]; note != "" {
 				rf := current[f]
@@ -565,7 +530,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 					updatedCount++
 				} else {
 					if _, seen := seenUnchanged[f]; !seen {
-						unchangedNotes = append(unchangedNotes, f)
+						unchangedNotes = append(unchangedNotes, rf.Path)
 						seenUnchanged[f] = struct{}{}
 					}
 				}
@@ -602,16 +567,12 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		return gp.AddRow(ctx, row)
 	}
 
-	// Serialize back to sorted slice
-	keys := make([]string, 0, len(current))
-	for f := range current {
-		keys = append(keys, f)
+	// Serialize back to a slice sorted by the stored path form
+	out := make(models.RelatedFiles, 0, len(current))
+	for _, rf := range current {
+		out = append(out, rf)
 	}
-	sort.Strings(keys)
-	out := make(models.RelatedFiles, 0, len(keys))
-	for _, k := range keys {
-		out = append(out, current[k])
-	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
 	doc.RelatedFiles = out
 
 	// Preserve existing content: rewrite file with updated frontmatter
@@ -629,6 +590,58 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		types.MRP("unchanged", strings.Join(unchangedNotes, ", ")),
 	)
 	return gp.AddRow(ctx, row)
+}
+
+// parseFileNotes parses repeated --file-note values into a path -> note map.
+// Each value must use the 'path:note' (or 'path=note') format with a non-empty
+// path and note. Anchored paths (repo://..., ws://..., abs:///..., ...) are
+// supported: the delimiter search starts after the '<scheme>://' marker so the
+// scheme's colon is not mistaken for the path/note separator.
+func parseFileNotes(fileNotes []string) (map[string]string, error) {
+	notes := map[string]string{}
+	for _, m := range fileNotes {
+		s := strings.TrimSpace(m)
+		if s == "" {
+			continue
+		}
+		searchFrom := 0
+		if idx := anchoredSchemePrefixLen(s); idx > 0 {
+			searchFrom = idx
+		}
+		i := strings.IndexAny(s[searchFrom:], ":=")
+		if i < 0 {
+			return nil, fmt.Errorf("malformed --file-note value %q: expected 'path:note' (or 'path=note')", m)
+		}
+		i += searchFrom
+		key := strings.TrimSpace(s[:i])
+		val := strings.TrimSpace(s[i+1:])
+		if key == "" {
+			return nil, fmt.Errorf("malformed --file-note value %q: empty path (expected 'path:note')", m)
+		}
+		if val == "" {
+			return nil, fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", key)
+		}
+		notes[key] = val
+	}
+	return notes, nil
+}
+
+// anchoredSchemePrefixLen returns the length of a known anchor-scheme prefix
+// ("repo://", "ws://", "docs://", "doc://", "abs://") at the start of s, or 0
+// when s does not start with one.
+func anchoredSchemePrefixLen(s string) int {
+	i := strings.Index(s, "://")
+	if i <= 0 {
+		return 0
+	}
+	switch paths.Scheme(strings.ToLower(s[:i])) {
+	case paths.SchemeRepo, paths.SchemeWs, paths.SchemeDocs, paths.SchemeDoc, paths.SchemeAbs:
+		return i + len("://")
+	case paths.SchemeLegacy:
+		return 0
+	default:
+		return 0
+	}
 }
 
 func appendNote(existing, addition string) (string, bool) {
@@ -650,7 +663,11 @@ func appendNote(existing, addition string) (string, bool) {
 	return existing + "\n" + addition, true
 }
 
-func canonicalizeWithResolver(resolver *paths.Resolver, raw string) string {
+// resolveKey returns the identity key used to deduplicate and remove
+// RelatedFiles entries: the resolved absolute path (one resolver for anchored
+// and legacy forms alike), falling back to the cleaned raw string when the
+// path cannot be resolved against any anchor.
+func resolveKey(resolver *paths.Resolver, raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return ""
@@ -658,31 +675,65 @@ func canonicalizeWithResolver(resolver *paths.Resolver, raw string) string {
 	if resolver == nil {
 		return filepath.ToSlash(raw)
 	}
-	normalized := resolver.Normalize(raw)
-	switch {
-	case strings.TrimSpace(normalized.Canonical) != "":
-		return normalized.Canonical
-	case strings.TrimSpace(normalized.Abs) != "":
-		return normalized.Abs
-	case strings.TrimSpace(normalized.OriginalClean) != "":
-		return normalized.OriginalClean
-	default:
-		return filepath.ToSlash(raw)
+	n := resolver.Resolve(raw)
+	if strings.TrimSpace(n.Abs) != "" {
+		return filepath.ToSlash(strings.TrimSpace(n.Abs))
 	}
+	if strings.TrimSpace(n.Canonical) != "" {
+		return strings.TrimSpace(n.Canonical)
+	}
+	return filepath.ToSlash(raw)
 }
 
-func addSuggestion(out map[string]reasonSet, resolver *paths.Resolver, rawPath, reason string) string {
-	canonical := canonicalizeWithResolver(resolver, rawPath)
-	if canonical == "" {
+// anchoredForWrite returns the anchored path string persisted for a newly
+// related file (design doc DOCMGR-200 §8.1): resolve the input to an absolute
+// path, then stamp the tightest containing anchor (repo:// > ws://<member> >
+// docs:// > abs://). Repo-escaping ../ chains are never emitted. Unresolvable
+// inputs fall back to the cleaned raw string (legacy form).
+func anchoredForWrite(resolver *paths.Resolver, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
 		return ""
 	}
-	if _, ok := out[canonical]; !ok {
-		out[canonical] = reasonSet{}
+	if resolver == nil {
+		return filepath.ToSlash(raw)
+	}
+	n := resolver.Resolve(raw)
+	abs := strings.TrimSpace(n.Abs)
+	if abs == "" {
+		if strings.TrimSpace(n.Canonical) != "" {
+			return strings.TrimSpace(n.Canonical)
+		}
+		return filepath.ToSlash(raw)
+	}
+	return resolver.AnchoredFor(abs).String()
+}
+
+// suggestionDisplay returns the anchored display/write form of a suggestion key.
+func suggestionDisplay(pathsByKey map[string]string, key string) string {
+	if p := strings.TrimSpace(pathsByKey[key]); p != "" {
+		return p
+	}
+	return key
+}
+
+func addSuggestion(out map[string]reasonSet, pathsByKey map[string]string, resolver *paths.Resolver, rawPath, reason string) string {
+	key := resolveKey(resolver, rawPath)
+	if key == "" {
+		return ""
+	}
+	if _, ok := out[key]; !ok {
+		out[key] = reasonSet{}
+	}
+	if pathsByKey != nil {
+		if _, ok := pathsByKey[key]; !ok {
+			pathsByKey[key] = anchoredForWrite(resolver, rawPath)
+		}
 	}
 	if reason != "" {
-		out[canonical][reason] = true
+		out[key][reason] = true
 	}
-	return canonical
+	return key
 }
 
 // inferTicketDirFromDocPath best-effort returns the ticket directory for a doc under docsRoot.
@@ -743,32 +794,33 @@ func (c *RelateCommand) Run(
 
 	first := collector.rows[0]
 	if _, ok := first.Get("doc"); ok {
-		docPath, _ := first.Get("doc")
+		docPathVal, _ := first.Get("doc")
+		docPath := displayPathForCwd(fmt.Sprint(docPathVal))
 		statusVal, _ := first.Get("status")
 		status := fmt.Sprint(statusVal)
 		unchangedVal, _ := first.Get("unchanged")
 		unchanged := strings.TrimSpace(fmt.Sprint(unchangedVal))
 		if status == "noop" {
 			reasonVal, _ := first.Get("reason")
-			fmt.Printf("No related file changes for %v\n", docPath)
-			if reasonVal != nil {
-				fmt.Printf("- Reason: %v\n", reasonVal)
-			}
-			if unchanged != "" && unchanged != "<nil>" {
-				fmt.Printf("- Unchanged: %s\n", unchanged)
+			reason := strings.TrimSpace(fmt.Sprint(reasonVal))
+			if reason == "" || reason == "<nil>" {
+				fmt.Printf("no related file changes for %v\n", docPath)
+			} else {
+				fmt.Printf("no related file changes for %v (%s)\n", docPath, reason)
 			}
 			return nil
 		}
 		added, _ := first.Get("added")
 		updated, _ := first.Get("updated")
 		removed, _ := first.Get("removed")
-		total, _ := first.Get("total")
-		fmt.Printf("Related files updated for %v\n", docPath)
-		fmt.Printf("- Added: %v\n", added)
-		fmt.Printf("- Updated: %v\n", updated)
-		fmt.Printf("- Removed: %v\n", removed)
-		fmt.Printf("- Total: %v\n", total)
-		if unchanged != "" && unchanged != "<nil>" {
+		touched := 0
+		for _, v := range []interface{}{added, updated, removed} {
+			if n, ok := v.(int); ok {
+				touched += n
+			}
+		}
+		fmt.Printf("related %d file(s) to %v (added %v, updated %v, removed %v)\n", touched, docPath, added, updated, removed)
+		if VerboseEnabled() && unchanged != "" && unchanged != "<nil>" {
 			fmt.Printf("- Unchanged (already present with same note): %s\n", unchanged)
 		}
 		return nil

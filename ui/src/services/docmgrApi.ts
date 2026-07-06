@@ -142,6 +142,12 @@ export type WorkspaceTopicDetailResponse = {
 export type RelatedFile = {
   path: string
   note?: string
+  // Server-side resolution of anchored paths (repo://, ws://, docs://, abs://)
+  // and legacy bare strings. Optional: some endpoints return raw entries only.
+  anchor?: string
+  root?: 'repo' | 'docs' | 'abs'
+  resolvedPath?: string
+  exists?: boolean
 }
 
 export type SearchDocResult = {
@@ -314,6 +320,9 @@ export type TicketTasksItem = {
   id: number
   checked: boolean
   text: string
+  // Stable short ID stored as an invisible marker in tasks.md; present for
+  // tasks created via `docmgr task add` or migrated via `docmgr task migrate`.
+  stableId?: string
 }
 
 export type TicketTasksSection = {
@@ -336,14 +345,70 @@ export type TicketGraphResponse = {
   stats: { nodes: number; edges: number }
 }
 
+export type DocMetaUpdateResponse = {
+  path: string
+  field: string
+  value: string
+  status: string
+}
+
+export type DocRelateResponse = {
+  path: string
+  added: number
+  updated: number
+  removed: number
+  total: number
+  status: string
+}
+
+export type ChangelogEntry = {
+  date: string
+  title: string
+  heading: string
+  body: string
+}
+
+export type TicketChangelogResponse = {
+  ticket: string
+  exists: boolean
+  path: string
+  entries: ChangelogEntry[]
+}
+
+export type DoctorFinding = {
+  ticket: string
+  issue: string
+  severity: string
+  message: string
+  path: string
+}
+
+export type DoctorRollupItem = {
+  ticket: string
+  errors: number
+  warnings: number
+  infos: number
+  status: string
+}
+
+export type WorkspaceDoctorResponse = {
+  ticket: string
+  totals: {
+    findings: number
+    errors: number
+    warnings: number
+    infos: number
+    ticketsChecked: number
+  }
+  rollup: DoctorRollupItem[]
+  findings: DoctorFinding[]
+}
+
 export const docmgrApi = createApi({
   reducerPath: 'docmgrApi',
   baseQuery: fetchBaseQuery({ baseUrl: '/api/v1' }),
-  tagTypes: ['Workspace', 'Search', 'Ticket'],
+  tagTypes: ['Workspace', 'Search', 'Ticket', 'Doc', 'Doctor'],
   endpoints: (builder) => ({
-    healthz: builder.query<{ ok: boolean }, void>({
-      query: () => '/healthz',
-    }),
     getWorkspaceStatus: builder.query<WorkspaceStatus, void>({
       query: () => '/workspace/status',
       providesTags: ['Workspace'],
@@ -518,6 +583,28 @@ export const docmgrApi = createApi({
         url: '/docs/get',
         params: { path: args.path },
       }),
+      providesTags: (_r, _e, args) => [{ type: 'Doc', id: args.path }],
+    }),
+
+    updateDocMeta: builder.mutation<DocMetaUpdateResponse, { path: string; field: string; value: string }>({
+      query: (args) => ({
+        url: '/docs/meta',
+        method: 'POST',
+        body: { path: args.path, field: args.field, value: args.value },
+      }),
+      invalidatesTags: (_r, _e, args) => [{ type: 'Doc', id: args.path }, 'Workspace', 'Search', 'Doctor'],
+    }),
+
+    relateDoc: builder.mutation<
+      DocRelateResponse,
+      { path: string; add?: { path: string; note?: string }[]; remove?: string[] }
+    >({
+      query: (args) => ({
+        url: '/docs/relate',
+        method: 'POST',
+        body: { path: args.path, add: args.add ?? [], remove: args.remove ?? [] },
+      }),
+      invalidatesTags: (_r, _e, args) => [{ type: 'Doc', id: args.path }, 'Workspace', 'Search', 'Doctor'],
     }),
     getFile: builder.query<FileGetResponse, { path: string; root?: 'repo' | 'docs' }>({
       query: (args) => ({
@@ -563,13 +650,37 @@ export const docmgrApi = createApi({
       providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
     }),
 
-    checkTicketTasks: builder.mutation<{ ok: boolean }, { ticket: string; ids: number[]; checked: boolean }>({
+    checkTicketTasks: builder.mutation<{ ok: boolean }, { ticket: string; refs: string[]; checked: boolean }>({
       query: (args) => ({
         url: '/tickets/tasks/check',
         method: 'POST',
-        body: { ticket: args.ticket, ids: args.ids, checked: args.checked },
+        body: { ticket: args.ticket, refs: args.refs, checked: args.checked },
       }),
-      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+      // Optimistic toggle: patch the cached tasks so the checkbox flips
+      // immediately; roll back if the server rejects the write.
+      async onQueryStarted(args, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          docmgrApi.util.updateQueryData('getTicketTasks', { ticket: args.ticket }, (draft) => {
+            const refs = new Set(args.refs)
+            let done = 0
+            let total = 0
+            for (const sec of draft.sections ?? []) {
+              for (const it of sec.items ?? []) {
+                if (refs.has(it.stableId ?? String(it.id))) it.checked = args.checked
+                total++
+                if (it.checked) done++
+              }
+            }
+            draft.stats = { total, done }
+          }),
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
+      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }, 'Workspace'],
     }),
 
     addTicketTask: builder.mutation<{ ok: boolean }, { ticket: string; section: string; text: string }>({
@@ -578,7 +689,35 @@ export const docmgrApi = createApi({
         method: 'POST',
         body: { ticket: args.ticket, section: args.section, text: args.text },
       }),
-      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }, 'Workspace'],
+    }),
+
+    getTicketChangelog: builder.query<TicketChangelogResponse, { ticket: string }>({
+      query: (args) => ({ url: '/tickets/changelog', params: { ticket: args.ticket } }),
+      providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    appendTicketChangelog: builder.mutation<
+      { ok: boolean; ticket: string; path: string; date: string },
+      { ticket: string; title?: string; entry: string }
+    >({
+      query: (args) => ({
+        url: '/tickets/changelog',
+        method: 'POST',
+        body: { ticket: args.ticket, title: args.title ?? '', entry: args.entry },
+      }),
+      invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }, 'Workspace'],
+    }),
+
+    getWorkspaceDoctor: builder.query<WorkspaceDoctorResponse, { ticket?: string; staleAfter?: number }>({
+      query: (args) => ({
+        url: '/workspace/doctor',
+        params: {
+          ticket: args.ticket ?? '',
+          staleAfter: args.staleAfter ?? 30,
+        },
+      }),
+      providesTags: ['Doctor'],
     }),
 
     getTicketGraph: builder.query<
@@ -618,11 +757,16 @@ export const {
   useLazySearchDocsQuery,
   useLazySearchFilesQuery,
   useGetDocQuery,
+  useUpdateDocMetaMutation,
+  useRelateDocMutation,
   useGetFileQuery,
   useGetTicketQuery,
   useGetTicketDocsQuery,
   useGetTicketTasksQuery,
   useCheckTicketTasksMutation,
   useAddTicketTaskMutation,
+  useGetTicketChangelogQuery,
+  useAppendTicketChangelogMutation,
+  useGetWorkspaceDoctorQuery,
   useGetTicketGraphQuery,
 } = docmgrApi

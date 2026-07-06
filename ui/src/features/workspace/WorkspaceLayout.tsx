@@ -25,6 +25,7 @@ function ShellNav() {
       {navLink('/search', 'Search')}
       {navLink('/workspace/topics', 'Topics')}
       {navLink('/workspace/recent', 'Recent')}
+      {navLink('/workspace/health', 'Health')}
     </div>
   )
 }
@@ -66,7 +67,7 @@ export function WorkspaceLayout() {
 
       {wsError ? (
         <div className="alert alert-warning">
-          Workspace status unavailable. Is the server running on <code>127.0.0.1:3001</code>?
+          Workspace status unavailable. Is <code>docmgr api serve</code> running? (dev: <code>make dev-backend</code>)
         </div>
       ) : null}
 

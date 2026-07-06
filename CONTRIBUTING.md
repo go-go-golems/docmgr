@@ -6,8 +6,9 @@ Thank you for your interest in contributing to docmgr! This guide will help you 
 
 ### Prerequisites
 
-- Go 1.24 or later
+- Go 1.25 or later
 - Git
+- (Web UI only) pnpm and a Dagger-capable Docker setup, for `make ui-build`
 
 ### Getting Started
 
@@ -19,158 +20,89 @@ cd docmgr
 # Download dependencies
 go mod download
 
-# Build the project
-go build ./cmd/docmgr
+# Build the project (sqlite_fts5 enables full-text search)
+go build -tags sqlite_fts5 ./cmd/docmgr
 
 # Run tests
 go test ./...
 
-# Install locally (optional)
+# Install locally (optional; also builds/embeds the web UI)
 make install
 ```
 
 ## Architecture
 
-docmgr is built using the [Glazed](https://github.com/go-go-golems/glazed) framework, which provides a consistent CLI structure and output formatting.
+docmgr is built using the [Glazed](https://github.com/go-go-golems/glazed) framework, which provides a consistent CLI structure and output formatting (dual-mode: human text by default, structured output via `--with-glaze-output`).
 
 ### Directory Structure
 
 ```
 docmgr/
-├── cmd/docmgr/          # Main CLI entry point
-│   └── main.go          # Command registration and Cobra setup
+├── cmd/docmgr/           # Main CLI entry point
+│   ├── main.go           # Help system setup + Execute
+│   └── cmds/             # Command registration
+│       ├── root.go       # Root command; calls <group>.Attach(rootCmd)
+│       ├── ticket/       # ticket create/show/list/rename/close/move/graph
+│       ├── doc/          # doc add/list/search/relate/move/...
+│       ├── tasks/        # task add/list/check/uncheck/edit/remove/migrate
+│       └── ...           # api, changelog, meta, vocab, skill, validate, ...
 ├── pkg/
-│   ├── commands/         # Command implementations
-│   │   ├── add.go        # Add document command
-│   │   ├── config.go     # Configuration management
-│   │   ├── create_ticket.go
-│   │   ├── doctor.go     # Validation command
-│   │   └── ...           # Other commands
-│   ├── models/           # Core data structures
-│   │   └── document.go   # Document, Vocabulary, RelatedFiles types
-│   ├── doc/              # Embedded help documentation
-│   │   ├── docmgr-how-to-use.md
-│   │   ├── docmgr-how-to-setup.md
-│   │   └── ...
-│   └── utils/            # Utility functions
-│       └── slug.go       # Slug generation
-├── test-scenarios/       # Integration test scenarios
+│   ├── commands/         # Command implementations (business logic)
+│   ├── models/           # Core data structures (Document, Vocabulary, ...)
+│   ├── diagnostics/      # Diagnostics taxonomies + rendering rules
+│   └── doc/              # Embedded help documentation (docmgr help --all)
+├── internal/
+│   ├── workspace/        # Workspace discovery, config resolution, SQLite index
+│   ├── paths/            # Anchored-path parser + resolver (repo://, ws://, ...)
+│   ├── httpapi/          # HTTP API server (/api/v1/*)
+│   └── web/              # Embedded SPA build/serve plumbing
+├── ui/                   # Web UI (pnpm + Vite + React + RTK Query)
+├── test-scenarios/       # Bash E2E scenario suite
 └── ttmp/                 # Documentation workspace (for docmgr itself)
 ```
 
 ### Key Components
 
-#### Commands (`pkg/commands/`)
+#### Commands (`pkg/commands/` + `cmd/docmgr/cmds/`)
 
-Each command is implemented as a Glazed command:
+Each verb is implemented as a Glazed command:
 
-- Commands implement the `glazed.Command` interface
-- Use Glazed layers for parameter parsing
-- Support both human-friendly and structured output (JSON/YAML/CSV)
-- Commands are registered in `cmd/docmgr/main.go`
+- Business logic lives in `pkg/commands/` (one file per verb)
+- Cobra wiring lives in `cmd/docmgr/cmds/<group>/`; each group package exposes an `Attach(rootCmd *cobra.Command) error` function that builds and registers its subcommands
+- Groups are registered centrally in `cmd/docmgr/cmds/root.go`
+- Commands support both human-friendly output and structured output (JSON/YAML/CSV via `--with-glaze-output`)
 
 #### Data Models (`pkg/models/`)
 
 - **Document**: Core document metadata structure with YAML frontmatter
-- **Vocabulary**: Controlled vocabulary for topics, doc types, and intents
-- **RelatedFiles**: List of related code files with optional notes
-- **TicketWorkspace**: Metadata about a ticket's documentation workspace
+- **Vocabulary**: Controlled vocabulary for topics, doc types, intents, and statuses
+- **RelatedFiles**: List of related code files with notes; paths are persisted as explicit anchors (`repo://`, `ws://`, `docs://`, `abs://` — see `docmgr help path-anchors`)
 
-#### Configuration (`pkg/commands/config.go`)
+#### Configuration (`internal/workspace/config.go`)
 
-docmgr resolves its documentation root using a 6-level fallback chain:
+docmgr resolves its documentation root using this fallback chain (`workspace.ResolveRoot`):
 
-1. `--root` flag (explicit command-line argument)
-2. `.ttmp.yaml` in current directory
-3. `.ttmp.yaml` in parent directories (walk up tree)
-4. `DOCMGR_ROOT` environment variable
-5. Git repository root: `<git-root>/ttmp`
-6. Default: `ttmp` in current directory
+1. `--root` flag (explicit command-line argument; relative paths are anchored on CWD)
+2. `.ttmp.yaml` config file — located via the `DOCMGR_CONFIG` environment variable if set, otherwise by walking up the directory tree from CWD; its `root:` value is resolved relative to the config file's directory
+3. Git repository root: `<git-root>/ttmp`
+4. Default: `ttmp` in the current directory
+
+Set `DOCMGR_DEBUG=1` to trace the resolution. Most commands should not call `ResolveRoot` directly — use `workspace.DiscoverWorkspace()` which wraps it.
 
 ## Adding a New Command
 
-### Step 1: Create Command File
+The authoritative, up-to-date walkthrough is the embedded help topic:
 
-Create a new file in `pkg/commands/` following the naming pattern `{action}.go`:
-
-```go
-package commands
-
-import (
-	"github.com/go-go-golems/glazed/pkg/cmds"
-	"github.com/go-go-golems/glazed/pkg/cmds/layers"
-	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
-)
-
-func NewMyActionCommand() (*cmds.Command, error) {
-	return cmds.NewCommand(
-		cmds.WithShort("Short description"),
-		cmds.WithLong("Long description"),
-		cmds.WithFlags(
-			parameters.NewParameterDefinition(
-				"flag-name",
-				parameters.ParameterTypeString,
-				parameters.WithHelp("Flag description"),
-				parameters.WithDefault("default-value"),
-			),
-		),
-		cmds.WithRunFunc(func(ctx context.Context, ps map[string]interface{}) error {
-			// Command implementation
-			return nil
-		}),
-	)
-}
+```bash
+docmgr help how-to-add-cli-verbs
 ```
 
-### Step 2: Register Command in main.go
+(Source: `pkg/doc/docmgr-how-to-add-cli-verbs.md`.) It covers the current Glazed APIs — command structs embedding `cmds.NewCommandDescription`, settings structs with `glazed:` tags, dual-mode (`BareCommand`/`GlazeCommand`) output, the `Attach()` registration pattern, and workspace integration. In short:
 
-Add the command to `cmd/docmgr/main.go`:
-
-```go
-// Create my-action command
-myActionCmd, err := commands.NewMyActionCommand()
-if err != nil {
-    fmt.Fprintf(os.Stderr, "Error creating my-action command: %v\n", err)
-    os.Exit(1)
-}
-
-cobraMyActionCmd, err := cli.BuildCobraCommand(myActionCmd,
-    cli.WithParserConfig(cli.CobraParserConfig{
-        ShortHelpLayers: []string{layers.DefaultSlug},
-        MiddlewaresFunc: cli.CobraCommandDefaultMiddlewares,
-    }),
-    cli.WithCobraMiddlewaresFunc(cli.CobraCommandDefaultMiddlewares),
-    cli.WithCobraShortHelpLayers(layers.DefaultSlug),
-)
-if err != nil {
-    fmt.Fprintf(os.Stderr, "Error building my-action command: %v\n", err)
-    os.Exit(1)
-}
-
-rootCmd.AddCommand(cobraMyActionCmd)
-```
-
-### Step 3: Add Tests
-
-Create `{action}_test.go` in the same directory:
-
-```go
-package commands
-
-import (
-	"testing"
-)
-
-func TestMyActionCommand(t *testing.T) {
-	// Test implementation
-}
-```
-
-### Step 4: Update Documentation
-
-- Add help text in the command's `WithLong()` description
-- If the command introduces new concepts, consider adding to embedded docs in `pkg/doc/`
-- Update README.md if the command is a major feature
+1. Implement the command in `pkg/commands/<action>.go`
+2. Wire it up in `cmd/docmgr/cmds/<group>/<action>.go` and register it in the group's `Attach()`
+3. If it is a new group, add a `<group>.Attach(rootCmd)` call in `cmd/docmgr/cmds/root.go`
+4. Add tests (`pkg/commands/<action>_test.go`) and, if the command introduces new concepts, a help topic in `pkg/doc/`
 
 ## Testing
 
@@ -179,6 +111,9 @@ func TestMyActionCommand(t *testing.T) {
 ```bash
 # Run all tests
 go test ./...
+
+# Include FTS5-backed search paths
+go test -tags sqlite_fts5 ./...
 
 # Run tests with verbose output
 go test -v ./...
@@ -190,13 +125,13 @@ go test ./pkg/commands
 go test -cover ./...
 ```
 
-### Integration Tests
+### Integration Tests (scenario suite)
 
-docmgr includes integration test scenarios in `test-scenarios/testing-doc-manager/`:
+docmgr includes end-to-end scenarios in `test-scenarios/testing-doc-manager/`. The runner refuses to fall back to a `docmgr` from PATH — build a pinned binary and pass it via `DOCMGR_PATH`:
 
 ```bash
-cd test-scenarios/testing-doc-manager
-./run-all.sh
+go build -tags sqlite_fts5 -o /tmp/docmgr-local ./cmd/docmgr
+DOCMGR_PATH=/tmp/docmgr-local bash test-scenarios/testing-doc-manager/run-all.sh /tmp/docmgr-scenario
 ```
 
 These scenarios test end-to-end workflows and help ensure commands work correctly together.
@@ -213,13 +148,14 @@ These scenarios test end-to-end workflows and help ensure commands work correctl
 - **Package-level docs**: Every package should have a package comment explaining its purpose
 - **Exported types**: Add godoc comments with examples where helpful
 - **Complex functions**: Add comments explaining non-obvious logic
-- **Commands**: Use descriptive `WithShort()` and `WithLong()` descriptions
+- **Commands**: Use descriptive short/long descriptions and examples in the command description
 
 ### Error Handling
 
 - Use `github.com/pkg/errors` for error wrapping: `errors.Wrap(err, "context")`
 - Return errors from functions; don't log and continue silently
 - Provide helpful error messages that guide users to solutions
+- Mutating verbs must exit non-zero on failure (agents and CI rely on exit codes)
 
 ### Naming Conventions
 
@@ -227,64 +163,34 @@ These scenarios test end-to-end workflows and help ensure commands work correctl
 - Types: Use descriptive names (`WorkspaceConfig`, not `TTMPConfig`)
 - Functions: Self-documenting names (`ResolveRoot()`, not `Resolve()`)
 
-## Using Glazed Framework
-
-docmgr uses the Glazed framework for CLI commands. Key concepts:
-
-### Parameters
-
-Define parameters using `parameters.NewParameterDefinition()`:
-
-```go
-parameters.NewParameterDefinition(
-    "ticket",
-    parameters.ParameterTypeString,
-    parameters.WithHelp("Ticket ID (e.g., MEN-1234)"),
-    parameters.WithRequired(true),
-)
-```
-
-### Output Formats
-
-Commands can support structured output (JSON/YAML/CSV) via Glazed:
-
-```go
-cobraCmd, err := cli.BuildCobraCommand(cmd,
-    cli.WithDualMode(true),                    // Enable both human and structured output
-    cli.WithGlazeToggleFlag("with-glaze-output"), // Add --with-glaze-output flag
-    // ...
-)
-```
-
-### Layers
-
-Glazed uses "layers" for parameter parsing. Most commands use `layers.DefaultSlug`.
-
 ## Common Patterns
+
+### Discovering the Workspace
+
+```go
+ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{
+    RootOverride: settings.Root,
+})
+if err != nil {
+    return errors.Wrap(err, "failed to discover workspace")
+}
+// ws.Context().Root is the resolved absolute docs root
+```
 
 ### Reading Configuration
 
 ```go
-cfg, err := commands.LoadTTMPConfig()
-if err != nil {
-    return fmt.Errorf("failed to load config: %w", err)
-}
-```
-
-### Resolving Documentation Root
-
-```go
-root := commands.ResolveRoot(providedRoot)
+cfg, err := workspace.LoadWorkspaceConfig() // nil cfg when no .ttmp.yaml exists
 ```
 
 ### Working with Documents
 
 ```go
 doc := &models.Document{
-    Title: "My Document",
-    Ticket: "MEN-1234",
+    Title:   "My Document",
+    Ticket:  "MEN-1234",
     DocType: "design-doc",
-    Topics: []string{"api", "backend"},
+    Topics:  []string{"api", "backend"},
 }
 ```
 
@@ -292,6 +198,7 @@ doc := &models.Document{
 
 - **CLI Help**: `docmgr help` or `docmgr help how-to-use`
 - **Embedded Docs**: `docmgr help --all` lists all available help topics
+- **Adding verbs**: `docmgr help how-to-add-cli-verbs`
 - **Issues**: Open an issue on GitHub for questions or bug reports
 
 ## Submitting Changes
@@ -299,7 +206,7 @@ doc := &models.Document{
 1. **Fork the repository** and create a feature branch
 2. **Write tests** for your changes
 3. **Run tests and linting**: `make test && make lint`
-4. **Update documentation** as needed
+4. **Update documentation** as needed (embedded help in `pkg/doc/` compiles into the binary)
 5. **Commit** with clear, descriptive messages
 6. **Push** to your fork and open a pull request
 
@@ -318,4 +225,3 @@ If you have questions about contributing, feel free to:
 - Review the codebase structure and existing command implementations
 
 Thank you for contributing to docmgr!
-

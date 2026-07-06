@@ -140,3 +140,81 @@ func (c *IgnoreExplainCommand) RunIntoGlazeProcessor(
 }
 
 var _ cmds.GlazeCommand = &IgnoreExplainCommand{}
+
+func (c *IgnoreExplainCommand) Run(
+	ctx context.Context,
+	parsedValues *values.Values,
+) error {
+	collector := &relateRowCollector{}
+	if err := c.RunIntoGlazeProcessor(ctx, parsedValues, collector); err != nil {
+		return err
+	}
+
+	for _, row := range collector.rows {
+		if idx, ok := row.Get("trace_index"); ok {
+			if fmt.Sprint(idx) == "0" {
+				path, _ := row.Get("path")
+				isDir, _ := row.Get("is_dir")
+				finalIgnored, _ := row.Get("final_ignored")
+				fmt.Printf("Path: %v (dir: %v)\n", path, isDir)
+				fmt.Printf("Ignored: %v\n", finalIgnored)
+				fmt.Println("Trace:")
+			}
+			source, _ := row.Get("source")
+			sourceKind, _ := row.Get("source_kind")
+			matched, _ := row.Get("matched")
+			ignored, _ := row.Get("ignored")
+			line := fmt.Sprintf("- source=%v kind=%v matched=%v ignored=%v", source, sourceKind, matched, ignored)
+			if pattern := ignoreExplainField(row, "pattern"); pattern != "" {
+				line += fmt.Sprintf(" pattern=%q", pattern)
+			}
+			if file := ignoreExplainField(row, "pattern_file"); file != "" {
+				lineNo, _ := row.Get("pattern_line")
+				line += fmt.Sprintf(" (%s:%v)", file, lineNo)
+			}
+			fmt.Println(line)
+			continue
+		}
+
+		path, _ := row.Get("path")
+		isDir, _ := row.Get("is_dir")
+		ignored, _ := row.Get("ignored")
+		matched, _ := row.Get("matched")
+		fmt.Printf("Path: %v (dir: %v)\n", path, isDir)
+		fmt.Printf("Ignored: %v\n", ignored)
+		fmt.Printf("Matched: %v\n", matched)
+		if source := ignoreExplainField(row, "source"); source != "" {
+			sourceKind, _ := row.Get("source_kind")
+			fmt.Printf("Source: %s (kind: %v)\n", source, sourceKind)
+		}
+		if pattern := ignoreExplainField(row, "pattern"); pattern != "" {
+			fmt.Printf("Pattern: %q", pattern)
+			if file := ignoreExplainField(row, "pattern_file"); file != "" {
+				lineNo, _ := row.Get("pattern_line")
+				fmt.Printf(" (%s:%v)", file, lineNo)
+			}
+			fmt.Println()
+		}
+		if docsRoot := ignoreExplainField(row, "docs_root"); docsRoot != "" {
+			fmt.Printf("Docs root: %s\n", docsRoot)
+		}
+		if repoRoot := ignoreExplainField(row, "repo_root"); repoRoot != "" {
+			fmt.Printf("Repo root: %s\n", repoRoot)
+		}
+	}
+	return nil
+}
+
+func ignoreExplainField(row types.Row, key string) string {
+	v, ok := row.Get(key)
+	if !ok || v == nil {
+		return ""
+	}
+	s := strings.TrimSpace(fmt.Sprint(v))
+	if s == "<nil>" {
+		return ""
+	}
+	return s
+}
+
+var _ cmds.BareCommand = &IgnoreExplainCommand{}

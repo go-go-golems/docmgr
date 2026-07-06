@@ -10,6 +10,8 @@ import (
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
 	"github.com/go-go-golems/glazed/pkg/cmds/schema"
 	"github.com/go-go-golems/glazed/pkg/cmds/values"
+	"github.com/go-go-golems/glazed/pkg/middlewares"
+	"github.com/go-go-golems/glazed/pkg/types"
 	"github.com/pkg/errors"
 )
 
@@ -75,13 +77,7 @@ Examples:
 	}, nil
 }
 
-// Run implements cmds.BareCommand (classic/human mode only).
-func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedValues *values.Values) error {
-	settings := &ExportSQLiteSettings{}
-	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
-		return fmt.Errorf("failed to parse settings: %w", err)
-	}
-
+func (c *ExportSQLiteCommand) applyExport(ctx context.Context, settings *ExportSQLiteSettings) error {
 	if settings.Out == "" {
 		return errors.New("--out is required")
 	}
@@ -100,10 +96,20 @@ func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedValues *values.Valu
 		return err
 	}
 
-	if err := ws.ExportIndexToSQLiteFile(ctx, workspace.ExportSQLiteOptions{
+	return ws.ExportIndexToSQLiteFile(ctx, workspace.ExportSQLiteOptions{
 		OutPath: settings.Out,
 		Force:   settings.Force,
-	}); err != nil {
+	})
+}
+
+// Run implements cmds.BareCommand (classic/human mode).
+func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedValues *values.Values) error {
+	settings := &ExportSQLiteSettings{}
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	if err := c.applyExport(ctx, settings); err != nil {
 		return err
 	}
 
@@ -111,4 +117,24 @@ func (c *ExportSQLiteCommand) Run(ctx context.Context, parsedValues *values.Valu
 	return nil
 }
 
+// RunIntoGlazeProcessor implements cmds.GlazeCommand (structured output mode).
+func (c *ExportSQLiteCommand) RunIntoGlazeProcessor(ctx context.Context, parsedValues *values.Values, gp middlewares.Processor) error {
+	settings := &ExportSQLiteSettings{}
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
+	}
+
+	if err := c.applyExport(ctx, settings); err != nil {
+		return err
+	}
+
+	row := types.NewRow(
+		types.MRP("out", settings.Out),
+		types.MRP("include_body", settings.IncludeBody),
+		types.MRP("status", "exported"),
+	)
+	return gp.AddRow(ctx, row)
+}
+
 var _ cmds.BareCommand = &ExportSQLiteCommand{}
+var _ cmds.GlazeCommand = &ExportSQLiteCommand{}

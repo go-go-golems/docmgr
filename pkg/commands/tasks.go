@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/tasksmd"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -25,6 +27,18 @@ type parsedTask struct {
 	LineIndex int
 	Checked   bool
 	Text      string
+	// StableID is the invisible "<!-- t:xxxx -->" marker ID, empty for
+	// unmarked (legacy) tasks that are addressed by position only.
+	StableID string
+}
+
+// DisplayID returns the identifier shown to users: the stable ID when the
+// task carries a marker, else the 1-based position.
+func (t parsedTask) DisplayID() string {
+	if t.StableID != "" {
+		return t.StableID
+	}
+	return strconv.Itoa(t.TaskIndex)
 }
 
 // removed unused regex to satisfy linter; parsing handled in code below
@@ -110,19 +124,107 @@ func parseTasksFromLines(lines []string) []parsedTask {
 			if pos >= 0 {
 				text = strings.TrimSpace(trimmed[pos+1:])
 			}
+			stableID, cleanText := tasksmd.ExtractStableID(text)
 			idx++
-			tasks = append(tasks, parsedTask{TaskIndex: idx, LineIndex: i, Checked: checked, Text: text})
+			tasks = append(tasks, parsedTask{TaskIndex: idx, LineIndex: i, Checked: checked, Text: cleanText, StableID: stableID})
 		}
 	}
 	return tasks
 }
 
-func formatTaskLine(checked bool, text string) string {
+func formatTaskLine(checked bool, text string, stableID string) string {
 	mark := " "
 	if checked {
 		mark = "x"
 	}
+	if stableID != "" {
+		return fmt.Sprintf("- [%s] %s %s", mark, text, tasksmd.FormatStableIDMarker(stableID))
+	}
 	return fmt.Sprintf("- [%s] %s", mark, text)
+}
+
+// existingStableIDs returns the set of stable IDs already present in tasks.
+func existingStableIDs(tasks []parsedTask) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, t := range tasks {
+		if t.StableID != "" {
+			out[t.StableID] = struct{}{}
+		}
+	}
+	return out
+}
+
+// renderTaskTable renders the current tasks as a small table so callers that
+// passed an unknown --id can see the real identifiers.
+func renderTaskTable(tasks []parsedTask) string {
+	if len(tasks) == 0 {
+		return "  (no tasks)"
+	}
+	var b strings.Builder
+	for _, t := range tasks {
+		mark := " "
+		if t.Checked {
+			mark = "x"
+		}
+		fmt.Fprintf(&b, "  [%s] [%s] %s\n", t.DisplayID(), mark, t.Text)
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// resolveTaskRefs maps user-supplied task references (stable IDs or 1-based
+// positions) to tasks. Unknown references produce an error that includes the
+// current task table, so callers can see the real IDs.
+func resolveTaskRefs(tasks []parsedTask, refs []string) ([]parsedTask, error) {
+	byStableID := map[string]parsedTask{}
+	byIndex := map[int]parsedTask{}
+	for _, t := range tasks {
+		if t.StableID != "" {
+			byStableID[t.StableID] = t
+		}
+		byIndex[t.TaskIndex] = t
+	}
+
+	var out []parsedTask
+	seen := map[int]struct{}{} // dedupe by line index
+	var unknown []string
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		var t parsedTask
+		var ok bool
+		if t, ok = byStableID[ref]; !ok {
+			if n, err := strconv.Atoi(ref); err == nil {
+				t, ok = byIndex[n]
+			}
+		}
+		if !ok {
+			unknown = append(unknown, ref)
+			continue
+		}
+		if _, dup := seen[t.LineIndex]; dup {
+			continue
+		}
+		seen[t.LineIndex] = struct{}{}
+		out = append(out, t)
+	}
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("task id(s) not found: %s\nuse a stable id (e.g. ab12) or the 1-based position from 'docmgr task list'. Current tasks:\n%s",
+			strings.Join(unknown, ", "), renderTaskTable(tasks))
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("no target task specified")
+	}
+	return out, nil
+}
+
+func displayIDList(tasks []parsedTask) string {
+	ids := make([]string, 0, len(tasks))
+	for _, t := range tasks {
+		ids = append(ids, t.DisplayID())
+	}
+	return strings.Join(ids, ",")
 }
 
 // tasks list
@@ -143,14 +245,18 @@ func NewTasksListCommand() (*TasksListCommand, error) {
 		cmds.WithLong(`List checkbox tasks found in the ticket's tasks.md.
 
 Columns:
-  index,checked,text
+  id,index,checked,text
+
+'id' is the stable task ID (from the invisible '<!-- t:xxxx -->' marker) when
+present, else the 1-based position. Stamp markers onto old task files with
+'docmgr task migrate --ticket <ID>'.
 
 Examples:
   # Human output
   docmgr task list --ticket MEN-4242
 
   # Scriptable (CSV without headers)
-  docmgr task list --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields index,text
+  docmgr task list --ticket MEN-4242 --with-glaze-output --output csv --with-headers=false --fields id,text
 `),
 		cmds.WithFlags(
 			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
@@ -175,6 +281,7 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values
 	// If only printing template schema, skip all other processing and output
 	if s.PrintTemplateSchema {
 		type TaskInfo struct {
+			ID      string
 			Index   int
 			Checked bool
 			Text    string
@@ -186,6 +293,7 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values
 			"TasksFile":  "",
 			"Tasks": []TaskInfo{
 				{
+					ID:      "",
 					Index:   0,
 					Checked: false,
 					Text:    "",
@@ -202,6 +310,7 @@ func (c *TasksListCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values
 	}
 	for _, t := range tasks {
 		row := types.NewRow(
+			types.MRP("id", t.DisplayID()),
 			types.MRP(ColIndex, t.TaskIndex),
 			types.MRP(ColChecked, t.Checked),
 			types.MRP(ColText, t.Text),
@@ -228,6 +337,7 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *values.Values) error {
 	// If only printing template schema, skip all other processing and output
 	if s.PrintTemplateSchema {
 		type TaskInfo struct {
+			ID      string
 			Index   int
 			Checked bool
 			Text    string
@@ -239,6 +349,7 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *values.Values) error {
 			"TasksFile":  "",
 			"Tasks": []TaskInfo{
 				{
+					ID:      "",
 					Index:   0,
 					Checked: false,
 					Text:    "",
@@ -253,17 +364,25 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *values.Values) error {
 	if err != nil {
 		return fmt.Errorf("failed to load tasks from file: %w", err)
 	}
+	if len(tasks) == 0 {
+		target := "--ticket " + s.Ticket
+		if strings.TrimSpace(s.Ticket) == "" {
+			target = "--tasks-file " + path
+		}
+		fmt.Printf("No tasks yet (%s). Add one with: docmgr task add %s --text \"...\"\n", path, target)
+	}
 	for _, t := range tasks {
 		mark := " "
 		if t.Checked {
 			mark = "x"
 		}
-		fmt.Printf("[%d] [%s] %s\n", t.TaskIndex, mark, t.Text)
+		fmt.Printf("[%s] [%s] %s\n", t.DisplayID(), mark, t.Text)
 	}
 
 	// Render postfix template if it exists
 	// Build template data struct
 	type TaskInfo struct {
+		ID      string
 		Index   int
 		Checked bool
 		Text    string
@@ -274,6 +393,7 @@ func (c *TasksListCommand) Run(ctx context.Context, pl *values.Values) error {
 	doneTasks := 0
 	for _, t := range tasks {
 		taskInfos = append(taskInfos, TaskInfo{
+			ID:      t.DisplayID(),
 			Index:   t.TaskIndex,
 			Checked: t.Checked,
 			Text:    t.Text,
@@ -348,16 +468,15 @@ Examples:
 	return &TasksAddCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksAddCommand) Run(ctx context.Context, pl *values.Values) error {
-	s := &TasksAddSettings{}
-	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
-		return fmt.Errorf("failed to parse tasks add settings: %w", err)
-	}
+// applyTaskAdd inserts the new task line and returns the tasks file path, the
+// 1-based index of the added task, and its stable ID.
+func (c *TasksAddCommand) applyTaskAdd(ctx context.Context, s *TasksAddSettings) (string, int, string, error) {
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
+		return "", 0, "", fmt.Errorf("failed to load tasks file: %w", err)
 	}
-	newLine := formatTaskLine(false, s.Text)
+	stableID := tasksmd.NewStableID(existingStableIDs(tasks))
+	newLine := formatTaskLine(false, strings.TrimSpace(s.Text), stableID)
 	if s.After <= 0 || len(tasks) == 0 {
 		lines = append(lines, newLine)
 	} else {
@@ -374,24 +493,63 @@ func (c *TasksAddCommand) Run(ctx context.Context, pl *values.Values) error {
 		}
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+		return "", 0, "", fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
-	fmt.Printf("Task added to %s\n", path)
-	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	newIndex := 0
+	for _, t := range parseTasksFromLines(lines) {
+		if t.StableID == stableID {
+			newIndex = t.TaskIndex
+		}
+	}
+	return path, newIndex, stableID, nil
+}
+
+func (c *TasksAddCommand) Run(ctx context.Context, pl *values.Values) error {
+	s := &TasksAddSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks add settings: %w", err)
+	}
+	path, _, stableID, err := c.applyTaskAdd(ctx, s)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Task %s added to %s\n", stableID, path)
+	printReminder("Reminder: update the changelog and relate changed files with notes if needed.")
 	return nil
 }
 
+func (c *TasksAddCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
+	s := &TasksAddSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks add settings: %w", err)
+	}
+	path, newIndex, stableID, err := c.applyTaskAdd(ctx, s)
+	if err != nil {
+		return err
+	}
+	row := types.NewRow(
+		types.MRP("ticket", s.Ticket),
+		types.MRP("tasks_file", path),
+		types.MRP("id", stableID),
+		types.MRP("index", newIndex),
+		types.MRP("text", s.Text),
+		types.MRP("status", "added"),
+	)
+	return gp.AddRow(ctx, row)
+}
+
 var _ cmds.BareCommand = &TasksAddCommand{}
+var _ cmds.GlazeCommand = &TasksAddCommand{}
 
 // tasks check
 type TasksCheckCommand struct{ *cmds.CommandDescription }
 
 type TasksCheckSettings struct {
-	Ticket    string `glazed:"ticket"`
-	Root      string `glazed:"root"`
-	TasksFile string `glazed:"tasks-file"`
-	IDs       []int  `glazed:"id"`
-	Match     string `glazed:"match"`
+	Ticket    string   `glazed:"ticket"`
+	Root      string   `glazed:"root"`
+	TasksFile string   `glazed:"tasks-file"`
+	IDs       []string `glazed:"id"`
+	Match     string   `glazed:"match"`
 }
 
 func NewTasksCheckCommand() (*TasksCheckCommand, error) {
@@ -400,19 +558,55 @@ func NewTasksCheckCommand() (*TasksCheckCommand, error) {
 		cmds.WithShort("Mark a task as done"),
 		cmds.WithLong(`Mark a checkbox task as completed in tasks.md.
 
+--id accepts stable task IDs (e.g. ab12, shown by 'task list') or 1-based
+positions.
+
 Examples:
-  docmgr task check --ticket MEN-4242 --id 1
+  docmgr task check --ticket MEN-4242 --id ab12
   docmgr task check --ticket MEN-4242 --id 1,2
 `),
 		cmds.WithFlags(
 			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
 			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
 			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
-			fields.New("id", fields.TypeIntegerList, fields.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
+			fields.New("id", fields.TypeStringList, fields.WithHelp("Task id(s): stable ID or 1-based position, comma-separated (from 'tasks list')")),
 			fields.New("match", fields.TypeString, fields.WithHelp("Substring to match a task if --id not set"), fields.WithDefault("")),
 		),
 	)
 	return &TasksCheckCommand{CommandDescription: cmd}, nil
+}
+
+// applyTaskMark sets the checked state for the targeted tasks. It returns the
+// tasks file path, the affected tasks, and the updated task list.
+func applyTaskMark(ctx context.Context, root string, ticket string, tasksFile string, ids []string, match string, checked bool) (string, []parsedTask, []parsedTask, error) {
+	path, lines, tasks, err := loadTasksFile(ctx, root, ticket, tasksFile)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to load tasks file: %w", err)
+	}
+	var targets []parsedTask
+	if len(ids) > 0 {
+		targets, err = resolveTaskRefs(tasks, ids)
+		if err != nil {
+			return "", nil, nil, err
+		}
+	} else if match != "" {
+		for _, t := range tasks {
+			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(match)) {
+				targets = []parsedTask{t}
+				break
+			}
+		}
+	}
+	if len(targets) == 0 {
+		return "", nil, nil, fmt.Errorf("no target task specified")
+	}
+	for _, t := range targets {
+		lines[t.LineIndex] = formatTaskLine(checked, t.Text, t.StableID)
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+		return "", nil, nil, fmt.Errorf("failed to write tasks file %s: %w", path, err)
+	}
+	return path, targets, parseTasksFromLines(lines), nil
 }
 
 func (c *TasksCheckCommand) Run(ctx context.Context, pl *values.Values) error {
@@ -420,57 +614,17 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *values.Values) error {
 	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
+	path, targets, updatedTasks, err := applyTaskMark(ctx, s.Root, s.Ticket, s.TasksFile, s.IDs, s.Match, true)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
-	}
-	var targets []int
-	if len(s.IDs) > 0 {
-		targets = s.IDs
-	} else if s.Match != "" {
-		for _, t := range tasks {
-			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
-				targets = []int{t.TaskIndex}
-				break
-			}
-		}
-	}
-	if len(targets) == 0 {
-		return fmt.Errorf("no target task specified")
-	}
-	found := map[int]bool{}
-	for _, t := range tasks {
-		for _, id := range targets {
-			if t.TaskIndex == id {
-				lines[t.LineIndex] = formatTaskLine(true, t.Text)
-				found[id] = true
-			}
-		}
-	}
-	var missing []int
-	for _, id := range targets {
-		if !found[id] {
-			missing = append(missing, id)
-		}
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("task id(s) not found: %v", missing)
-	}
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
-	}
-	idsStr := make([]string, 0, len(targets))
-	for _, id := range targets {
-		idsStr = append(idsStr, fmt.Sprintf("%d", id))
+		return err
 	}
 	if len(targets) > 1 {
-		fmt.Printf("Tasks checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+		fmt.Printf("Tasks checked: %s (file=%s)\n", displayIDList(targets), path)
 	} else {
-		fmt.Printf("Task checked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+		fmt.Printf("Task checked: %s (file=%s)\n", displayIDList(targets), path)
 	}
 
 	// Check if all tasks are now done
-	updatedTasks := parseTasksFromLines(lines)
 	allDone := true
 	hasTasks := len(updatedTasks) > 0
 	for _, t := range updatedTasks {
@@ -482,9 +636,9 @@ func (c *TasksCheckCommand) Run(ctx context.Context, pl *values.Values) error {
 
 	// Suggest ticket close if all tasks are done
 	if allDone && hasTasks && s.Ticket != "" {
-		fmt.Printf("💡 All tasks complete! Consider closing the ticket: docmgr ticket close --ticket %s\n", s.Ticket)
+		fmt.Printf("All tasks complete! Consider closing the ticket: docmgr ticket close --ticket %s\n", s.Ticket)
 	} else {
-		fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+		printReminder("Reminder: update the changelog and relate changed files with notes if needed.")
 	}
 	return nil
 }
@@ -494,48 +648,12 @@ func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *value
 	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks check settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
+	path, targets, updatedTasks, err := applyTaskMark(ctx, s.Root, s.Ticket, s.TasksFile, s.IDs, s.Match, true)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
-	}
-	var targets []int
-	if len(s.IDs) > 0 {
-		targets = s.IDs
-	} else if s.Match != "" {
-		for _, t := range tasks {
-			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
-				targets = []int{t.TaskIndex}
-				break
-			}
-		}
-	}
-	if len(targets) == 0 {
-		return fmt.Errorf("no target task specified")
-	}
-	found := map[int]bool{}
-	for _, t := range tasks {
-		for _, id := range targets {
-			if t.TaskIndex == id {
-				lines[t.LineIndex] = formatTaskLine(true, t.Text)
-				found[id] = true
-			}
-		}
-	}
-	var missing []int
-	for _, id := range targets {
-		if !found[id] {
-			missing = append(missing, id)
-		}
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("task id(s) not found: %v", missing)
-	}
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+		return err
 	}
 
 	// Check if all tasks are now done
-	updatedTasks := parseTasksFromLines(lines)
 	allDone := true
 	hasTasks := len(updatedTasks) > 0
 	openTasks := 0
@@ -557,7 +675,7 @@ func (c *TasksCheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *value
 		types.MRP("open_tasks", openTasks),
 		types.MRP("done_tasks", doneTasks),
 		types.MRP("total_tasks", len(updatedTasks)),
-		types.MRP("checked_ids", targets),
+		types.MRP("checked_ids", displayIDList(targets)),
 	)
 	return gp.AddRow(ctx, row)
 }
@@ -569,11 +687,11 @@ var _ cmds.GlazeCommand = &TasksCheckCommand{}
 type TasksUncheckCommand struct{ *cmds.CommandDescription }
 
 type TasksUncheckSettings struct {
-	Ticket    string `glazed:"ticket"`
-	Root      string `glazed:"root"`
-	TasksFile string `glazed:"tasks-file"`
-	IDs       []int  `glazed:"id"`
-	Match     string `glazed:"match"`
+	Ticket    string   `glazed:"ticket"`
+	Root      string   `glazed:"root"`
+	TasksFile string   `glazed:"tasks-file"`
+	IDs       []string `glazed:"id"`
+	Match     string   `glazed:"match"`
 }
 
 func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
@@ -582,15 +700,18 @@ func NewTasksUncheckCommand() (*TasksUncheckCommand, error) {
 		cmds.WithShort("Mark a task as not done"),
 		cmds.WithLong(`Mark a checkbox task as incomplete in tasks.md.
 
+--id accepts stable task IDs (e.g. ab12, shown by 'task list') or 1-based
+positions.
+
 Examples:
-  docmgr task uncheck --ticket MEN-4242 --id 1
+  docmgr task uncheck --ticket MEN-4242 --id ab12
   docmgr task uncheck --ticket MEN-4242 --id 1,2
 `),
 		cmds.WithFlags(
 			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
 			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
 			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
-			fields.New("id", fields.TypeIntegerList, fields.WithHelp("Task index(es), comma-separated (from 'tasks list')")),
+			fields.New("id", fields.TypeStringList, fields.WithHelp("Task id(s): stable ID or 1-based position, comma-separated (from 'tasks list')")),
 			fields.New("match", fields.TypeString, fields.WithHelp("Substring to match a task if --id not set"), fields.WithDefault("")),
 		),
 	)
@@ -602,59 +723,50 @@ func (c *TasksUncheckCommand) Run(ctx context.Context, pl *values.Values) error 
 	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
 		return fmt.Errorf("failed to parse tasks uncheck settings: %w", err)
 	}
-	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
+	path, targets, _, err := applyTaskMark(ctx, s.Root, s.Ticket, s.TasksFile, s.IDs, s.Match, false)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
-	}
-	var targets []int
-	if len(s.IDs) > 0 {
-		targets = s.IDs
-	} else if s.Match != "" {
-		for _, t := range tasks {
-			if strings.Contains(strings.ToLower(t.Text), strings.ToLower(s.Match)) {
-				targets = []int{t.TaskIndex}
-				break
-			}
-		}
-	}
-	if len(targets) == 0 {
-		return fmt.Errorf("no target task specified")
-	}
-	found := map[int]bool{}
-	for _, t := range tasks {
-		for _, id := range targets {
-			if t.TaskIndex == id {
-				lines[t.LineIndex] = formatTaskLine(false, t.Text)
-				found[id] = true
-			}
-		}
-	}
-	var missing []int
-	for _, id := range targets {
-		if !found[id] {
-			missing = append(missing, id)
-		}
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("task id(s) not found: %v", missing)
-	}
-	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
-	}
-	idsStr := make([]string, 0, len(targets))
-	for _, id := range targets {
-		idsStr = append(idsStr, fmt.Sprintf("%d", id))
+		return err
 	}
 	if len(targets) > 1 {
-		fmt.Printf("Tasks unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+		fmt.Printf("Tasks unchecked: %s (file=%s)\n", displayIDList(targets), path)
 	} else {
-		fmt.Printf("Task unchecked: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+		fmt.Printf("Task unchecked: %s (file=%s)\n", displayIDList(targets), path)
 	}
-	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	printReminder("Reminder: update the changelog and relate changed files with notes if needed.")
 	return nil
 }
 
+func (c *TasksUncheckCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
+	s := &TasksUncheckSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks uncheck settings: %w", err)
+	}
+	path, targets, updatedTasks, err := applyTaskMark(ctx, s.Root, s.Ticket, s.TasksFile, s.IDs, s.Match, false)
+	if err != nil {
+		return err
+	}
+	openTasks := 0
+	doneTasks := 0
+	for _, t := range updatedTasks {
+		if t.Checked {
+			doneTasks++
+		} else {
+			openTasks++
+		}
+	}
+	row := types.NewRow(
+		types.MRP("ticket", s.Ticket),
+		types.MRP("tasks_file", path),
+		types.MRP("open_tasks", openTasks),
+		types.MRP("done_tasks", doneTasks),
+		types.MRP("total_tasks", len(updatedTasks)),
+		types.MRP("unchecked_ids", displayIDList(targets)),
+	)
+	return gp.AddRow(ctx, row)
+}
+
 var _ cmds.BareCommand = &TasksUncheckCommand{}
+var _ cmds.GlazeCommand = &TasksUncheckCommand{}
 
 // tasks edit
 type TasksEditCommand struct{ *cmds.CommandDescription }
@@ -663,7 +775,7 @@ type TasksEditSettings struct {
 	Ticket    string `glazed:"ticket"`
 	Root      string `glazed:"root"`
 	TasksFile string `glazed:"tasks-file"`
-	ID        int    `glazed:"id"`
+	ID        string `glazed:"id"`
 	Text      string `glazed:"text"`
 }
 
@@ -673,14 +785,17 @@ func NewTasksEditCommand() (*TasksEditCommand, error) {
 		cmds.WithShort("Edit a task's text"),
 		cmds.WithLong(`Edit the text of a checkbox task in tasks.md.
 
+--id accepts a stable task ID (e.g. ab12, shown by 'task list') or a 1-based
+position.
+
 Examples:
-  docmgr task edit --ticket MEN-4242 --id 1 --text "Updated task text"
+  docmgr task edit --ticket MEN-4242 --id ab12 --text "Updated task text"
 `),
 		cmds.WithFlags(
 			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
 			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
 			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
-			fields.New("id", fields.TypeInteger, fields.WithHelp("Task index (from 'tasks list')"), fields.WithRequired(true)),
+			fields.New("id", fields.TypeString, fields.WithHelp("Task id: stable ID or 1-based position (from 'tasks list')"), fields.WithRequired(true)),
 			fields.New("text", fields.TypeString, fields.WithHelp("New task text"), fields.WithRequired(true)),
 		),
 	)
@@ -698,7 +813,7 @@ func (c *TasksEditCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values
 	}
 	row := types.NewRow(types.MRP("file", path), types.MRP("status", "task edited"), types.MRP("id", s.ID))
 	if err := gp.AddRow(ctx, row); err != nil {
-		return fmt.Errorf("failed to emit tasks edit row for %s id %d: %w", path, s.ID, err)
+		return fmt.Errorf("failed to emit tasks edit row for %s id %s: %w", path, s.ID, err)
 	}
 	return nil
 }
@@ -714,8 +829,8 @@ func (c *TasksEditCommand) Run(ctx context.Context, pl *values.Values) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Task %d updated in %s\n", s.ID, path)
-	fmt.Println("Reminder: update the changelog and relate changed files with notes if needed.")
+	fmt.Printf("Task %s updated in %s\n", s.ID, path)
+	printReminder("Reminder: update the changelog and relate changed files with notes if needed.")
 	return nil
 }
 
@@ -726,17 +841,12 @@ func editTaskLine(ctx context.Context, s *TasksEditSettings) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to load tasks file: %w", err)
 	}
-	var target *parsedTask
-	for i := range tasks {
-		if tasks[i].TaskIndex == s.ID {
-			target = &tasks[i]
-			break
-		}
+	targets, err := resolveTaskRefs(tasks, []string{s.ID})
+	if err != nil {
+		return "", err
 	}
-	if target == nil {
-		return "", fmt.Errorf("task id not found: %d", s.ID)
-	}
-	lines[target.LineIndex] = formatTaskLine(target.Checked, s.Text)
+	target := targets[0]
+	lines[target.LineIndex] = formatTaskLine(target.Checked, strings.TrimSpace(s.Text), target.StableID)
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
 		return "", fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
@@ -747,10 +857,10 @@ func editTaskLine(ctx context.Context, s *TasksEditSettings) (string, error) {
 type TasksRemoveCommand struct{ *cmds.CommandDescription }
 
 type TasksRemoveSettings struct {
-	Ticket    string `glazed:"ticket"`
-	Root      string `glazed:"root"`
-	TasksFile string `glazed:"tasks-file"`
-	IDs       []int  `glazed:"id"`
+	Ticket    string   `glazed:"ticket"`
+	Root      string   `glazed:"root"`
+	TasksFile string   `glazed:"tasks-file"`
+	IDs       []string `glazed:"id"`
 }
 
 func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
@@ -759,51 +869,40 @@ func NewTasksRemoveCommand() (*TasksRemoveCommand, error) {
 		cmds.WithShort("Remove a task"),
 		cmds.WithLong(`Remove a checkbox task from tasks.md.
 
+--id accepts stable task IDs (e.g. ab12, shown by 'task list') or 1-based
+positions.
+
 Examples:
-  docmgr task remove --ticket MEN-4242 --id 3
+  docmgr task remove --ticket MEN-4242 --id ab12
   docmgr task remove --ticket MEN-4242 --id 3,4
 `),
 		cmds.WithFlags(
 			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
 			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
 			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
-			fields.New("id", fields.TypeIntegerList, fields.WithHelp("Task index(es), comma-separated (from 'tasks list')"), fields.WithRequired(true)),
+			fields.New("id", fields.TypeStringList, fields.WithHelp("Task id(s): stable ID or 1-based position, comma-separated (from 'tasks list')"), fields.WithRequired(true)),
 		),
 	)
 	return &TasksRemoveCommand{CommandDescription: cmd}, nil
 }
 
-func (c *TasksRemoveCommand) Run(ctx context.Context, pl *values.Values) error {
-	s := &TasksRemoveSettings{}
-	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
-		return fmt.Errorf("failed to parse tasks remove settings: %w", err)
-	}
+// applyTaskRemove deletes the targeted task lines and returns the tasks file
+// path, the removed tasks, and remaining tasks.
+func (c *TasksRemoveCommand) applyTaskRemove(ctx context.Context, s *TasksRemoveSettings) (string, []parsedTask, []parsedTask, error) {
 	path, lines, tasks, err := loadTasksFile(ctx, s.Root, s.Ticket, s.TasksFile)
 	if err != nil {
-		return fmt.Errorf("failed to load tasks file: %w", err)
+		return "", nil, nil, fmt.Errorf("failed to load tasks file: %w", err)
 	}
 	if len(s.IDs) == 0 {
-		return fmt.Errorf("no target task specified")
+		return "", nil, nil, fmt.Errorf("no target task specified")
 	}
-	lineIdxs := make([]int, 0, len(s.IDs))
-	found := map[int]bool{}
-	for _, id := range s.IDs {
-		for _, t := range tasks {
-			if t.TaskIndex == id {
-				lineIdxs = append(lineIdxs, t.LineIndex)
-				found[id] = true
-				break
-			}
-		}
+	targets, err := resolveTaskRefs(tasks, s.IDs)
+	if err != nil {
+		return "", nil, nil, err
 	}
-	var missing []int
-	for _, id := range s.IDs {
-		if !found[id] {
-			missing = append(missing, id)
-		}
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("task id(s) not found: %v", missing)
+	lineIdxs := make([]int, 0, len(targets))
+	for _, t := range targets {
+		lineIdxs = append(lineIdxs, t.LineIndex)
 	}
 	sort.Sort(sort.Reverse(sort.IntSlice(lineIdxs)))
 	newLines := append([]string{}, lines...)
@@ -811,18 +910,142 @@ func (c *TasksRemoveCommand) Run(ctx context.Context, pl *values.Values) error {
 		newLines = append(newLines[:idx], newLines[idx+1:]...)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(newLines, "\n")+"\n"), 0644); err != nil {
-		return fmt.Errorf("failed to write tasks file %s: %w", path, err)
+		return "", nil, nil, fmt.Errorf("failed to write tasks file %s: %w", path, err)
 	}
-	idsStr := make([]string, 0, len(s.IDs))
-	for _, id := range s.IDs {
-		idsStr = append(idsStr, fmt.Sprintf("%d", id))
+	return path, targets, parseTasksFromLines(newLines), nil
+}
+
+func (c *TasksRemoveCommand) Run(ctx context.Context, pl *values.Values) error {
+	s := &TasksRemoveSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks remove settings: %w", err)
 	}
-	if len(s.IDs) > 1 {
-		fmt.Printf("Tasks removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+	path, removed, _, err := c.applyTaskRemove(ctx, s)
+	if err != nil {
+		return err
+	}
+	if len(removed) > 1 {
+		fmt.Printf("Tasks removed: %s (file=%s)\n", displayIDList(removed), path)
 	} else {
-		fmt.Printf("Task removed: %s (file=%s)\n", strings.Join(idsStr, ","), path)
+		fmt.Printf("Task removed: %s (file=%s)\n", displayIDList(removed), path)
 	}
 	return nil
 }
 
+func (c *TasksRemoveCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
+	s := &TasksRemoveSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks remove settings: %w", err)
+	}
+	path, removed, remaining, err := c.applyTaskRemove(ctx, s)
+	if err != nil {
+		return err
+	}
+	row := types.NewRow(
+		types.MRP("ticket", s.Ticket),
+		types.MRP("tasks_file", path),
+		types.MRP("removed_ids", displayIDList(removed)),
+		types.MRP("total_tasks", len(remaining)),
+		types.MRP("status", "removed"),
+	)
+	return gp.AddRow(ctx, row)
+}
+
 var _ cmds.BareCommand = &TasksRemoveCommand{}
+var _ cmds.GlazeCommand = &TasksRemoveCommand{}
+
+// tasks migrate: stamp stable ID markers onto unmarked tasks.
+type TasksMigrateCommand struct{ *cmds.CommandDescription }
+
+type TasksMigrateSettings struct {
+	Ticket    string `glazed:"ticket"`
+	Root      string `glazed:"root"`
+	TasksFile string `glazed:"tasks-file"`
+}
+
+func NewTasksMigrateCommand() (*TasksMigrateCommand, error) {
+	cmd := cmds.NewCommandDescription(
+		"migrate",
+		cmds.WithShort("Stamp stable IDs onto tasks that lack them"),
+		cmds.WithLong(`Add invisible stable-ID markers ('<!-- t:xxxx -->') to every checkbox task
+in tasks.md that does not have one yet. Tasks created by 'docmgr task add'
+already carry markers; this migrates older, hand-written task lists so that
+'task check/uncheck/edit/remove --id' can address tasks by stable ID instead
+of position.
+
+Examples:
+  docmgr task migrate --ticket MEN-4242
+`),
+		cmds.WithFlags(
+			fields.New("ticket", fields.TypeString, fields.WithHelp("Ticket identifier (if --tasks-file not set)"), fields.WithDefault("")),
+			fields.New("root", fields.TypeString, fields.WithHelp("Root directory for docs"), fields.WithDefault("ttmp")),
+			fields.New("tasks-file", fields.TypeString, fields.WithHelp("Path to tasks.md (overrides --ticket)"), fields.WithDefault("")),
+		),
+	)
+	return &TasksMigrateCommand{CommandDescription: cmd}, nil
+}
+
+// applyTaskMigrate stamps markers and returns the tasks file path, the number
+// of stamped tasks, and the updated task list.
+func applyTaskMigrate(ctx context.Context, root string, ticket string, tasksFile string) (string, int, []parsedTask, error) {
+	path, lines, tasks, err := loadTasksFile(ctx, root, ticket, tasksFile)
+	if err != nil {
+		return "", 0, nil, fmt.Errorf("failed to load tasks file: %w", err)
+	}
+	existing := existingStableIDs(tasks)
+	stamped := 0
+	for _, t := range tasks {
+		if t.StableID != "" {
+			continue
+		}
+		id := tasksmd.NewStableID(existing)
+		existing[id] = struct{}{}
+		lines[t.LineIndex] = formatTaskLine(t.Checked, t.Text, id)
+		stamped++
+	}
+	if stamped > 0 {
+		if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0644); err != nil {
+			return "", 0, nil, fmt.Errorf("failed to write tasks file %s: %w", path, err)
+		}
+	}
+	return path, stamped, parseTasksFromLines(lines), nil
+}
+
+func (c *TasksMigrateCommand) Run(ctx context.Context, pl *values.Values) error {
+	s := &TasksMigrateSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks migrate settings: %w", err)
+	}
+	path, stamped, tasks, err := applyTaskMigrate(ctx, s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return err
+	}
+	if stamped == 0 {
+		fmt.Printf("All %d task(s) already have stable IDs (file=%s)\n", len(tasks), path)
+		return nil
+	}
+	fmt.Printf("Stamped stable IDs onto %d task(s) (file=%s)\n", stamped, path)
+	return nil
+}
+
+func (c *TasksMigrateCommand) RunIntoGlazeProcessor(ctx context.Context, pl *values.Values, gp middlewares.Processor) error {
+	s := &TasksMigrateSettings{}
+	if err := pl.DecodeSectionInto(schema.DefaultSlug, s); err != nil {
+		return fmt.Errorf("failed to parse tasks migrate settings: %w", err)
+	}
+	path, stamped, tasks, err := applyTaskMigrate(ctx, s.Root, s.Ticket, s.TasksFile)
+	if err != nil {
+		return err
+	}
+	row := types.NewRow(
+		types.MRP("ticket", s.Ticket),
+		types.MRP("tasks_file", path),
+		types.MRP("stamped", stamped),
+		types.MRP("total_tasks", len(tasks)),
+		types.MRP("status", "migrated"),
+	)
+	return gp.AddRow(ctx, row)
+}
+
+var _ cmds.BareCommand = &TasksMigrateCommand{}
+var _ cmds.GlazeCommand = &TasksMigrateCommand{}

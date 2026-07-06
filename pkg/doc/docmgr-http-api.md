@@ -520,6 +520,137 @@ Safety behavior:
 - Binary files and non-UTF8 are rejected (`unsupported_media_type`).
 - Large files may be truncated (see `truncated`).
 
+### 5.8. Get File (raw bytes)
+
+`GET /api/v1/files/raw`
+
+Streams a file's bytes with a sniffed `Content-Type` — no JSON envelope. This
+is what the web UI uses to load relative images referenced from markdown
+bodies; any binary type is fine (images, PDFs, ...).
+
+Query parameters:
+- `path` (string, required): file path relative to the chosen root
+- `root` (string, optional): `repo|docs` (default `repo`)
+
+Safety behavior:
+- Same traversal-safe resolution as `/files/get` (path traversal and
+  symlink escapes are rejected with `403 forbidden`).
+- Files larger than ~20MB are rejected (`413 too_large`).
+
+```bash
+curl -s "http://127.0.0.1:8787/api/v1/files/raw?root=docs&path=2026/01/03/TICKET--slug/images/diagram.png" -o diagram.png
+```
+
+### 5.9. Update Document Metadata (write)
+
+`POST /api/v1/docs/meta`
+
+Wraps the `docmgr meta update` write primitive: updates one frontmatter field
+of a document under the docs root, bumps `LastUpdated`, and refreshes the
+in-memory index so subsequent reads see the change.
+
+Request body:
+
+```json
+{ "path": "2026/01/03/TICKET--slug/index.md", "field": "Status", "value": "review" }
+```
+
+- `field` accepts the same names as the CLI: `Title`, `Ticket`, `Status`,
+  `Topics`, `DocType`, `Intent`, `Owners`, `RelatedFiles`,
+  `ExternalSources`, `Summary` (case-insensitive; list fields take
+  comma-separated values). Unknown fields return `400 invalid_argument`.
+
+Response:
+
+```json
+{ "path": "2026/01/03/TICKET--slug/index.md", "field": "Status", "value": "review", "status": "updated" }
+```
+
+### 5.10. Relate Files to a Document (write)
+
+`POST /api/v1/docs/relate`
+
+Wraps the `docmgr doc relate` write primitive, including anchored writes: new
+entries are persisted in anchored form (`repo://...`, `ws://...`,
+`docs://...`, `abs://...`), duplicates collapse by resolved absolute path,
+and notes merge. Refreshes the index afterwards.
+
+Request body:
+
+```json
+{
+  "path": "2026/01/03/TICKET--slug/index.md",
+  "add": [{ "path": "internal/httpapi/server.go", "note": "route registration" }],
+  "remove": ["pkg/old/file.go"]
+}
+```
+
+Response:
+
+```json
+{ "path": "2026/01/03/TICKET--slug/index.md", "added": 1, "updated": 0, "removed": 1, "total": 3, "status": "updated" }
+```
+
+`status` is `"noop"` when nothing changed (e.g. the entry already existed
+with the same note).
+
+### 5.11. Ticket Changelog (read + write)
+
+`GET /api/v1/tickets/changelog?ticket=TICKET-123`
+
+Returns the ticket's changelog.md parsed into its dated `## YYYY-MM-DD[ - Title]`
+sections, in file order (appends put the newest entry last):
+
+```json
+{
+  "ticket": "TICKET-123",
+  "exists": true,
+  "path": "2026/01/03/TICKET-123--slug/changelog.md",
+  "entries": [
+    { "date": "2026-07-05", "title": "First pass", "heading": "2026-07-05 - First pass", "body": "Did the thing.\n\n### Related Files\n..." }
+  ]
+}
+```
+
+`POST /api/v1/tickets/changelog`
+
+Appends an entry via the `docmgr changelog update` primitive (creates
+changelog.md with a header when missing) and refreshes the index:
+
+```json
+{ "ticket": "TICKET-123", "title": "Optional title", "entry": "What changed." }
+```
+
+Response: `{ "ok": true, "ticket": "TICKET-123", "path": "...", "date": "2026-07-05" }`.
+Empty `entry` returns `400 invalid_argument`.
+
+### 5.12. Workspace Doctor (read-only)
+
+`GET /api/v1/workspace/doctor`
+
+Runs the `docmgr doctor` scan (read-only — no `--fix`) and returns its
+findings as JSON using the same row model as the CLI: a per-ticket rollup
+plus the per-finding list.
+
+Query parameters:
+- `ticket` (string, optional): restrict to one ticket (forgiving resolution)
+- `staleAfter` (int, optional): staleness threshold in days (default 30)
+
+Response (shape):
+
+```json
+{
+  "ticket": "",
+  "totals": { "findings": 12, "errors": 1, "warnings": 9, "infos": 0, "ticketsChecked": 4 },
+  "rollup": [
+    { "ticket": "TICKET-123", "errors": 0, "warnings": 3, "infos": 0, "status": "warning" }
+  ],
+  "findings": [
+    { "ticket": "TICKET-123", "issue": "missing_related_file", "severity": "warning", "message": "related file not found: pkg/gone.go", "path": "..." }
+  ]
+}
+```
+
 ## 6. Error Handling
 
 All error responses use a stable JSON envelope:

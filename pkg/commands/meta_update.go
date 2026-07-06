@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -132,8 +134,10 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 		return err
 	}
 
+	errorCount := 0
 	for _, update := range result.Updates {
 		if update.Status == "error" {
+			errorCount++
 			row := types.NewRow(
 				types.MRP("doc", update.Doc),
 				types.MRP("field", update.Field),
@@ -155,6 +159,10 @@ func (c *MetaUpdateCommand) RunIntoGlazeProcessor(
 		if err := gp.AddRow(ctx, row); err != nil {
 			return fmt.Errorf("failed to add meta update row for %s: %w", update.Doc, err)
 		}
+	}
+
+	if errorCount > 0 {
+		return fmt.Errorf("metadata update failed for %d document(s)", errorCount)
 	}
 
 	return nil
@@ -183,7 +191,11 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 	var filesToUpdate []string
 
 	if settings.Doc != "" {
-		filesToUpdate = []string{settings.Doc}
+		resolved, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+		if err != nil {
+			return nil, err
+		}
+		filesToUpdate = []string{resolved}
 	} else if settings.Ticket != "" {
 		// Workspace+QueryDocs-backed ticket discovery and document enumeration.
 		ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
@@ -196,26 +208,16 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 			return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
 		}
 
+		// Forgiving ticket resolution (exact ID, unique prefix, directory slug, ...).
+		ticketRes, err := tickets.Resolve(ctx, ws, settings.Ticket)
+		if err != nil {
+			return nil, err
+		}
+		settings.Ticket = ticketRes.TicketID
+
 		if settings.DocType == "" {
 			// Default: update ticket index.md only.
-			res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-				Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
-				Filters: workspace.DocFilters{DocType: "index"},
-				Options: workspace.DocQueryOptions{
-					IncludeErrors:       false,
-					IncludeArchivedPath: true,
-					IncludeScriptsPath:  true,
-					IncludeControlDocs:  true,
-					OrderBy:             workspace.OrderByPath,
-				},
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to find ticket index doc: %w", err)
-			}
-			if len(res.Docs) != 1 || res.Docs[0].Path == "" {
-				return nil, fmt.Errorf("ticket not found or ambiguous: %s", strings.TrimSpace(settings.Ticket))
-			}
-			filesToUpdate = []string{filepath.FromSlash(res.Docs[0].Path)}
+			filesToUpdate = []string{filepath.FromSlash(ticketRes.IndexPathAbs)}
 		} else {
 			// Update all docs of the requested doc type within the ticket.
 			res, err := ws.QueryDocs(ctx, workspace.DocQuery{
@@ -227,6 +229,7 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 					IncludeErrors:       false,
 					IncludeArchivedPath: true,
 					IncludeScriptsPath:  true,
+					IncludeSourcesPath:  true,
 					IncludeControlDocs:  true,
 					OrderBy:             workspace.OrderByPath,
 				},
@@ -247,7 +250,7 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 
 	updates := make([]MetaUpdateRow, 0, len(filesToUpdate))
 	for _, filePath := range filesToUpdate {
-		if err := updateDocumentField(filePath, settings.Field, settings.Value); err != nil {
+		if err := UpdateDocumentField(filePath, settings.Field, settings.Value); err != nil {
 			updates = append(updates, MetaUpdateRow{
 				Doc:    filePath,
 				Field:  settings.Field,
@@ -285,15 +288,23 @@ func (c *MetaUpdateCommand) Run(
 		return err
 	}
 
-	fmt.Printf("Docs root: `%s`\n", result.Context.Root)
-	if result.Context.ConfigPath != "" {
-		fmt.Printf("Config: `%s`\n", result.Context.ConfigPath)
-	}
-	if result.Context.VocabularyPath != "" {
-		fmt.Printf("Vocabulary: `%s`\n", result.Context.VocabularyPath)
+	printWorkspaceBanner(result.Context.Root, result.Context.ConfigPath, result.Context.VocabularyPath)
+
+	errorCount := 0
+	for _, update := range result.Updates {
+		if update.Status == "error" {
+			errorCount++
+		}
 	}
 
-	fmt.Printf("\n## Metadata Updates\n\n")
+	// Single successful update: one line. Multiple rows or any error: per-row detail.
+	if errorCount == 0 && len(result.Updates) == 1 {
+		u := result.Updates[0]
+		fmt.Printf("updated %s in %s\n", u.Field, u.Doc)
+		return nil
+	}
+
+	fmt.Printf("## Metadata Updates\n\n")
 	for _, update := range result.Updates {
 		if update.Status == "error" {
 			fmt.Printf("- `%s`: error updating %s (%s)\n", update.Doc, update.Field, update.Error)
@@ -302,11 +313,21 @@ func (c *MetaUpdateCommand) Run(
 		fmt.Printf("- `%s`: %s → %s\n", update.Doc, update.Field, update.Value)
 	}
 
+	if errorCount > 0 {
+		return fmt.Errorf("metadata update failed for %d document(s)", errorCount)
+	}
+
 	return nil
 }
 
-// updateDocumentField updates a specific field in a document's frontmatter
-func updateDocumentField(filePath string, fieldName string, value string) error {
+// ErrUnknownMetaField is returned by UpdateDocumentField when the requested
+// frontmatter field is not one of the supported field names.
+var ErrUnknownMetaField = errors.New("unknown field")
+
+// UpdateDocumentField updates a specific field in a document's frontmatter.
+// It is the shared write primitive behind 'docmgr meta update' and the HTTP
+// API's POST /docs/meta endpoint.
+func UpdateDocumentField(filePath string, fieldName string, value string) error {
 	doc, content, err := documents.ReadDocumentWithFrontmatter(filePath)
 	if err != nil {
 		return err
@@ -369,7 +390,7 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 	case "summary":
 		doc.Summary = value
 	default:
-		return fmt.Errorf("unknown field: %s", fieldName)
+		return fmt.Errorf("%w: %s", ErrUnknownMetaField, fieldName)
 	}
 
 	// Update LastUpdated

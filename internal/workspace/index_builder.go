@@ -116,10 +116,9 @@ VALUES (?, ?, ?)
 	insertRFStmt, err := tx.PrepareContext(ctx, `
 INSERT INTO related_files (
   doc_id, note,
-  norm_canonical, norm_repo_rel, norm_docs_rel, norm_doc_rel, norm_abs, norm_clean,
-  anchor, raw_path
+  anchor, norm_abs, norm_repo_rel, raw_path
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?)
 `)
 	if err != nil {
 		return errors.Wrap(err, "prepare insert related_files")
@@ -251,10 +250,11 @@ VALUES (?, ?, ?, ?, ?, ?)
 
 		// Use a resolver anchored at this document path so doc-relative entries normalize correctly.
 		resolver := paths.NewResolver(paths.ResolverOptions{
-			DocsRoot:  wctx.Root,
-			DocPath:   absPath,
-			ConfigDir: wctx.ConfigDir,
-			RepoRoot:  wctx.RepoRoot,
+			DocsRoot:      wctx.Root,
+			DocPath:       absPath,
+			ConfigDir:     wctx.ConfigDir,
+			RepoRoot:      wctx.RepoRoot,
+			WorkspaceRoot: wctx.WorkspaceRoot,
 		})
 		for _, rf := range doc.RelatedFiles {
 			raw := strings.TrimSpace(rf.Path)
@@ -266,13 +266,9 @@ VALUES (?, ?, ?, ?, ?, ?)
 				ctx,
 				docID,
 				nullString(rf.Note),
-				nullString(n.Canonical),
-				nullString(n.RepoRelative),
-				nullString(n.DocsRelative),
-				nullString(n.DocRelative),
-				nullString(n.Abs),
-				nullString(n.Clean),
 				nullString(n.Anchor),
+				nullString(n.Abs),
+				nullString(n.RepoRelative),
 				nullString(raw),
 			)
 			if err != nil {

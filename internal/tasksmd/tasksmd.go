@@ -1,10 +1,13 @@
 package tasksmd
 
 import (
+	cryptorand "crypto/rand"
 	"errors"
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -12,6 +15,11 @@ type Item struct {
 	ID      int    `json:"id"`
 	Checked bool   `json:"checked"`
 	Text    string `json:"text"`
+	// StableID is an optional short identifier stored as an invisible HTML
+	// comment marker at the end of the task line (e.g. "<!-- t:ab12 -->").
+	// Tasks without markers have an empty StableID and are addressed by
+	// position (ID) only.
+	StableID string `json:"stableId,omitempty"`
 }
 
 type Section struct {
@@ -31,12 +39,83 @@ type parsedTaskLine struct {
 	Checked   bool
 	Text      string
 	Section   string
+	StableID  string
 }
 
 var (
 	headingRe = regexp.MustCompile(`^\s{0,3}(#{1,6})\s+(.+?)\s*$`)
 	taskRe    = regexp.MustCompile(`^\s{0,3}([-*])\s+\[(?i:[ x])\]\s+(.+?)\s*$`)
+	// stableIDMarkerRe matches a trailing invisible task-ID marker, e.g.
+	// "Fix resolver <!-- t:a3f2 -->".
+	stableIDMarkerRe = regexp.MustCompile(`\s*<!--\s*t:([a-z0-9]{2,12})\s*-->\s*$`)
 )
+
+const stableIDAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+// ExtractStableID splits a task text into its stable ID (if a trailing
+// "<!-- t:xxxx -->" marker is present) and the clean text without the marker.
+func ExtractStableID(text string) (string, string) {
+	m := stableIDMarkerRe.FindStringSubmatchIndex(text)
+	if m == nil {
+		return "", strings.TrimSpace(text)
+	}
+	id := text[m[2]:m[3]]
+	clean := strings.TrimSpace(text[:m[0]])
+	return id, clean
+}
+
+// FormatStableIDMarker renders the invisible marker for a stable task ID.
+func FormatStableIDMarker(id string) string {
+	return "<!-- t:" + id + " -->"
+}
+
+// NewStableID generates a short random task ID (base36, 4+ chars) that does
+// not collide with the provided existing IDs.
+func NewStableID(existing map[string]struct{}) string {
+	for length := 4; length <= 12; length++ {
+		for attempt := 0; attempt < 32; attempt++ {
+			id, err := randomStableID(length)
+			if err != nil {
+				continue
+			}
+			if _, ok := existing[id]; !ok {
+				return id
+			}
+		}
+	}
+	// Practically unreachable: fall back to a deterministic suffix scan.
+	base, _ := randomStableID(8)
+	for i := 0; ; i++ {
+		id := fmt.Sprintf("%s%d", base, i)
+		if _, ok := existing[id]; !ok {
+			return id
+		}
+	}
+}
+
+func randomStableID(length int) (string, error) {
+	buf := make([]byte, length)
+	if _, err := cryptorand.Read(buf); err != nil {
+		return "", err
+	}
+	out := make([]byte, length)
+	for i, b := range buf {
+		out[i] = stableIDAlphabet[int(b)%len(stableIDAlphabet)]
+	}
+	return string(out), nil
+}
+
+// CollectStableIDs returns the set of stable IDs already present in the file.
+func CollectStableIDs(lines []string) map[string]struct{} {
+	out := map[string]struct{}{}
+	_, tasks := Parse(lines)
+	for _, t := range tasks {
+		if t.StableID != "" {
+			out[t.StableID] = struct{}{}
+		}
+	}
+	return out
+}
 
 func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
 	sections := []Section{}
@@ -80,13 +159,13 @@ func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
 		trimmed := strings.TrimSpace(raw)
 		checked := strings.HasPrefix(strings.ToLower(trimmed), "- [x]") || strings.HasPrefix(strings.ToLower(trimmed), "* [x]")
 
-		text := strings.TrimSpace(m[2])
+		stableID, text := ExtractStableID(strings.TrimSpace(m[2]))
 		total++
 		if checked {
 			done++
 		}
 
-		item := Item{ID: total, Checked: checked, Text: text}
+		item := Item{ID: total, Checked: checked, Text: text, StableID: stableID}
 		sections[secIdx].Items = append(sections[secIdx].Items, item)
 		taskByID[item.ID] = parsedTaskLine{
 			ID:        item.ID,
@@ -94,6 +173,7 @@ func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
 			Checked:   checked,
 			Text:      text,
 			Section:   sections[secIdx].Title,
+			StableID:  stableID,
 		}
 	}
 
@@ -118,28 +198,93 @@ func WriteFile(path string, lines []string) error {
 }
 
 func ToggleChecked(lines []string, ids []int, checked bool) ([]string, error) {
-	_, tasks := Parse(lines)
-
-	idSet := map[int]struct{}{}
+	refs := make([]string, 0, len(ids))
 	for _, id := range ids {
 		if id <= 0 {
 			continue
 		}
-		idSet[id] = struct{}{}
+		refs = append(refs, fmt.Sprintf("%d", id))
 	}
-	if len(idSet) == 0 {
+	return ToggleCheckedByRefs(lines, refs, checked)
+}
+
+// ToggleCheckedByRefs toggles tasks addressed by stable IDs (preferred) or by
+// their current 1-based positional IDs (legacy compatibility). Unknown refs
+// return an error that includes the current task table so callers can recover.
+func ToggleCheckedByRefs(lines []string, refs []string, checked bool) ([]string, error) {
+	_, tasks := Parse(lines)
+
+	byStable := map[string]parsedTaskLine{}
+	byPosition := map[int]parsedTaskLine{}
+	for id, task := range tasks {
+		byPosition[id] = task
+		if strings.TrimSpace(task.StableID) != "" {
+			byStable[task.StableID] = task
+		}
+	}
+
+	seenLines := map[int]struct{}{}
+	var targets []parsedTaskLine
+	var unknown []string
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		var task parsedTaskLine
+		var ok bool
+		if task, ok = byStable[ref]; !ok {
+			if id, err := strconv.Atoi(ref); err == nil && id > 0 {
+				task, ok = byPosition[id]
+			}
+		}
+		if !ok {
+			unknown = append(unknown, ref)
+			continue
+		}
+		if _, seen := seenLines[task.LineIndex]; seen {
+			continue
+		}
+		seenLines[task.LineIndex] = struct{}{}
+		targets = append(targets, task)
+	}
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("task id(s) not found: %s\nuse a stable id (e.g. ab12) or the 1-based position. Current tasks:\n%s", strings.Join(unknown, ", "), renderTaskTable(tasks))
+	}
+	if len(targets) == 0 {
 		return nil, errors.New("no valid ids")
 	}
 
 	out := append([]string{}, lines...)
-	for id := range idSet {
-		t, ok := tasks[id]
-		if !ok {
-			return nil, fmt.Errorf("task id not found: %d", id)
-		}
-		out[t.LineIndex] = setTaskLineChecked(out[t.LineIndex], checked)
+	for _, task := range targets {
+		out[task.LineIndex] = setTaskLineChecked(out[task.LineIndex], checked)
 	}
 	return out, nil
+}
+
+func renderTaskTable(tasks map[int]parsedTaskLine) string {
+	if len(tasks) == 0 {
+		return "  (no tasks)"
+	}
+	ids := make([]int, 0, len(tasks))
+	for id := range tasks {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	var b strings.Builder
+	for _, id := range ids {
+		t := tasks[id]
+		displayID := fmt.Sprintf("%d", id)
+		if strings.TrimSpace(t.StableID) != "" {
+			displayID = t.StableID
+		}
+		mark := " "
+		if t.Checked {
+			mark = "x"
+		}
+		fmt.Fprintf(&b, "  [%s] [%s] %s\n", displayID, mark, t.Text)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func AppendTask(lines []string, section string, text string) ([]string, error) {
@@ -171,7 +316,7 @@ func AppendTask(lines []string, section string, text string) ([]string, error) {
 		}
 	}
 
-	newTaskLine := "- [ ] " + text
+	newTaskLine := "- [ ] " + text + " " + FormatStableIDMarker(NewStableID(CollectStableIDs(lines)))
 
 	out := append([]string{}, lines...)
 	switch {

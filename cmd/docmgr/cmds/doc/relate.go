@@ -22,6 +22,9 @@ func newRelateCommand() (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := common.DisableFlagCommaSplitting(cobraCmd, "file-note"); err != nil {
+		return nil, err
+	}
 	carapace.Gen(cobraCmd).FlagCompletion(carapace.ActionMap{
 		"ticket":       completion.ActionTickets(),
 		"doc":          completion.ActionFiles(),

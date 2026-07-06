@@ -13,6 +13,7 @@ import { WorkspaceTicketsPage } from './features/workspace/WorkspaceTicketsPage'
 import { WorkspaceTopicsPage } from './features/workspace/WorkspaceTopicsPage'
 import { WorkspaceTopicDetailPage } from './features/workspace/WorkspaceTopicDetailPage'
 import { WorkspaceRecentPage } from './features/workspace/WorkspaceRecentPage'
+import { WorkspaceHealthPage } from './features/workspace/WorkspaceHealthPage'
 import './styles/design-system.css'
 import './styles/search.css'
 
@@ -30,6 +31,7 @@ function App() {
             <Route path="topics" element={<WorkspaceTopicsPage />} />
             <Route path="topics/:topic" element={<WorkspaceTopicDetailPage />} />
             <Route path="recent" element={<WorkspaceRecentPage />} />
+            <Route path="health" element={<WorkspaceHealthPage />} />
           </Route>
           <Route path="/doc" element={<DocViewerPage />} />
           <Route path="/file" element={<FileViewerPage />} />

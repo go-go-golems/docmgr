@@ -187,6 +187,7 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 			IncludeDiagnostics:  true,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 			Reverse:             false,
@@ -322,6 +323,7 @@ func (c *ListDocsCommand) Run(
 			IncludeDiagnostics:  false, // keep human mode quiet (matches previous behavior)
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 			Reverse:             false,
@@ -384,7 +386,9 @@ func (c *ListDocsCommand) Run(
 	})
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", absRoot)
+	if VerboseEnabled() {
+		fmt.Fprintf(&b, "Docs root: `%s`\nPaths are relative to this root.\n\n", absRoot)
+	}
 	fmt.Fprintf(&b, "## Documents (%d)\n\n", len(entries))
 	for _, ticket := range order {
 		docs := grouped[ticket]

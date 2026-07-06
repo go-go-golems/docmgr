@@ -5,29 +5,12 @@ import { ApiErrorAlert } from '../../components/ApiErrorAlert'
 import { EmptyState } from '../../components/EmptyState'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { timeAgo } from '../../lib/time'
+import { StatusBadge } from '../../components/StatusBadge'
 import {
   type WorkspaceTicketListItem,
   useGetWorkspaceFacetsQuery,
   useGetWorkspaceTopicQuery,
 } from '../../services/docmgrApi'
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'active'
-      ? 'primary'
-      : status === 'review'
-        ? 'warning'
-        : status === 'complete'
-          ? 'success'
-          : status === 'draft'
-            ? 'secondary'
-            : 'secondary'
-  return (
-    <span className={`badge text-bg-${variant}`} style={{ fontWeight: 600 }}>
-      {status || 'unknown'}
-    </span>
-  )
-}
 
 function getParamBool(sp: URLSearchParams, key: string, def: boolean): boolean {
   const v = (sp.get(key) ?? '').trim().toLowerCase()

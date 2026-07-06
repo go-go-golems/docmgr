@@ -411,6 +411,7 @@ func computeStatusTickets(ctx context.Context, root string, ticketFilter string,
 			OrderBy:             workspace.OrderByPath,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 		},
 	})

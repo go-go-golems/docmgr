@@ -28,12 +28,12 @@ type fileStats struct {
 }
 
 type docGetResponse struct {
-	Path         string               `json:"path"`
-	Doc          *models.Document     `json:"doc,omitempty"`
-	RelatedFiles []models.RelatedFile `json:"relatedFiles"`
-	Body         string               `json:"body"`
-	Stats        fileStats            `json:"stats"`
-	Diagnostic   *core.Taxonomy       `json:"diagnostic,omitempty"`
+	Path         string            `json:"path"`
+	Doc          *models.Document  `json:"doc,omitempty"`
+	RelatedFiles []relatedFileItem `json:"relatedFiles"`
+	Body         string            `json:"body"`
+	Stats        fileStats         `json:"stats"`
+	Diagnostic   *core.Taxonomy    `json:"diagnostic,omitempty"`
 }
 
 type fileGetResponse struct {
@@ -102,11 +102,11 @@ func (s *Server) handleDocsGet(w http.ResponseWriter, r *http.Request) error {
 		resp = docGetResponse{
 			Path: rel,
 			Doc:  doc,
-			RelatedFiles: func() []models.RelatedFile {
+			RelatedFiles: func() []relatedFileItem {
 				if doc == nil {
-					return []models.RelatedFile{}
+					return []relatedFileItem{}
 				}
-				return append([]models.RelatedFile{}, doc.RelatedFiles...)
+				return resolveRelatedFiles(ws, filepath.Join(rootAbs, filepath.FromSlash(rel)), doc.RelatedFiles)
 			}(),
 			Body: body,
 			Stats: fileStats{

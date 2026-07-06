@@ -76,7 +76,7 @@ Renderer: `docmgr.RenderTaxonomy` looks up matches in the default registry, rend
 ## 5. CLI Verb Integration
 
 Diagnostics are emitted from verbs and helpers so users see consistent guidance:
-- **doctor** (`pkg/commands/doctor.go`): Emits workspace missing index/stale, frontmatter schema (required fields + missing Status/Topics), vocabulary warnings, related file missing, and invalid frontmatter anywhere under the ticket. Supports `--diagnostics-json <path|->` to write rule results for CI while preserving `--fail-on` semantics.
+- **doctor** (`pkg/commands/doctor.go`): Emits workspace missing index/stale, frontmatter schema (required fields + missing Status/Topics), vocabulary warnings, related file missing, and invalid frontmatter anywhere under the ticket (docs under `sources/` are skipped unless `--include-sources` is passed). Supports `--diagnostics-json <path|->` to write rule results for CI while preserving `--fail-on` semantics. Multi-ticket human output is a per-ticket rollup by default (`--details` for the full report); `--fix` / `--fix-anchors` apply safe frontmatter repairs and anchored-path migration before validation.
 - **list docs / search** (`pkg/commands/list_docs.go`, `search.go`): Emit listing-skip taxonomies when a doc is skipped due to bad frontmatter instead of silently ignoring it.
 - **template validate** (`pkg/commands/template_validate.go`): Wraps `.templ` parse errors into template taxonomies so users see parser details.
 - **meta update / relate / rename-ticket** (`pkg/commands/meta_update.go`, `relate.go`, `rename_ticket.go`): Wrap frontmatter parse errors into taxonomies for actionable output.

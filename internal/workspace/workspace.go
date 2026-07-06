@@ -33,7 +33,10 @@ type WorkspaceContext struct {
 	Root      string
 	ConfigDir string
 	RepoRoot  string
-	Config    *WorkspaceConfig // best-effort loaded config (may be nil)
+	// WorkspaceRoot is the go.work-aware workspace root (directory containing
+	// go.work). Empty when the repo is not part of a go.work workspace.
+	WorkspaceRoot string
+	Config        *WorkspaceConfig // best-effort loaded config (may be nil)
 }
 
 // DiscoverOptions customizes workspace discovery.
@@ -85,10 +88,11 @@ func DiscoverWorkspace(ctx context.Context, opts DiscoverOptions) (*Workspace, e
 	}
 
 	return NewWorkspaceFromContext(WorkspaceContext{
-		Root:      root,
-		ConfigDir: configDir,
-		RepoRoot:  repoRoot,
-		Config:    cfg,
+		Root:          root,
+		ConfigDir:     configDir,
+		RepoRoot:      repoRoot,
+		WorkspaceRoot: FindWorkspaceRoot(repoRoot),
+		Config:        cfg,
 	})
 }
 
@@ -107,11 +111,15 @@ func NewWorkspaceFromContext(ctx WorkspaceContext) (*Workspace, error) {
 	if ctx.RepoRoot == "" {
 		return nil, errors.New("workspace context missing RepoRoot")
 	}
+	if ctx.WorkspaceRoot == "" {
+		ctx.WorkspaceRoot = FindWorkspaceRoot(ctx.RepoRoot)
+	}
 
 	resolver := paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  ctx.Root,
-		ConfigDir: ctx.ConfigDir,
-		RepoRoot:  ctx.RepoRoot,
+		DocsRoot:      ctx.Root,
+		ConfigDir:     ctx.ConfigDir,
+		RepoRoot:      ctx.RepoRoot,
+		WorkspaceRoot: ctx.WorkspaceRoot,
 	})
 
 	ignoreMatcher, err := docignore.Load(context.Background(), docignore.LoadOptions{

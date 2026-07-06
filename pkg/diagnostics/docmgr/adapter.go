@@ -47,6 +47,13 @@ func NewRenderer(opts ...Option) *Renderer {
 	return r
 }
 
+// WithTextOutput enables or disables immediate text rendering of findings.
+func WithTextOutput(enabled bool) Option {
+	return func(r *Renderer) {
+		r.renderText = enabled
+	}
+}
+
 // WithWriter overrides the text output destination (defaults to stderr).
 func WithWriter(w io.Writer) Option {
 	return func(r *Renderer) {

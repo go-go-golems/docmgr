@@ -334,6 +334,7 @@ func (b *ticketGraphBuilder) addTicketDocsDepth0(ctx context.Context) error {
 			IncludeControlDocs:  b.settings.IncludeControlDocs,
 			IncludeArchivedPath: b.settings.IncludeArchived,
 			IncludeScriptsPath:  b.settings.IncludeScriptsPath,
+			IncludeSourcesPath:  true,
 			OrderBy:             workspace.OrderByPath,
 		},
 	})
@@ -386,6 +387,7 @@ func (b *ticketGraphBuilder) expandTransitive(ctx context.Context) error {
 					IncludeControlDocs:  b.settings.IncludeControlDocs,
 					IncludeArchivedPath: b.settings.IncludeArchived,
 					IncludeScriptsPath:  b.settings.IncludeScriptsPath,
+					IncludeSourcesPath:  true,
 					OrderBy:             workspace.OrderByPath,
 				},
 			})

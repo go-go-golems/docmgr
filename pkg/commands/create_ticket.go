@@ -229,11 +229,11 @@ Use docmgr commands to manage this workspace:
 	files = append(files, readmePath)
 
 	tasksPath := filepath.Join(ticketPath, "tasks.md")
+	// No placeholder task: an empty TODO section keeps ticket task counts
+	// honest, and 'docmgr task list' prints a hint when there are no tasks.
 	tasksContent := `# Tasks
 
 ## TODO
-
-- [ ] Add tasks here
 
 `
 	if err := writeFileIfNotExists(tasksPath, []byte(tasksContent), settings.Force); err != nil {

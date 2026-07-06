@@ -336,6 +336,7 @@ type DocQueryOptions struct {
 	IncludeArchivedPath bool
 	IncludeControlDocs  bool
 	IncludeScriptsPath  bool
+	IncludeSourcesPath  bool
 
 	IncludeDiagnostics bool
 }

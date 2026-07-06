@@ -127,7 +127,7 @@ func TestAgentContract(t *testing.T) {
 			{"changelog", "update", "--ticket", "TEST-1", "--entry", "contract entry"},
 			{"doc", "relate", "--ticket", "TEST-1", "--file-note", "main.go:entry point"},
 			{"meta", "update", "--ticket", "TEST-1", "--field", "Status", "--value", "review"},
-			{"task", "remove", "--ticket", "TEST-1", "--id", "2"},
+			{"task", "remove", "--ticket", "TEST-1", "--id", "1"},
 		}
 		for _, args := range cases {
 			out := mustSucceed(t, tmp, args...)

@@ -81,6 +81,7 @@ func SuggestFiles(ctx context.Context, ws *workspace.Workspace, q SuggestFilesQu
 			IncludeDiagnostics:  false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},

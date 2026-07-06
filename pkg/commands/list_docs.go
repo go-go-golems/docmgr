@@ -187,6 +187,7 @@ func (c *ListDocsCommand) RunIntoGlazeProcessor(
 			IncludeDiagnostics:  true,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 			Reverse:             false,
@@ -322,6 +323,7 @@ func (c *ListDocsCommand) Run(
 			IncludeDiagnostics:  false, // keep human mode quiet (matches previous behavior)
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 			Reverse:             false,

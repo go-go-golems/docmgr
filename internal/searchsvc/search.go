@@ -141,6 +141,7 @@ func SearchDocs(ctx context.Context, ws *workspace.Workspace, q SearchQuery) (Se
 			IncludeDiagnostics:  q.IncludeDiagnostics,
 			IncludeArchivedPath: q.IncludeArchivedPath,
 			IncludeScriptsPath:  q.IncludeScriptsPath,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  q.IncludeControlDocs,
 			OrderBy:             q.OrderBy,
 			Reverse:             q.Reverse,

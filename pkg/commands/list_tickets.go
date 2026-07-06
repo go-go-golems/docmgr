@@ -403,6 +403,7 @@ func queryTicketIndexDocs(ctx context.Context, rootOverride string, ticketFilter
 			IncludeErrors:       false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByLastUpdated,
 			Reverse:             true,

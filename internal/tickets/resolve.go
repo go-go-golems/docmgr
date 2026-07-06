@@ -192,6 +192,7 @@ func queryIndexDocs(ctx context.Context, ws *workspace.Workspace) ([]workspace.D
 			IncludeDiagnostics:  false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},

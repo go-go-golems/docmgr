@@ -134,6 +134,7 @@ func (c *ShowTicketCommand) gather(ctx context.Context, settings *ShowTicketSett
 			IncludeErrors:       false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},

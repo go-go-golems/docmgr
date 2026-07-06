@@ -37,6 +37,9 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 	if !q.Options.IncludeScriptsPath {
 		where = append(where, "d.is_scripts_path = 0")
 	}
+	if !q.Options.IncludeSourcesPath {
+		where = append(where, "d.is_sources_path = 0")
+	}
 	if !q.Options.IncludeControlDocs {
 		where = append(where, "d.is_control_doc = 0")
 	}

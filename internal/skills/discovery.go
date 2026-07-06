@@ -142,6 +142,7 @@ func scanAllTicketPlans(ctx context.Context, ws *workspace.Workspace) ([]struct 
 			IncludeErrors:       false,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},

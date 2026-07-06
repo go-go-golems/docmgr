@@ -12,11 +12,11 @@ DocType: reference
 Intent: ticket-specific
 Owners: []
 RelatedFiles:
-    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/03-stage-and-convert.sh
+    - Path: repo://ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/03-stage-and-convert.sh
       Note: Session staging + minitrace conversion pipeline built in Step 3
-    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/query-commands/docmgr/usage.js
+    - Path: repo://ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/query-commands/docmgr/usage.js
       Note: JS analysis verbs (command-freq / error-summary / retry-chains / session-stats) from Step 3
-    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/minitrace-command-freq.json
+    - Path: repo://ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/minitrace-command-freq.json
       Note: Raw per-framework frequency data behind Step 4 findings
 ExternalSources: []
 Summary: Chronological diary of the DOCMGR-200 investigation - codebase review fan-out, go-minitrace JS analysis of agent sessions, and findings.
@@ -24,6 +24,7 @@ LastUpdated: 2026-07-05T18:50:00-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 # Diary
@@ -377,3 +378,31 @@ The frontmatter-paths redesign (D1) is in: explicit anchor schemes (`repo://`, `
 ### Code review instructions
 - Start: `internal/paths/anchored.go`, then `resolver.go` Resolve/MatchPaths, `pkg/commands/relate.go` anchoredForWrite, `pkg/commands/anchors_property_test.go`.
 - Validate: `go test ./internal/paths ./pkg/commands`; the go.work two-repo empirical from this step; `docmgr doctor --fix-anchors --ticket <old ticket>` on a scratch copy.
+
+## Step 10: Implementation - Phase 3 doctor v2 + stable task IDs landed
+
+Doctor is now summary-first, all-docs, vocabulary-bootstrapped, and self-healing; tasks have stable IDs. The implementing agent was cut off by a session limit after "lint green" - orchestrator review completed the verification and caught one real bug plus one improvement.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+### What I did
+- Doctor v2: RelatedFiles/vocab/staleness checks run on every doc (staleness = no doc in the ticket updated within --stale-after); sources/ excluded from frontmatter/prefix checks by default (--include-sources opts in; the dead is_sources_path column is finally wired); init seeds vocabulary by default; built-in docTypes/intents/statuses always known; no-vocabulary emits one info instead of a wall; multi-ticket runs print one rollup line per ticket + totals (--details or --ticket restores full findings); doctor --fix absorbs validate frontmatter --auto-fix + anchor migration (--fix-anchors alias kept); inline remediation text fixed.
+- Stable task IDs: `task add` appends `<!-- t:xxxx -->` markers; check/uncheck/edit/remove accept stable IDs or legacy positions; unknown IDs error with the current task table printed; `task list` shows [xxxx]; `task migrate` stamps old files; the eternal "Add tasks here" placeholder no longer counts as an open task.
+
+### What worked
+- All gates green (build, tests, fts5, make lint); fresh init+ticket doctors clean except a legit missing-Topics warning; invented `--id F2.5.1` exits 1 and prints the real IDs; stable-ID round-trip verified.
+- doctor --all over the repo's 55 tickets: 56 lines of rollup (was ~1,320 pre-P3).
+
+### What didn't work (orchestrator review catches)
+- **Rollup mode leaked details**: the per-finding taxonomy text streams to stderr from a package-level defaultRenderer whenever --diagnostics-json is NOT set, so `doctor --all` printed 4,818 lines before the rollup. Fixed: doctor always installs a context renderer with text output gated by the same detail-mode decision (new WithTextOutput option in pkg/diagnostics/docmgr/adapter.go).
+- **Anchor migration couldn't heal the historical cross-repo chains** (the exact damage D1 documented): legacy resolution keeps the repo-containment guard, so `../../..` entries resolved to nothing and were skipped. Added a rescue pass to migrateDocAnchors: plain doc-relative join + stat, migrate when the file exists. First version accidentally migrated non-existing files (property test caught it - `n.Abs` can be non-empty with Exists=false); tightened to require existence. Dogfooded on this ticket: 4/5 chains migrated to abs://, the fifth correctly skipped (its target moved during the go-minitrace migration).
+
+### What warrants a second pair of eyes
+- The detail-mode formula lives in two functions (renderer install + output site) - candidates for one helper.
+- API task payloads kept positional int ids for shape compatibility (stable id exposed alongside) - check UI consumers.
+
+### Code review instructions
+- `git show` this commit; key files pkg/commands/doctor.go (rollup gating + migrateDocAnchors rescue), internal/tasksmd/tasksmd.go, pkg/commands/tasks.go, cmd/docmgr/cmds/tasks/migrate.go, pkg/diagnostics/docmgr/adapter.go.
+- Validate: `docmgr doctor --all` (rollup), `--details`, `--ticket X` (details), `--fix-anchors` on a scratch ticket with ../ chains; task add/check/migrate round-trip.

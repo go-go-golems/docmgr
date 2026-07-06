@@ -228,6 +228,7 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 					IncludeErrors:       false,
 					IncludeArchivedPath: true,
 					IncludeScriptsPath:  true,
+					IncludeSourcesPath:  true,
 					IncludeControlDocs:  true,
 					OrderBy:             workspace.OrderByPath,
 				},

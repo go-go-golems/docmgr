@@ -129,6 +129,7 @@ func suffixMatchIndexedDocs(ctx context.Context, ws *workspace.Workspace, rootOv
 			IncludeErrors:       true,
 			IncludeArchivedPath: true,
 			IncludeScriptsPath:  true,
+			IncludeSourcesPath:  true,
 			IncludeControlDocs:  true,
 			OrderBy:             workspace.OrderByPath,
 		},

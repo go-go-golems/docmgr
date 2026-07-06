@@ -320,6 +320,9 @@ export type TicketTasksItem = {
   id: number
   checked: boolean
   text: string
+  // Stable short ID stored as an invisible marker in tasks.md; present for
+  // tasks created via `docmgr task add` or migrated via `docmgr task migrate`.
+  stableId?: string
 }
 
 export type TicketTasksSection = {

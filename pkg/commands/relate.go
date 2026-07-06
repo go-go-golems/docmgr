@@ -183,7 +183,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		}
 		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
 			Scope:   workspace.Scope{Kind: workspace.ScopeDoc, DocPath: resolvedDoc},
-			Options: workspace.DocQueryOptions{IncludeErrors: true},
+			Options: workspace.DocQueryOptions{IncludeErrors: true, IncludeSourcesPath: true},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to resolve --doc via workspace index: %w", err)
@@ -270,6 +270,7 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 					IncludeErrors:       false,
 					IncludeArchivedPath: true,
 					IncludeScriptsPath:  true,
+					IncludeSourcesPath:  true,
 					IncludeControlDocs:  true,
 					IncludeDiagnostics:  false,
 					OrderBy:             workspace.OrderByPath,

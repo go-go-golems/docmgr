@@ -141,6 +141,7 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 				IncludeErrors:       false,
 				IncludeArchivedPath: true,
 				IncludeScriptsPath:  true,
+				IncludeSourcesPath:  true,
 				IncludeControlDocs:  true,
 				OrderBy:             workspace.OrderByPath,
 			},

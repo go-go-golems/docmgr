@@ -12,19 +12,19 @@ DocType: design-doc
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: internal/paths/resolver.go
+    - Path: repo://internal/paths/resolver.go
       Note: Five-anchor path resolver at the heart of the frontmatter-paths trickiness (sections 4.4 and 8.1)
-    - Path: internal/workspace/config.go
+    - Path: repo://internal/workspace/config.go
       Note: Docs-root/config resolution chain - section 4.2
-    - Path: internal/workspace/query_docs.go
+    - Path: repo://internal/workspace/query_docs.go
       Note: fts5 hard-fail on default builds - section 4.3
-    - Path: pkg/commands/doctor.go
+    - Path: repo://pkg/commands/doctor.go
       Note: Doctor checks inventory and index-only validation gap - sections 4.5/8.3
-    - Path: pkg/commands/relate.go
+    - Path: repo://pkg/commands/relate.go
       Note: Write side of related files; silent --file-note drop and canonicalization analyzed in sections 4.4/7
-    - Path: pkg/models/document.go
+    - Path: repo://pkg/models/document.go
       Note: Frontmatter data model (no omitempty; silent RelatedFiles drops) - section 3.2
-    - Path: ui/src/components/MarkdownBlock.tsx
+    - Path: repo://ui/src/components/MarkdownBlock.tsx
       Note: UI markdown renderer missing mermaid/link/image handling - section 8.6
 ExternalSources: []
 Summary: Intern-ready end-to-end guide to docmgr - what it is, how every subsystem works (with file references), empirical evidence of how coding agents use and struggle with it (mined from 139 real sessions via go-minitrace), a gap analysis, and a phased design for making it a first-class documentation tool for coding agents, including an LLM-in-docmgr subsystem.
@@ -32,6 +32,7 @@ LastUpdated: 2026-07-05T19:30:00-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
 
 
 # Improving docmgr for coding agents: analysis, design, and implementation guide

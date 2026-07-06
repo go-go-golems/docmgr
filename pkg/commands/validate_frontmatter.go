@@ -42,13 +42,20 @@ func NewValidateFrontmatterCommand() (*ValidateFrontmatterCommand, error) {
 			cmds.WithShort("Validate YAML frontmatter for a document"),
 			cmds.WithLong(`Validates YAML frontmatter for a single markdown file.
 
+NOTE: 'docmgr doctor --fix' is the primary path for fixing frontmatter issues:
+it applies the same safe auto-fixes as '--auto-fix' here (plus anchor
+migration) across a whole ticket or workspace and re-validates afterwards.
+Use this command for a focused check of a single file.
+
 If parsing fails, the command surfaces a diagnostics taxonomy (line/column/snippet when available).
-Use this before running doctor when iterating on frontmatter edits.
 
 Examples:
   docmgr validate frontmatter --doc ttmp/2025/11/29/DOC-1234/index.md
   docmgr validate frontmatter --doc ttmp/.../index.md --suggest-fixes
   docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix
+
+  # Fix a whole ticket in one go (preferred)
+  docmgr doctor --ticket DOC-1234 --fix
 `),
 			cmds.WithFlags(
 				fields.New(

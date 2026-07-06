@@ -72,6 +72,7 @@ func BuildMermaid(ctx context.Context, ws *workspace.Workspace, ticketID string,
 			IncludeControlDocs:  includeControlDocs,
 			IncludeArchivedPath: includeArchived,
 			IncludeScriptsPath:  includeScripts,
+			IncludeSourcesPath:  true,
 			OrderBy:             workspace.OrderByPath,
 		},
 	})

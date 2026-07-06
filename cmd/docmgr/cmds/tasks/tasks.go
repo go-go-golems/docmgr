@@ -45,6 +45,10 @@ Examples:
 	if err != nil {
 		return err
 	}
+	migrateCmd, err := newMigrateCommand()
+	if err != nil {
+		return err
+	}
 
 	tasksCmd.AddCommand(
 		listCmd,
@@ -53,6 +57,7 @@ Examples:
 		uncheckCmd,
 		editCmd,
 		removeCmd,
+		migrateCmd,
 	)
 	root.AddCommand(tasksCmd)
 	return nil

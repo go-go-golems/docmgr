@@ -11,19 +11,19 @@ DocType: analysis
 Intent: long-term
 Owners: []
 RelatedFiles:
-    - Path: ../../../../../../../../../../code/wesen/go-go-golems/go-minitrace/pkg/adapters/claudecode/convert.go
+    - Path: abs:///home/manuel/code/wesen/go-go-golems/go-minitrace/pkg/adapters/claudecode/convert.go
       Note: Drops toolUseResult entirely and overwrites emit timestamps - biggest fidelity loss (sections 8.3/10)
-    - Path: ../../../../../../../../../../code/wesen/go-go-golems/go-minitrace/pkg/adapters/codex/convert.go
+    - Path: abs:///home/manuel/code/wesen/go-go-golems/go-minitrace/pkg/adapters/codex/convert.go
       Note: Scrapes exit_code/duration from output text - only adapter with timing; exec-format turn-index aliasing bug (section 8.3)
-    - Path: ../../../../../../../../../../code/wesen/go-go-golems/go-minitrace/pkg/adapters/pi/convert.go
+    - Path: abs:///home/manuel/code/wesen/go-go-golems/go-minitrace/pkg/adapters/pi/convert.go
       Note: Never derives duration_ms and destroys emit timestamps (section 8.3)
-    - Path: ../../../../../../../../../../code/wesen/go-go-golems/go-minitrace/pkg/minitrace/util.go
+    - Path: abs:///home/manuel/code/wesen/go-go-golems/go-minitrace/pkg/minitrace/util.go
       Note: TruncateLimit 10240 + full_bytes/full_hash pre-cap bug (section 8.1)
     - Path: ../../../../../../../../../../code/wesen/go-go-golems/go-minitrace/pkg/minitracecmd/command_runtime.go
       Note: Unconditional DuckDB preload before JS dispatch (section 7)
-    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/query-commands/docmgr/fidelity.js
+    - Path: repo://ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/query-commands/docmgr/fidelity.js
       Note: Fidelity probe producing the section 8.2 NULL-rate matrix
-    - Path: ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/minitrace-fidelity.json
+    - Path: repo://ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/minitrace-fidelity.json
       Note: Measured adapter-fidelity data
 ExternalSources: []
 Summary: First-party field report on go-minitrace from a real analysis project (mining 240 coding-agent sessions for docmgr usage) - what worked, every friction point with exact errors, CLI ergonomics, the JS query API, schema/adapter-fidelity assessment with measured NULL rates, what is fundamentally misshapen, and a prioritized improvement list.
@@ -31,6 +31,8 @@ LastUpdated: 2026-07-05T20:30:00-04:00
 WhatFor: ""
 WhenToUse: ""
 ---
+
+
 
 
 # go-minitrace field report: assessment from the docmgr usage-mining project

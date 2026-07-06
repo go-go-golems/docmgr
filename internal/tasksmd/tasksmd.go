@@ -1,6 +1,7 @@
 package tasksmd
 
 import (
+	cryptorand "crypto/rand"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,11 @@ type Item struct {
 	ID      int    `json:"id"`
 	Checked bool   `json:"checked"`
 	Text    string `json:"text"`
+	// StableID is an optional short identifier stored as an invisible HTML
+	// comment marker at the end of the task line (e.g. "<!-- t:ab12 -->").
+	// Tasks without markers have an empty StableID and are addressed by
+	// position (ID) only.
+	StableID string `json:"stableId,omitempty"`
 }
 
 type Section struct {
@@ -31,12 +37,83 @@ type parsedTaskLine struct {
 	Checked   bool
 	Text      string
 	Section   string
+	StableID  string
 }
 
 var (
 	headingRe = regexp.MustCompile(`^\s{0,3}(#{1,6})\s+(.+?)\s*$`)
 	taskRe    = regexp.MustCompile(`^\s{0,3}([-*])\s+\[(?i:[ x])\]\s+(.+?)\s*$`)
+	// stableIDMarkerRe matches a trailing invisible task-ID marker, e.g.
+	// "Fix resolver <!-- t:a3f2 -->".
+	stableIDMarkerRe = regexp.MustCompile(`\s*<!--\s*t:([a-z0-9]{2,12})\s*-->\s*$`)
 )
+
+const stableIDAlphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+// ExtractStableID splits a task text into its stable ID (if a trailing
+// "<!-- t:xxxx -->" marker is present) and the clean text without the marker.
+func ExtractStableID(text string) (string, string) {
+	m := stableIDMarkerRe.FindStringSubmatchIndex(text)
+	if m == nil {
+		return "", strings.TrimSpace(text)
+	}
+	id := text[m[2]:m[3]]
+	clean := strings.TrimSpace(text[:m[0]])
+	return id, clean
+}
+
+// FormatStableIDMarker renders the invisible marker for a stable task ID.
+func FormatStableIDMarker(id string) string {
+	return "<!-- t:" + id + " -->"
+}
+
+// NewStableID generates a short random task ID (base36, 4+ chars) that does
+// not collide with the provided existing IDs.
+func NewStableID(existing map[string]struct{}) string {
+	for length := 4; length <= 12; length++ {
+		for attempt := 0; attempt < 32; attempt++ {
+			id, err := randomStableID(length)
+			if err != nil {
+				continue
+			}
+			if _, ok := existing[id]; !ok {
+				return id
+			}
+		}
+	}
+	// Practically unreachable: fall back to a deterministic suffix scan.
+	base, _ := randomStableID(8)
+	for i := 0; ; i++ {
+		id := fmt.Sprintf("%s%d", base, i)
+		if _, ok := existing[id]; !ok {
+			return id
+		}
+	}
+}
+
+func randomStableID(length int) (string, error) {
+	buf := make([]byte, length)
+	if _, err := cryptorand.Read(buf); err != nil {
+		return "", err
+	}
+	out := make([]byte, length)
+	for i, b := range buf {
+		out[i] = stableIDAlphabet[int(b)%len(stableIDAlphabet)]
+	}
+	return string(out), nil
+}
+
+// CollectStableIDs returns the set of stable IDs already present in the file.
+func CollectStableIDs(lines []string) map[string]struct{} {
+	out := map[string]struct{}{}
+	_, tasks := Parse(lines)
+	for _, t := range tasks {
+		if t.StableID != "" {
+			out[t.StableID] = struct{}{}
+		}
+	}
+	return out
+}
 
 func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
 	sections := []Section{}
@@ -80,13 +157,13 @@ func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
 		trimmed := strings.TrimSpace(raw)
 		checked := strings.HasPrefix(strings.ToLower(trimmed), "- [x]") || strings.HasPrefix(strings.ToLower(trimmed), "* [x]")
 
-		text := strings.TrimSpace(m[2])
+		stableID, text := ExtractStableID(strings.TrimSpace(m[2]))
 		total++
 		if checked {
 			done++
 		}
 
-		item := Item{ID: total, Checked: checked, Text: text}
+		item := Item{ID: total, Checked: checked, Text: text, StableID: stableID}
 		sections[secIdx].Items = append(sections[secIdx].Items, item)
 		taskByID[item.ID] = parsedTaskLine{
 			ID:        item.ID,
@@ -94,6 +171,7 @@ func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
 			Checked:   checked,
 			Text:      text,
 			Section:   sections[secIdx].Title,
+			StableID:  stableID,
 		}
 	}
 
@@ -171,7 +249,7 @@ func AppendTask(lines []string, section string, text string) ([]string, error) {
 		}
 	}
 
-	newTaskLine := "- [ ] " + text
+	newTaskLine := "- [ ] " + text + " " + FormatStableIDMarker(NewStableID(CollectStableIDs(lines)))
 
 	out := append([]string{}, lines...)
 	switch {

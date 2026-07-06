@@ -431,3 +431,28 @@ The web UI is no longer a read-only browser. Mermaid renders inside doc bodies, 
 ### Code review instructions
 - `git show` this commit; key files ui/src/components/MarkdownBlock.tsx, internal/httpapi/{files_raw,docs_write,tickets_changelog,workspace_doctor}.go, pkg/commands/{relate_apply,changelog_entries}.go.
 - Validate: `go test ./internal/httpapi`; `docmgr api serve --root <scratch ttmp>` + the curl set from this step; open a doc with a mermaid block in the UI.
+
+## Step 12: Implementation complete - docs and skills refreshed
+
+The final phase landed: every embedded help topic, README, AGENT.md, and CONTRIBUTING now describe the post-implementation reality, a new `path-anchors` help page documents the anchor scheme, and updated docmgr + diary skills are staged in this ticket (the skills directory is mounted read-only in this environment). This closes the "implement it all" directive for docmgr: P0 silent failures, P1 agent contract, P2 paths v2, P3 doctor v2 + stable task IDs, P4 UI parity, and the docs/skills refresh - everything except the deliberately skipped `docmgr ai` (D7).
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7; docs directive in Step 8)
+
+### What I did
+- pkg/doc sweep: 12 topics updated + new `path-anchors.md`; cli-guide/how-to-use teach canonical spellings, ticket show, forgiving refs, anchored paths, doctor rollup/--fix, stable task IDs, exit codes, --verbose; architecture page's six-representation text replaced with anchored resolution; web-ui page covers the new write paths and health page.
+- README quick-start fence fixed + full feature surface; AGENT.md rewritten repo-accurate; CONTRIBUTING fixed (registration, config, glazed example deferral, scenario instructions).
+- Staged skills: `scripts/skill-updates/{docmgr,diary}/SKILL.md` + INSTALL.md (also go-minitrace's skill under the GMT-009 ticket).
+
+### What worked
+- ~40 doc-shown commands executed against a scratch workspace incl. failure paths; all touched help topics render; build+tests green; pre-existing doc bugs fixed opportunistically (tab-indented fence, wrong go install paths).
+- Verification corrected three doc claims before they shipped: root `create-ticket` alias doesn't exist (group-level only), `--doc` suffix matching is workspace-unique not ticket-scoped, and fresh tickets scaffold zero tasks.
+
+### What should be done in the future
+- `internal/workspace/config.go` package comment still mentions a nonexistent DOCMGR_ROOT step (code comment, out of docs scope).
+- Install the staged skills (see scripts/skill-updates/INSTALL.md) once ~/.claude/skills is writable.
+- The skipped `docmgr ai` design (D7) remains available in the design doc for a future phase.
+
+### Code review instructions
+- `git show` this commit; `docmgr help path-anchors`; spot-check any doc command against a scratch workspace.

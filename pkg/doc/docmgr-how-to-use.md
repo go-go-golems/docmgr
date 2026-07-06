@@ -158,7 +158,7 @@ If you see the first output (with root, vocabulary paths), **you're already set 
 If not initialized, run:
 
 ```bash
-docmgr init --seed-vocabulary
+docmgr init
 ```
 
 This creates:
@@ -181,9 +181,9 @@ docmgr status --summary-only
 docmgr vocab list
 ```
 
-Expected output from `docmgr status`:
+Expected output from `docmgr status --summary-only`:
 ```
-root=/your/path/ttmp vocabulary=/your/path/ttmp/vocabulary.yaml tickets=0 docs=0
+root=/your/path/ttmp config=/your/path/.ttmp.yaml vocabulary=/your/path/ttmp/vocabulary.yaml tickets=0 stale=0 docs=0 (design 0 / reference 0 / playbooks 0) stale-after=30
 ```
 
 Expected output from `docmgr vocab list`:
@@ -200,7 +200,7 @@ If you see these, initialization succeeded!
 **What's vocabulary.yaml?**
 - Defines valid topics (backend, frontend, etc.) and doc types (design-doc, reference, etc.)
 - Used by `docmgr doctor` to warn about unknown values (NOT enforced — you can use any topics)
-- `--seed-vocabulary` pre-fills it with common defaults
+- `docmgr init` seeds it with common defaults by default (pass `--seed-vocabulary=false` for an empty vocabulary); built-in doc types, intents, and statuses are always recognized by `doctor` regardless
 - Add custom entries with: `docmgr vocab add --category topics --slug your-topic`
 
 **Note:** Running `docmgr init` multiple times is safe (idempotent) — it won't overwrite existing files unless you use `--force`.
@@ -212,10 +212,12 @@ If you see these, initialization succeeded!
 ## 4. Create Your First Ticket [BASIC]
 
 ```bash
-docmgr ticket create-ticket --ticket MEN-4242 \
+docmgr ticket create --ticket MEN-4242 \
   --title "Normalize chat API paths and WebSocket lifecycle" \
   --topics chat,backend,websocket
 ```
+
+On success this prints a single line: `created MEN-4242 at ttmp/YYYY/MM/DD/MEN-4242--... (9 dirs, 4 files)`. Check the result any time with `docmgr ticket show MEN-4242`.
 
 This creates `ttmp/YYYY/MM/DD/MEN-4242--.../` with `index.md`, `tasks.md`, and `changelog.md` under a standard structure. Use `--path-template` to override the relative directory layout (placeholders: `{{YYYY}}`, `{{MM}}`, `{{DD}}`, `{{DATE}}`, `{{TICKET}}`, `{{SLUG}}`, `{{TITLE}}`). If your repository doesn’t have a docs root yet (with `vocabulary.yaml`, `_templates/`, `_guidelines/`), run `docmgr init` first.
 
@@ -438,6 +440,8 @@ docmgr meta update --doc "$DOC" --field Summary --value "Unify API paths"
 
 Note: When you omit --doc and provide --ticket, commands like `meta update` target the ticket’s `index.md` by default.
 
+**Forgiving references:** `--ticket` accepts the ticket ID, a unique prefix, or a pasted workspace directory path. `--doc` accepts an absolute path, a path relative to your current directory, a repo-relative or docs-root-relative path, a path with a duplicated `ttmp/` prefix, or a suffix like `design-doc/01-my-design.md` that is unique across the workspace (ambiguous suffixes list the candidates). If the update fails for any document, the command exits non-zero.
+
 ### Bulk Updates Across Documents
 
 For updating multiple docs at once, use `--ticket` and `--doc-type`:
@@ -488,7 +492,7 @@ docmgr doc add --ticket $TICKET --doc-type playbook --title "Smoke Tests"
 
 Bidirectional linking between documentation and code is one of docmgr's most powerful features. By relating code files to docs with explanatory notes, you create a navigation map that answers two critical questions: "What's the design for this code file?" (code review context) and "Which code implements this design?" (implementation reference). The `docmgr doc relate` command manages these relationships in frontmatter, while `docmgr doc search --file` provides instant reverse lookup from any code file to its related documentation.
 
-Under the hood, `docmgr doc relate` uses the same workspace discovery and path normalization logic as the unified index-backed commands (search/list/doctor). That means the paths you relate are normalized in a way that keeps reverse lookup consistent and explainable.
+Under the hood, `docmgr doc relate` uses the same workspace discovery and path resolution logic as the unified index-backed commands (search/list/doctor). Related file paths are persisted as **anchored paths** with an explicit scheme — `repo://backend/api/register.go` (repository-relative), `ws://member/pkg/foo.go` (go.work workspace member), `docs://2026/.../doc.md` (docs-root-relative), or `abs:///abs/path` (absolute) — so an entry means the same thing no matter where it is read from. Legacy bare paths in existing docs still resolve; migrate them with `docmgr doctor --fix-anchors`. See `docmgr help path-anchors` for the full scheme.
 
 > **Important:** Always use `docmgr doc relate` (not `docmgr relate`). The `doc relate` command does not support a `--doc-type` flag; use `--ticket` to target the ticket index or `--doc PATH` to target a specific document.
 
@@ -528,7 +532,10 @@ For examples, see Basic Usage above.
 >
 > - ✅ `--file-note "backend/api/register.go:Registers API routes"`
 > - ✅ `--file-note "web/src/store/api/chatApi.ts:Frontend integration"`
+> - ✅ `--file-note "pkg/foo.go:Parses config, validates fields: see design doc"` (commas and further colons are part of the note)
 > - ❌ `--file-note "backend/api/register.go - Registers API routes"` (wrong delimiter)
+>
+> A value without a `:` (or `=`) separator, or with an empty note, is rejected with an error and exit code 1 — nothing is silently dropped.
 
 **Re-running with the same notes:** If you call `docmgr doc relate` again with identical `--file-note` entries (and nothing else), docmgr now emits a warning row like `status=noop` with a reason such as `file-note entries matched existing notes` instead of failing. Add a new note, change the note text, or use `--remove-files` to make a real change.
 
@@ -560,14 +567,14 @@ docmgr doc relate --doc "$DOC" \
 ```
 
 **Path handling tips:**
-- **Use `--ticket` when possible** — Simplest approach, automatically targets the ticket's `index.md` or works with `--doc-type`
-- **For subdocuments, use paths relative to workspace root** — Paths should start from your workspace root (where `.ttmp.yaml` lives), not from `ttmp/`
+- **Use `--ticket` when possible** — Simplest approach; it automatically targets the ticket's `index.md`
+- **`--doc` is forgiving** — It accepts an absolute path, a path relative to your current directory, a repo- or docs-root-relative path, a path with a duplicated `ttmp/` prefix, or a suffix like `reference/01-carapace-analysis.md` that is unique across the workspace. If a reference is ambiguous, docmgr lists the candidates.
+- **Code file paths can be absolute or relative** — relate resolves them and stores an explicit anchor (`repo://...` etc.), never `../` chains. Absolute paths are the safest input for scripts and agents.
 - **Use shell variables for long paths** — Store the document path in a variable to avoid typos:
   ```bash
-  DOC="docmgr/ttmp/2025/11/19/MEN-4242--chat-persistence/reference/01-carapace-analysis.md"
+  DOC="ttmp/2025/11/19/MEN-4242--chat-persistence/reference/01-carapace-analysis.md"
   docmgr doc relate --doc "$DOC" --file-note "carapace/storage.go:Storage system"
   ```
-- **Common mistake:** Using paths relative to `ttmp/` instead of workspace root — docmgr expects paths from the workspace root where the config file lives
 
 ### Advanced patterns and best practices
 
@@ -589,7 +596,7 @@ docmgr doc relate --doc ttmp/MEN-4242/design-doc/01-path-normalization-strategy.
 Make relating files part of your document workflow:
 
 1. **Create the document** → `docmgr doc add --ticket T --doc-type TYPE --title "Title"`
-2. **Immediately relate source files** → `docmgr doc relate --ticket T --doc-type TYPE --file-note "path:reason"`
+2. **Immediately relate source files** → `docmgr doc relate --doc <new-doc> --file-note "path:reason"`
 3. **Update changelog** → `docmgr changelog update --ticket T --entry "Created doc, related files"`
 4. **Validate** → `docmgr doctor --ticket T`
 
@@ -607,18 +614,19 @@ docmgr changelog update --ticket MEN-4242 \
   --file-note "backend/api/register.go:Path normalization source"
 ```
 
-Changelogs are dated automatically. Keep entries short — mention what changed and link relevant files.
+Changelogs are dated automatically. Keep entries short — mention what changed and link relevant files. `--entry` must be non-empty; an empty entry is an error (exit 1). File notes follow the same `path:note` format as `doc relate` and are stored with anchored paths.
 
 **Best practice:** When you add a changelog entry, always include file notes and also relate the exact files you changed to the relevant subdocument(s) (design-doc/reference/playbook). Keep `index.md` as a concise map that links to those subdocuments. Then validate.
 
 ### Validate and fix YAML/frontmatter
 
-- **Quick check:** `docmgr validate frontmatter --doc <file>` shows line/col, snippet, and suggestions for YAML/frontmatter issues. Add `--suggest-fixes` to see suggested repairs, or `--auto-fix` to rewrite the file (creates `<file>.bak`).
-- **Workspace scan:** `docmgr doctor --ticket <T>` or `--all` reports frontmatter/schema/vocab issues across a ticket. Use `--doc <file>` for a single-file doctor run (parse + schema + vocab checks).
+- **Primary path:** `docmgr doctor --ticket <T> --fix` applies safe frontmatter auto-fixes (creating `.bak` backups) plus anchor migration across the whole ticket, then re-validates.
+- **Quick single-file check:** `docmgr validate frontmatter --doc <file>` shows line/col, snippet, and suggestions for YAML/frontmatter issues. Add `--suggest-fixes` to see suggested repairs, or `--auto-fix` to rewrite the file (creates `<file>.bak`).
+- **Workspace scan:** `docmgr doctor --ticket <T>` or `--all` reports frontmatter/schema/vocab issues across all docs in a ticket. Use `--doc <file>` for a single-file doctor run (parse + schema + vocab checks).
 - **Help:** `docmgr help yaml-frontmatter-validation` for common issues and commands. Diagnostics output also links to this help.
 - **Examples:**
+  - Fix a whole ticket: `docmgr doctor --ticket MEN-4242 --fix`
   - View issues: `docmgr validate frontmatter --doc ttmp/.../index.md --suggest-fixes`
-  - Attempt repair: `docmgr validate frontmatter --doc ttmp/.../index.md --auto-fix`
   - Scan ticket: `docmgr doctor --ticket MEN-4242 --fail-on warning`
 
 These commands reuse the same parser and diagnostics rules described in `docmgr help docmgr-diagnostics-and-rules`.
@@ -653,41 +661,45 @@ Tasks capture the atomic steps required to finish a ticket. They pair nicely wit
 Track concrete steps in `tasks.md`:
 
 ```bash
-# Add tasks
+# Add tasks — each gets a stable ID, echoed back on creation
 docmgr task add --ticket MEN-4242 --text "Update API docs for /v2"
+# -> Task v0sv added to .../tasks.md
 docmgr task add --ticket MEN-4242 --text "Add WebSocket lifecycle diagram"
 
-# Check off completed tasks
-docmgr task check --ticket MEN-4242 --id 1,2
-
-# List tasks
+# List tasks (stable IDs shown in brackets)
 docmgr task list --ticket MEN-4242
+# -> [v0sv] [ ] Update API docs for /v2
+#    [a3t8] [ ] Add WebSocket lifecycle diagram
+
+# Check off completed tasks by stable ID (preferred) or 1-based position
+docmgr task check --ticket MEN-4242 --id v0sv
+docmgr task check --ticket MEN-4242 --id 1,2
 ```
+
+### Stable task IDs
+
+IDs are persisted inside `tasks.md` as invisible HTML comments (`- [ ] Update API docs <!-- t:v0sv -->`), so they survive reordering, edits, and manual changes to the file. Prefer stable IDs over positions in scripts and agent workflows. If you pass an unknown ID, the command exits 1 and prints the current task table so you can pick the right one. For hand-written task lists that predate stable IDs, run:
+
+```bash
+docmgr task migrate --ticket MEN-4242
+```
+
+Fresh tickets start with zero tasks — the scaffolded `tasks.md` contains no placeholder checkbox, so `ticket show` reports `0 open / 0 done` until you add real work.
 
 ### Edit, uncheck, or remove tasks
 
 ```bash
 # Fix the text without touching other lines
-docmgr task edit --ticket MEN-4242 --id 2 --text "Align frontend routes with backend"
+docmgr task edit --ticket MEN-4242 --id a3t8 --text "Align frontend routes with backend"
 
 # Re-open work that needs more attention
-docmgr task uncheck --ticket MEN-4242 --id 2
+docmgr task uncheck --ticket MEN-4242 --id a3t8
 
 # Remove noisy items (docmgr keeps the rest of the list intact)
-docmgr task remove --ticket MEN-4242 --id 3
+docmgr task remove --ticket MEN-4242 --id a3t8
 ```
 
-Output shows checkboxes: `[x]` for done, `[ ]` for pending.
-
-### Quick Hands-on
-
-```bash
-# Edit a task inline (safe updates to just the target line)
-docmgr task edit --ticket MEN-4242 --id 1 --text "Write API docs for /v2"
-
-# Remove a task while keeping the rest intact
-docmgr task remove --ticket MEN-4242 --id 1
-```
+All of `check`, `uncheck`, `edit`, and `remove` accept stable IDs or 1-based positions in `--id`. Output shows checkboxes: `[x]` for done, `[ ]` for pending.
 
 **When to use which doc:**
 - Keep *tasks* focused on actionable steps ("Add monitoring dashboard").
@@ -780,28 +792,51 @@ docmgr task check --ticket MEN-4242 --id 3
 Check for problems before they bite you:
 
 ```bash
-# Validate all docs
+# Validate all docs (multi-ticket runs print a compact per-ticket rollup)
 docmgr doctor --all --stale-after 30 --fail-on error
 
-# Validate specific ticket
+# Full per-issue report for multi-ticket runs
+docmgr doctor --all --details
+
+# Validate specific ticket (single-ticket runs always show full details)
 docmgr doctor --ticket MEN-4242
+
+# Apply safe fixes: frontmatter auto-repair (.bak backups) + anchor migration
+docmgr doctor --ticket MEN-4242 --fix
+
+# Only migrate legacy RelatedFiles paths to anchored paths (subset of --fix)
+docmgr doctor --ticket MEN-4242 --fix-anchors
+
+# Also validate imported material under sources/ (skipped by default)
+docmgr doctor --ticket MEN-4242 --include-sources
 
 # Capture diagnostics for CI (JSON)
 docmgr doctor --all --diagnostics-json diagnostics.json --fail-on warning
 ```
 
-**What doctor checks:**
+The rollup output for multi-ticket runs looks like:
+
+```
+MEN-4242: 0 error(s), 2 warning(s) — top: missing_related_file x1, unknown_topics x1
+5 ticket(s) checked: 0 with errors, 1 with warnings, 4 ok (0 errors, 2 warnings total)
+Run 'docmgr doctor --ticket <ID>' or add --details for full findings.
+```
+
+**What doctor checks (all documents in each ticket, not just index.md):**
 - ✅ Missing or invalid frontmatter (all markdown files)
-- ✅ Unknown topics/doc-types/status (warns, doesn't fail)
+- ✅ Unknown topics/doc-types/status (warns, doesn't fail; built-in doc types, intents, and statuses are always recognized)
 - ✅ Missing Note on RelatedFiles entries (warns)
-- ✅ Missing files in RelatedFiles
+- ✅ Missing files in RelatedFiles (anchored and legacy paths)
 - ✅ Stale docs (older than --stale-after days)
+
+Docs under `sources/` (imported external material) are skipped unless you pass `--include-sources`.
 
 **Common warnings:**
 - Unknown topic (not in vocabulary.yaml) — Add it with `docmgr vocab add`
 - Missing file in RelatedFiles — Fix path or remove entry
+- Legacy (non-anchored) RelatedFiles path — Run `docmgr doctor --fix-anchors`
 - Stale doc — Update content or adjust --stale-after threshold
-- Invalid frontmatter — Fix YAML syntax errors
+- Invalid frontmatter — Run `docmgr doctor --fix` or fix YAML syntax by hand
 
 ### Suppressing Noise with .docmgrignore
 
@@ -834,12 +869,12 @@ Before touching ticket files, confirm that you can run docmgr at the repository 
 cd <REPO-PATH>
 
 docmgr help how-to-use
-docmgr ticket list --ticket <TICKET-ID>
+docmgr ticket show <TICKET-ID>
 docmgr doc list --ticket <TICKET-ID>
 docmgr task list --ticket <TICKET-ID>
 ```
 
-> **Note:** Both `docmgr ticket list` and `docmgr list tickets` work (they're aliases). Similarly, `docmgr doc list` and `docmgr list docs` are both valid forms.
+> **Note:** `docmgr ticket show <ID>` prints a compact one-ticket overview (status, tasks, docs, changelog date). Both `docmgr ticket list` and `docmgr list tickets` work (they're aliases), as do `docmgr doc list` and `docmgr list docs`. `<TICKET-ID>` can also be a unique prefix or a pasted workspace directory path.
 
 **Review the repository vocabulary:** Familiarize yourself with the team's shared vocabulary by viewing the available topics, doc types, intent values, and status values. This helps you understand the repository's conventions and use consistent metadata when creating or updating documents.
 
@@ -1039,9 +1074,6 @@ docmgr list docs --ticket MEN-4242 --with-glaze-output --output csv
 Sample human output (default):
 
 ```
-Docs root: `/home/you/projects/chat-app/ttmp`
-Paths are relative to this root.
-
 ## Tickets (2)
 
 ### MEN-4242 — Chat Persistence
@@ -1052,7 +1084,7 @@ Paths are relative to this root.
 - Path: `2025/11/19/MEN-4242--chat-persistence`
 ```
 
-`docmgr list docs` mirrors the same style, grouped by ticket with per-document bullet summaries (doc type, status, topics, updated, path).
+`docmgr list docs` mirrors the same style, grouped by ticket with per-document bullet summaries (doc type, status, topics, updated, path). Add the global `--verbose` flag to prepend the workspace banner (docs root / config / vocabulary paths); it is omitted by default to keep output terse.
 
 **Common usecases:**
 - `list tickets` or `ticket list` — See all your tickets at a glance (both forms work)
@@ -1060,7 +1092,7 @@ Paths are relative to this root.
 - `status` — Health check: how many tickets, docs, any stale?
 - `status --summary-only` — Just the totals, no per-ticket detail
 
-> **Note:** Command aliases: `docmgr ticket list` is an alias for `docmgr ticket tickets`, and both `docmgr list docs` and `docmgr doc list` work identically. Use whichever form feels more natural.
+> **Note:** Command aliases: `docmgr ticket list` is the canonical spelling (`docmgr ticket tickets` remains as an alias), and both `docmgr list docs` and `docmgr doc list` work identically. Use whichever form feels more natural.
 
 ---
 

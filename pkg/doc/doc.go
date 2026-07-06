@@ -6,9 +6,10 @@
 // The embedded files include:
 //   - docmgr-how-to-use.md: Quick start and usage guide
 //   - docmgr-how-to-setup.md: Initial setup instructions
-//   - how-to-work-on-any-ticket.md: Checklist for taking over any ticket
 //   - docmgr-cli-guide.md: Complete CLI reference
-//   - docmgr-http-api.md: HTTP API server reference (search + index refresh)
+//   - docmgr-http-api.md: HTTP API server reference
+//   - docmgr-web-ui.md: Embedded web UI guide
+//   - path-anchors.md: Anchored RelatedFiles paths (repo://, ws://, docs://, abs://)
 //   - templates-and-guidelines.md: Document templates and guidelines
 //   - docmgr-ci-automation.md: CI/CD integration guide
 //   - using-skills.md: LLM bootstrap prompt pack (docmgr + skills)

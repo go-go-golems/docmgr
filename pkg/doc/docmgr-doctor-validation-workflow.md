@@ -45,6 +45,7 @@ Input discovery determines which files to validate. The strategy differs by comm
 - Builds a temporary in-memory workspace index via `Workspace.InitIndex` (see `internal/workspace/index_builder.go`)
   - Ingestion applies the canonical skip policy (for example `.meta/` and `_*/` like `_templates/` / `_guidelines/`) — see `internal/workspace/skip_policy.go`
   - Ingestion also applies the workspace-owned `.docmgrignore` matcher before frontmatter parsing, so ignored dependency/generated Markdown is not indexed.
+- Validates **all documents** in each ticket workspace (not just `index.md`). Documents under `sources/` (imported external material) are excluded by default; pass `--include-sources` to check them too.
 - Queries the indexed doc set via `Workspace.QueryDocs` (see `internal/workspace/query_docs.go`)
   - `doctor` requests `IncludeErrors=true` so parse-error docs are available as `DocHandle{ReadErr: ...}` for repair workflows
   - `doctor` requests `IncludeDiagnostics=true` so QueryDocs can emit structured diagnostics (for example parse-skip and normalization fallback)
@@ -84,11 +85,12 @@ After successful parsing, schema validation checks that required fields are pres
 **Optional checks (doctor only):**
 - Missing Status or Topics fields (warnings, not errors)
 - Vocabulary mismatches: Topics, DocType, Intent, Status values not in `vocabulary.yaml`
+  - Built-in doc types, intents, and statuses (`doctorBuiltinDocTypes` etc. in `pkg/commands/doctor.go`) are merged into the known sets, so a sparse or missing `vocabulary.yaml` never produces false unknown-value warnings for standard values
 - Implemented in `pkg/commands/doctor.go` after successful parse
 
-### 1.4. Fix Generation Phase (validate frontmatter only)
+### 1.4. Fix Generation Phase (doctor --fix and validate frontmatter)
 
-The `validate frontmatter` command can generate fix suggestions and optionally apply them automatically. Fix generation operates on raw file bytes (not parsed structure), allowing repairs even when parsing fails completely.
+Both `docmgr doctor --fix` and `docmgr validate frontmatter --auto-fix` can generate fix suggestions and apply them automatically; `doctor --fix` is the primary path because it operates across a whole ticket or workspace and additionally migrates legacy `RelatedFiles` paths to explicit anchors (`repo://`, `ws://`, `docs://`, `abs://` — see `docmgr help path-anchors`). `doctor --fix-anchors` runs only the anchor migration. Fix generation operates on raw file bytes (not parsed structure), allowing repairs even when parsing fails completely; fixed files get a `.bak` backup and are re-validated afterwards.
 
 **Fix heuristics (`generateFixes` in `pkg/commands/validate_frontmatter.go`):**
 1. Normalize delimiters (add missing closing `---`, handle stray delimiter lines)
@@ -337,17 +339,19 @@ return severityOK, nil
 2. Builds the in-memory workspace index once (`Workspace.InitIndex`), applying the canonical skip policy during ingestion.
 3. Checks for ticket scaffolds missing `index.md` (`workspace.FindTicketScaffoldsMissingIndex`) and emits `missing_index` findings (scoped to `--ticket` when provided).
 4. Queries the indexed doc set via `Workspace.QueryDocs` (typically with `IncludeErrors=true` and `IncludeDiagnostics=true`) and groups findings by ticket.
-5. Applies validation and checks:
+5. If `--fix` or `--fix-anchors` was passed, rewrites documents *before* validation: `--fix` applies safe frontmatter auto-repair (same heuristics as `validate frontmatter --auto-fix`, with `.bak` backups) plus anchor migration; `--fix-anchors` migrates only legacy `RelatedFiles` paths to explicit anchors. Legacy entries that do not resolve to an existing file are left untouched and reported.
+6. Applies validation and checks:
    - frontmatter parse/schema issues (as taxonomies)
    - optional field and vocabulary warnings
-   - `RelatedFiles` existence checks (doc-anchored path normalization)
+   - `RelatedFiles` existence checks through the shared anchored-path resolver (`internal/paths`)
    - stale docs (`LastUpdated` older than `--stale-after` days)
-6. Uses the workspace-owned `.docmgrignore` matcher during index ingestion; explicit `--ignore-glob` / `--ignore-dir` flags are applied as doctor command filters.
-7. Optionally writes diagnostics JSON (`--diagnostics-json`)
-8. Exits with error code if `--fail-on` threshold is met
+7. Uses the workspace-owned `.docmgrignore` matcher during index ingestion; explicit `--ignore-glob` / `--ignore-dir` flags are applied as doctor command filters.
+8. Optionally writes diagnostics JSON (`--diagnostics-json`)
+9. Exits with error code if `--fail-on` threshold is met
 
 **Output:**
-- Human-readable: Grouped by ticket, shows issue type, severity, message, path
+- Human-readable, multi-ticket runs: a per-ticket rollup by default — one line per ticket with error/warning counts and the top issue codes, followed by a totals line. Pass `--details` for the full per-issue report (single-ticket runs always show details). Rendering lives in `printDoctorRollup` (`pkg/commands/doctor.go`).
+- Human-readable, single-ticket runs: grouped findings showing issue type, severity, message, path
 - JSON (with `--with-glaze-output --output json`): Array of row objects
 - Diagnostics JSON (`--diagnostics-json`): Array of `RuleResult` objects
 
@@ -364,13 +368,16 @@ return severityOK, nil
 6. Emits success row if no issues
 
 **Limitations:**
-- No auto-fix (use `validate frontmatter --auto-fix` instead)
 - No related file checks (only in workspace scan)
 - No stale doc checks (only in workspace scan)
+
+For fixes on a single file, use `docmgr validate frontmatter --doc <file> --auto-fix` or run `docmgr doctor --ticket <T> --fix` on the containing ticket.
 
 ### 3.3. Validate Frontmatter
 
 **Command:** `docmgr validate frontmatter --doc <file> [--suggest-fixes] [--auto-fix]`
+
+`docmgr doctor --fix` is the primary repair path (same safe fixes plus anchor migration, across a ticket or workspace); `validate frontmatter` remains useful for a focused check of a single file.
 
 **Behavior:**
 1. Validates exactly one file
@@ -467,18 +474,9 @@ Frontmatter validation errors flow through docmgr's diagnostics taxonomy system.
 
 ## 6. Extending the System
 
-### 6.1. Adding Doctor Auto-Fix
+### 6.1. Doctor Auto-Fix (implemented)
 
-To add auto-fix capabilities to `doctor`:
-
-1. Reuse fix engine from `validate_frontmatter.go` (`generateFixes`, `applyAutoFix`)
-2. Add `--auto-fix` flag to `DoctorSettings`
-3. In workspace scan loop, when frontmatter parse fails:
-   - Call `generateFixes` to get suggestions and fixed content
-   - If `--auto-fix`, call `applyAutoFix` (creates `.bak`, rewrites, re-parses)
-   - On success: suppress error taxonomy, emit success row
-   - On failure: emit new taxonomy from failed re-parse
-4. Follow same pattern as `validate frontmatter` for backup handling and error suppression
+`doctor --fix` reuses the fix engine from `validate_frontmatter.go`: `autoFixDocFrontmatter` (`pkg/commands/doctor.go`) calls `generateFixes` and `applyAutoFix` (creating `.bak` backups) for each fixable document before validation runs, and the anchor migration pass rewrites legacy `RelatedFiles` paths via the shared resolver in `internal/paths`. `doctor --fix-anchors` runs the anchor migration alone. To extend the fix pass, add heuristics to `generateFixes` (they are automatically picked up by both verbs) or extend the anchor-migration logic guarded by `settings.Fix || settings.FixAnchors` in `pkg/commands/doctor.go`.
 
 ### 6.2. Adding Schema Rules
 

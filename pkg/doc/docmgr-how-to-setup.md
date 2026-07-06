@@ -99,14 +99,15 @@ If already initialized, skip to [Section 3 (Vocabulary)](#3-managing-vocabulary-
 **Run once per repository:**
 
 ```bash
-docmgr init --seed-vocabulary
+docmgr init
 ```
 
 **What this creates:**
 
 ```
 ttmp/
-├── vocabulary.yaml     # Seeded with common topics/docTypes/intent
+├── vocabulary.yaml     # Seeded with common topics/docTypes/intent/status
+│                       # (pass --seed-vocabulary=false for an empty vocabulary)
 ├── _templates/         # Document scaffolds (design-doc.md, reference.md, etc.)
 ├── _guidelines/        # Writing guidelines for each doc type
 └── .docmgrignore       # Validation exclusions (.git/, _templates/, etc.)
@@ -274,7 +275,7 @@ docmgr doc guidelines --list  # Show all available types
 ✅ **Milestone: Repository is Set Up!**
 
 Your team can now:
-- Create tickets with `docmgr ticket create-ticket`
+- Create tickets with `docmgr ticket create`
 - Add docs with `docmgr doc add`
 - Search with `docmgr doc search`
 
@@ -441,7 +442,7 @@ docmgr doc add --ticket MEN-XXXX --doc-type til --title "TIL — WebSocket Recon
 1) **Create ticket workspace:**
 
 ```bash
-docmgr ticket create-ticket --ticket MIGRATE-001 --title "Existing Docs" --topics migration
+docmgr ticket create --ticket MIGRATE-001 --title "Existing Docs" --topics migration
 ```
 
 2) **Move files into ticket directory:**
@@ -489,7 +490,7 @@ Your repository now has:
 **What's next?**
 - Set up CI (see [Part 2](#part-2-ci-integration-🔧))
 - Share setup with team
-- Create first ticket: `docmgr ticket create-ticket`
+- Create first ticket: `docmgr ticket create`
 
 ---
 
@@ -808,7 +809,7 @@ vocabulary: /shared/path/vocabulary.yaml
 
 ```bash
 # Initialize with seeded vocabulary
-docmgr init --seed-vocabulary
+docmgr init
 
 # Initialize empty
 docmgr init

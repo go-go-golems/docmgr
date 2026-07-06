@@ -84,7 +84,7 @@ func (r *Resolver) Normalize(raw string) NormalizedPath {
 	}
 
 	if filepath.IsAbs(cleaned) {
-		return r.buildResultWithExists(cleaned, AnchorUnknown, true)
+		return r.buildResult(cleaned, AnchorUnknown)
 	}
 
 	bases := []struct {

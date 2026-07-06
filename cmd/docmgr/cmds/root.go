@@ -36,6 +36,9 @@ Helpful docs (built-in):
   - Quick usage:          docmgr help how-to-use
   - Initial setup guide:  docmgr help how-to-setup
   - List all embedded docs: docmgr help --all`,
+		// main.go already prints the error returned by Execute; silence cobra's
+		// own copy so errors are printed exactly once.
+		SilenceErrors: true,
 	}
 
 	help_cmd.SetupCobraRootCommand(helpSystem, rootCmd)

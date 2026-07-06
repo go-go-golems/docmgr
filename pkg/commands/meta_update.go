@@ -294,12 +294,18 @@ func (c *MetaUpdateCommand) Run(
 	}
 
 	fmt.Printf("\n## Metadata Updates\n\n")
+	errorCount := 0
 	for _, update := range result.Updates {
 		if update.Status == "error" {
+			errorCount++
 			fmt.Printf("- `%s`: error updating %s (%s)\n", update.Doc, update.Field, update.Error)
 			continue
 		}
 		fmt.Printf("- `%s`: %s → %s\n", update.Doc, update.Field, update.Value)
+	}
+
+	if errorCount > 0 {
+		return fmt.Errorf("metadata update failed for %d document(s)", errorCount)
 	}
 
 	return nil

@@ -22,6 +22,7 @@ type Renderer struct {
 	renderText bool
 	collect    bool
 	results    []*rules.RuleResult
+	nextNumber int
 }
 
 type Option func(*Renderer)
@@ -36,6 +37,7 @@ func NewRenderer(opts ...Option) *Renderer {
 		renderText: true,
 		collect:    false,
 		results:    []*rules.RuleResult{},
+		nextNumber: 1,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -112,11 +114,12 @@ func (r *Renderer) Render(ctx context.Context, tax *core.Taxonomy) {
 		r.results = append(r.results, results...)
 	}
 	if r.renderText {
-		out := render.RenderToText(results)
+		out := render.RenderToText(results, r.nextNumber)
 		if strings.TrimSpace(out) != "" {
 			fmt.Fprintln(r.writer, out)
 		}
 	}
+	r.nextNumber += len(results)
 }
 
 // Results returns collected rule results (empty slice if none).

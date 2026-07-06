@@ -26,10 +26,8 @@ type RelateCommand struct {
 }
 
 type RelateSettings struct {
-	Ticket string `glazed:"ticket"`
-	Doc    string `glazed:"doc"`
-	// Deprecated: kept only to emit a friendly migration error if provided
-	Files            []string `glazed:"files"`
+	Ticket           string   `glazed:"ticket"`
+	Doc              string   `glazed:"doc"`
 	RemoveFiles      []string `glazed:"remove-files"`
 	FileNotes        []string `glazed:"file-note"`
 	Suggest          bool     `glazed:"suggest"`
@@ -94,13 +92,6 @@ Examples:
 					fields.TypeString,
 					fields.WithHelp("Path to a specific document to update"),
 					fields.WithDefault(""),
-				),
-				// Deprecated flag: still declared to provide a clearer migration error when used
-				fields.New(
-					"files",
-					fields.TypeStringList,
-					fields.WithHelp("DEPRECATED (removed) — use repeated --file-note 'path:note'"),
-					fields.WithDefault([]string{}),
 				),
 				fields.New(
 					"remove-files",
@@ -447,37 +438,9 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	}
 
 	// Parse provided file-note mappings
-	rawNotes := map[string]string{}
-	for _, m := range settings.FileNotes {
-		s := strings.TrimSpace(m)
-		if s == "" {
-			continue
-		}
-		var key, val string
-		if i := strings.IndexAny(s, ":="); i >= 0 {
-			key = strings.TrimSpace(s[:i])
-			val = strings.TrimSpace(s[i+1:])
-		} else {
-			// No delimiter, skip
-			continue
-		}
-		if key != "" {
-			rawNotes[key] = strings.TrimSpace(val)
-		}
-	}
-
-	// Enforce deprecation: --files is no longer supported for additions
-	// We keep the flag definition at the CLI layer for a friendlier error.
-	// If any values are provided, fail fast with guidance.
-	if len(settings.Files) > 0 {
-		return fmt.Errorf("--files has been removed from 'docmgr doc relate'. Use repeated --file-note 'path:note' instead. Example: docmgr doc relate --file-note 'a/b.go:reason' --file-note 'c/d.ts:reason'")
-	}
-
-	// Validate that all provided file-note mappings contain a non-empty note
-	for p, n := range rawNotes {
-		if strings.TrimSpace(n) == "" {
-			return fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", p)
-		}
+	rawNotes, err := parseFileNotes(settings.FileNotes)
+	if err != nil {
+		return err
 	}
 
 	// Canonicalize provided paths
@@ -629,6 +592,33 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		types.MRP("unchanged", strings.Join(unchangedNotes, ", ")),
 	)
 	return gp.AddRow(ctx, row)
+}
+
+// parseFileNotes parses repeated --file-note values into a path -> note map.
+// Each value must use the 'path:note' (or 'path=note') format with a non-empty
+// path and note.
+func parseFileNotes(fileNotes []string) (map[string]string, error) {
+	notes := map[string]string{}
+	for _, m := range fileNotes {
+		s := strings.TrimSpace(m)
+		if s == "" {
+			continue
+		}
+		i := strings.IndexAny(s, ":=")
+		if i < 0 {
+			return nil, fmt.Errorf("malformed --file-note value %q: expected 'path:note' (or 'path=note')", m)
+		}
+		key := strings.TrimSpace(s[:i])
+		val := strings.TrimSpace(s[i+1:])
+		if key == "" {
+			return nil, fmt.Errorf("malformed --file-note value %q: empty path (expected 'path:note')", m)
+		}
+		if val == "" {
+			return nil, fmt.Errorf("--file-note requires a non-empty note for %s (use 'path:reason')", key)
+		}
+		notes[key] = val
+	}
+	return notes, nil
 }
 
 func appendNote(existing, addition string) (string, bool) {

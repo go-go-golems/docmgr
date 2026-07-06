@@ -34,7 +34,7 @@ func (w *Workspace) QueryDocs(ctx context.Context, q DocQuery) (DocQueryResult, 
 	}
 
 	if strings.TrimSpace(q.Filters.TextQuery) != "" && !w.ftsAvailable {
-		return DocQueryResult{}, ErrFTSNotAvailable
+		return DocQueryResult{}, errors.Wrap(ErrFTSNotAvailable, "full-text search requires SQLite FTS5, but this binary was built without it; rebuild with 'go build -tags sqlite_fts5' (see Makefile)")
 	}
 
 	var diags []core.Taxonomy

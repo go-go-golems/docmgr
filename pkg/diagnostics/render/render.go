@@ -9,14 +9,19 @@ import (
 )
 
 // RenderToText formats rule results as human-readable text blocks.
-func RenderToText(results []*rules.RuleResult) string {
+// Numbering starts at startNumber so callers can keep it continuous across
+// multiple render calls within a single report.
+func RenderToText(results []*rules.RuleResult, startNumber int) string {
 	if len(results) == 0 {
 		return ""
+	}
+	if startNumber < 1 {
+		startNumber = 1
 	}
 
 	var b strings.Builder
 	for i, res := range results {
-		fmt.Fprintf(&b, "%d) [%s] %s\n", i+1, res.Severity, res.Headline)
+		fmt.Fprintf(&b, "%d) [%s] %s\n", startNumber+i, res.Severity, res.Headline)
 		if res.Body != "" {
 			b.WriteString(res.Body)
 			if !strings.HasSuffix(res.Body, "\n") {

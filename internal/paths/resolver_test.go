@@ -52,6 +52,37 @@ func TestResolverNormalizeRelativeToRepo(t *testing.T) {
 	}
 }
 
+func TestResolverNormalizeAbsolutePathReportsExistence(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	repo := filepath.Join(tmp, "repo")
+	docRoot := filepath.Join(repo, "ttmp")
+	docPath := filepath.Join(docRoot, "2025/11/26/TICKET/index.md")
+
+	mustMkdir(t, filepath.Dir(docPath))
+	writeFile(t, docPath, "# test\n")
+
+	existing := filepath.Join(repo, "pkg", "existing.go")
+	mustMkdir(t, filepath.Dir(existing))
+	writeFile(t, existing, "package pkg\n")
+
+	resolver := NewResolver(ResolverOptions{
+		DocsRoot: docRoot,
+		DocPath:  docPath,
+		RepoRoot: repo,
+	})
+
+	if got := resolver.Normalize(existing); !got.Exists {
+		t.Fatalf("expected existing absolute path to report Exists=true, got %+v", got)
+	}
+
+	missing := filepath.Join(repo, "pkg", "missing.go")
+	if got := resolver.Normalize(missing); got.Exists {
+		t.Fatalf("expected missing absolute path to report Exists=false, got %+v", got)
+	}
+}
+
 func TestMatchPathsWithSuffix(t *testing.T) {
 	t.Parallel()
 

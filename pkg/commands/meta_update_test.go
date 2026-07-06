@@ -47,8 +47,8 @@ func TestMetaUpdateRunReturnsErrorWhenUpdateFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error when updating a missing document")
 	}
-	if !strings.Contains(err.Error(), "metadata update failed") {
-		t.Fatalf("expected metadata update failure error, got: %v", err)
+	if !strings.Contains(err.Error(), "doc not found") {
+		t.Fatalf("expected doc-not-found error, got: %v", err)
 	}
 }
 

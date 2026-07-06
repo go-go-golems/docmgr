@@ -510,8 +510,8 @@ func (c *ChangelogUpdateCommand) Run(
 		return fmt.Errorf("failed to write changelog entry: %w", err)
 	}
 
-	fmt.Printf("Changelog updated: %s\n", changelogPath)
-	fmt.Println("Reminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.")
+	fmt.Printf("changelog updated: %s\n", changelogPath)
+	printReminder("Reminder: update the ticket index (docmgr doc relate / docmgr meta update) and refresh file relationships in any impacted docs if needed.")
 	return nil
 }
 

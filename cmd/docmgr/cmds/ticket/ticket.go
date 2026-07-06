@@ -7,11 +7,14 @@ func Attach(root *cobra.Command) error {
 	ticketCmd := &cobra.Command{
 		Use:   "ticket",
 		Short: "Ticket workspace management",
-		Long: `Ticket workspace management: create tickets, list them, and manage lifecycle operations.
+		Long: `Ticket workspace management: create tickets, list and show them, and manage lifecycle operations.
 
 Examples:
   # Create a ticket workspace
-  docmgr ticket create-ticket --ticket MEN-4242 --title "Normalize chat API paths" --topics chat,backend
+  docmgr ticket create --ticket MEN-4242 --title "Normalize chat API paths" --topics chat,backend
+
+  # Show one ticket's detail
+  docmgr ticket show MEN-4242
 
   # Close a ticket and record a changelog entry
   docmgr ticket close --ticket MEN-4242 --changelog-entry "Implementation complete"
@@ -23,6 +26,10 @@ Examples:
 		return err
 	}
 	listCmd, err := newListCommand()
+	if err != nil {
+		return err
+	}
+	showCmd, err := newShowCommand()
 	if err != nil {
 		return err
 	}
@@ -43,7 +50,7 @@ Examples:
 		return err
 	}
 
-	ticketCmd.AddCommand(createCmd, listCmd, renameCmd, closeCmd, moveCmd, graphCmd)
+	ticketCmd.AddCommand(createCmd, listCmd, showCmd, renameCmd, closeCmd, moveCmd, graphCmd)
 	root.AddCommand(ticketCmd)
 	return nil
 }

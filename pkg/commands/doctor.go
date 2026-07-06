@@ -62,7 +62,7 @@ Common findings (doctor message ⇒ likely cause ⇒ how to fix):
     quote strings containing ':' or '#', and use 'docmgr meta update' to rewrite fields safely.
   • missing_required_fields — Title/Summary/DocType/etc. are missing. Run
     'docmgr meta update --ticket T --field FieldName --value ...' (or edit frontmatter) to add them.
-  • missing_index — Ticket directories without index.md. Re-run 'docmgr ticket create-ticket'
+  • missing_index — Ticket directories without index.md. Re-run 'docmgr ticket create'
     or copy the template back into place.
   • unknown_topics / unknown_status — Value not present in vocabulary.yaml. Either add it via
     'docmgr vocab add --category topics --slug your-topic' (or status/doc-type) or update the doc’s fields.
@@ -257,9 +257,9 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// intentionally ignores workspace ignore policy: if the user names a file,
 	// doctor validates that file directly.
 	if settings.Doc != "" {
-		docPath := settings.Doc
-		if !filepath.IsAbs(docPath) {
-			docPath = filepath.Join(settings.Root, docPath)
+		docPath, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+		if err != nil {
+			return err
 		}
 		sev, err := validateSingleDoc(ctx, docPath, topicSet, topicList, docTypeSet, docTypeList, intentSet, intentList, statusSet, statusList, statusValidText, gp)
 		highestSeverity = maxInt(highestSeverity, sev)

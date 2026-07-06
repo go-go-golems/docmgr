@@ -56,13 +56,13 @@ func NewCreateTicketCommand() (*CreateTicketCommand, error) {
 
 Examples:
   # Create a ticket (default root + default date-based path template)
-  docmgr ticket create-ticket --ticket MEN-3475 --title "Chat API cleanup" --topics chat,llm-workflow
+  docmgr ticket create --ticket MEN-3475 --title "Chat API cleanup" --topics chat,llm-workflow
 
   # Create with multiple topics
-  docmgr ticket create-ticket --ticket MEN-8888 --title "WebSocket reconnection plan" --topics chat,backend,websocket
+  docmgr ticket create --ticket MEN-8888 --title "WebSocket reconnection plan" --topics chat,backend,websocket
 
   # Create under a custom path template (relative to --root)
-  docmgr ticket create-ticket --ticket MEN-9999 --title "Scratch ticket for experiments" \
+  docmgr ticket create --ticket MEN-9999 --title "Scratch ticket for experiments" \
     --root ttmp --path-template "examples/{{TICKET}}--{{SLUG}}"
 `),
 			cmds.WithFlags(
@@ -289,8 +289,14 @@ func (c *CreateTicketCommand) Run(
 		relPath = filepath.ToSlash(rel)
 	}
 
-	fmt.Printf("Docs root: `%s`\n\n", absRoot)
-	fmt.Printf("## Ticket Workspace Created\n\n")
+	if !VerboseEnabled() {
+		fmt.Printf("created %s at %s (%d dirs, %d files)\n",
+			result.Ticket, displayPathForCwd(result.Path), len(result.Directories), len(result.FilesCreated))
+		return nil
+	}
+
+	printWorkspaceBanner(absRoot, "", "")
+	fmt.Printf("\n## Ticket Workspace Created\n\n")
 	fmt.Printf("- Ticket: %s\n", result.Ticket)
 	fmt.Printf("- Title: %s\n", result.Title)
 	fmt.Printf("- Path: `%s`\n", relPath)

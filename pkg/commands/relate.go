@@ -10,6 +10,7 @@ import (
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/searchsvc"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -174,16 +175,21 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 	var ticketDir string
 
 	if settings.Doc != "" {
-		// ScopeDoc: normalize and verify doc exists in workspace index.
+		// Resolve the --doc reference forgivingly (absolute / repo-relative /
+		// docs-root-relative / unique suffix), then verify it via the index.
+		resolvedDoc, err := resolveDocRef(ctx, ws, settings.Root, settings.Doc)
+		if err != nil {
+			return err
+		}
 		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope:   workspace.Scope{Kind: workspace.ScopeDoc, DocPath: strings.TrimSpace(settings.Doc)},
+			Scope:   workspace.Scope{Kind: workspace.ScopeDoc, DocPath: resolvedDoc},
 			Options: workspace.DocQueryOptions{IncludeErrors: true},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to resolve --doc via workspace index: %w", err)
 		}
 		if len(res.Docs) != 1 {
-			return fmt.Errorf("expected exactly 1 doc for --doc %q, got %d", settings.Doc, len(res.Docs))
+			return fmt.Errorf("--doc %q resolved to %s, but it is not in the docs index (is it under the docs root?)", settings.Doc, resolvedDoc)
 		}
 		if res.Docs[0].ReadErr != nil {
 			return fmt.Errorf("document has invalid frontmatter (fix before relating files): %s: %v", res.Docs[0].Path, res.Docs[0].ReadErr)
@@ -193,38 +199,13 @@ func (c *RelateCommand) RunIntoGlazeProcessor(
 		if settings.Ticket == "" {
 			return fmt.Errorf("must specify either --doc or --ticket")
 		}
-		// ScopeTicket: resolve ticket index doc via QueryDocs (DocType=index and basename index.md).
-		res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-			Scope: workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)},
-			Filters: workspace.DocFilters{
-				DocType: "index",
-			},
-			Options: workspace.DocQueryOptions{IncludeErrors: true},
-		})
+		// Forgiving ticket resolution (exact ID, unique prefix, directory slug, ...).
+		ticketRes, err := tickets.Resolve(ctx, ws, settings.Ticket)
 		if err != nil {
-			return fmt.Errorf("failed to resolve ticket index via workspace index: %w", err)
+			return err
 		}
-		var candidates []workspace.DocHandle
-		for _, h := range res.Docs {
-			if filepath.Base(filepath.FromSlash(h.Path)) == "index.md" {
-				candidates = append(candidates, h)
-			}
-		}
-		if len(candidates) == 0 {
-			return fmt.Errorf("could not find index.md for ticket %q", settings.Ticket)
-		}
-		if len(candidates) > 1 {
-			paths := make([]string, 0, len(candidates))
-			for _, c := range candidates {
-				paths = append(paths, c.Path)
-			}
-			sort.Strings(paths)
-			return fmt.Errorf("found multiple index.md docs for ticket %q: %s", settings.Ticket, strings.Join(paths, ", "))
-		}
-		if candidates[0].ReadErr != nil {
-			return fmt.Errorf("ticket index has invalid frontmatter (fix before relating files): %s: %v", candidates[0].Path, candidates[0].ReadErr)
-		}
-		targetDocPath = candidates[0].Path
+		settings.Ticket = ticketRes.TicketID
+		targetDocPath = ticketRes.IndexPathAbs
 	}
 
 	targetDocPath = filepath.Clean(strings.TrimSpace(targetDocPath))
@@ -733,32 +714,33 @@ func (c *RelateCommand) Run(
 
 	first := collector.rows[0]
 	if _, ok := first.Get("doc"); ok {
-		docPath, _ := first.Get("doc")
+		docPathVal, _ := first.Get("doc")
+		docPath := displayPathForCwd(fmt.Sprint(docPathVal))
 		statusVal, _ := first.Get("status")
 		status := fmt.Sprint(statusVal)
 		unchangedVal, _ := first.Get("unchanged")
 		unchanged := strings.TrimSpace(fmt.Sprint(unchangedVal))
 		if status == "noop" {
 			reasonVal, _ := first.Get("reason")
-			fmt.Printf("No related file changes for %v\n", docPath)
-			if reasonVal != nil {
-				fmt.Printf("- Reason: %v\n", reasonVal)
-			}
-			if unchanged != "" && unchanged != "<nil>" {
-				fmt.Printf("- Unchanged: %s\n", unchanged)
+			reason := strings.TrimSpace(fmt.Sprint(reasonVal))
+			if reason == "" || reason == "<nil>" {
+				fmt.Printf("no related file changes for %v\n", docPath)
+			} else {
+				fmt.Printf("no related file changes for %v (%s)\n", docPath, reason)
 			}
 			return nil
 		}
 		added, _ := first.Get("added")
 		updated, _ := first.Get("updated")
 		removed, _ := first.Get("removed")
-		total, _ := first.Get("total")
-		fmt.Printf("Related files updated for %v\n", docPath)
-		fmt.Printf("- Added: %v\n", added)
-		fmt.Printf("- Updated: %v\n", updated)
-		fmt.Printf("- Removed: %v\n", removed)
-		fmt.Printf("- Total: %v\n", total)
-		if unchanged != "" && unchanged != "<nil>" {
+		touched := 0
+		for _, v := range []interface{}{added, updated, removed} {
+			if n, ok := v.(int); ok {
+				touched += n
+			}
+		}
+		fmt.Printf("related %d file(s) to %v (added %v, updated %v, removed %v)\n", touched, docPath, added, updated, removed)
+		if VerboseEnabled() && unchanged != "" && unchanged != "<nil>" {
 			fmt.Printf("- Unchanged (already present with same note): %s\n", unchanged)
 		}
 		return nil

@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
-	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx"
@@ -92,10 +90,9 @@ func (c *ValidateFrontmatterCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	docPath := settings.Doc
-	if !filepath.IsAbs(docPath) {
-		root := workspace.ResolveRoot(settings.Root)
-		docPath = filepath.Join(root, docPath)
+	docPath, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+	if err != nil {
+		return err
 	}
 
 	renderer := docmgr.NewRenderer()
@@ -128,10 +125,9 @@ func (c *ValidateFrontmatterCommand) Run(
 		return fmt.Errorf("failed to parse settings: %w", err)
 	}
 
-	docPath := settings.Doc
-	if !filepath.IsAbs(docPath) {
-		root := workspace.ResolveRoot(settings.Root)
-		docPath = filepath.Join(root, docPath)
+	docPath, err := resolveDocRef(ctx, nil, settings.Root, settings.Doc)
+	if err != nil {
+		return err
 	}
 
 	renderer := docmgr.NewRenderer()

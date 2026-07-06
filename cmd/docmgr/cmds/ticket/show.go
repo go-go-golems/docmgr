@@ -1,4 +1,4 @@
-package workspace
+package ticket
 
 import (
 	"github.com/carapace-sh/carapace"
@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func newExportSQLiteCommand() (*cobra.Command, error) {
-	cmd, err := commands.NewExportSQLiteCommand()
+func newShowCommand() (*cobra.Command, error) {
+	cmd, err := commands.NewShowTicketCommand()
 	if err != nil {
 		return nil, err
 	}
@@ -23,8 +23,8 @@ func newExportSQLiteCommand() (*cobra.Command, error) {
 		return nil, err
 	}
 	carapace.Gen(cobraCmd).FlagCompletion(carapace.ActionMap{
-		"root": completion.ActionDirectories(),
-		"out":  completion.ActionFiles(),
+		"ticket": completion.ActionTickets(),
+		"root":   completion.ActionDirectories(),
 	})
 	return cobraCmd, nil
 }

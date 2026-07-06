@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/glazed/pkg/cmds"
@@ -40,8 +41,8 @@ func NewRenameTicketCommand() (*RenameTicketCommand, error) {
 moves the ticket directory from <oldTicket>-<slug> to <newTicket>-<slug>.
 
 Examples:
-  docmgr ticket rename-ticket --ticket MEN-1234 --new-ticket MEN-5678
-  docmgr ticket rename-ticket --ticket DOCMGR-1 --new-ticket DOCMGR-101 --dry-run
+  docmgr ticket rename --ticket MEN-1234 --new-ticket MEN-5678
+  docmgr ticket rename --ticket DOCMGR-1 --new-ticket DOCMGR-101 --dry-run
 `),
 			cmds.WithFlags(
 				fields.New(
@@ -101,11 +102,13 @@ func (c *RenameTicketCommand) RunIntoGlazeProcessor(
 		return fmt.Errorf("new ticket is identical to current ticket")
 	}
 
-	// Locate current ticket directory
-	oldDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
+	// Locate current ticket directory (forgiving ticket reference resolution).
+	ticketRes, err := tickets.Resolve(ctx, ws, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
+	settings.Ticket = ticketRes.TicketID
+	oldDir := ticketRes.TicketDirAbs
 
 	// Compute new directory name: replace leading ticket prefix, preserve slug suffix if present
 	base := filepath.Base(oldDir)
@@ -204,10 +207,12 @@ func (c *RenameTicketCommand) Run(
 		return fmt.Errorf("new ticket is identical to current ticket")
 	}
 
-	oldDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
+	ticketRes, err := tickets.Resolve(ctx, ws, settings.Ticket)
 	if err != nil {
 		return fmt.Errorf("failed to find ticket directory: %w", err)
 	}
+	settings.Ticket = ticketRes.TicketID
+	oldDir := ticketRes.TicketDirAbs
 	base := filepath.Base(oldDir)
 	remainder := ""
 	if strings.HasPrefix(base, settings.Ticket) {
@@ -233,8 +238,8 @@ func (c *RenameTicketCommand) Run(
 		return fmt.Errorf("failed to rename directory %s -> %s: %w", oldDir, newDir, err)
 	}
 
-	fmt.Printf("Renamed ticket %s -> %s, updated %d docs\nfrom: %s\nto:   %s\n",
-		settings.Ticket, settings.NewTicket, updated, oldDir, newDir)
+	fmt.Printf("renamed %s -> %s (%d docs updated) at %s\n",
+		settings.Ticket, settings.NewTicket, updated, newDir)
 	return nil
 }
 

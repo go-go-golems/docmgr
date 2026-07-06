@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/templates"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/models"
 	"github.com/go-go-golems/docmgr/pkg/utils"
@@ -341,6 +342,13 @@ func (c *AddCommand) Run(
 		return err
 	}
 
+	displayPath := displayPathForCwd(result.DocPath)
+
+	if !VerboseEnabled() {
+		fmt.Printf("created %s\n", displayPath)
+		return nil
+	}
+
 	relPath := result.DocPath
 	if rel, err := filepath.Rel(result.Root, result.DocPath); err == nil {
 		relPath = filepath.ToSlash(rel)
@@ -355,13 +363,7 @@ func (c *AddCommand) Run(
 		owners = strings.Join(result.Owners, ", ")
 	}
 
-	fmt.Printf("Docs root: `%s`\n", result.Root)
-	if result.ConfigPath != "" {
-		fmt.Printf("Config: `%s`\n", result.ConfigPath)
-	}
-	if result.VocabularyPath != "" {
-		fmt.Printf("Vocabulary: `%s`\n", result.VocabularyPath)
-	}
+	printWorkspaceBanner(result.Root, result.ConfigPath, result.VocabularyPath)
 	fmt.Printf("\n## Document Created\n\n")
 	fmt.Printf("- Ticket: %s\n", result.Ticket)
 	fmt.Printf("- Doc type: %s\n", result.DocType)
@@ -379,6 +381,20 @@ func (c *AddCommand) Run(
 	}
 
 	return nil
+}
+
+// displayPathForCwd renders an absolute path relative to the current working
+// directory when possible (falling back to the absolute path).
+func displayPathForCwd(p string) string {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return filepath.ToSlash(p)
+	}
+	rel, err := filepath.Rel(cwd, p)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return filepath.ToSlash(p)
+	}
+	return filepath.ToSlash(rel)
 }
 
 var _ cmds.GlazeCommand = &AddCommand{}
@@ -403,35 +419,9 @@ func findTicketDirectoryViaWorkspace(ctx context.Context, rootOverride string, t
 		return "", resolvedRoot, fmt.Errorf("init workspace index: %w", err)
 	}
 
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
-		Filters: workspace.DocFilters{DocType: "index"},
-		Options: workspace.DocQueryOptions{
-			IncludeErrors:       false,
-			IncludeArchivedPath: true,
-			IncludeScriptsPath:  true,
-			IncludeControlDocs:  true,
-			OrderBy:             workspace.OrderByPath,
-		},
-	})
+	res, err := tickets.Resolve(ctx, ws, ticketID)
 	if err != nil {
-		return "", resolvedRoot, fmt.Errorf("query ticket index doc: %w", err)
+		return "", resolvedRoot, err
 	}
-	if len(res.Docs) == 0 {
-		return "", resolvedRoot, fmt.Errorf("ticket not found: %s", ticketID)
-	}
-	if len(res.Docs) > 1 {
-		return "", resolvedRoot, fmt.Errorf("ambiguous ticket index doc for %s (got %d)", ticketID, len(res.Docs))
-	}
-
-	p := strings.TrimSpace(res.Docs[0].Path)
-	if p == "" {
-		return "", resolvedRoot, fmt.Errorf("ticket index doc has empty path for %s", ticketID)
-	}
-	ticketDir := filepath.Clean(filepath.Dir(filepath.FromSlash(p)))
-	if ticketDir == "" || ticketDir == "." {
-		return "", resolvedRoot, fmt.Errorf("failed to derive ticket dir from %q", p)
-	}
-
-	return ticketDir, resolvedRoot, nil
+	return res.TicketDirAbs, resolvedRoot, nil
 }

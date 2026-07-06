@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-go-golems/docmgr/internal/documents"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
@@ -146,13 +147,9 @@ func (c *DocMoveCommand) applyMove(ctx context.Context, settings *DocMoveSetting
 		return nil, fmt.Errorf("failed to initialize workspace index: %w", err)
 	}
 
-	srcPath, err := resolveDocPath(settings.Root, settings.Doc)
+	srcPath, err := resolveDocRef(ctx, ws, settings.Root, settings.Doc)
 	if err != nil {
 		return nil, err
-	}
-
-	if _, err := os.Stat(srcPath); err != nil {
-		return nil, fmt.Errorf("source document not found: %s", srcPath)
 	}
 
 	doc, body, err := documents.ReadDocumentWithFrontmatter(srcPath)
@@ -168,10 +165,12 @@ func (c *DocMoveCommand) applyMove(ctx context.Context, settings *DocMoveSetting
 	if err != nil {
 		return nil, fmt.Errorf("failed to find source ticket directory: %w", err)
 	}
-	destTicketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.DestTicket)
+	destRes, err := tickets.Resolve(ctx, ws, settings.DestTicket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find destination ticket directory: %w", err)
 	}
+	destTicketDir := destRes.TicketDirAbs
+	settings.DestTicket = destRes.TicketID
 
 	relFromSrc, err := filepath.Rel(srcTicketDir, srcPath)
 	if err != nil {
@@ -219,6 +218,8 @@ func (c *DocMoveCommand) applyMove(ctx context.Context, settings *DocMoveSetting
 	}, nil
 }
 
+// resolveTicketDirViaWorkspace resolves a (possibly imprecise) ticket reference to
+// the absolute ticket directory. See tickets.ResolveTicketID for accepted forms.
 func resolveTicketDirViaWorkspace(ctx context.Context, ws *workspace.Workspace, ticketID string) (string, error) {
 	if ctx == nil {
 		return "", fmt.Errorf("nil context")
@@ -226,55 +227,31 @@ func resolveTicketDirViaWorkspace(ctx context.Context, ws *workspace.Workspace, 
 	if ws == nil {
 		return "", fmt.Errorf("nil workspace")
 	}
-	ticketID = strings.TrimSpace(ticketID)
-	if ticketID == "" {
-		return "", fmt.Errorf("empty ticket id")
-	}
-
-	res, err := ws.QueryDocs(ctx, workspace.DocQuery{
-		Scope:   workspace.Scope{Kind: workspace.ScopeTicket, TicketID: ticketID},
-		Filters: workspace.DocFilters{DocType: "index"},
-		Options: workspace.DocQueryOptions{
-			IncludeErrors:       false,
-			IncludeDiagnostics:  false,
-			IncludeArchivedPath: true,
-			IncludeScriptsPath:  true,
-			IncludeControlDocs:  true,
-			OrderBy:             workspace.OrderByPath,
-		},
-	})
+	res, err := tickets.Resolve(ctx, ws, ticketID)
 	if err != nil {
 		return "", err
 	}
-	if len(res.Docs) == 0 {
-		return "", fmt.Errorf("ticket not found: %s", ticketID)
-	}
-	if len(res.Docs) > 1 {
-		return "", fmt.Errorf("ambiguous ticket index doc for %s (got %d)", ticketID, len(res.Docs))
-	}
-	p := strings.TrimSpace(res.Docs[0].Path)
-	if p == "" {
-		return "", fmt.Errorf("ticket index doc has empty path for %s", ticketID)
-	}
-	return filepath.Dir(filepath.FromSlash(p)), nil
+	return res.TicketDirAbs, nil
 }
 
-func resolveDocPath(root, doc string) (string, error) {
-	if doc == "" {
-		return "", fmt.Errorf("doc path is required")
+// Run implements cmds.BareCommand with a one-line success summary.
+func (c *DocMoveCommand) Run(
+	ctx context.Context,
+	parsedValues *values.Values,
+) error {
+	settings := &DocMoveSettings{}
+	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
+		return fmt.Errorf("failed to parse settings: %w", err)
 	}
-	if filepath.IsAbs(doc) {
-		return doc, nil
-	}
-	candidate := filepath.Join(root, doc)
-	if _, err := os.Stat(candidate); err == nil {
-		return candidate, nil
-	}
-	abs, err := filepath.Abs(doc)
+
+	result, err := c.applyMove(ctx, settings)
 	if err != nil {
-		return "", err
+		return err
 	}
-	return abs, nil
+
+	fmt.Printf("moved %s -> %s (ticket %s -> %s)\n", result.SourcePath, result.DestPath, result.SourceTicket, result.DestTicket)
+	return nil
 }
 
 var _ cmds.GlazeCommand = &DocMoveCommand{}
+var _ cmds.BareCommand = &DocMoveCommand{}

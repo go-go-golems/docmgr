@@ -22,6 +22,9 @@ func newCreateCommand() (*cobra.Command, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Canonical spelling is `ticket create`; keep `create-ticket` as an alias.
+	cobraCmd.Use = "create"
+	cobraCmd.Aliases = append(cobraCmd.Aliases, "create-ticket")
 	carapace.Gen(cobraCmd).FlagCompletion(carapace.ActionMap{
 		"topics": completion.ActionTopics(),
 		"root":   completion.ActionDirectories(),

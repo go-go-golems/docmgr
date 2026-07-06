@@ -317,3 +317,32 @@ Implementation of the design doc's section 9 began (user directive: "Implement i
 
 ### Code review instructions
 - `git show db2cca4`; run the empirical checks above against a scratch workspace (`docmgr init` + `create-ticket` + the three failing invocations).
+
+## Step 8: Implementation - Phase 1 agent contract landed
+
+The agent CLI contract is in: aliases for what agents guess, forgiving ticket/doc references, a ~10x output diet in bare mode, uniform dual-mode, and executable contract tests.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7) - plus "make sure to updat eall the necessary documentation as well, add that as task if not present already, the glazed docs and the skill as well." (docs refresh queued as its own phase after paths v2 / doctor v2 so help pages document final behavior).
+
+### What I did
+- Aliases: `ticket create`/`rename` canonical (old spellings kept as aliases); `ticket list` canonical with `tickets` alias; NEW `ticket show <ref>` (dual-mode single-ticket detail); help examples corrected.
+- Forgiving refs: `internal/tickets/resolve.go` rewritten (exact -> unique prefix -> directory slug -> unique substring; ambiguity lists candidates); shared `resolveDocRef` in `pkg/commands/doc_ref.go` (absolute -> cwd -> repo -> docs-root -> duplicated-basename strip -> unique index suffix) used by relate/meta/doctor/validate/move.
+- Output diet: `--verbose` persistent flag gates the 3-line banner and reminder nags; one-line mutation successes everywhere; glaze/JSON shapes untouched.
+- Dual-mode completed for task add/uncheck/remove, doc move, ticket move/rename, export-sqlite; meta update glaze mode now exits 1 on error rows.
+- `pkg/commands/contract_test.go`: subprocess-based table test - successes exit 0 with stdout <= 400 bytes and no banner, failures exit non-zero, --verbose restores the banner.
+
+### What worked
+- All gates green (build, tests, fts5 tests, glazed-lint); scenario suite: all 17 registered steps pass (excluded step 15-diagnostics-smoke fails for a pre-existing hardcoded-path reason, untouched).
+- Verified: `ticket show TEST-1` prefix-resolves; pasted directory slugs resolve; `--doc 2026/...` and `--doc ttmp/...` both work.
+
+### What didn't work (and was fixed in review)
+- The implementing agent's docs-root basename strip ran ONCE, so the observed `ttmp/ttmp/...` double-join still failed (`doc not found`). Orchestrator review caught it empirically; fixed by stripping repeated prefixes in a loop (doc_ref.go) - `--doc ttmp/ttmp/2026/.../index.md` now resolves. Lesson: the review-verify loop earns its keep on exactly the cases the corpus flagged.
+
+### What warrants a second pair of eyes
+- `resolveDocRef` precedence (cwd before repo) - correct for the observed corpus but worth confirming against future habits.
+- Relate's special-cased invalid-frontmatter error for ticket indexes was subsumed into not-found; doctor still reports the parse error itself.
+
+### Code review instructions
+- `git show` this commit; run `go test ./pkg/commands -run Contract -v` and the empirical checks (ticket create/show, ttmp/ttmp doc ref, --verbose banner).

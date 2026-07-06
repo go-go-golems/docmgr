@@ -653,6 +653,11 @@ func pathExists(path string) bool {
 	if path == "" {
 		return false
 	}
+	// Resolver.Stat is intentionally limited to the filesystem-aware Resolve path.
+	// Search and other lookup-only inputs use ResolveNoFS/NormalizeNoFS, which do
+	// not call pathExists; filesystem-aware callers build this path from configured
+	// workspace anchors after lexical containment checks.
+	// codeql[go/path-injection]
 	_, err := os.Stat(path)
 	return err == nil
 }

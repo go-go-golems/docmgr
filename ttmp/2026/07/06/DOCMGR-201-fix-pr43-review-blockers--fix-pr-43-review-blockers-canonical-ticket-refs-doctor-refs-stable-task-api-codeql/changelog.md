@@ -69,3 +69,12 @@ Step 7: Split anchored no-filesystem resolver path from filesystem-aware resolve
 
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/paths/resolver.go — Separate ResolveNoFS anchored call graph from filesystem Stat path
 
+
+## 2026-07-06
+
+Step 8: Added a narrow inline CodeQL suppression on the trusted resolver os.Stat sink after separating search/lookup inputs onto the no-filesystem resolver path.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/paths/resolver.go — CodeQL suppression documents trusted filesystem-aware resolver invariant
+

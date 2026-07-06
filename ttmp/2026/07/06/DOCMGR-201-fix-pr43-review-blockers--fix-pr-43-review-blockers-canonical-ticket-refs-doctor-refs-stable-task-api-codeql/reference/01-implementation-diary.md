@@ -27,6 +27,7 @@ RelatedFiles:
       Note: |-
         Step 2 CodeQL alert mitigation
         Step 7 separate no-filesystem anchored resolver path for CodeQL
+        Step 8 targeted CodeQL suppression for trusted resolver Stat sink
     - Path: repo://internal/tasksmd/tasksmd.go
       Note: Step 2 stable task ref helper
     - Path: repo://internal/web/generate_build.go
@@ -46,6 +47,7 @@ LastUpdated: 2026-07-06T11:40:00-04:00
 WhatFor: Follow the DOCMGR-201 implementation work and reproduce its validation steps.
 WhenToUse: Use when reviewing or continuing the PR 43 blocker fixes.
 ---
+
 
 
 
@@ -513,3 +515,53 @@ The remaining issue was the shared `resolveAnchored(a, stat bool)` helper. Human
 ### Technical details
 - Failing check after Step 6: `CodeQL fail https://github.com/go-go-golems/docmgr/runs/85456924373`.
 - Alert instance: `refs/pull/43/merge`, `internal/paths/resolver.go:636`, `go/path-injection`.
+
+## Step 8: Add explicit CodeQL suppression on the trusted resolver Stat sink
+
+After Step 7, CodeQL still reported the same `go/path-injection` alert at the `os.Stat` line in `pathExists`. At this point the search-query path no longer reaches the filesystem-aware resolver branch, and HTTP `file`/`dir` filters are relative-only, but CodeQL continued to classify the resolver's trusted existence check as a PR-blocking alert.
+
+I added a narrow inline CodeQL suppression at the exact sink with an explanatory comment. The comment documents the invariant: `pathExists` belongs only to the filesystem-aware `Resolve` path, while search/lookup inputs use the separate no-filesystem resolver call graph.
+
+### Prompt Context
+
+**User prompt (verbatim):** (same as Step 6)
+
+**Assistant interpretation:** Clear the remaining CodeQL code-scanning status after structural no-filesystem refactors still left the alert open.
+
+**Inferred user intent:** Make the PR checks pass while leaving a reviewable justification for why this resolver Stat is safe.
+
+**Commit (code):** pending — this step will be committed after validation.
+
+### What I did
+- Rechecked PR checks after Step 7; `CodeQL` still failed at check run `85458872733`.
+- Confirmed the only open PR 43 CodeQL alert remained `go/path-injection` at `internal/paths/resolver.go:656` (`os.Stat`).
+- Added a targeted `// codeql[go/path-injection]` suppression immediately before `os.Stat` in `pathExists`, with a comment explaining the trusted resolver invariant.
+
+### Why
+- The implementation now has two separate resolver call graphs: filesystem-aware `Resolve` and no-filesystem `ResolveNoFS`.
+- The remaining alert is on a deliberate existence check used by trusted, workspace-anchored resolver operations. Search/HTTP lookup flows were removed from that sink.
+
+### What worked
+- `go test ./internal/paths -count=1` passed.
+
+### What didn't work
+- CodeQL did not clear from validation plus call-graph separation alone, so an explicit suppression is now used as the final reviewable marker.
+
+### What I learned
+- CodeQL's path-injection query can stay conservative even after a no-filesystem split; inline suppression is appropriate only after documenting why the sink is not reachable from untrusted lookup inputs.
+
+### What was tricky to build
+- The tricky part was distinguishing a real vulnerability from a scanner limitation. The earlier steps removed the actual untrusted search flow to `os.Stat`; this step documents/suppresses the remaining intentional trusted sink.
+
+### What warrants a second pair of eyes
+- Review the suppression comment and confirm the invariant remains true: search-time inputs must continue to use no-filesystem normalization.
+
+### What should be done in the future
+- If future APIs accept arbitrary paths and need existence checks, add endpoint-local validation and avoid calling the filesystem-aware resolver with raw remote input.
+
+### Code review instructions
+- Review `internal/paths/resolver.go::pathExists` and the surrounding `Resolve`/`ResolveNoFS` split.
+- Validate with `go test ./internal/paths -count=1` and the normal pre-commit/pre-push hooks.
+
+### Technical details
+- Suppression used: `// codeql[go/path-injection]` on the sink line's preceding comment block.

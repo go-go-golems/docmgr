@@ -191,7 +191,6 @@ export function TicketPage() {
           tasksError={tasksError}
           tasksLoading={tasksLoading}
           checkTask={(args) => checkTask(args).unwrap()}
-          checkTaskLoading={checkTaskState.isLoading}
           addTask={(args) => addTask(args).unwrap()}
           addTaskLoading={addTaskState.isLoading}
           addTaskError={addTaskState.error}
@@ -202,7 +201,7 @@ export function TicketPage() {
         <TicketGraphTab graphData={graphData} graphError={graphError} graphLoading={graphLoading} />
       ) : null}
 
-      {tab === 'changelog' ? <TicketChangelogTab ticketDir={t?.ticketDir} /> : null}
+      {tab === 'changelog' ? <TicketChangelogTab ticket={ticket} ticketDir={t?.ticketDir} /> : null}
 
       {/* TODO: Tab errors are rendered inline per tab; toast is page-scoped for now. */}
     </div>

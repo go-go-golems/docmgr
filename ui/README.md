@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# docmgr web UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite single-page app for browsing (and now editing) a
+docmgr workspace. It talks to the JSON API served by `docmgr api serve`
+(`internal/httpapi`) and is embedded into the docmgr binary for production via
+`go:embed` (`internal/web`).
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Two processes: the Go API backend on port 3001 and the Vite dev server on
+port 3000 (which proxies `/api` to 3001, see `vite.config.ts`).
 
-## React Compiler
+```bash
+# 1. From the repo root: run the API against the repo's own ttmp workspace
+make dev-backend        # go run -tags sqlite_fts5 ./cmd/docmgr api serve --addr 127.0.0.1:3001 --root ttmp
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# 2. From ui/: run the dev server with HMR
+pnpm install
+pnpm dev                # http://localhost:3000
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Checks:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm tsc -b --noEmit    # typecheck
+pnpm lint               # eslint
+pnpm build              # production build into dist/public
 ```
+
+## Production embed
+
+The embedded binary is built through the Dagger pipeline (do not run `pnpm
+build` by hand for this):
+
+```bash
+make build-embed        # ui build via internal/web/generate_build.go + go build -tags "sqlite_fts5,embed"
+```
+
+## Layout
+
+- `src/services/docmgrApi.ts` — RTK Query API client (all `/api/v1` endpoints).
+- `src/features/` — route-level pages: workspace shell (home/tickets/topics/
+  recent/health), search, ticket tabs (overview/documents/tasks/graph/
+  changelog), doc viewer, file viewer.
+- `src/components/` — shared presentational components (`MarkdownBlock` with
+  mermaid + relative link/image handling, `StatusBadge`, `DiagnosticCard`, ...).
+
+See `docmgr help web-ui` and `docmgr help http-api` for the server-side docs.

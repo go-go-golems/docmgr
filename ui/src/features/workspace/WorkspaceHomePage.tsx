@@ -4,24 +4,7 @@ import { timeAgo } from '../../lib/time'
 import { useGetWorkspaceSummaryQuery } from '../../services/docmgrApi'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { ApiErrorAlert } from '../../components/ApiErrorAlert'
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'active'
-      ? 'primary'
-      : status === 'review'
-        ? 'warning'
-        : status === 'complete'
-          ? 'success'
-          : status === 'draft'
-            ? 'secondary'
-            : 'secondary'
-  return (
-    <span className={`badge text-bg-${variant}`} style={{ fontWeight: 600 }}>
-      {status || 'unknown'}
-    </span>
-  )
-}
+import { StatusBadge } from '../../components/StatusBadge'
 
 export function WorkspaceHomePage() {
   const { data, isLoading, error } = useGetWorkspaceSummaryQuery()

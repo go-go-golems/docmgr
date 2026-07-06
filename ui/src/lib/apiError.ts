@@ -22,8 +22,3 @@ export function apiErrorFromUnknown(err: unknown): APIErrorDetails {
   const details = data?.error?.details
   return { code, message, details }
 }
-
-export function apiErrorMessage(err: unknown): string {
-  return apiErrorFromUnknown(err).message
-}
-

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -249,7 +250,7 @@ func (c *MetaUpdateCommand) applyMetaUpdate(ctx context.Context, settings *MetaU
 
 	updates := make([]MetaUpdateRow, 0, len(filesToUpdate))
 	for _, filePath := range filesToUpdate {
-		if err := updateDocumentField(filePath, settings.Field, settings.Value); err != nil {
+		if err := UpdateDocumentField(filePath, settings.Field, settings.Value); err != nil {
 			updates = append(updates, MetaUpdateRow{
 				Doc:    filePath,
 				Field:  settings.Field,
@@ -319,8 +320,14 @@ func (c *MetaUpdateCommand) Run(
 	return nil
 }
 
-// updateDocumentField updates a specific field in a document's frontmatter
-func updateDocumentField(filePath string, fieldName string, value string) error {
+// ErrUnknownMetaField is returned by UpdateDocumentField when the requested
+// frontmatter field is not one of the supported field names.
+var ErrUnknownMetaField = errors.New("unknown field")
+
+// UpdateDocumentField updates a specific field in a document's frontmatter.
+// It is the shared write primitive behind 'docmgr meta update' and the HTTP
+// API's POST /docs/meta endpoint.
+func UpdateDocumentField(filePath string, fieldName string, value string) error {
 	doc, content, err := documents.ReadDocumentWithFrontmatter(filePath)
 	if err != nil {
 		return err
@@ -383,7 +390,7 @@ func updateDocumentField(filePath string, fieldName string, value string) error 
 	case "summary":
 		doc.Summary = value
 	default:
-		return fmt.Errorf("unknown field: %s", fieldName)
+		return fmt.Errorf("%w: %s", ErrUnknownMetaField, fieldName)
 	}
 
 	// Update LastUpdated

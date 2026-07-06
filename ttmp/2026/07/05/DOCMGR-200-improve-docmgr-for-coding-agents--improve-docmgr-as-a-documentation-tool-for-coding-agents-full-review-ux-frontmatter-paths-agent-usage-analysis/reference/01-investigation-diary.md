@@ -406,3 +406,28 @@ Doctor is now summary-first, all-docs, vocabulary-bootstrapped, and self-healing
 ### Code review instructions
 - `git show` this commit; key files pkg/commands/doctor.go (rollup gating + migrateDocAnchors rescue), internal/tasksmd/tasksmd.go, pkg/commands/tasks.go, cmd/docmgr/cmds/tasks/migrate.go, pkg/diagnostics/docmgr/adapter.go.
 - Validate: `docmgr doctor --all` (rollup), `--details`, `--ticket X` (details), `--fix-anchors` on a scratch ticket with ../ chains; task add/check/migrate round-trip.
+
+## Step 11: Implementation - Phase 4 UI parity landed
+
+The web UI is no longer a read-only browser. Mermaid renders inside doc bodies, relative links and images work, and the write path exists: frontmatter edits, relate, changelog append, and a doctor Health page - all wrapping the same command logic the CLI uses, all refreshing the index after writes.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+### What I did
+- MarkdownBlock rewritten: mermaid fences route to the existing MermaidDiagram; relative .md links -> /doc, files -> /file, external -> new tab; images via a new streaming `GET /api/v1/files/raw` (traversal-safe, 20MB cap, MIME sniff).
+- Write endpoints wrapping extracted command logic (no shelling out): POST /docs/meta (UpdateDocumentField), POST /docs/relate (ApplyRelatedFilesUpdate - anchored writes), GET/POST /tickets/changelog (ParseChangelogEntries/AppendChangelogEntry, deduplicating changelog.go's two copies), GET /workspace/doctor (doctor's own row model, rollup + findings).
+- UI: Status dropdown + Summary edit + relate form on DocViewerPage; changelog timeline + append form; /workspace/health page reusing DiagnosticList; task section selector + optimistic check/uncheck with rollback.
+- Hygiene: shared StatusBadge (5 copies deleted), port hint fixed, 300ms FTS debounce, dead healthz/apiErrorMessage removed, real ui/README, new endpoints documented in pkg/doc/docmgr-http-api.md.
+
+### What worked
+- All gates green (Go build/tests/fts5/lint; pnpm tsc + lint + build); new handler tests cover traversal/symlink escapes (403), size cap (413), meta/relate/changelog/doctor round-trips; live curl verification on a scratch copy of the repo ttmp (deliberate deviation: writes would have mutated the real ttmp/) - relate returned the anchored `repo://src/main.go` with exists:true, proving P2 and P4 compose.
+
+### What warrants a second pair of eyes
+- The rehype-highlight interaction (mermaid extraction relies on unknown languages passing through untouched - verified against the library source, but pin the version).
+- Optimistic task patching incl. stats rollback in docmgrApi.ts.
+
+### Code review instructions
+- `git show` this commit; key files ui/src/components/MarkdownBlock.tsx, internal/httpapi/{files_raw,docs_write,tickets_changelog,workspace_doctor}.go, pkg/commands/{relate_apply,changelog_entries}.go.
+- Validate: `go test ./internal/httpapi`; `docmgr api serve --root <scratch ttmp>` + the curl set from this step; open a doc with a mermaid block in the UI.

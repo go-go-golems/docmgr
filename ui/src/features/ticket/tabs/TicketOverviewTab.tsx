@@ -180,7 +180,7 @@ export function TicketOverviewTab({
             {indexDocError ? (
               <ApiErrorAlert title="Failed to load index.md" error={indexDocError} />
             ) : indexBody ? (
-              <MarkdownBlock markdown={indexBody} />
+              <MarkdownBlock markdown={indexBody} docPath={ticketData?.indexPath} />
             ) : (
               <EmptyState title="No content." />
             )}

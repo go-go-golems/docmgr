@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 
 import type { RelatedFile } from '../services/docmgrApi'
 import { timeAgo } from '../lib/time'
+import { StatusBadge } from './StatusBadge'
 
 export type DocCardDoc = {
   ticket: string
@@ -14,24 +15,6 @@ export type DocCardDoc = {
   topics?: string[]
   lastUpdated?: string
   relatedFiles?: RelatedFile[]
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const variant =
-    status === 'active'
-      ? 'primary'
-      : status === 'review'
-        ? 'warning'
-        : status === 'complete'
-          ? 'success'
-          : status === 'draft'
-            ? 'secondary'
-            : 'secondary'
-  return (
-    <span className={`badge text-bg-${variant} ms-2`} style={{ fontWeight: 600 }}>
-      {status || 'unknown'}
-    </span>
-  )
 }
 
 export function DocCard({
@@ -88,7 +71,7 @@ export function DocCard({
                 • {doc.docType}
               </>
             ) : null}
-            {doc.status ? <StatusBadge status={doc.status} /> : null}
+            {doc.status ? <StatusBadge status={doc.status} className="ms-2" /> : null}
             {doc.lastUpdated ? <span className="ms-2 text-muted">Updated {timeAgo(doc.lastUpdated)}</span> : null}
           </div>
 

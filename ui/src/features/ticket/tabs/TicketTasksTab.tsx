@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { ApiErrorAlert } from '../../../components/ApiErrorAlert'
@@ -9,13 +9,14 @@ function asArray<T>(v: T[] | null | undefined): T[] {
   return Array.isArray(v) ? v : []
 }
 
+const NEW_SECTION = '__new__'
+
 export function TicketTasksTab({
   ticket,
   tasksData,
   tasksError,
   tasksLoading,
   checkTask,
-  checkTaskLoading,
   addTask,
   addTaskLoading,
   addTaskError,
@@ -25,12 +26,21 @@ export function TicketTasksTab({
   tasksError?: unknown
   tasksLoading: boolean
   checkTask: (args: { ticket: string; ids: number[]; checked: boolean }) => Promise<unknown>
-  checkTaskLoading: boolean
   addTask: (args: { ticket: string; section: string; text: string }) => Promise<unknown>
   addTaskLoading: boolean
   addTaskError?: unknown
 }) {
   const [newTaskText, setNewTaskText] = useState('')
+  const [section, setSection] = useState('TODO')
+  const [customSection, setCustomSection] = useState('')
+
+  const sectionTitles = useMemo(() => {
+    const titles = (tasksData?.sections ?? []).map((s) => s.title).filter((t) => t.trim() !== '')
+    if (!titles.some((t) => t.toLowerCase() === 'todo')) titles.unshift('TODO')
+    return titles
+  }, [tasksData])
+
+  const effectiveSection = section === NEW_SECTION ? customSection.trim() : section
 
   return (
     <div className="row g-3">
@@ -69,7 +79,6 @@ export function TicketTasksTab({
                             onChange={(e) =>
                               void checkTask({ ticket, ids: [it.id], checked: e.target.checked })
                             }
-                            disabled={checkTaskLoading}
                           />
                           <span>
                             <span className="text-muted me-2">#{it.id}</span>
@@ -89,8 +98,30 @@ export function TicketTasksTab({
       <div className="col-12 col-lg-5">
         <div className="card">
           <div className="card-header fw-semibold">Add task</div>
-          <div className="card-body">
-            <div className="mb-2 text-muted small">Adds to section “TODO”.</div>
+          <div className="card-body vstack gap-2">
+            <div>
+              <label className="form-label small mb-1">Section</label>
+              <select
+                className="form-select form-select-sm"
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+              >
+                {sectionTitles.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+                <option value={NEW_SECTION}>New section…</option>
+              </select>
+            </div>
+            {section === NEW_SECTION ? (
+              <input
+                className="form-control form-control-sm"
+                value={customSection}
+                onChange={(e) => setCustomSection(e.target.value)}
+                placeholder="Section title"
+              />
+            ) : null}
             <div className="input-group">
               <input
                 className="form-control"
@@ -100,11 +131,11 @@ export function TicketTasksTab({
               />
               <button
                 className="btn btn-primary"
-                disabled={addTaskLoading || newTaskText.trim() === ''}
+                disabled={addTaskLoading || newTaskText.trim() === '' || effectiveSection === ''}
                 onClick={() => {
                   const text = newTaskText.trim()
-                  if (!text) return
-                  void addTask({ ticket, section: 'TODO', text }).then(() => setNewTaskText(''))
+                  if (!text || effectiveSection === '') return
+                  void addTask({ ticket, section: effectiveSection, text }).then(() => setNewTaskText(''))
                 }}
               >
                 Add
@@ -117,4 +148,3 @@ export function TicketTasksTab({
     </div>
   )
 }
-

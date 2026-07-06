@@ -3,11 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/go-go-golems/docmgr/internal/searchsvc"
 	"github.com/go-go-golems/docmgr/internal/workspace"
@@ -296,55 +294,10 @@ func (c *ChangelogUpdateCommand) RunIntoGlazeProcessor(
 		}
 	}
 
-	// Ensure changelog file exists; create if missing with header
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		_ = os.MkdirAll(filepath.Dir(changelogPath), 0755)
-		// minimal header
-		_ = os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0644)
-	}
-
-	// Compose entry
-	today := time.Now().Format("2006-01-02")
-	heading := "## " + today
-	if strings.TrimSpace(s.Title) != "" {
-		heading += " - " + s.Title
-	}
-
-	var sb strings.Builder
-	sb.WriteString("\n")
-	sb.WriteString(heading)
-	sb.WriteString("\n\n")
-	if strings.TrimSpace(s.Entry) != "" {
-		sb.WriteString(s.Entry)
-		sb.WriteString("\n\n")
-	}
-	if len(final) > 0 {
-		sb.WriteString("### Related Files\n\n")
-		// stable order
-		var files []string
-		for f := range final {
-			files = append(files, f)
-		}
-		sort.Strings(files)
-		for _, f := range files {
-			note := strings.TrimSpace(final[f])
-			if note != "" {
-				sb.WriteString("- " + f + " — " + note + "\n")
-			} else {
-				sb.WriteString("- " + f + "\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
-
-	// Append to changelog
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
+	// Compose and append the entry (shared primitive with the HTTP API).
+	today, err := AppendChangelogEntry(changelogPath, s.Title, s.Entry, final)
 	if err != nil {
-		return fmt.Errorf("failed to open changelog.md: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(sb.String()); err != nil {
-		return fmt.Errorf("failed to write changelog entry: %w", err)
+		return err
 	}
 
 	row := types.NewRow(
@@ -464,51 +417,9 @@ func (c *ChangelogUpdateCommand) Run(
 		}
 	}
 
-	// Ensure file exists
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		_ = os.MkdirAll(filepath.Dir(changelogPath), 0755)
-		_ = os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0644)
-	}
-
-	today := time.Now().Format("2006-01-02")
-	heading := "## " + today
-	if strings.TrimSpace(s.Title) != "" {
-		heading += " - " + s.Title
-	}
-
-	var sb strings.Builder
-	sb.WriteString("\n")
-	sb.WriteString(heading)
-	sb.WriteString("\n\n")
-	if strings.TrimSpace(s.Entry) != "" {
-		sb.WriteString(s.Entry)
-		sb.WriteString("\n\n")
-	}
-	if len(final) > 0 {
-		sb.WriteString("### Related Files\n\n")
-		var files []string
-		for f := range final {
-			files = append(files, f)
-		}
-		sort.Strings(files)
-		for _, f := range files {
-			note := strings.TrimSpace(final[f])
-			if note != "" {
-				sb.WriteString("- " + f + " — " + note + "\n")
-			} else {
-				sb.WriteString("- " + f + "\n")
-			}
-		}
-		sb.WriteString("\n")
-	}
-
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open changelog.md: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(sb.String()); err != nil {
-		return fmt.Errorf("failed to write changelog entry: %w", err)
+	// Compose and append the entry (shared primitive with the HTTP API).
+	if _, err := AppendChangelogEntry(changelogPath, s.Title, s.Entry, final); err != nil {
+		return err
 	}
 
 	fmt.Printf("changelog updated: %s\n", changelogPath)

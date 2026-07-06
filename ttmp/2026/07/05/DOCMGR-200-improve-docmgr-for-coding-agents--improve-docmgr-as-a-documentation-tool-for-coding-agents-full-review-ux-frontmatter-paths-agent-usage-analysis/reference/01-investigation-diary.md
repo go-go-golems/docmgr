@@ -280,3 +280,40 @@ Per user follow-up, wrote a second full deliverable: a field report and assessme
 ### Code review instructions
 - Read `analysis/01-go-minitrace-field-report-assessment-from-the-docmgr-usage-mining-project.md` sections 8-9 first (fidelity + misshapen); verify anchors against `~/code/wesen/go-go-golems/go-minitrace`.
 - Re-run the fidelity matrix: `go-minitrace query commands docmgr fidelity --query-repository scripts/query-commands --archive-glob '<work>/archive/*/active/*/*.minitrace.json'`.
+
+## Step 7: Implementation - Phase 0 landed (commit db2cca4)
+
+Implementation of the design doc's section 9 began (user directive: "Implement it all... Skip the AI part though"). All 12 Phase 0 items are in, tested, lint-clean, and committed; the three headline silent failures and both live-reproduced bugs from Step 5 are fixed.
+
+### Prompt Context
+
+**User prompt (verbatim):** "Implement it all, keep a detailed diary as you work. Skip the AI part of it all though. Commit at appropriate intervals. Read diary skill for the diary format if necessary."
+
+**Assistant interpretation:** Implement the DOCMGR-200 phased plan (P0-P4) minus D7/`docmgr ai`, plus the GMT-009 go-minitrace backlog, with diaries and interval commits.
+
+**Inferred user intent:** Convert the designs into working, committed code this session.
+
+**Commit (code):** db2cca4 - "P0: fix silent failures, honest path existence, doctor output, dead code"
+
+### What I did
+- Malformed `--file-note` errors with exit 1 (shared `parseFileNotes`, relate + both changelog paths - fixing a latent empty-key bug in changelog's bare path too).
+- **Comma-split fix**: glazed has no non-splitting list type (TypeStringList is hard-wired to pflag StringSlice), so `cmd/docmgr/cmds/common/repeatable_flag.go` adds a StringArray-semantics pflag Value that masquerades as `stringSlice` and CSV-quotes on render so `GetStringSlice` round-trips commas. Wired for `--file-note` on relate and changelog.
+- `meta update` exits 1 on any error row; `changelog update` requires non-empty `--entry` (write path only - `--suggest` print mode still works).
+- fts5 error now names `-tags sqlite_fts5`; `ignore explain` bare mode implemented; doctor numbering continuous; doctor vocab remediation emits valid category + `--description "TODO"`.
+- Resolver stats absolute paths (Exists honest); root `SilenceErrors` (single error print); deleted `pkg/commands/list.go`, `test-api.sh`, tombstone `--files` flags; CI gains an fts5-tagged test step.
+
+### What worked
+- `go build`, `go test ./...` (15 pkgs ok), `go test -tags sqlite_fts5 ./...`, logcopter-check, glazed-lint all green; pre-commit hooks (test+lint) passed on commit.
+- Independent empirical re-verification: malformed file-note exit=1, bogus meta field exit=1, empty changelog entry exit=1, comma note stored intact ("note with commas (a, b, c)").
+
+### What was tricky to build
+- The comma fix without touching glazed: pflag's GetStringSlice CSV-parses the flag's String() rendering, so a custom Value with StringArray gathering must CSV-quote its own rendering to survive the round-trip. It reports Type()=="stringSlice" deliberately; documented as an upstream-glazed candidate (a real non-splitting list type).
+
+### What warrants a second pair of eyes
+- The masquerading flag Value (correct but subtle); and three deliberate scope edges: glaze-output `meta update` still exits 0 on row errors, `--suggest --apply-suggestions` now requires `--entry`, and doctor's *inline* remediation text (doctor.go) still lacks `--description` (the rule-rendered one is fixed) - the latter two roll into P3.
+
+### What should be done in the future
+- Upstream a non-comma-splitting list type to glazed; then delete the local workaround.
+
+### Code review instructions
+- `git show db2cca4`; run the empirical checks above against a scratch workspace (`docmgr init` + `create-ticket` + the three failing invocations).

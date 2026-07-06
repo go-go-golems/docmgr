@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -256,38 +257,17 @@ func ResolveRoot(root string) string {
 	return root
 }
 
-// FindGitRoot walks up from the current working directory to find the nearest .git directory
+// FindGitRoot walks up from the current working directory to find the nearest .git directory.
+//
+// The walk itself is shared with the paths resolver (paths.FindGitRootFrom) so the
+// two historical repo-root detectors agree (design doc DOCMGR-200 §8.1 / Phase 2).
 func FindGitRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
-	for {
-		gitPath := filepath.Join(dir, ".git")
-		if fi, err := os.Stat(gitPath); err == nil {
-			if fi.IsDir() {
-				return dir, nil
-			}
-			// .git is a file; parse gitdir:
-			if b, err := os.ReadFile(gitPath); err == nil {
-				line := strings.TrimSpace(string(b))
-				lower := strings.ToLower(line)
-				if strings.HasPrefix(lower, "gitdir:") {
-					gd := strings.TrimSpace(line[len("gitdir:"):])
-					if !filepath.IsAbs(gd) {
-						gd = filepath.Join(dir, gd)
-					}
-					if _, err := os.Stat(gd); err == nil {
-						return dir, nil
-					}
-				}
-			}
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
+	if root := paths.FindGitRootFrom(dir); root != "" {
+		return root, nil
 	}
 	return "", fmt.Errorf(".git directory not found")
 }
@@ -320,6 +300,18 @@ func FindRepositoryRoot() (string, error) {
 		return cwd, nil
 	}
 	return "", fmt.Errorf("could not determine repository root")
+}
+
+// FindWorkspaceRoot returns the go.work-aware workspace root for a repository
+// root ("" when the repo is not part of a go.work workspace).
+func FindWorkspaceRoot(repoRoot string) string {
+	start := strings.TrimSpace(repoRoot)
+	if start == "" {
+		if cwd, err := os.Getwd(); err == nil {
+			start = cwd
+		}
+	}
+	return paths.FindWorkspaceRootFrom(start)
 }
 
 // DetectMultipleTTMPRoots walks up from CWD and records directories containing a 'ttmp' folder

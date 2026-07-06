@@ -3,8 +3,10 @@ package workspace
 import (
 	"context"
 	"path/filepath"
+	"sort"
 	"strings"
 
+	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/pkg/errors"
 )
 
@@ -107,7 +109,7 @@ func compileDocQueryWithParseFilter(ctx context.Context, w *Workspace, q DocQuer
 	if len(q.Filters.RelatedFile) > 0 {
 		keys := buildQueryPathKeySet(w, q.Filters.RelatedFile)
 		suffixes := buildQueryFileSuffixPatterns(q.Filters.RelatedFile)
-		if len(keys) > 0 {
+		if len(keys) > 0 || len(suffixes) > 0 {
 			sub, subArgs := relatedFileExistsClause(keys, suffixes)
 			where = append(where, sub)
 			args = append(args, subArgs...)
@@ -231,64 +233,69 @@ func makePlaceholders(n int) string {
 	return strings.Repeat("?,", n-1) + "?"
 }
 
+// buildQueryPathKeySet resolves query inputs to absolute paths via the one
+// resolver; reverse lookup matches exactly on related_files.norm_abs.
 func buildQueryPathKeySet(w *Workspace, rawPaths []string) []string {
 	seen := map[string]struct{}{}
 	var out []string
 	for _, raw := range rawPaths {
-		for _, k := range queryPathKeys(w.resolver, raw) {
-			k = filepath.ToSlash(strings.TrimSpace(k))
-			if k == "" {
-				continue
-			}
-			if _, ok := seen[k]; ok {
-				continue
-			}
-			seen[k] = struct{}{}
-			out = append(out, k)
+		k := queryPathAbsKey(w.resolver, raw)
+		if k == "" {
+			continue
 		}
+		if _, ok := seen[k]; ok {
+			continue
+		}
+		seen[k] = struct{}{}
+		out = append(out, k)
 	}
 	return out
 }
 
+// buildQueryDirPrefixes builds case-sensitive GLOB patterns matching files
+// under the queried directory: the resolved absolute prefix plus (for
+// relative, non-anchored queries) a whole-segment infix pattern.
 func buildQueryDirPrefixes(w *Workspace, rawDirs []string) []string {
 	seen := map[string]struct{}{}
-	var out []string
+	add := func(p string) {
+		if p == "" {
+			return
+		}
+		if _, ok := seen[p]; ok {
+			return
+		}
+		seen[p] = struct{}{}
+	}
 	for _, raw := range rawDirs {
-		keys := queryPathKeys(w.resolver, raw)
-		for _, k := range keys {
-			k = strings.Trim(filepath.ToSlash(strings.TrimSpace(k)), "/")
-			if k == "" {
-				continue
-			}
-			p := k + "/%"
-			if _, ok := seen[p]; ok {
-				continue
-			}
-			seen[p] = struct{}{}
-			out = append(out, p)
+		if abs := queryPathAbsKey(w.resolver, raw); abs != "" {
+			add(escapeGlob(strings.TrimRight(abs, "/")) + "/*")
+		}
+		if rel := querySuffixRel(raw); rel != "" {
+			add("*/" + escapeGlob(rel) + "/*")
 		}
 	}
+	out := make([]string, 0, len(seen))
+	for p := range seen {
+		out = append(out, p)
+	}
+	sortStrings(out)
 	return out
 }
 
+// buildQueryFileSuffixPatterns builds case-sensitive whole-segment suffix
+// GLOB patterns for relative (non-anchored, non-absolute) queries: the query's
+// full path must equal a trailing run of the stored absolute path's segments.
+// Substring containment is intentionally not supported ("api.go" must not
+// match "chatapi.go").
 func buildQueryFileSuffixPatterns(rawPaths []string) []string {
 	seen := map[string]struct{}{}
 	var out []string
 	for _, raw := range rawPaths {
-		raw = strings.TrimSpace(raw)
-		if raw == "" {
+		rel := querySuffixRel(raw)
+		if rel == "" {
 			continue
 		}
-		// Only enable suffix matching for basename-like queries. This intentionally trades
-		// precision for UX in "I only know the filename" scenarios (see scenario tests).
-		if strings.Contains(raw, "/") || strings.Contains(raw, "\\") {
-			continue
-		}
-		base := filepath.ToSlash(filepath.Clean(raw))
-		if base == "" || base == "." || base == "/" {
-			continue
-		}
-		p := "%/" + base
+		p := "*/" + escapeGlob(rel)
 		if _, ok := seen[p]; ok {
 			continue
 		}
@@ -298,61 +305,87 @@ func buildQueryFileSuffixPatterns(rawPaths []string) []string {
 	return out
 }
 
-func relatedFileExistsClause(keys []string, suffixPatterns []string) (string, []any) {
-	// We match against multiple persisted representations.
-	cols := []string{
-		"rf.norm_canonical",
-		"rf.norm_repo_rel",
-		"rf.norm_docs_rel",
-		"rf.norm_doc_rel",
-		"rf.norm_abs",
-		"rf.norm_clean",
-		"rf.raw_path",
+// querySuffixRel returns the cleaned relative form of a query usable for
+// whole-segment suffix matching, or "" when the query is absolute/anchored.
+func querySuffixRel(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
 	}
-	in := makePlaceholders(len(keys))
-	var parts []string
+	if paths.IsAnchored(raw) {
+		return ""
+	}
+	if filepath.IsAbs(filepath.FromSlash(raw)) {
+		return ""
+	}
+	rel := filepath.ToSlash(filepath.Clean(filepath.FromSlash(raw)))
+	rel = strings.Trim(rel, "/")
+	if rel == "" || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
+		return ""
+	}
+	return rel
+}
+
+// queryPathAbsKey resolves a query input to its absolute path key.
+func queryPathAbsKey(resolver *paths.Resolver, raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || resolver == nil {
+		return ""
+	}
+	n := resolver.Resolve(raw)
+	return filepath.ToSlash(strings.TrimSpace(n.Abs))
+}
+
+func relatedFileExistsClause(keys []string, suffixPatterns []string) (string, []any) {
+	var ors []string
 	var args []any
-	for _, col := range cols {
-		var ors []string
-		ors = append(ors, col+" IN ("+in+")")
-		for range suffixPatterns {
-			ors = append(ors, col+" LIKE ?")
-		}
-		parts = append(parts, "("+strings.Join(ors, " OR ")+")")
+	if len(keys) > 0 {
+		ors = append(ors, "rf.norm_abs IN ("+makePlaceholders(len(keys))+")")
 		for _, k := range keys {
 			args = append(args, k)
 		}
-		for _, p := range suffixPatterns {
-			args = append(args, p)
-		}
 	}
-	return "EXISTS (SELECT 1 FROM related_files rf WHERE rf.doc_id = d.doc_id AND (" + strings.Join(parts, " OR ") + "))", args
+	for _, p := range suffixPatterns {
+		// GLOB is case-sensitive (unlike LIKE).
+		ors = append(ors, "rf.norm_abs GLOB ?")
+		args = append(args, p)
+	}
+	if len(ors) == 0 {
+		return "1=0", nil
+	}
+	return "EXISTS (SELECT 1 FROM related_files rf WHERE rf.doc_id = d.doc_id AND (" + strings.Join(ors, " OR ") + "))", args
 }
 
 func relatedDirExistsClause(prefixes []string) (string, []any) {
-	cols := []string{
-		"rf.norm_canonical",
-		"rf.norm_repo_rel",
-		"rf.norm_docs_rel",
-		"rf.norm_doc_rel",
-		"rf.norm_abs",
-		"rf.norm_clean",
-		"rf.raw_path",
-	}
-	in := makePlaceholders(len(prefixes))
-	_ = in // not used, but keep the pattern consistent with file clause
-	var parts []string
+	var ors []string
 	var args []any
-	for _, col := range cols {
-		// OR together LIKE patterns for each prefix.
-		var likes []string
-		for range prefixes {
-			likes = append(likes, col+" LIKE ?")
-		}
-		parts = append(parts, "("+strings.Join(likes, " OR ")+")")
-		for _, p := range prefixes {
-			args = append(args, p)
+	for _, p := range prefixes {
+		ors = append(ors, "rf.norm_abs GLOB ?")
+		args = append(args, p)
+	}
+	if len(ors) == 0 {
+		return "1=0", nil
+	}
+	return "EXISTS (SELECT 1 FROM related_files rf WHERE rf.doc_id = d.doc_id AND (" + strings.Join(ors, " OR ") + "))", args
+}
+
+// escapeGlob escapes SQLite GLOB metacharacters so pattern parts derived from
+// user paths match literally.
+func escapeGlob(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		switch r {
+		case '*', '?', '[':
+			b.WriteRune('[')
+			b.WriteRune(r)
+			b.WriteRune(']')
+		default:
+			b.WriteRune(r)
 		}
 	}
-	return "EXISTS (SELECT 1 FROM related_files rf WHERE rf.doc_id = d.doc_id AND (" + strings.Join(parts, " OR ") + "))", args
+	return b.String()
+}
+
+func sortStrings(values []string) {
+	sort.Strings(values)
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/templates"
 	"github.com/go-go-golems/docmgr/internal/workspace"
@@ -42,6 +43,7 @@ type DoctorSettings struct {
 	StaleAfterDays  int      `glazed:"stale-after"`
 	FailOn          string   `glazed:"fail-on"`
 	DiagnosticsJSON string   `glazed:"diagnostics-json"`
+	FixAnchors      bool     `glazed:"fix-anchors"`
 	// Schema printing flags (human mode only)
 	PrintTemplateSchema bool   `glazed:"print-template-schema"`
 	SchemaFormat        string `glazed:"schema-format"`
@@ -70,6 +72,10 @@ Common findings (doctor message ⇒ likely cause ⇒ how to fix):
     or pass '--stale-after N' if the cadence should be different for this run.
 
 Tips:
+  • '--fix-anchors' migrates legacy RelatedFiles paths to explicit anchors
+    (repo://pkg/foo.go, ws://<member>/<rel> for go.work siblings, docs://..., abs:///...).
+    Only entries that resolve to an existing file are rewritten; the rest are left
+    as legacy with an 'anchor_migration_skipped' warning.
   • Use '--fail-on warning' (or 'error') to make CI fail when issues are detected.
   • '--diagnostics-json path' captures rule results as JSON (use '-' for stdout) for CI/automation.
   • '--ignore-glob' is handy for suppressing known noisy paths; the command also reads patterns from
@@ -157,6 +163,12 @@ Examples:
 					fields.TypeString,
 					fields.WithHelp("Write diagnostics rule output to JSON (file path or '-' for stdout)"),
 					fields.WithDefault(""),
+				),
+				fields.New(
+					"fix-anchors",
+					fields.TypeBool,
+					fields.WithHelp("Migrate legacy RelatedFiles paths to explicit anchors (repo://, ws://, docs://, abs://). Rewrites frontmatter in place; entries that don't resolve to an existing file are left as-is with a warning."),
+					fields.WithDefault(false),
 				),
 			),
 		),
@@ -381,6 +393,71 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	// Group by ticket directory inferred from ttmp layout.
 	tickets := groupDoctorDocsByTicket(settings.Root, filtered)
 
+	// Anchor migration (--fix-anchors): rewrite legacy RelatedFiles entries with
+	// explicit anchors before validation, then rebuild the index so the checks
+	// below see the migrated state.
+	if settings.FixAnchors {
+		migrated := false
+		for _, bucket := range tickets {
+			for _, h := range bucket.Docs {
+				if h.ReadErr != nil || h.Doc == nil {
+					continue
+				}
+				changed, skipped, err := migrateDocAnchors(ws, h.Path)
+				if err != nil {
+					return fmt.Errorf("failed to migrate anchors for %s: %w", h.Path, err)
+				}
+				for _, skip := range skipped {
+					row := types.NewRow(
+						types.MRP("ticket", bucket.TicketID),
+						types.MRP("issue", "anchor_migration_skipped"),
+						types.MRP("severity", "warning"),
+						types.MRP("message", fmt.Sprintf("legacy related file left as-is (does not resolve to an existing file): %s", skip)),
+						types.MRP("path", h.Path),
+					)
+					if err := gp.AddRow(ctx, row); err != nil {
+						return fmt.Errorf("failed to emit doctor row (anchor_migration_skipped) for %s: %w", h.Path, err)
+					}
+					highestSeverity = maxInt(highestSeverity, 1)
+				}
+				if changed > 0 {
+					migrated = true
+					row := types.NewRow(
+						types.MRP("ticket", bucket.TicketID),
+						types.MRP("issue", "anchors_migrated"),
+						types.MRP("severity", "ok"),
+						types.MRP("message", fmt.Sprintf("migrated %d related file path(s) to explicit anchors", changed)),
+						types.MRP("path", h.Path),
+					)
+					if err := gp.AddRow(ctx, row); err != nil {
+						return fmt.Errorf("failed to emit doctor row (anchors_migrated) for %s: %w", h.Path, err)
+					}
+				}
+			}
+		}
+		if migrated {
+			// Re-index and re-query so validations reflect the rewritten docs.
+			if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
+				return fmt.Errorf("failed to rebuild workspace index after anchor migration: %w", err)
+			}
+			qr, err = ws.QueryDocs(ctx, query)
+			if err != nil {
+				return fmt.Errorf("failed to query docs after anchor migration: %w", err)
+			}
+			filtered = qr.Docs
+			if len(settings.IgnoreDirs) > 0 || len(settings.IgnoreGlobs) > 0 {
+				filtered = make([]workspace.DocHandle, 0, len(qr.Docs))
+				for _, h := range qr.Docs {
+					if shouldSkipDoctorCLIPath(settings.Root, h.Path, settings.IgnoreDirs, settings.IgnoreGlobs) {
+						continue
+					}
+					filtered = append(filtered, h)
+				}
+			}
+			tickets = groupDoctorDocsByTicket(settings.Root, filtered)
+		}
+	}
+
 	// Per-ticket validations.
 	prefixRe := regexp.MustCompile(`^(\d{2,3})-`)
 	for _, bucket := range tickets {
@@ -586,12 +663,13 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 					}
 
 					resolver := paths.NewResolver(paths.ResolverOptions{
-						DocsRoot:  ws.Context().Root,
-						DocPath:   indexPath,
-						ConfigDir: ws.Context().ConfigDir,
-						RepoRoot:  ws.Context().RepoRoot,
+						DocsRoot:      ws.Context().Root,
+						DocPath:       indexPath,
+						ConfigDir:     ws.Context().ConfigDir,
+						RepoRoot:      ws.Context().RepoRoot,
+						WorkspaceRoot: ws.Context().WorkspaceRoot,
 					})
-					n := resolver.Normalize(rf.Path)
+					n := resolver.Resolve(rf.Path)
 					if !n.Exists {
 						hasIssues = true
 						row := types.NewRow(
@@ -714,6 +792,57 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 	}
 
 	return nil
+}
+
+// migrateDocAnchors rewrites legacy (bare-string) RelatedFiles entries of one
+// document into explicit anchored form (repo://, ws://, docs://, abs://) using
+// the tightest-containing-anchor rule. Entries are only migrated when the
+// legacy resolution finds an existing file; ambiguous/missing entries are left
+// as legacy and reported in skipped. Already-anchored entries are untouched.
+func migrateDocAnchors(ws *workspace.Workspace, docPath string) (int, []string, error) {
+	doc, content, err := documents.ReadDocumentWithFrontmatter(docPath)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	resolver := paths.NewResolver(paths.ResolverOptions{
+		DocsRoot:      ws.Context().Root,
+		DocPath:       docPath,
+		ConfigDir:     ws.Context().ConfigDir,
+		RepoRoot:      ws.Context().RepoRoot,
+		WorkspaceRoot: ws.Context().WorkspaceRoot,
+	})
+
+	changed := 0
+	var skipped []string
+	for i, rf := range doc.RelatedFiles {
+		raw := strings.TrimSpace(rf.Path)
+		if raw == "" {
+			continue
+		}
+		if paths.IsAnchored(raw) {
+			continue
+		}
+		n := resolver.Resolve(raw)
+		if !n.Exists || strings.TrimSpace(n.Abs) == "" {
+			skipped = append(skipped, raw)
+			continue
+		}
+		anchored := resolver.AnchoredFor(n.Abs).String()
+		if anchored == "" || anchored == raw {
+			continue
+		}
+		doc.RelatedFiles[i].Path = anchored
+		changed++
+	}
+
+	if changed == 0 {
+		return 0, skipped, nil
+	}
+	if err := documents.WriteDocumentWithFrontmatter(docPath, doc, content, true); err != nil {
+		return 0, skipped, err
+	}
+	return changed, skipped, nil
 }
 
 type doctorTicketBucket struct {

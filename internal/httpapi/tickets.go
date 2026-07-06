@@ -15,7 +15,6 @@ import (
 	"github.com/go-go-golems/docmgr/internal/ticketgraph"
 	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
-	"github.com/go-go-golems/docmgr/pkg/models"
 )
 
 type ticketStats struct {
@@ -105,14 +104,14 @@ func (s *Server) handleTicketsGet(w http.ResponseWriter, r *http.Request) error 
 }
 
 type ticketDocItem struct {
-	Path         string               `json:"path"`
-	Title        string               `json:"title"`
-	DocType      string               `json:"docType"`
-	Status       string               `json:"status"`
-	Topics       []string             `json:"topics"`
-	Summary      string               `json:"summary"`
-	LastUpdated  *time.Time           `json:"lastUpdated,omitempty"`
-	RelatedFiles []models.RelatedFile `json:"relatedFiles"`
+	Path         string            `json:"path"`
+	Title        string            `json:"title"`
+	DocType      string            `json:"docType"`
+	Status       string            `json:"status"`
+	Topics       []string          `json:"topics"`
+	Summary      string            `json:"summary"`
+	LastUpdated  *time.Time        `json:"lastUpdated,omitempty"`
+	RelatedFiles []relatedFileItem `json:"relatedFiles"`
 }
 
 type ticketDocsResponse struct {
@@ -242,7 +241,7 @@ func (s *Server) handleTicketsDocs(w http.ResponseWriter, r *http.Request) error
 				Topics:       append([]string{}, h.Doc.Topics...),
 				Summary:      strings.TrimSpace(h.Doc.Summary),
 				LastUpdated:  lastUpdated,
-				RelatedFiles: append([]models.RelatedFile{}, h.Doc.RelatedFiles...),
+				RelatedFiles: resolveRelatedFiles(ws, h.Path, h.Doc.RelatedFiles),
 			})
 		}
 
@@ -557,10 +556,11 @@ func ticketDocStats(ctx context.Context, ws *workspace.Workspace, ticketID strin
 		}
 		docsTotal++
 		docResolver := paths.NewResolver(paths.ResolverOptions{
-			DocsRoot:  ws.Context().Root,
-			ConfigDir: ws.Context().ConfigDir,
-			RepoRoot:  ws.Context().RepoRoot,
-			DocPath:   h.Path,
+			DocsRoot:      ws.Context().Root,
+			ConfigDir:     ws.Context().ConfigDir,
+			RepoRoot:      ws.Context().RepoRoot,
+			WorkspaceRoot: ws.Context().WorkspaceRoot,
+			DocPath:       h.Path,
 		})
 		for _, rf := range h.Doc.RelatedFiles {
 			key := canonicalizeForStats(docResolver, rf.Path)
@@ -578,12 +578,13 @@ func canonicalizeForStats(resolver *paths.Resolver, raw string) string {
 	if raw == "" || resolver == nil {
 		return ""
 	}
-	n := resolver.NormalizeNoFS(raw)
+	// Dedupe by resolved absolute path (one resolver for anchored + legacy forms).
+	n := resolver.ResolveNoFS(raw)
 	switch {
+	case strings.TrimSpace(n.Abs) != "":
+		return filepath.ToSlash(strings.TrimSpace(n.Abs))
 	case strings.TrimSpace(n.Canonical) != "":
 		return filepath.ToSlash(strings.TrimSpace(n.Canonical))
-	case strings.TrimSpace(n.RepoRelative) != "":
-		return filepath.ToSlash(strings.TrimSpace(n.RepoRelative))
 	case strings.TrimSpace(n.OriginalClean) != "":
 		return filepath.ToSlash(strings.TrimSpace(n.OriginalClean))
 	default:

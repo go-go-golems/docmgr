@@ -16,6 +16,10 @@ const (
 	AnchorConfig     Anchor = "config"
 	AnchorDocsRoot   Anchor = "docs-root"
 	AnchorDocsParent Anchor = "docs-parent"
+	// AnchorWs marks a path resolved against a go.work workspace member (ws://).
+	AnchorWs Anchor = "ws"
+	// AnchorAbs marks an explicitly absolute path (abs://).
+	AnchorAbs Anchor = "abs"
 )
 
 // ResolverOptions configures a Resolver instance.
@@ -24,6 +28,9 @@ type ResolverOptions struct {
 	DocPath   string
 	ConfigDir string
 	RepoRoot  string
+	// WorkspaceRoot is the directory containing go.work (for ws:// anchors).
+	// When empty it is auto-detected by walking up from the repo root.
+	WorkspaceRoot string
 }
 
 // Resolver normalizes user-provided paths into canonical representations.
@@ -33,6 +40,7 @@ type Resolver struct {
 	configDir  string
 	docsParent string
 	repoRoot   string
+	wsRoot     string
 }
 
 // NormalizedPath contains all known representations of a path.
@@ -63,17 +71,105 @@ func NewResolver(opts ResolverOptions) *Resolver {
 		repoRoot = findRepositoryRoot(docDir, docsRoot, configDir)
 	}
 
+	wsRoot := absDir(opts.WorkspaceRoot)
+	if wsRoot == "" {
+		wsRoot = findWorkspaceRoot(repoRoot, docDir, docsRoot, configDir)
+	}
+
 	return &Resolver{
 		docDir:     docDir,
 		docsRoot:   docsRoot,
 		configDir:  configDir,
 		docsParent: docsParent,
 		repoRoot:   repoRoot,
+		wsRoot:     wsRoot,
 	}
 }
 
+// Resolve is the single entry point for turning any persisted path string —
+// anchored (repo://, ws://, docs://, doc://, abs://) or legacy bare string —
+// into all known representations, with an honest os.Stat-based Exists for
+// every anchor (design doc DOCMGR-200 §8.1).
+func (r *Resolver) Resolve(raw string) NormalizedPath {
+	return r.Normalize(raw)
+}
+
+// ResolveNoFS is Resolve without filesystem access (Exists is always false).
+// For anchored inputs the anchor choice is identical to Resolve because the
+// anchor is explicit; only legacy bare strings can differ (first-valid-base
+// instead of first-existing-base).
+func (r *Resolver) ResolveNoFS(raw string) NormalizedPath {
+	return r.NormalizeNoFS(raw)
+}
+
+// resolveAnchored resolves an explicitly anchored path. Anchors are explicit,
+// so no containment checks apply: doc:// MAY escape the repository.
+func (r *Resolver) resolveAnchored(a AnchoredPath, stat bool) NormalizedPath {
+	var base string
+	var anchor Anchor
+	var absPath string
+
+	switch a.Scheme {
+	case SchemeLegacy:
+		// Legacy strings never reach resolveAnchored; treated as unknown.
+	case SchemeRepo:
+		base, anchor = r.repoRoot, AnchorRepo
+	case SchemeWs:
+		anchor = AnchorWs
+		wsBase := r.wsRoot
+		if wsBase == "" {
+			// Design fallback: without a go.work the workspace root is the repo root.
+			wsBase = r.repoRoot
+		}
+		if wsBase != "" {
+			base = filepath.Join(wsBase, a.Member)
+		}
+	case SchemeDocs:
+		base, anchor = r.docsRoot, AnchorDocsRoot
+	case SchemeDoc:
+		base, anchor = r.docDir, AnchorDoc
+	case SchemeAbs:
+		anchor = AnchorAbs
+		absPath = filepath.Clean(filepath.FromSlash(a.Rel))
+	}
+
+	if absPath == "" && base != "" {
+		absPath = filepath.Clean(filepath.Join(base, filepath.FromSlash(a.Rel)))
+	}
+
+	canonical := a.String()
+	if absPath == "" {
+		// Anchor base unknown (e.g. docs:// without a docs root).
+		return NormalizedPath{
+			Original:      canonical,
+			OriginalClean: canonical,
+			Canonical:     canonical,
+			Anchor:        anchor,
+		}
+	}
+
+	var n NormalizedPath
+	if stat {
+		n = r.buildResult(absPath, anchor)
+	} else {
+		n = r.buildResultWithExists(absPath, anchor, false)
+	}
+	// Anchored strings are canonical by construction and must round-trip.
+	n.Original = canonical
+	n.OriginalClean = canonical
+	n.Canonical = canonical
+	return n
+}
+
 // Normalize resolves a raw path string into a NormalizedPath.
+//
+// Anchored inputs (repo://, ws://, docs://, doc://, abs://) resolve directly
+// against their explicit base; bare strings keep the legacy multi-anchor
+// guessing behavior.
 func (r *Resolver) Normalize(raw string) NormalizedPath {
+	if a, ok := ParseAnchored(raw); ok {
+		return r.resolveAnchored(a, true)
+	}
 	result := NormalizedPath{
 		Original:      raw,
 		OriginalClean: toSlash(strings.TrimSpace(raw)),
@@ -143,6 +239,9 @@ func (r *Resolver) Normalize(raw string) NormalizedPath {
 // This is useful for normalizing user-provided strings for matching and diagnostics
 // without turning them into filesystem reads.
 func (r *Resolver) NormalizeNoFS(raw string) NormalizedPath {
+	if a, ok := ParseAnchored(raw); ok {
+		return r.resolveAnchored(a, false)
+	}
 	result := NormalizedPath{
 		Original:      raw,
 		OriginalClean: toSlash(strings.TrimSpace(raw)),
@@ -210,28 +309,6 @@ func (n NormalizedPath) Representations() []string {
 	return uniqueStrings(values...)
 }
 
-// Suffixes returns the trailing path segments (up to maxSegments) for fuzzy matches.
-func (n NormalizedPath) Suffixes(maxSegments int) []string {
-	source := firstNonEmpty(n.Canonical, n.RepoRelative, n.Abs, n.OriginalClean)
-	if source == "" {
-		return nil
-	}
-	segments := strings.Split(source, "/")
-	if len(segments) == 0 {
-		return nil
-	}
-	if maxSegments > len(segments) {
-		maxSegments = len(segments)
-	}
-	var out []string
-	for i := 1; i <= maxSegments; i++ {
-		start := len(segments) - i
-		suffix := strings.Join(segments[start:], "/")
-		out = append(out, suffix)
-	}
-	return uniqueStrings(out...)
-}
-
 // Empty reports whether the normalized path has no usable representations.
 func (n NormalizedPath) Empty() bool {
 	return strings.TrimSpace(n.Canonical) == "" &&
@@ -244,22 +321,85 @@ func (n NormalizedPath) Best() string {
 	return firstNonEmpty(n.Canonical, n.RepoRelative, n.DocsRelative, n.DocRelative, n.Abs, n.OriginalClean)
 }
 
-// MatchPaths performs fuzzy matching between two normalized paths.
+// MatchPaths reports whether two normalized paths refer to the same file.
+//
+// Matching is intentionally strict (design doc DOCMGR-200 §8.1 "fuzzy layer
+// diet"): first an exact match on the resolved absolute path, then
+// case-SENSITIVE suffix matching on whole path segments (one side's full
+// path must equal a trailing run of the other side's segments). Substring
+// containment is gone: "api.go" no longer matches "chatapi.go".
 func MatchPaths(a, b NormalizedPath) bool {
 	if a.Empty() || b.Empty() {
 		return false
 	}
-	aSet := toSet(a.Representations())
-	bSet := toSet(b.Representations())
-	if intersects(aSet, bSet) {
+	if a.Abs != "" && a.Abs == b.Abs {
 		return true
 	}
-	aSuffix := toSet(a.Suffixes(3))
-	bSuffix := toSet(b.Suffixes(3))
-	if intersects(aSuffix, bSuffix) {
-		return true
+	for _, x := range a.matchKeys() {
+		for _, y := range b.matchKeys() {
+			if segmentSuffixMatch(x, y) {
+				return true
+			}
+		}
 	}
-	return containsSubstring(aSet, bSet)
+	return false
+}
+
+// matchKeys returns the comparable full-path strings for strict matching.
+func (n NormalizedPath) matchKeys() []string {
+	return uniqueStrings(
+		n.Abs,
+		n.RepoRelative,
+		n.DocsRelative,
+		n.DocRelative,
+		stripAnchorScheme(n.Canonical),
+		n.OriginalClean,
+	)
+}
+
+func stripAnchorScheme(value string) string {
+	if a, ok := ParseAnchored(value); ok {
+		switch a.Scheme {
+		case SchemeWs:
+			if a.Rel == "" {
+				return a.Member
+			}
+			return a.Member + "/" + a.Rel
+		case SchemeRepo, SchemeDocs, SchemeDoc, SchemeAbs, SchemeLegacy:
+			return a.Rel
+		default:
+			return a.Rel
+		}
+	}
+	return value
+}
+
+// segmentSuffixMatch reports whether one path equals a whole-segment suffix
+// of the other (case-sensitive).
+func segmentSuffixMatch(x, y string) bool {
+	xs := splitSegments(x)
+	ys := splitSegments(y)
+	if len(xs) == 0 || len(ys) == 0 {
+		return false
+	}
+	if len(xs) > len(ys) {
+		xs, ys = ys, xs
+	}
+	off := len(ys) - len(xs)
+	for i := range xs {
+		if xs[i] != ys[off+i] {
+			return false
+		}
+	}
+	return true
+}
+
+func splitSegments(value string) []string {
+	value = strings.Trim(strings.TrimSpace(filepath.ToSlash(value)), "/")
+	if value == "" {
+		return nil
+	}
+	return strings.Split(value, "/")
 }
 
 // DirectoryMatch reports whether target is inside dir.
@@ -382,6 +522,78 @@ func findRepositoryRoot(docDir, docsRoot, configDir string) string {
 	return ""
 }
 
+func findWorkspaceRoot(candidates ...string) string {
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		if root := FindWorkspaceRootFrom(candidate); root != "" {
+			return root
+		}
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		return FindWorkspaceRootFrom(cwd)
+	}
+	return ""
+}
+
+// FindWorkspaceRootFrom walks up from start looking for a go.work file and
+// returns the directory containing it ("" when none is found). This is the
+// base directory for ws://<member>/<rel> anchors.
+func FindWorkspaceRootFrom(start string) string {
+	dir := absDir(start)
+	for dir != "" {
+		if fi, err := os.Stat(filepath.Join(dir, "go.work")); err == nil && !fi.IsDir() {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
+}
+
+// FindRepoRootFrom walks up from start for the nearest directory containing
+// .git or go.mod (the shared repo-root heuristic; see also FindGitRootFrom).
+func FindRepoRootFrom(start string) string {
+	return walkForRepo(start)
+}
+
+// FindGitRootFrom walks up from start looking for a .git directory or a valid
+// .git gitfile (worktrees/submodules) and returns the containing directory.
+func FindGitRootFrom(start string) string {
+	dir := absDir(start)
+	for dir != "" {
+		gitPath := filepath.Join(dir, ".git")
+		if fi, err := os.Stat(gitPath); err == nil {
+			if fi.IsDir() {
+				return dir
+			}
+			// .git is a file; validate the gitdir: pointer.
+			if b, err := os.ReadFile(gitPath); err == nil {
+				line := strings.TrimSpace(string(b))
+				if strings.HasPrefix(strings.ToLower(line), "gitdir:") {
+					gd := strings.TrimSpace(line[len("gitdir:"):])
+					if !filepath.IsAbs(gd) {
+						gd = filepath.Join(dir, gd)
+					}
+					if _, err := os.Stat(gd); err == nil {
+						return dir
+					}
+				}
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
+}
+
 func walkForRepo(start string) string {
 	dir := absDir(start)
 	for dir != "" {
@@ -463,21 +675,6 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func toSet(values []string) map[string]struct{} {
-	if len(values) == 0 {
-		return nil
-	}
-	set := make(map[string]struct{}, len(values))
-	for _, v := range values {
-		n := normalizeForCompare(v)
-		if n == "" {
-			continue
-		}
-		set[n] = struct{}{}
-	}
-	return set
-}
-
 func normalizeForCompare(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -485,35 +682,6 @@ func normalizeForCompare(value string) string {
 	}
 	value = strings.ToLower(filepath.ToSlash(value))
 	return value
-}
-
-func intersects(a, b map[string]struct{}) bool {
-	if len(a) == 0 || len(b) == 0 {
-		return false
-	}
-	if len(a) > len(b) {
-		a, b = b, a
-	}
-	for k := range a {
-		if _, ok := b[k]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-func containsSubstring(a, b map[string]struct{}) bool {
-	if len(a) == 0 || len(b) == 0 {
-		return false
-	}
-	for ka := range a {
-		for kb := range b {
-			if strings.Contains(ka, kb) || strings.Contains(kb, ka) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func hasPathPrefix(value, prefix string) bool {

@@ -534,10 +534,11 @@ func (b *ticketGraphBuilder) addDocAndEdges(docPath string, doc *models.Document
 func (b *ticketGraphBuilder) docResolver(docPath string) *paths.Resolver {
 	docPathAbs := filepath.ToSlash(filepath.Clean(docPath))
 	return paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  b.ws.Context().Root,
-		DocPath:   filepath.FromSlash(docPathAbs),
-		ConfigDir: b.ws.Context().ConfigDir,
-		RepoRoot:  b.ws.Context().RepoRoot,
+		DocsRoot:      b.ws.Context().Root,
+		DocPath:       filepath.FromSlash(docPathAbs),
+		ConfigDir:     b.ws.Context().ConfigDir,
+		RepoRoot:      b.ws.Context().RepoRoot,
+		WorkspaceRoot: b.ws.Context().WorkspaceRoot,
 	})
 }
 

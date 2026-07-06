@@ -275,10 +275,11 @@ func externalSourceMatch(externalSources []string, query string) bool {
 
 func matchRelatedFiles(ws *workspace.Workspace, docPath string, relatedFiles models.RelatedFiles, fileQueryRaw string) ([]string, []string) {
 	docResolver := paths.NewResolver(paths.ResolverOptions{
-		DocsRoot:  ws.Context().Root,
-		DocPath:   docPath,
-		ConfigDir: ws.Context().ConfigDir,
-		RepoRoot:  ws.Context().RepoRoot,
+		DocsRoot:      ws.Context().Root,
+		DocPath:       docPath,
+		ConfigDir:     ws.Context().ConfigDir,
+		RepoRoot:      ws.Context().RepoRoot,
+		WorkspaceRoot: ws.Context().WorkspaceRoot,
 	})
 
 	fileQueryNorm := docResolver.NormalizeNoFS(fileQueryRaw)

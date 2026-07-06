@@ -24,6 +24,26 @@ func TestParseFileNotes(t *testing.T) {
 			want:  map[string]string{"pkg/commands/relate.go": "note (sections 4.4, 8.1)"},
 		},
 		{
+			name: "anchored paths keep their scheme colon",
+			input: []string{
+				"repo://pkg/commands/relate.go:write side",
+				"ws://glazed/pkg/fields.go:sibling member",
+				"abs:///home/user/x.go:absolute escape hatch",
+				"docs://2026/07/05/T--x/design/01.md=docs-root doc",
+			},
+			want: map[string]string{
+				"repo://pkg/commands/relate.go":       "write side",
+				"ws://glazed/pkg/fields.go":           "sibling member",
+				"abs:///home/user/x.go":               "absolute escape hatch",
+				"docs://2026/07/05/T--x/design/01.md": "docs-root doc",
+			},
+		},
+		{
+			name:    "anchored path without note errors",
+			input:   []string{"repo://pkg/commands/relate.go"},
+			wantErr: "malformed --file-note value",
+		},
+		{
 			name:  "skips empty values",
 			input: []string{"", "   ", "a/b.go:note"},
 			want:  map[string]string{"a/b.go": "note"},

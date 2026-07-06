@@ -346,3 +346,34 @@ The agent CLI contract is in: aliases for what agents guess, forgiving ticket/do
 
 ### Code review instructions
 - `git show` this commit; run `go test ./pkg/commands -run Contract -v` and the empirical checks (ticket create/show, ttmp/ttmp doc ref, --verbose banner).
+
+## Step 9: Implementation - Phase 2 paths v2 landed (the deep fix)
+
+The frontmatter-paths redesign (D1) is in: explicit anchor schemes (`repo://`, `ws://member/...`, `docs://`, `doc://`, `abs://`), one resolver used by relate/index/doctor/API/UI, go.work-aware workspace roots, `doctor --fix-anchors` migration, and a strict fuzzy-matching diet. The self-contradiction that defined the old system - relate writing `../../../glazed/...` chains that doctor then flagged missing - is gone: sibling-repo relates write `ws://...` and doctor validates them.
+
+### Prompt Context
+
+**User prompt (verbatim):** (see Step 7)
+
+### What I did
+- `internal/paths/anchored.go` (new): scheme parse/format + tightest-containing-anchor rule; `Resolver.Resolve`/`ResolveNoFS` as the single entry point with honest os.Stat for every anchor; `doc://` may escape the repo by design.
+- Unified root detection (`FindGitRootFrom`/`FindWorkspaceRootFrom` shared by workspace + paths); `WorkspaceContext.WorkspaceRoot` from go.work.
+- relate writes anchored paths (never `../` chains); legacy entries preserved verbatim; index collapsed to `{anchor, raw_path, norm_abs, norm_repo_rel}`; reverse lookup = exact abs + case-sensitive whole-segment GLOB suffix (substring containment deleted - `api.go` no longer matches `chatapi.go`).
+- doctor validates via Resolve; `--fix-anchors` migrates resolvable legacy entries and warns on the rest; httpapi returns `{anchor, root, resolvedPath, exists}` per related file and the UI uses server resolution (abs entries no longer render as 403 links).
+- Property tests: anchor x existence x location matrix incl. a two-repo go.work fixture asserting write->index->doctor->resolve agreement.
+
+### What worked
+- All gates green; **doctor over the repo's own 53-ticket ttmp is byte-identical before/after** (159 warnings / 15 errors both) - full backward compatibility for legacy entries; scenario suite 17/17.
+- Independent verification: sibling-repo relate wrote `ws://repoB/pkg/lib.go`, doctor 0 related-file findings.
+
+### What was tricky to build
+- The new scheme collided with P0's `--file-note` parsing: `repo://x:note` split at the scheme colon. Caught by the implementing agent; parseFileNotes now skips known scheme prefixes before finding the delimiter.
+- Case-sensitive suffix matching in SQLite needed GLOB (LIKE is case-insensitive) plus metachar escaping.
+
+### What warrants a second pair of eyes
+- The resolver's anchored short-circuit inside Normalize/NormalizeNoFS (anchored strings entering legacy paths); the GLOB pattern escaping; the decision to keep `norm_repo_rel` as a display column.
+- Deliberate deviation: no per-entry "migrate me" doctor hint (would add hundreds of warnings across historical tickets); migration is opt-in via `doctor --fix-anchors`.
+
+### Code review instructions
+- Start: `internal/paths/anchored.go`, then `resolver.go` Resolve/MatchPaths, `pkg/commands/relate.go` anchoredForWrite, `pkg/commands/anchors_property_test.go`.
+- Validate: `go test ./internal/paths ./pkg/commands`; the go.work two-repo empirical from this step; `docmgr doctor --fix-anchors --ticket <old ticket>` on a scratch copy.

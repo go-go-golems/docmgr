@@ -142,6 +142,12 @@ export type WorkspaceTopicDetailResponse = {
 export type RelatedFile = {
   path: string
   note?: string
+  // Server-side resolution of anchored paths (repo://, ws://, docs://, abs://)
+  // and legacy bare strings. Optional: some endpoints return raw entries only.
+  anchor?: string
+  root?: 'repo' | 'docs' | 'abs'
+  resolvedPath?: string
+  exists?: boolean
 }
 
 export type SearchDocResult = {

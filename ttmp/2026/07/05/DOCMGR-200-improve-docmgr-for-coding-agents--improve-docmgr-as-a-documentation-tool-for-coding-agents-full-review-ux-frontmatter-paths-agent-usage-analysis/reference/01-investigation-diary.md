@@ -456,3 +456,77 @@ The final phase landed: every embedded help topic, README, AGENT.md, and CONTRIB
 
 ### Code review instructions
 - `git show` this commit; `docmgr help path-anchors`; spot-check any doc command against a scratch workspace.
+
+## Step 13: PR 43 code review and reMarkable handoff
+
+Reviewed PR 43 as a merge-readiness pass rather than another implementation phase. The review validates the branch locally, checks GitHub PR status, runs a small scratch-workspace/API experiment, and records the findings in a new analysis document that can be handed to the PR author or a new intern.
+
+The main outcome is positive but not unconditional: the implementation direction is strong and local tests/builds pass, but the review found three concrete correctness blockers (forgiving `doc add` writes non-canonical `Ticket:` metadata; `doctor --ticket` can check zero tickets for a short forgiving ref; HTTP/UI task toggles still use positional IDs despite stable IDs) plus a failing Advanced Security CodeQL check that must be resolved before merge.
+
+### Prompt Context
+
+**User prompt (verbatim):** "In the context of docmgr ticket DOCMGR-200 in docmgr/ttmp (and PR https://github.com/go-go-golems/docmgr/pull/43)
+
+Do a detailed code review / project review / analysis in the style of the usual intern design guide. Upload to remarkable. You can run experiments in the scripts/ directory of the ticket."
+
+**Assistant interpretation:** Review PR 43 deeply in the existing DOCMGR-200 ticket context, write an intern-style code/project review with evidence and concrete recommendations, use ticket scripts for reproducible experiments, and upload the resulting document to reMarkable.
+
+**Inferred user intent:** Get an independent merge-readiness assessment of the large DOCMGR-200 PR, including subtle cross-surface correctness issues that ordinary green tests might miss.
+
+### What I did
+- Created `analysis/02-pr-43-code-review-and-project-review.md` and wrote a merge-readiness review with architecture map, validation evidence, findings, snippets, why-it-matters sections, and cleanup sketches.
+- Added and ran `scripts/04-pr43-review-experiments.sh`; saved output in `sources/pr43-review-experiments.txt`.
+- Ran local validation: `go test ./... -count=1`, `go test -tags sqlite_fts5 ./... -count=1`, `cd ui && pnpm build`, `cd ui && pnpm lint`.
+- Checked GitHub PR status via `gh pr checks 43` and check-run annotations via `gh api`.
+- Ran scratch-workspace reproductions for the stable-task-ID HTTP mismatch and the forgiving-ticket-ref `doc add` metadata drift.
+
+### Why
+- PR 43 is a large cross-cutting change; green tests alone do not prove that the new abstractions are consistently wired across CLI, HTTP API, UI, ticket metadata, and docs.
+- The original DOCMGR-200 work was driven by real agent failure modes, so the review focused especially on agent-facing contracts and cases where a command appears successful but leaves inconsistent state.
+
+### What worked
+- Both Go test suites passed locally, including the new `sqlite_fts5` job.
+- The UI build and lint pass locally.
+- The scratch experiments produced compact, reproducible evidence for two important findings:
+  - `doc add --ticket CANON-1` creates a doc in the canonical ticket directory but persists `Ticket: CANON-1`, so `ticket show CANON-1` lists only `index.md`.
+  - `doctor --ticket DOCMGR-200` printed `No tickets checked.` while `ticket show DOCMGR-200` resolved the ticket correctly; the full canonical ID was required for doctor.
+  - `/api/v1/tickets/tasks` returns `stableId`, but `/api/v1/tickets/tasks/check` rejects a stable ID string and accepts only positional `ids: [1]`.
+
+### What didn't work
+- The first run of `scripts/04-pr43-review-experiments.sh` failed during the scratch-workspace section because the output path was relative; once the script `cd`'d into the temp workspace, `tee` could not open `ttmp/.../sources/pr43-review-experiments.txt`:
+  - `tee: ttmp/2026/07/05/DOCMGR-200-.../sources/pr43-review-experiments.txt: No such file or directory`
+- Fixed the script by making `out_dir` absolute from `git rev-parse --show-toplevel`, then reran successfully.
+- `gh pr checks 43` exits non-zero because the `github-advanced-security` CodeQL check is failing, even though the Actions CodeQL `Analyze` job passes.
+
+### What I learned
+- The new forgiving ticket resolver is effective for locating ticket directories, but commands that persist metadata must also use the canonical resolved ID, not the user-supplied ref.
+- Stable IDs are partly implemented in two parallel stacks: the CLI has stable-ref resolution, while the HTTP task stack still uses the older `tasksmd.ToggleChecked([]int)` path.
+- PR CI now covers FTS5 Go tests but still does not cover TypeScript/Vite UI validation on pull requests.
+
+### What was tricky to build
+- The subtle bug was not a failing command; it was a successful command that produced a hidden inconsistency. The only reliable way to catch it was to create a ticket with a long canonical ID, add a doc using a short forgiving ref, inspect frontmatter, and then ask `ticket show` what docs belong to the ticket.
+- The CodeQL status is split: `gh run list` shows the Actions CodeQL workflow as successful, but `gh pr checks` and check-run API output show a separate failing `github-advanced-security` check. The review documents both so a maintainer can triage the real merge blocker.
+
+### What warrants a second pair of eyes
+- The CodeQL alert at `internal/paths/resolver.go:350` may be a false positive because `matchKeys` appears to build comparison strings, not perform filesystem I/O. A maintainer should inspect the GitHub data-flow trace before dismissing it.
+- The recommended stable-task-ID HTTP API shape (`refs: []string` plus legacy `ids: []int`) should be checked against existing UI consumers before changing the endpoint contract.
+
+### What should be done in the future
+- Fix the three correctness blockers before merging PR 43: canonicalize `Ticket:` in `doc add`, make `doctor --ticket` resolve forgiving refs, and make HTTP/UI task toggles use stable refs.
+- Add UI build/lint to pull-request CI.
+- Lazy-load Mermaid to reduce the default UI bundle.
+- Consider optimistic concurrency for the new write endpoints.
+
+### Code review instructions
+- Start with `analysis/02-pr-43-code-review-and-project-review.md`.
+- Re-run `scripts/04-pr43-review-experiments.sh` from the docmgr repo root to regenerate validation output.
+- Validate after fixes with:
+  - `go test ./... -count=1`
+  - `go test -tags sqlite_fts5 ./... -count=1`
+  - `(cd ui && pnpm build && pnpm lint)`
+  - `gh pr checks 43`
+
+### Technical details
+- PR head reviewed: `962e35bdbf117ce7ba6824d7154179845b7749ca`.
+- GitHub failing check: `CodeQL` from `github-advanced-security`, check run `85406559070`, annotation `internal/paths/resolver.go:350`, title `Uncontrolled data used in path expression`.
+- New report path: `ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/analysis/02-pr-43-code-review-and-project-review.md`.

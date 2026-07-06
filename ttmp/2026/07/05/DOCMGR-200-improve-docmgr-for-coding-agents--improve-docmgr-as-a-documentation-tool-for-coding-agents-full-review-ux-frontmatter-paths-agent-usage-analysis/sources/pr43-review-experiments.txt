@@ -1,0 +1,246 @@
+
+### repository
+962e35bdbf117ce7ba6824d7154179845b7749ca
+?? ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/scripts/04-pr43-review-experiments.sh
+?? ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/pr43-review-experiments.txt
+
+### go test ./... -count=1
+?   	github.com/go-go-golems/docmgr	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/api	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/changelog	[no test files]
+ok  	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/common	0.061s
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/configcmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/doc	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/importcmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/list	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/meta	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/skill	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/tasks	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/template	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate/validator	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/documents	0.036s
+ok  	github.com/go-go-golems/docmgr/internal/httpapi	0.234s
+ok  	github.com/go-go-golems/docmgr/internal/ignore	0.022s
+ok  	github.com/go-go-golems/docmgr/internal/paths	0.091s
+ok  	github.com/go-go-golems/docmgr/internal/searchsvc	0.214s
+ok  	github.com/go-go-golems/docmgr/internal/skills	0.147s
+?   	github.com/go-go-golems/docmgr/internal/tasksmd	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/templates	0.018s
+?   	github.com/go-go-golems/docmgr/internal/ticketgraph	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/tickets	0.127s
+ok  	github.com/go-go-golems/docmgr/internal/web	0.011s
+ok  	github.com/go-go-golems/docmgr/internal/workspace	0.163s
+?   	github.com/go-go-golems/docmgr/pkg	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/commands	6.878s
+?   	github.com/go-go-golems/docmgr/pkg/completion	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/core	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr	0.007s
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrrules	0.004s
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/render	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/rules	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/doc	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/frontmatter	0.004s
+?   	github.com/go-go-golems/docmgr/pkg/models	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/utils	0.004s
+
+### go test -tags sqlite_fts5 ./... -count=1
+?   	github.com/go-go-golems/docmgr	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/api	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/changelog	[no test files]
+ok  	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/common	0.044s
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/configcmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/doc	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/importcmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/list	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/meta	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/skill	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/tasks	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/template	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate/validator	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/documents	0.025s
+ok  	github.com/go-go-golems/docmgr/internal/httpapi	0.204s
+ok  	github.com/go-go-golems/docmgr/internal/ignore	0.018s
+ok  	github.com/go-go-golems/docmgr/internal/paths	0.025s
+ok  	github.com/go-go-golems/docmgr/internal/searchsvc	0.096s
+ok  	github.com/go-go-golems/docmgr/internal/skills	0.106s
+?   	github.com/go-go-golems/docmgr/internal/tasksmd	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/templates	0.049s
+?   	github.com/go-go-golems/docmgr/internal/ticketgraph	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/tickets	0.065s
+ok  	github.com/go-go-golems/docmgr/internal/web	0.021s
+ok  	github.com/go-go-golems/docmgr/internal/workspace	0.143s
+?   	github.com/go-go-golems/docmgr/pkg	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/commands	7.083s
+?   	github.com/go-go-golems/docmgr/pkg/completion	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/core	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr	0.011s
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrrules	0.006s
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/render	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/rules	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/doc	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/frontmatter	0.006s
+?   	github.com/go-go-golems/docmgr/pkg/models	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/utils	0.008s
+
+### ui build
+
+> ui@0.0.0 build /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ui
+> tsc -b && vite build
+
+vite v7.3.0 building client environment for production...
+transforming...
+✓ 3162 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/public/index.html                                           0.45 kB │ gzip:   0.29 kB
+dist/public/assets/index-DF_mBGP7.css                          234.54 kB │ gzip:  32.03 kB
+dist/public/assets/clone-DnEVMkBu.js                             0.09 kB │ gzip:   0.11 kB
+dist/public/assets/channel-DqqZ8UFa.js                           0.11 kB │ gzip:   0.12 kB
+dist/public/assets/init-Gi6I4Gst.js                              0.15 kB │ gzip:   0.13 kB
+dist/public/assets/chunk-QZHKN3VN-BnMwGm3R.js                    0.19 kB │ gzip:   0.16 kB
+dist/public/assets/chunk-4BX2VUAB-HBdZRGzL.js                    0.22 kB │ gzip:   0.17 kB
+dist/public/assets/chunk-55IACEB6-C6S5E_Fo.js                    0.23 kB │ gzip:   0.21 kB
+dist/public/assets/stateDiagram-v2-4FDKWEC3-BLHaHNE0.js          0.36 kB │ gzip:   0.27 kB
+dist/public/assets/chunk-FMBD7UC4-CBrY98R4.js                    0.36 kB │ gzip:   0.27 kB
+dist/public/assets/classDiagram-2ON5EDUG-8k84yJil.js             0.40 kB │ gzip:   0.28 kB
+dist/public/assets/classDiagram-v2-WZHVMYZB-8k84yJil.js          0.40 kB │ gzip:   0.28 kB
+dist/public/assets/chunk-QN33PNHL-DvX_deR5.js                    0.50 kB │ gzip:   0.35 kB
+dist/public/assets/min-qThAG8wx.js                               0.59 kB │ gzip:   0.36 kB
+dist/public/assets/infoDiagram-WHAUD3N6-DRNlHuKh.js              0.62 kB │ gzip:   0.42 kB
+dist/public/assets/ordinal-Cboi1Yqb.js                           1.19 kB │ gzip:   0.57 kB
+dist/public/assets/chunk-TZMSLE5B-BKVz3DBO.js                    1.43 kB │ gzip:   0.63 kB
+dist/public/assets/arc-BcRfjPc9.js                               3.43 kB │ gzip:   1.48 kB
+dist/public/assets/diagram-S2PKOQOG-qvWNZfxv.js                  4.23 kB │ gzip:   1.85 kB
+dist/public/assets/defaultLocale-C4B-KCzX.js                     4.55 kB │ gzip:   2.13 kB
+dist/public/assets/pieDiagram-ADFJNKIX-DV2GjSSe.js               5.17 kB │ gzip:   2.29 kB
+dist/public/assets/linear-BKRtSPLI.js                            5.65 kB │ gzip:   2.30 kB
+dist/public/assets/diagram-QEK2KX5R-DKjACfA7.js                  5.84 kB │ gzip:   2.46 kB
+dist/public/assets/_baseUniq-D4n1_zca.js                         8.48 kB │ gzip:   3.53 kB
+dist/public/assets/graph-BSzZNPt3.js                             9.36 kB │ gzip:   3.20 kB
+dist/public/assets/stateDiagram-FKZM4ZOC-B2bSb9Eu.js            10.34 kB │ gzip:   3.62 kB
+dist/public/assets/dagre-6UL2VRFP-D6AK1mhV.js                   10.96 kB │ gzip:   4.08 kB
+dist/public/assets/diagram-PSM6KHXK-Xy86xGcn.js                 15.80 kB │ gzip:   5.64 kB
+dist/public/assets/kanban-definition-3W4ZIXB7-E54xZvsI.js       20.16 kB │ gzip:   7.15 kB
+dist/public/assets/mindmap-definition-VGOIOE7T-gFfIe8Rd.js      20.87 kB │ gzip:   7.27 kB
+dist/public/assets/sankeyDiagram-TZEHDZUN-BzA5_8Px.js           22.07 kB │ gzip:   8.12 kB
+dist/public/assets/journeyDiagram-XKPGCS4Q-DP0C3ZdA.js          23.51 kB │ gzip:   8.31 kB
+dist/public/assets/timeline-definition-IT6M3QCI-D90kmMny.js     23.55 kB │ gzip:   8.20 kB
+dist/public/assets/gitGraphDiagram-NY62KEGX-CVQexh3P.js         24.06 kB │ gzip:   7.40 kB
+dist/public/assets/erDiagram-Q2GNP2WA-BaVO5sQ3.js               25.21 kB │ gzip:   8.81 kB
+dist/public/assets/layout-CFJPxGut.js                           29.28 kB │ gzip:  10.52 kB
+dist/public/assets/requirementDiagram-UZGBJVZJ-DoZxw8Ew.js      30.05 kB │ gzip:   9.40 kB
+dist/public/assets/quadrantDiagram-AYHSOK5B-DMJn0D6C.js         33.81 kB │ gzip:   9.93 kB
+dist/public/assets/chunk-DI55MBZ5-BPqE5uA5.js                   36.33 kB │ gzip:  11.84 kB
+dist/public/assets/xychartDiagram-PRI3JC2R-Btt83y9J.js          40.18 kB │ gzip:  11.43 kB
+dist/public/assets/chunk-B4BG7PRW-B0c93qve.js                   45.31 kB │ gzip:  14.70 kB
+dist/public/assets/flowDiagram-NV44I4VS-9lR8Bv96.js             60.42 kB │ gzip:  19.42 kB
+dist/public/assets/ganttDiagram-JELNMOA3-QM9n0kg3.js            68.27 kB │ gzip:  23.12 kB
+dist/public/assets/c4Diagram-YG6GDRKO-CnDJIUoj.js               70.10 kB │ gzip:  19.67 kB
+dist/public/assets/blockDiagram-VD42YOAC-BoOQrjY4.js            71.75 kB │ gzip:  20.48 kB
+dist/public/assets/cose-bilkent-S5V4N54A-e20x6WFj.js            81.66 kB │ gzip:  22.45 kB
+dist/public/assets/sequenceDiagram-WL72ISMW-HAHYFhcb.js         97.77 kB │ gzip:  26.83 kB
+dist/public/assets/architectureDiagram-VXUJARFQ-Blt5dfuC.js    148.56 kB │ gzip:  42.03 kB
+dist/public/assets/katex-XbL3y5x-.js                           265.42 kB │ gzip:  77.51 kB
+dist/public/assets/treemap-KMMF4GRG-CX7_KLpZ.js                354.61 kB │ gzip:  89.01 kB
+dist/public/assets/cytoscape.esm-5J0xJHOV.js                   441.64 kB │ gzip: 141.47 kB
+dist/public/assets/index-C1Swa_Wo.js                         2,192.40 kB │ gzip: 668.52 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 14.67s
+
+### ui lint
+
+> ui@0.0.0 lint /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ui
+> eslint .
+
+
+### github checks
+CodeQL	fail	4s	https://github.com/go-go-golems/docmgr/runs/85406559070	
+Analyze	pass	4m52s	https://github.com/go-go-golems/docmgr/actions/runs/28801396629/job/85405413552	
+Dependency Review	pass	7s	https://github.com/go-go-golems/docmgr/actions/runs/28801396558/job/85405413207	
+Go Vulnerability Check	pass	1m5s	https://github.com/go-go-golems/docmgr/actions/runs/28801396558/job/85405413211	
+GoSec Security Scan	pass	2m58s	https://github.com/go-go-golems/docmgr/actions/runs/28801396558/job/85405413722	
+TruffleHog Secret Scan	pass	12s	https://github.com/go-go-golems/docmgr/actions/runs/28801396671/job/85405413945	
+lint	pass	1m37s	https://github.com/go-go-golems/docmgr/actions/runs/28801398866/job/85405421242	
+test	pass	3m42s	https://github.com/go-go-golems/docmgr/actions/runs/28801396554/job/85405413650	
+{"app":"github-advanced-security","conclusion":"failure","html_url":"https://github.com/go-go-golems/docmgr/runs/85406559070","name":"CodeQL","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801398866/job/85405421242","name":"lint","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801396671/job/85405413945","name":"TruffleHog Secret Scan","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801396558/job/85405413722","name":"GoSec Security Scan","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801396554/job/85405413650","name":"test","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801396629/job/85405413552","name":"Analyze","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801396558/job/85405413211","name":"Go Vulnerability Check","status":"completed"}
+{"app":"github-actions","conclusion":"success","html_url":"https://github.com/go-go-golems/docmgr/actions/runs/28801396558/job/85405413207","name":"Dependency Review","status":"completed"}
+{"annotation_level":"failure","end_line":350,"message":"This path depends on a [user-provided value](1).","path":"internal/paths/resolver.go","start_line":350,"title":"Uncontrolled data used in path expression"}
+
+### stable task id API parity experiment
+tasks file: ttmp/2026/07/06/API-1--api-stable-id-review/tasks.md
+5:- [ ] task created with a stable marker <!-- t:6i99 -->
+stable id: 6i99
+GET /tickets/tasks exposes stableId:
+{"ticket":"API-1","exists":true,"tasksPath":"2026/07/06/API-1--api-stable-id-review/tasks.md","stats":{"total":1,"done":0},"sections":[{"title":"TODO","items":[{"id":1,"checked":false,"text":"task created with a stable marker","stableId":"6i99"}]}]}
+
+POST /tickets/tasks/check with stable id string (expected to fail today):
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Date: Mon, 06 Jul 2026 15:12:18 GMT
+Content-Length: 83
+
+{"error":{"code":"invalid_argument","details":null,"message":"invalid json body"}}
+
+POST /tickets/tasks/check with positional id 1 (succeeds):
+HTTP/1.1 200 OK
+Content-Type: application/json
+Date: Mon, 06 Jul 2026 15:12:18 GMT
+Content-Length: 12
+
+{"ok":true}
+
+
+### done
+wrote /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ttmp/2026/07/05/DOCMGR-200-improve-docmgr-for-coding-agents--improve-docmgr-as-a-documentation-tool-for-coding-agents-full-review-ux-frontmatter-paths-agent-usage-analysis/sources/pr43-review-experiments.txt
+
+### forgiving ticket ref doc-add metadata drift experiment
+created ttmp/2026/07/06/CANON-1-long-canonical--canonical-ticket/analysis/01-short-ref-doc.md
+created doc: ttmp/2026/07/06/CANON-1-long-canonical--canonical-ticket/analysis/01-short-ref-doc.md
+---
+Title: Short ref doc
+Ticket: CANON-1
+Status: active
+Topics: []
+DocType: analysis
+Intent: long-term
+Owners: []
+RelatedFiles: []
+ExternalSources: []
+Summary: ""
+LastUpdated: 2026-07-06T11:14:04.49097196-04:00
+WhatFor: ""
+WhenToUse: ""
+---
+CANON-1-long-canonical — Canonical ticket
+status: active  topics: —  updated: 2026-07-06 15:14
+path: 2026/07/06/CANON-1-long-canonical--canonical-ticket
+tasks: 0 open / 0 done
+docs (1):
+  - index.md (index)
+changelog: 2026-07-06

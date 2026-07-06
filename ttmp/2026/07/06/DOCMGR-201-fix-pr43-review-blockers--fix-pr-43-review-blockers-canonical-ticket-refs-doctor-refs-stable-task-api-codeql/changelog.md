@@ -29,3 +29,13 @@ Step 2: Implemented PR 43 blocker fixes: doc add persists canonical ticket IDs, 
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ui/src/features/ticket/tabs/TicketTasksTab.tsx — UI task tab uses stable refs
 - /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/ui/src/services/docmgrApi.ts — UI API mutation sends refs
 
+
+## 2026-07-06
+
+Step 4: Fixed local embed/public generation for release hooks: Dagger UI build excludes node_modules/dist, uses frozen pnpm install, and make goreleaser now depends on ui-build.
+
+### Related Files
+
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/Makefile — goreleaser depends on ui-build
+- /home/manuel/workspaces/2026-07-05/improve-docmgr/docmgr/internal/web/generate_build.go — Non-interactive Dagger UI build fix
+

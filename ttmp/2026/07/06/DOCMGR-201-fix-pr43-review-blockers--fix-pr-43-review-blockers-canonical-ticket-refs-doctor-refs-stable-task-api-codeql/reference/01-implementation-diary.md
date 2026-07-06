@@ -11,12 +11,16 @@ DocType: reference
 Intent: long-term
 Owners: []
 RelatedFiles:
+    - Path: repo://Makefile
+      Note: Step 4 local goreleaser now builds UI assets first
     - Path: repo://internal/httpapi/tickets.go
       Note: Step 2 stable task ref HTTP API
     - Path: repo://internal/paths/resolver.go
       Note: Step 2 CodeQL alert mitigation
     - Path: repo://internal/tasksmd/tasksmd.go
       Note: Step 2 stable task ref helper
+    - Path: repo://internal/web/generate_build.go
+      Note: Step 4 non-interactive embed asset generation
     - Path: repo://pkg/commands/add.go
       Note: Step 2 canonical doc add fix
     - Path: repo://pkg/commands/doctor.go
@@ -30,6 +34,7 @@ LastUpdated: 2026-07-06T11:40:00-04:00
 WhatFor: Follow the DOCMGR-201 implementation work and reproduce its validation steps.
 WhenToUse: Use when reviewing or continuing the PR 43 blocker fixes.
 ---
+
 
 
 # Diary
@@ -240,3 +245,63 @@ GitHub checks started on the pushed commit. At handoff time several checks were 
 ### Technical details
 - Push command that succeeded: `LEFTHOOK=0 git push wesen task/improve-docmgr`.
 - Immediate PR checks after push were initially unreported, then pending; after ~60s, lint/dependency/vuln/TruffleHog had passed while Analyze/test/GoSec were still pending.
+
+## Step 4: Fix local embed/public release-hook generation
+
+Investigated why `internal/web/embed/public` was missing during the local pre-push `make goreleaser` hook. The directory is intentionally ignored because it is generated Vite output, and GitHub's release workflow builds it as a separate prebuild artifact. The local `goreleaser` Make target, however, did not build the UI first, so `go build -tags embed` failed whenever the ignored generated directory was absent.
+
+The first attempt to generate assets also exposed a second local-only problem: the Dagger build mounted the entire `ui/` directory including host `node_modules`, so `pnpm install` prompted to remove/reinstall `node_modules` inside the container and hung in non-interactive hooks. The fix makes the Dagger build exclude `node_modules`/`dist` and use a frozen lockfile install, then makes `make goreleaser` depend on `ui-build`.
+
+### Prompt Context
+
+**User prompt (verbatim):** "why is the embed public not built and can we fix that?"
+
+**Assistant interpretation:** Explain the missing embedded public assets from the failed pre-push release hook and make the local release path generate them reliably.
+
+**Inferred user intent:** Remove the need to bypass pre-push hooks and make local release validation match the expected embed build flow.
+
+**Commit (code):** pending — this step will be committed after validation.
+
+### What I did
+- `internal/web/generate_build.go`: changed Dagger `Host().Directory(uiDir)` to exclude `node_modules` and `dist`.
+- `internal/web/generate_build.go`: changed `pnpm install --reporter=append-only` to `pnpm install --frozen-lockfile --reporter=append-only`.
+- `Makefile`: changed `goreleaser` to depend on `ui-build`.
+
+### Why
+- `internal/web/embed/public/` is ignored by `.gitignore`, so it cannot be assumed to exist in a clean checkout or after `goreleaser --clean` style workflows.
+- `.goreleaser.yaml` builds with `-tags=sqlite_fts5,embed`; `internal/web/embed.go` has `//go:embed embed/public`, which requires the directory to exist at compile time.
+- The release workflow already has an explicit UI prebuild artifact, but the local Make target used by the pre-push hook did not.
+
+### What worked
+- `make ui-build` now completes and exports files to `internal/web/embed/public`.
+- `make goreleaser` now completes successfully locally, including `ui-build` first and then the snapshot GoReleaser build.
+- `go test ./internal/web -count=1` passes.
+
+### What didn't work
+- Before this fix, `make ui-build`/`CI=true make ui-build` hung at:
+  - `The modules directory at "/src/node_modules" will be removed and reinstalled from scratch. Proceed? (Y/n)`
+- The root cause was mounting host `ui/node_modules` into the Dagger build container.
+
+### What I learned
+- The release workflow's two-stage artifact setup hid a mismatch in the local release path: CI generated the embed assets externally, while local `make goreleaser` assumed they already existed.
+- Dagger host mounts need explicit excludes for package-manager output directories when the container is expected to perform a fresh install.
+
+### What was tricky to build
+- Generated embed assets are deliberately ignored and should remain ignored. The correct fix is not to commit `internal/web/embed/public`, but to guarantee it is generated before any `-tags embed` build.
+
+### What warrants a second pair of eyes
+- Check whether the GitHub release workflow should keep its existing prebuild artifact path or switch to `make goreleaser` now that the Make target generates assets. Keeping the current CI flow is fine; this change mainly fixes local hooks.
+
+### What should be done in the future
+- Consider adding a lightweight `make release-check` target that runs the local pre-push release path without publishing.
+
+### Code review instructions
+- Review `internal/web/generate_build.go` and `Makefile` only.
+- Validate with:
+  - `make ui-build`
+  - `make goreleaser`
+  - `go test ./internal/web -count=1`
+
+### Technical details
+- `internal/web/embed/public/` remains ignored by `.gitignore`.
+- Successful local `make goreleaser` output ended with `release succeeded after 8s`.

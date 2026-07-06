@@ -51,7 +51,12 @@ func main() {
 		fatalf("mkdir %s: %v", outDir, err)
 	}
 
-	webDir := client.Host().Directory(uiDir)
+	webDir := client.Host().Directory(uiDir, dagger.HostDirectoryOpts{
+		// Host node_modules is platform-specific and can make pnpm prompt to
+		// remove/reinstall it inside the container, which hangs non-interactive
+		// release hooks. The container should always install its own dependencies.
+		Exclude: []string{"node_modules", "dist"},
+	})
 	ctr := client.Container().From(builderImage).
 		WithWorkdir("/src").
 		WithMountedDirectory("/src", webDir).
@@ -75,7 +80,7 @@ func main() {
 
 	ctr = ctr.
 		WithExec([]string{"sh", "-lc", "pnpm --version"}).
-		WithExec([]string{"sh", "-lc", "pnpm install --reporter=append-only"}).
+		WithExec([]string{"sh", "-lc", "pnpm install --frozen-lockfile --reporter=append-only"}).
 		WithExec([]string{"sh", "-lc", "pnpm build"})
 
 	dist := ctr.Directory("/src/dist/public")

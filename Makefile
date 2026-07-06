@@ -40,7 +40,7 @@ build-embed: ui-build
 dev-backend:
 	go run -tags sqlite_fts5 ./cmd/docmgr api serve --addr 127.0.0.1:3001 --root ttmp
 
-goreleaser:
+goreleaser: ui-build
 	goreleaser release $(GORELEASER_ARGS) $(GORELEASER_TARGET)
 
 tag-major:

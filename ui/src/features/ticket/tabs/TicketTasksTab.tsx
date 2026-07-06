@@ -25,7 +25,7 @@ export function TicketTasksTab({
   tasksData?: TicketTasksResponse
   tasksError?: unknown
   tasksLoading: boolean
-  checkTask: (args: { ticket: string; ids: number[]; checked: boolean }) => Promise<unknown>
+  checkTask: (args: { ticket: string; refs: string[]; checked: boolean }) => Promise<unknown>
   addTask: (args: { ticket: string; section: string; text: string }) => Promise<unknown>
   addTaskLoading: boolean
   addTaskError?: unknown
@@ -71,21 +71,24 @@ export function TicketTasksTab({
                     <div className="text-muted small">No tasks in this section.</div>
                   ) : (
                     <div className="vstack gap-2">
-                      {asArray(sec.items).map((it) => (
-                        <label key={it.id} className="d-flex gap-2 align-items-start">
-                          <input
-                            type="checkbox"
-                            checked={it.checked}
-                            onChange={(e) =>
-                              void checkTask({ ticket, ids: [it.id], checked: e.target.checked })
-                            }
-                          />
-                          <span>
-                            <span className="text-muted me-2">#{it.id}</span>
-                            {it.text}
-                          </span>
-                        </label>
-                      ))}
+                      {asArray(sec.items).map((it) => {
+                        const taskRef = it.stableId ?? String(it.id)
+                        return (
+                          <label key={taskRef} className="d-flex gap-2 align-items-start">
+                            <input
+                              type="checkbox"
+                              checked={it.checked}
+                              onChange={(e) =>
+                                void checkTask({ ticket, refs: [taskRef], checked: e.target.checked })
+                              }
+                            />
+                            <span>
+                              <span className="text-muted me-2">#{taskRef}</span>
+                              {it.text}
+                            </span>
+                          </label>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

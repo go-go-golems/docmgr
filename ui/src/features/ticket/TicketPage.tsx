@@ -110,10 +110,10 @@ export function TicketPage() {
 
   const openTasks = useMemo(() => {
     const secs = tasksData?.sections ?? []
-    const out: { id: number; text: string; checked: boolean }[] = []
+    const out: { id: number; stableId?: string; text: string; checked: boolean }[] = []
     for (const sec of secs) {
       for (const it of asArray(sec.items)) {
-        if (!it.checked) out.push({ id: it.id, text: it.text, checked: it.checked })
+        if (!it.checked) out.push({ id: it.id, stableId: it.stableId, text: it.text, checked: it.checked })
       }
     }
     return out.slice(0, 10)

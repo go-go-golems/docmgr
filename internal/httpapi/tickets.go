@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -334,9 +335,29 @@ func (s *Server) handleTicketsTasks(w http.ResponseWriter, r *http.Request) erro
 }
 
 type ticketTasksCheckRequest struct {
-	Ticket  string `json:"ticket"`
-	IDs     []int  `json:"ids"`
-	Checked bool   `json:"checked"`
+	Ticket  string   `json:"ticket"`
+	Refs    []string `json:"refs,omitempty"`
+	IDs     []int    `json:"ids,omitempty"` // legacy positional IDs
+	Checked bool     `json:"checked"`
+}
+
+func normalizeTaskCheckRefs(refs []string, ids []int) []string {
+	out := make([]string, 0, len(refs)+len(ids))
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref != "" {
+			out = append(out, ref)
+		}
+	}
+	if len(out) > 0 {
+		return out
+	}
+	for _, id := range ids {
+		if id > 0 {
+			out = append(out, strconv.Itoa(id))
+		}
+	}
+	return out
 }
 
 func (s *Server) handleTicketsTasksCheck(w http.ResponseWriter, r *http.Request) error {
@@ -352,8 +373,9 @@ func (s *Server) handleTicketsTasksCheck(w http.ResponseWriter, r *http.Request)
 	if req.Ticket == "" {
 		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "missing ticket", map[string]any{"field": "ticket"})
 	}
-	if len(req.IDs) == 0 {
-		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "missing ids", map[string]any{"field": "ids"})
+	refs := normalizeTaskCheckRefs(req.Refs, req.IDs)
+	if len(refs) == 0 {
+		return NewHTTPError(http.StatusBadRequest, "invalid_argument", "missing refs", map[string]any{"field": "refs"})
 	}
 
 	if err := s.mgr.WithWorkspace(func(ws *workspace.Workspace) error {
@@ -377,7 +399,7 @@ func (s *Server) handleTicketsTasksCheck(w http.ResponseWriter, r *http.Request)
 		if err != nil {
 			return err
 		}
-		updated, err := tasksmd.ToggleChecked(lines, req.IDs, req.Checked)
+		updated, err := tasksmd.ToggleCheckedByRefs(lines, refs, req.Checked)
 		if err != nil {
 			return NewHTTPError(http.StatusBadRequest, "invalid_argument", err.Error(), nil)
 		}

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -196,28 +198,93 @@ func WriteFile(path string, lines []string) error {
 }
 
 func ToggleChecked(lines []string, ids []int, checked bool) ([]string, error) {
-	_, tasks := Parse(lines)
-
-	idSet := map[int]struct{}{}
+	refs := make([]string, 0, len(ids))
 	for _, id := range ids {
 		if id <= 0 {
 			continue
 		}
-		idSet[id] = struct{}{}
+		refs = append(refs, fmt.Sprintf("%d", id))
 	}
-	if len(idSet) == 0 {
+	return ToggleCheckedByRefs(lines, refs, checked)
+}
+
+// ToggleCheckedByRefs toggles tasks addressed by stable IDs (preferred) or by
+// their current 1-based positional IDs (legacy compatibility). Unknown refs
+// return an error that includes the current task table so callers can recover.
+func ToggleCheckedByRefs(lines []string, refs []string, checked bool) ([]string, error) {
+	_, tasks := Parse(lines)
+
+	byStable := map[string]parsedTaskLine{}
+	byPosition := map[int]parsedTaskLine{}
+	for id, task := range tasks {
+		byPosition[id] = task
+		if strings.TrimSpace(task.StableID) != "" {
+			byStable[task.StableID] = task
+		}
+	}
+
+	seenLines := map[int]struct{}{}
+	var targets []parsedTaskLine
+	var unknown []string
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		var task parsedTaskLine
+		var ok bool
+		if task, ok = byStable[ref]; !ok {
+			if id, err := strconv.Atoi(ref); err == nil && id > 0 {
+				task, ok = byPosition[id]
+			}
+		}
+		if !ok {
+			unknown = append(unknown, ref)
+			continue
+		}
+		if _, seen := seenLines[task.LineIndex]; seen {
+			continue
+		}
+		seenLines[task.LineIndex] = struct{}{}
+		targets = append(targets, task)
+	}
+	if len(unknown) > 0 {
+		return nil, fmt.Errorf("task id(s) not found: %s\nuse a stable id (e.g. ab12) or the 1-based position. Current tasks:\n%s", strings.Join(unknown, ", "), renderTaskTable(tasks))
+	}
+	if len(targets) == 0 {
 		return nil, errors.New("no valid ids")
 	}
 
 	out := append([]string{}, lines...)
-	for id := range idSet {
-		t, ok := tasks[id]
-		if !ok {
-			return nil, fmt.Errorf("task id not found: %d", id)
-		}
-		out[t.LineIndex] = setTaskLineChecked(out[t.LineIndex], checked)
+	for _, task := range targets {
+		out[task.LineIndex] = setTaskLineChecked(out[task.LineIndex], checked)
 	}
 	return out, nil
+}
+
+func renderTaskTable(tasks map[int]parsedTaskLine) string {
+	if len(tasks) == 0 {
+		return "  (no tasks)"
+	}
+	ids := make([]int, 0, len(tasks))
+	for id := range tasks {
+		ids = append(ids, id)
+	}
+	sort.Ints(ids)
+	var b strings.Builder
+	for _, id := range ids {
+		t := tasks[id]
+		displayID := fmt.Sprintf("%d", id)
+		if strings.TrimSpace(t.StableID) != "" {
+			displayID = t.StableID
+		}
+		mark := " "
+		if t.Checked {
+			mark = "x"
+		}
+		fmt.Fprintf(&b, "  [%s] [%s] %s\n", displayID, mark, t.Text)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func AppendTask(lines []string, section string, text string) ([]string, error) {

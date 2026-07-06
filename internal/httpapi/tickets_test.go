@@ -47,7 +47,7 @@ RelatedFiles:
 
 ## TODO
 
-- [ ] First task
+- [ ] First task <!-- t:ab12 -->
 - [x] Done task
 `)
 
@@ -87,11 +87,11 @@ RelatedFiles:
 		}
 	}
 
-	// Toggle task id=1 to checked.
+	// Toggle task stable ref to checked.
 	{
 		body, _ := json.Marshal(map[string]any{
 			"ticket":  "TST-123",
-			"ids":     []int{1},
+			"refs":    []string{"ab12"},
 			"checked": true,
 		})
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/tickets/tasks/check", bytes.NewReader(body))
@@ -107,6 +107,25 @@ RelatedFiles:
 		s.Handler().ServeHTTP(rr2, req2)
 		if rr2.Code != http.StatusOK {
 			t.Fatalf("tickets/tasks after check: expected %d, got %d (%s)", http.StatusOK, rr2.Code, rr2.Body.String())
+		}
+		if !bytes.Contains(rr2.Body.Bytes(), []byte(`"stableId":"ab12"`)) {
+			t.Fatalf("tickets/tasks did not expose stableId after check: %s", rr2.Body.String())
+		}
+	}
+
+	// Legacy positional ids still work.
+	{
+		body, _ := json.Marshal(map[string]any{
+			"ticket":  "TST-123",
+			"ids":     []int{1},
+			"checked": false,
+		})
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/tickets/tasks/check", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+		s.Handler().ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("tickets/tasks/check legacy ids: expected %d, got %d (%s)", http.StatusOK, rr.Code, rr.Body.String())
 		}
 	}
 

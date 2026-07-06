@@ -14,6 +14,7 @@ import (
 	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/paths"
 	"github.com/go-go-golems/docmgr/internal/templates"
+	"github.com/go-go-golems/docmgr/internal/tickets"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/core"
 	"github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr"
@@ -453,10 +454,17 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 		docmgr.RenderTaxonomy(ctx, docmgrctx.NewWorkspaceMissingIndex(missing))
 	}
 
-	// Determine scope: default is repo-wide unless --ticket is provided.
+	// Determine scope: default is repo-wide unless --ticket is provided. Ticket
+	// refs use the same forgiving resolver as the other user-facing ticket
+	// commands before ScopeTicket compiles to an exact ticket_id SQL predicate.
 	scope := workspace.Scope{Kind: workspace.ScopeRepo}
-	if strings.TrimSpace(settings.Ticket) != "" {
-		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: strings.TrimSpace(settings.Ticket)}
+	requestedTicket := strings.TrimSpace(settings.Ticket)
+	if requestedTicket != "" {
+		res, err := tickets.Resolve(ctx, ws, requestedTicket)
+		if err != nil {
+			return fmt.Errorf("failed to resolve ticket %q: %w", requestedTicket, err)
+		}
+		scope = workspace.Scope{Kind: workspace.ScopeTicket, TicketID: res.TicketID}
 	}
 	if settings.All {
 		scope = workspace.Scope{Kind: workspace.ScopeRepo}
@@ -498,6 +506,9 @@ func (c *DoctorCommand) RunIntoGlazeProcessor(
 
 	// Group by ticket directory inferred from ttmp layout.
 	tickets := groupDoctorDocsByTicket(settings.Root, filtered)
+	if requestedTicket != "" && !settings.All && len(tickets) == 0 {
+		return fmt.Errorf("doctor checked zero documents for ticket %q", requestedTicket)
+	}
 
 	// Safe fixes (--fix / --fix-anchors): rewrite documents before validation,
 	// then rebuild the index so the checks below see the fixed state.

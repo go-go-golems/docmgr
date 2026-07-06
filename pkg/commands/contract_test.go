@@ -150,6 +150,27 @@ func TestAgentContract(t *testing.T) {
 		mustSucceed(t, tmp, "meta", "update", "--doc", ticketDir+"/index.md", "--field", "Status", "--value", "active")
 		// Docs-root-relative --doc.
 		mustSucceed(t, tmp, "meta", "update", "--doc", strings.TrimPrefix(ticketDir, "ttmp/")+"/index.md", "--field", "Status", "--value", "active")
+
+		// Mutating commands must persist canonical ticket IDs, not the short ref.
+		mustSucceed(t, tmp, "doc", "add", "--ticket", "TEST", "--doc-type", "analysis", "--title", "Short Ref Doc")
+		docPath := filepath.Join(tmp, ticketDir, "analysis", "01-short-ref-doc.md")
+		b, err := os.ReadFile(docPath)
+		if err != nil {
+			t.Fatalf("read short-ref doc: %v", err)
+		}
+		if !strings.Contains(string(b), "Ticket: TEST-1") {
+			t.Fatalf("doc add persisted non-canonical ticket frontmatter:\n%s", b)
+		}
+		showOut := mustSucceed(t, tmp, "ticket", "show", "TEST")
+		if !strings.Contains(showOut, "analysis/01-short-ref-doc.md") {
+			t.Fatalf("ticket show did not include doc added with forgiving ref:\n%s", showOut)
+		}
+
+		// Doctor should accept the same forgiving ticket refs as ticket show.
+		doctorOut := mustSucceed(t, tmp, "doctor", "--ticket", "TEST")
+		if strings.Contains(doctorOut, "No tickets checked") {
+			t.Fatalf("doctor checked zero tickets for forgiving ref:\n%s", doctorOut)
+		}
 	})
 
 	t.Run("failures exit non-zero", func(t *testing.T) {

@@ -191,14 +191,19 @@ func (c *AddCommand) createDocument(ctx context.Context, settings *AddSettings) 
 	}
 
 	// Ticket discovery is now Workspace+QueryDocs-backed (no legacy walkers).
-	ticketDir, resolvedRoot, err := findTicketDirectoryViaWorkspace(ctx, settings.Root, settings.Ticket)
+	ticketResolution, err := resolveTicketDirectoryForAdd(ctx, settings.Root, settings.Ticket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find ticket directory: %w", err)
 	}
+	ticketDir := ticketResolution.TicketDirAbs
+	canonicalTicketID := ticketResolution.TicketID
+	if strings.TrimSpace(canonicalTicketID) == "" {
+		canonicalTicketID = settings.Ticket
+	}
 	// Keep Root consistent with Workspace resolution (affects templates/guidelines lookup + output paths).
-	if strings.TrimSpace(resolvedRoot) != "" {
-		settings.Root = resolvedRoot
-		absRoot = resolvedRoot
+	if strings.TrimSpace(ticketResolution.Root) != "" {
+		settings.Root = ticketResolution.Root
+		absRoot = ticketResolution.Root
 	}
 
 	subdir := settings.DocType
@@ -281,7 +286,7 @@ func (c *AddCommand) createDocument(ctx context.Context, settings *AddSettings) 
 
 	doc := models.Document{
 		Title:           settings.Title,
-		Ticket:          settings.Ticket,
+		Ticket:          canonicalTicketID,
 		Status:          status,
 		Topics:          topics,
 		DocType:         settings.DocType,
@@ -312,7 +317,7 @@ func (c *AddCommand) createDocument(ctx context.Context, settings *AddSettings) 
 	// No guideline found - that's fine, just don't show any
 
 	return &AddResult{
-		Ticket:         settings.Ticket,
+		Ticket:         canonicalTicketID,
 		DocType:        settings.DocType,
 		Title:          settings.Title,
 		DocPath:        docPath,
@@ -400,28 +405,38 @@ func displayPathForCwd(p string) string {
 var _ cmds.GlazeCommand = &AddCommand{}
 var _ cmds.BareCommand = &AddCommand{}
 
-func findTicketDirectoryViaWorkspace(ctx context.Context, rootOverride string, ticketID string) (string, string, error) {
+type addTicketResolution struct {
+	TicketID     string
+	TicketDirAbs string
+	Root         string
+}
+
+func resolveTicketDirectoryForAdd(ctx context.Context, rootOverride string, ticketID string) (addTicketResolution, error) {
 	if ctx == nil {
-		return "", "", fmt.Errorf("nil context")
+		return addTicketResolution{}, fmt.Errorf("nil context")
 	}
 	ticketID = strings.TrimSpace(ticketID)
 	if ticketID == "" {
-		return "", "", fmt.Errorf("empty ticket id")
+		return addTicketResolution{}, fmt.Errorf("empty ticket id")
 	}
 
 	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: rootOverride})
 	if err != nil {
-		return "", "", fmt.Errorf("discover workspace: %w", err)
+		return addTicketResolution{}, fmt.Errorf("discover workspace: %w", err)
 	}
 	resolvedRoot := ws.Context().Root
 
 	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-		return "", resolvedRoot, fmt.Errorf("init workspace index: %w", err)
+		return addTicketResolution{Root: resolvedRoot}, fmt.Errorf("init workspace index: %w", err)
 	}
 
 	res, err := tickets.Resolve(ctx, ws, ticketID)
 	if err != nil {
-		return "", resolvedRoot, err
+		return addTicketResolution{Root: resolvedRoot}, err
 	}
-	return res.TicketDirAbs, resolvedRoot, nil
+	return addTicketResolution{
+		TicketID:     res.TicketID,
+		TicketDirAbs: res.TicketDirAbs,
+		Root:         resolvedRoot,
+	}, nil
 }

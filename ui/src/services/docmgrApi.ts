@@ -650,23 +650,23 @@ export const docmgrApi = createApi({
       providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
     }),
 
-    checkTicketTasks: builder.mutation<{ ok: boolean }, { ticket: string; ids: number[]; checked: boolean }>({
+    checkTicketTasks: builder.mutation<{ ok: boolean }, { ticket: string; refs: string[]; checked: boolean }>({
       query: (args) => ({
         url: '/tickets/tasks/check',
         method: 'POST',
-        body: { ticket: args.ticket, ids: args.ids, checked: args.checked },
+        body: { ticket: args.ticket, refs: args.refs, checked: args.checked },
       }),
       // Optimistic toggle: patch the cached tasks so the checkbox flips
       // immediately; roll back if the server rejects the write.
       async onQueryStarted(args, { dispatch, queryFulfilled }) {
         const patch = dispatch(
           docmgrApi.util.updateQueryData('getTicketTasks', { ticket: args.ticket }, (draft) => {
-            const ids = new Set(args.ids)
+            const refs = new Set(args.refs)
             let done = 0
             let total = 0
             for (const sec of draft.sections ?? []) {
               for (const it of sec.items ?? []) {
-                if (ids.has(it.id)) it.checked = args.checked
+                if (refs.has(it.stableId ?? String(it.id))) it.checked = args.checked
                 total++
                 if (it.checked) done++
               }

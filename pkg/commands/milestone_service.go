@@ -198,10 +198,14 @@ func TicketResume(ctx context.Context, dir string) (ResumeView, error) {
 		if err != nil {
 			return err
 		}
+		latestHashes := map[string]string{}
 		for _, record := range records {
 			if record.Receipt.State != "committed" {
 				view.Conflicts = append(view.Conflicts, "pending operation: "+record.Receipt.OperationID)
 				continue
+			}
+			for name, hash := range record.Receipt.After {
+				latestHashes[name] = hash
 			}
 			var req MilestoneRequest
 			if err := json.Unmarshal(record.Request, &req); err != nil {
@@ -216,12 +220,12 @@ func TicketResume(ctx context.Context, dir string) (ResumeView, error) {
 				view.Evidence = req.Evidence
 			}
 		}
-		if view.Latest != nil {
-			for name, want := range view.Latest.After {
-				if got := view.Revisions[name]; got != want {
-					view.Conflicts = append(view.Conflicts, "projection changed since milestone: "+name)
-				}
+		for _, name := range []string{"index.md", "tasks.md", "changelog.md"} {
+			if want, recorded := latestHashes[name]; recorded && view.Revisions[name] != want {
+				view.Conflicts = append(view.Conflicts, "projection changed since recorded operation: "+name)
 			}
+		}
+		if view.Latest != nil {
 			for _, e := range view.Evidence {
 				_, hash, err := readEvidence(dir, e.Path)
 				if err != nil || hash != e.Revision {

@@ -1,0 +1,44 @@
+internal/documents/frontmatter.go:24:func ReadDocumentWithFrontmatter(path string) (*models.Document, string, error) {
+internal/documents/frontmatter.go:35:func ReadDocumentWithFrontmatterFS(fsys fs.FS, path string) (*models.Document, string, error) {
+internal/documents/frontmatter.go:44:func readDocumentWithFrontmatterBytes(path string, raw []byte) (*models.Document, string, error) {
+internal/documents/frontmatter.go:81:func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string, force bool) error {
+internal/documents/frontmatter.go:137:func extractFrontmatter(raw []byte) ([]byte, []byte, int, error) {
+internal/documents/frontmatter.go:172:func SplitFrontmatter(raw []byte) ([]byte, []byte, int, error) {
+internal/documents/frontmatter.go:177:func extractLineCol(msg string, fmStartLine int) (int, int) {
+internal/documents/frontmatter.go:188:func classifyYAMLError(msg string) string {
+internal/documents/frontmatter.go:205:func buildSnippet(lines []string, line, col int) string {
+pkg/commands/changelog_entries.go:15:type ChangelogEntry struct {
+pkg/commands/changelog_entries.go:28:func ParseChangelogEntries(content string) []ChangelogEntry {
+pkg/commands/changelog_entries.go:71:func AppendChangelogEntry(changelogPath string, title string, entry string, files map[string]string) (string, error) {
+pkg/commands/relate_apply.go:17:type RelatedFileChange struct {
+pkg/commands/relate_apply.go:23:type RelatedFilesUpdateResult struct {
+pkg/commands/relate_apply.go:41:func ApplyRelatedFilesUpdate(ws *workspace.Workspace, targetDocPath string, add []RelatedFileChange, remove []string) (*RelatedFilesUpdateResult, error) {
+internal/tasksmd/tasksmd.go:14:type Item struct {
+internal/tasksmd/tasksmd.go:25:type Section struct {
+internal/tasksmd/tasksmd.go:30:type Parsed struct {
+internal/tasksmd/tasksmd.go:36:type parsedTaskLine struct {
+internal/tasksmd/tasksmd.go:57:func ExtractStableID(text string) (string, string) {
+internal/tasksmd/tasksmd.go:68:func FormatStableIDMarker(id string) string {
+internal/tasksmd/tasksmd.go:74:func NewStableID(existing map[string]struct{}) string {
+internal/tasksmd/tasksmd.go:96:func randomStableID(length int) (string, error) {
+internal/tasksmd/tasksmd.go:109:func CollectStableIDs(lines []string) map[string]struct{} {
+internal/tasksmd/tasksmd.go:120:func Parse(lines []string) (Parsed, map[int]parsedTaskLine) {
+internal/tasksmd/tasksmd.go:183:func ReadFile(path string) ([]string, error) {
+internal/tasksmd/tasksmd.go:196:func WriteFile(path string, lines []string) error {
+internal/tasksmd/tasksmd.go:200:func ToggleChecked(lines []string, ids []int, checked bool) ([]string, error) {
+internal/tasksmd/tasksmd.go:214:func ToggleCheckedByRefs(lines []string, refs []string, checked bool) ([]string, error) {
+internal/tasksmd/tasksmd.go:265:func renderTaskTable(tasks map[int]parsedTaskLine) string {
+internal/tasksmd/tasksmd.go:290:func AppendTask(lines []string, section string, text string) ([]string, error) {
+internal/tasksmd/tasksmd.go:350:func setTaskLineChecked(raw string, checked bool) string {
+pkg/commands/ticket_close.go:22:type TicketCloseCommand struct {
+pkg/commands/ticket_close.go:27:type TicketCloseSettings struct {
+pkg/commands/ticket_close.go:35:func NewTicketCloseCommand() (*TicketCloseCommand, error) {
+pkg/commands/ticket_close.go:97:func (c *TicketCloseCommand) RunIntoGlazeProcessor(
+pkg/commands/ticket_close.go:211:func (c *TicketCloseCommand) Run(
+cmd/docmgr/cmds/root.go:27:func NewRootCommand(helpSystem *help.HelpSystem) (*cobra.Command, error) {
+internal/httpapi/tickets_changelog.go:16:type ticketChangelogResponse struct {
+internal/httpapi/tickets_changelog.go:26:func (s *Server) handleTicketsChangelog(w http.ResponseWriter, r *http.Request) error {
+internal/httpapi/tickets_changelog.go:37:func (s *Server) handleTicketsChangelogGet(w http.ResponseWriter, r *http.Request) error {
+internal/httpapi/tickets_changelog.go:84:type ticketChangelogAppendRequest struct {
+internal/httpapi/tickets_changelog.go:90:func (s *Server) handleTicketsChangelogPost(w http.ResponseWriter, r *http.Request) error {
+internal/httpapi/tickets_changelog.go:136:func resolveTicketOrHTTPError(r *http.Request, ws *workspace.Workspace, ticketID string) (tickets.Resolution, error) {

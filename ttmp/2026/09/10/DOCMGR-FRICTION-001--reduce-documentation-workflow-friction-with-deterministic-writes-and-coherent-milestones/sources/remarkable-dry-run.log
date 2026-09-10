@@ -1,0 +1,7 @@
+DRY: layout=default
+DRY: bundle name=DOCMGR-FRICTION-001 Intern Guide
+DRY: remote-dir=/ai/2026/09/10/DOCMGR-FRICTION-001
+DRY: include /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/sources/print/guide.md (title="guide")
+DRY: include /home/manuel/code/wesen/go-go-golems/docmgr/ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/sources/print/diary.md (title="diary")
+DRY: pandoc <bundle> -> <tmp>/DOCMGR-FRICTION-001 Intern Guide.pdf
+DRY: upload DOCMGR-FRICTION-001 Intern Guide.pdf -> /ai/2026/09/10/DOCMGR-FRICTION-001

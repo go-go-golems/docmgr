@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "digest": "b4a75aaddd745112f65b143fbc6626491e61e11720e80874654d7af8a791dbba",
+  "request": {
+    "ticket": "DOCMGR-FRICTION-001",
+    "operation_id": "local-installation-verified",
+    "summary": "Installed full embedded UI/FTS5 build locally; installed smoke and exact CI lint/GoSec checks pass.",
+    "phase": "close",
+    "next": "Open repository-specific PRs when requested; await remote CI and review.",
+    "task_ids": null,
+    "evidence": [
+      {
+        "kind": "validation",
+        "path": "doc://sources/local-installation.json",
+        "revision": "0e513f76b43e51216f342174aab9d25596afbf9a8ad8d9f031a045f51de803bc",
+        "claim": "Full local install and bounded PR readiness checks passed; remote PR CI remains required."
+      }
+    ],
+    "expected": null
+  },
+  "receipt": {
+    "sequence": 3,
+    "operation_id": "local-installation-verified",
+    "state": "committed",
+    "created_at": "2026-09-10T20:30:49.238536924Z",
+    "changed_paths": [
+      "changelog.md"
+    ],
+    "before": {
+      "changelog.md": "0b3c8741d0dc17d884cec6f707a9fe1fc5fbcd6766328aa942d16c391a292c18"
+    },
+    "after": {
+      "changelog.md": "cec22d55cc31c34396018c1561ed60c7754880ac17a61f2eb598386e3433431e"
+    }
+  },
+  "changes": [
+    {
+      "path": "changelog.md",
+      "before": "0b3c8741d0dc17d884cec6f707a9fe1fc5fbcd6766328aa942d16c391a292c18",
+      "after": "IyBDaGFuZ2Vsb2cKCiMjIDIwMjYtMDktMTAKCi0gSW5pdGlhbCB3b3Jrc3BhY2UgY3JlYXRlZAoKCiMjIDIwMjYtMDktMTAKClJlc2VhcmNoZWQgc291cmNlIGFuZCBhY3R1YWwgc2Vzc2lvbjsgcmVwcm9kdWNlZCBuZXdsaW5lIGdyb3d0aCBhbmQgcGFydGlhbCBjbG9zZTsgd3JvdGUgYW5kIGNyb3NzLWxpbmtlZCBpbnRlcm4gZ3VpZGUuIERvY3RvciBhbmQgZm9jdXNlZCB0ZXN0cyBwYXNzLiBHdWlkZSBhbmQgZGlhcnkgdXBsb2FkZWQgdG8gL2FpLzIwMjYvMDkvMTAvRE9DTUdSLUZSSUNUSU9OLTAwMSBhbmQgbGlzdGluZyB2ZXJpZmllZC4gSW1wbGVtZW50YXRpb24gcGhhc2VzIHJlbWFpbiBvcGVuLgoKIyMgMjAyNi0wOS0xMAoKU3RlcCAyOiBieXRlLXN0YWJsZSBkb2N1bWVudCBwZXJzaXN0ZW5jZSwgdW5rbm93biBtZXRhZGF0YSBwcmVzZXJ2YXRpb24gYW5kIGNhbm9uaWNhbCBjaGFuZ2Vsb2cgYm91bmRhcmllcyAoY29tbWl0IDkxZTA2MDMpLiBGdWxsIEdvIHRlc3RzIGFuZCBsaW50IHBhc3MuCgojIyAyMDI2LTA5LTEwCgpJbXBsZW1lbnRlZCBhbmQgdmFsaWRhdGVkIHBlcnNpc3RlbmNlLCByZWNvdmVyeSBhbmQgQ0xJL0hUVFAgd29ya2Zsb3dzOyBjb2RlIHRocm91Z2ggMWQwNzEwZC4KCk9wZXJhdGlvbjogYGltcGxlbWVudGF0aW9uLXZlcmlmaWVkYAoKIyMgMjAyNi0wOS0xMAoKSW1wbGVtZW50YXRpb24gY29tcGxldGUgYW5kIHZhbGlkYXRlZDsgZGV0YWlsZWQgZGlhcnkgYW5kIHNjb3BlZCBldmlkZW5jZSByZXRhaW5lZC4KCiMjIDIwMjYtMDktMTAKCkluc3RhbGxlZCBmdWxsIGVtYmVkZGVkIFVJL0ZUUzUgYnVpbGQgbG9jYWxseTsgaW5zdGFsbGVkIHNtb2tlIGFuZCBleGFjdCBDSSBsaW50L0dvU2VjIGNoZWNrcyBwYXNzLgoKT3BlcmF0aW9uOiBgbG9jYWwtaW5zdGFsbGF0aW9uLXZlcmlmaWVkYAo="
+    }
+  ]
+}

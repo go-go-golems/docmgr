@@ -1,0 +1,29 @@
+{
+  "installed_path": "/home/manuel/.local/bin/docmgr",
+  "backup_path": "/tmp/docmgr-before-friction-install",
+  "source_revision": "e607822dd2bd45c33da8547140c3822125ace108",
+  "source_dirty_at_build": false,
+  "go_version": "go1.26.6",
+  "build_tags": ["sqlite_fts5", "embed"],
+  "sha256": "449999482b7fbe9f1bc265a341b7e956bf4f699da50ede6a2aea73b76f462766",
+  "validation": {
+    "make build-embed": "passed; Dagger/pnpm UI build included",
+    "installed_binary_cli_smoke": "passed",
+    "installed_resume": "passed",
+    "go test -tags sqlite_fts5,embed ./internal/web ./internal/httpapi": "passed",
+    "ci_pinned_golangci_lint_v2.12.2": "passed",
+    "ci_gosec_command": "passed"
+  },
+  "pr_preflight": {
+    "docmgr_origin_main": "710f31384d2d3242bfb84bf37cd06d2868a63bd3",
+    "docmgr_ahead_before_installation_note": 9,
+    "docmgr_behind": 0,
+    "skills_origin_main": "a6d2f00958837ec657542bc988721e1891252d6a",
+    "skills_ahead": 4,
+    "skills_behind": 0,
+    "diff_hygiene": "both committed PR diffs pass git diff --check",
+    "recommendation": "ready to open one PR per repository; remote PR checks still required",
+    "remaining_nonblocking_followup": "equivalent real post-adoption skills sessions (vewh)",
+    "pushed_or_opened": false
+  }
+}

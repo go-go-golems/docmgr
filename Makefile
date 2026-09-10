@@ -9,7 +9,7 @@ GORELEASER_TARGET ?= --single-target
 docker-lint:
 	docker run --rm -v $(shell pwd):/app -w /app golangci/golangci-lint:latest golangci-lint run -v
 
-lint:
+lint: glazed-lint
 	golangci-lint run -v
 
 lintmax:
@@ -76,13 +76,13 @@ logcopter-check:
 
 GLAZED_LINT_BIN ?= /tmp/glazed-lint
 GLAZED_LINT_PKG ?= github.com/go-go-golems/glazed/cmd/tools/glazed-lint
-GLAZED_VERSION ?= v1.3.6
+GLAZED_VERSION ?= $(shell go list -m -f '{{.Version}}' github.com/go-go-golems/glazed 2>/dev/null)
 
 .PHONY: glazed-lint-build glazed-lint
 
 glazed-lint-build:
 	@echo "Building glazed-lint from Glazed module..."
-	@if [ -n "$(GLAZED_VERSION)" ]; then \
+	@if [ -n "$(GLAZED_VERSION)" ] && [ "$(GLAZED_VERSION)" != "(devel)" ]; then \
 		echo "Installing $(GLAZED_LINT_PKG)@$(GLAZED_VERSION)"; \
 		GOBIN=$(dir $(GLAZED_LINT_BIN)) GOWORK=off go install $(GLAZED_LINT_PKG)@$(GLAZED_VERSION); \
 	else \

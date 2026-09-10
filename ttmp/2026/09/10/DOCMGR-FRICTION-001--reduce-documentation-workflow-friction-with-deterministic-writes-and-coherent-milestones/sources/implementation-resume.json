@@ -1,0 +1,49 @@
+[
+{
+  "resume": {
+    "schema_version": 1,
+    "ticket": "DOCMGR-FRICTION-001",
+    "status": "complete",
+    "phase": "close",
+    "next": "No implementation requirements remain; companion skills adoption study remains separate.",
+    "latest_milestone": {
+      "sequence": 1,
+      "operation_id": "implementation-verified",
+      "state": "committed",
+      "created_at": "2026-09-10T19:58:52.216809132Z",
+      "changed_paths": [
+        "tasks.md",
+        "changelog.md"
+      ],
+      "before": {
+        "changelog.md": "c7e9946b5a29b8588bb6b69bde63bfc8fb6f219f8fff601435f1b71f796dafc6",
+        "tasks.md": "5f560f92acfa46a9c885364fa9f21913dadc5fd06c7ecb8a00b0730fba24b3f0"
+      },
+      "after": {
+        "changelog.md": "0ed296c6df5bb07713403227f5cdbd376c98f5bffc33cd6c809b617ddac1eaa3",
+        "tasks.md": "b0e5122d6127a5ca902f7bde7e39bbdd0214fb3e02c83635b73dc32bb8bf49a4"
+      }
+    },
+    "remaining": [],
+    "revisions": {
+      "changelog.md": "0b3c8741d0dc17d884cec6f707a9fe1fc5fbcd6766328aa942d16c391a292c18",
+      "index.md": "f7176f9a5a30f6fe55d61d5a4c3ca18438a221446e45a1d8a1e1827cedd1605d",
+      "tasks.md": "b0e5122d6127a5ca902f7bde7e39bbdd0214fb3e02c83635b73dc32bb8bf49a4"
+    },
+    "documents": [
+      "design-doc/01-intern-guide-to-deterministic-document-mutation-and-milestone-workflows.md",
+      "reference/01-investigation-diary.md"
+    ],
+    "evidence": [
+      {
+        "kind": "validation",
+        "path": "doc://sources/implementation-validation.json",
+        "revision": "8a7bafde25ac244e30d82b77d40682c43ba71640912bdac2dfa2186a685ea314",
+        "claim": "Implementation checks and declared limitations reviewed; observational follow-up is explicitly separate."
+      }
+    ],
+    "conflicts": []
+  },
+  "ticket": "DOCMGR-FRICTION-001"
+}
+]

@@ -193,7 +193,7 @@ func (c *CreateTicketCommand) createTicketWorkspace(settings *CreateTicketSettin
 		doc.Title = settings.Title
 		indexBody = templates.RenderTemplateBody(body, &doc)
 	}
-	if err := documents.WriteDocumentWithFrontmatter(indexPath, &doc, indexBody, settings.Force); err != nil {
+	if err := documents.WriteDocumentWithFrontmatter(indexPath, &doc, documents.CreationBody(indexBody), settings.Force); err != nil {
 		return nil, fmt.Errorf("failed to write index.md: %w", err)
 	}
 

@@ -306,7 +306,7 @@ func (c *AddCommand) createDocument(ctx context.Context, settings *AddSettings) 
 	}
 	// If no template found, content remains empty - document will have only frontmatter
 
-	if err := documents.WriteDocumentWithFrontmatter(docPath, &doc, content, false); err != nil {
+	if err := documents.WriteDocumentWithFrontmatter(docPath, &doc, documents.CreationBody(content), false); err != nil {
 		return nil, fmt.Errorf("failed to write document: %w", err)
 	}
 

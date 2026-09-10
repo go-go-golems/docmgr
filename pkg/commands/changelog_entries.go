@@ -2,8 +2,8 @@ package commands
 
 import (
 	"fmt"
+	"github.com/go-go-golems/docmgr/internal/documents"
 	"os"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -73,26 +73,33 @@ func AppendChangelogEntry(changelogPath string, title string, entry string, file
 		return "", fmt.Errorf("entry must not be empty")
 	}
 
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		if err := os.MkdirAll(filepath.Dir(changelogPath), 0o755); err != nil {
-			return "", fmt.Errorf("failed to create changelog directory: %w", err)
-		}
-		if err := os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0o644); err != nil {
-			return "", fmt.Errorf("failed to create changelog.md: %w", err)
-		}
+	old, err := os.ReadFile(changelogPath)
+	if err != nil && !os.IsNotExist(err) {
+		return "", err
 	}
-
 	today := time.Now().Format("2006-01-02")
-	heading := "## " + today
+	next := BuildChangelogEntry(string(old), today, title, entry, files)
+	_, err = documents.WriteFileIfChanged(changelogPath, []byte(next))
+	return today, err
+}
+
+// BuildChangelogEntry is a pure projection with explicit date and canonical boundaries.
+// Internal Markdown whitespace is preserved; only boundary newline bytes are trimmed.
+func BuildChangelogEntry(old, date, title, entry string, files map[string]string) string {
+	if old == "" {
+		old = "# Changelog"
+	}
+	heading := "## " + date
 	if strings.TrimSpace(title) != "" {
 		heading += " - " + title
 	}
 
 	var sb strings.Builder
-	sb.WriteString("\n")
+	sb.WriteString(strings.TrimRight(old, "\r\n"))
+	sb.WriteString("\n\n")
 	sb.WriteString(heading)
 	sb.WriteString("\n\n")
-	sb.WriteString(entry)
+	sb.WriteString(strings.Trim(entry, "\r\n"))
 	sb.WriteString("\n\n")
 	if len(files) > 0 {
 		sb.WriteString("### Related Files\n\n")
@@ -112,13 +119,5 @@ func AppendChangelogEntry(changelogPath string, title string, entry string, file
 		sb.WriteString("\n")
 	}
 
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return "", fmt.Errorf("failed to open changelog.md: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(sb.String()); err != nil {
-		return "", fmt.Errorf("failed to write changelog entry: %w", err)
-	}
-	return today, nil
+	return strings.TrimRight(sb.String(), "\n") + "\n"
 }

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "digest": "f83b6bc14051969c3c3e7f3c98e6a229bd2edf5229d63433fcd76d565ba2f80d",
+  "request": {
+    "ticket": "DOCMGR-FRICTION-001",
+    "operation_id": "implementation-verified",
+    "summary": "Implemented and validated persistence, recovery and CLI/HTTP workflows; code through 1d0710d.",
+    "phase": "close",
+    "next": "No implementation requirements remain; companion skills adoption study remains separate.",
+    "task_ids": [
+      "5j84",
+      "h133",
+      "5b7s"
+    ],
+    "evidence": [
+      {
+        "kind": "validation",
+        "path": "doc://sources/implementation-validation.json",
+        "revision": "8a7bafde25ac244e30d82b77d40682c43ba71640912bdac2dfa2186a685ea314",
+        "claim": "Implementation checks and declared limitations reviewed; observational follow-up is explicitly separate."
+      }
+    ],
+    "expected": null
+  },
+  "receipt": {
+    "sequence": 1,
+    "operation_id": "implementation-verified",
+    "state": "committed",
+    "created_at": "2026-09-10T19:58:52.216809132Z",
+    "changed_paths": [
+      "tasks.md",
+      "changelog.md"
+    ],
+    "before": {
+      "changelog.md": "c7e9946b5a29b8588bb6b69bde63bfc8fb6f219f8fff601435f1b71f796dafc6",
+      "tasks.md": "5f560f92acfa46a9c885364fa9f21913dadc5fd06c7ecb8a00b0730fba24b3f0"
+    },
+    "after": {
+      "changelog.md": "0ed296c6df5bb07713403227f5cdbd376c98f5bffc33cd6c809b617ddac1eaa3",
+      "tasks.md": "b0e5122d6127a5ca902f7bde7e39bbdd0214fb3e02c83635b73dc32bb8bf49a4"
+    }
+  },
+  "changes": [
+    {
+      "path": "tasks.md",
+      "before": "5f560f92acfa46a9c885364fa9f21913dadc5fd06c7ecb8a00b0730fba24b3f0",
+      "after": "IyBUYXNrcwoKIyMgVE9ETwoKLSBbeF0gUmVzZWFyY2ggc2Vzc2lvbiBhbmQgc291cmNlOyByZXByb2R1Y2UgZGVmZWN0czsgd3JpdGUgY3Jvc3MtbGlua2VkIGludGVybiBndWlkZSA8IS0tIHQ6bGI2eCAtLT4KLSBbeF0gVmFsaWRhdGUgYW5kIHVwbG9hZCByZXZpZXdlZCBndWlkZSBidW5kbGUgdG8gcmVNYXJrYWJsZSA8IS0tIHQ6Z3d6cSAtLT4KLSBbeF0gSW1wbGVtZW50IGxvc3NsZXNzIGZyYW1pbmcgYW5kIGNhbm9uaWNhbCBnZW5lcmF0ZWQgY2hhbmdlbG9nIHJlZ3Jlc3Npb24gdGVzdHMgPCEtLSB0OjIyd3cgLS0+Ci0gW3hdIFVuaWZ5IGNsb3NlIG9wZXJhdGlvbiBhbmQgZG9jdW1lbnQgYWN0dWFsIHBhcnRpYWwtZmFpbHVyZSBndWFyYW50ZWVzIDwhLS0gdDo1ajg0IC0tPgotIFt4XSBEZXNpZ24gYW5kIGltcGxlbWVudCBleHBsaWNpdCBtaWxlc3RvbmUgaWRlbnRpdHkgYW5kIHJlY292ZXJhYmxlIHByb2plY3Rpb25zIDwhLS0gdDpoMTMzIC0tPgotIFt4XSBBZGQgcmVzdW1lIHZpZXcsIENMSSBIVFRQIHBhcml0eSB0ZXN0cyBhbmQgZW1iZWRkZWQgaGVscCA8IS0tIHQ6NWI3cyAtLT4K"
+    },
+    {
+      "path": "changelog.md",
+      "before": "c7e9946b5a29b8588bb6b69bde63bfc8fb6f219f8fff601435f1b71f796dafc6",
+      "after": "IyBDaGFuZ2Vsb2cKCiMjIDIwMjYtMDktMTAKCi0gSW5pdGlhbCB3b3Jrc3BhY2UgY3JlYXRlZAoKCiMjIDIwMjYtMDktMTAKClJlc2VhcmNoZWQgc291cmNlIGFuZCBhY3R1YWwgc2Vzc2lvbjsgcmVwcm9kdWNlZCBuZXdsaW5lIGdyb3d0aCBhbmQgcGFydGlhbCBjbG9zZTsgd3JvdGUgYW5kIGNyb3NzLWxpbmtlZCBpbnRlcm4gZ3VpZGUuIERvY3RvciBhbmQgZm9jdXNlZCB0ZXN0cyBwYXNzLiBHdWlkZSBhbmQgZGlhcnkgdXBsb2FkZWQgdG8gL2FpLzIwMjYvMDkvMTAvRE9DTUdSLUZSSUNUSU9OLTAwMSBhbmQgbGlzdGluZyB2ZXJpZmllZC4gSW1wbGVtZW50YXRpb24gcGhhc2VzIHJlbWFpbiBvcGVuLgoKIyMgMjAyNi0wOS0xMAoKU3RlcCAyOiBieXRlLXN0YWJsZSBkb2N1bWVudCBwZXJzaXN0ZW5jZSwgdW5rbm93biBtZXRhZGF0YSBwcmVzZXJ2YXRpb24gYW5kIGNhbm9uaWNhbCBjaGFuZ2Vsb2cgYm91bmRhcmllcyAoY29tbWl0IDkxZTA2MDMpLiBGdWxsIEdvIHRlc3RzIGFuZCBsaW50IHBhc3MuCgojIyAyMDI2LTA5LTEwCgpJbXBsZW1lbnRlZCBhbmQgdmFsaWRhdGVkIHBlcnNpc3RlbmNlLCByZWNvdmVyeSBhbmQgQ0xJL0hUVFAgd29ya2Zsb3dzOyBjb2RlIHRocm91Z2ggMWQwNzEwZC4KCk9wZXJhdGlvbjogYGltcGxlbWVudGF0aW9uLXZlcmlmaWVkYAo="
+    }
+  ]
+}

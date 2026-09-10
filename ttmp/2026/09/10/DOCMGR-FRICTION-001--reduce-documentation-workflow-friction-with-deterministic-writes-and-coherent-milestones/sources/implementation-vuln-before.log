@@ -1,0 +1,108 @@
+go install golang.org/x/vuln/cmd/govulncheck@latest
+go: downloading golang.org/x/vuln v1.8.0
+go: downloading golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518
+go: downloading golang.org/x/mod v0.41.0
+go: downloading golang.org/x/tools v0.50.0
+go: downloading golang.org/x/sync v0.23.0
+govulncheck ./...
+=== Symbol Results ===
+
+Vulnerability #1: GO-2026-6218
+    Avoid quadratic complexity in resolvePath in net/url
+  More info: https://pkg.go.dev/vuln/GO-2026-6218
+  Standard library
+    Found in: net/url@go1.26.4
+    Fixed in: net/url@go1.26.6
+    Example traces found:
+      #1: pkg/commands/doctor.go:1597:40: commands.DoctorCommand.Run calls glamour.TermRenderer.Render, which eventually calls url.URL.ResolveReference
+
+Vulnerability #2: GO-2026-6090
+    Limit handshake messages we are willing to accept post-handshake in
+    crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-6090
+  Standard library
+    Found in: crypto/tls@go1.26.4
+    Fixed in: crypto/tls@go1.26.6
+    Example traces found:
+      #1: cmd/docmgr/cmds/api/serve.go:65:29: api.newServeCommand calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #2: internal/operations/store.go:94:25: operations.Read calls io.ReadAll, which eventually calls tls.Conn.Read
+      #3: internal/templates/schema.go:29:24: templates.PrintSchema calls io.WriteString, which calls tls.Conn.Write
+
+Vulnerability #3: GO-2026-6089
+    Apply ReadHeaderTimeout when doing unencrypted HTTP/2 check in net/http
+  More info: https://pkg.go.dev/vuln/GO-2026-6089
+  Standard library
+    Found in: net/http@go1.26.4
+    Fixed in: net/http@go1.26.6
+    Example traces found:
+      #1: cmd/docmgr/cmds/api/serve.go:65:29: api.newServeCommand calls http.Server.ListenAndServe
+
+Vulnerability #4: GO-2026-6088
+    Add recursion depth guard during decode in encoding/xml
+  More info: https://pkg.go.dev/vuln/GO-2026-6088
+  Standard library
+    Found in: encoding/xml@go1.26.4
+    Fixed in: encoding/xml@go1.26.6
+    Example traces found:
+      #1: pkg/commands/doctor.go:13:2: commands.init calls glamour.init, which eventually calls xml.Decoder.Decode
+      #2: pkg/commands/doctor.go:13:2: commands.init calls glamour.init, which eventually calls xml.Decoder.DecodeElement
+      #3: pkg/commands/doctor.go:13:2: commands.init calls glamour.init, which eventually calls xml.Decoder.Token
+
+Vulnerability #5: GO-2026-5972
+    Enforce maximum recursion depth in encoding/asn1
+  More info: https://pkg.go.dev/vuln/GO-2026-5972
+  Standard library
+    Found in: encoding/asn1@go1.26.4
+    Fixed in: encoding/asn1@go1.26.6
+    Example traces found:
+      #1: internal/templates/templates.go:552:18: templates.RenderTemplateBody calls strings.Replacer.Replace, which eventually calls asn1.Unmarshal
+
+Vulnerability #6: GO-2026-5970
+    Infinite loop on invalid input in golang.org/x/text
+  More info: https://pkg.go.dev/vuln/GO-2026-5970
+  Module: golang.org/x/text
+    Found in: golang.org/x/text@v0.37.0
+    Fixed in: golang.org/x/text@v0.39.0
+    Example traces found:
+      #1: internal/templates/schema.go:29:24: templates.PrintSchema calls io.WriteString, which eventually calls norm.Form.Properties
+
+Vulnerability #7: GO-2026-5960
+    Excelize: Unbounded Row Index Allocation in Worksheet Parser (checkSheet
+    OOM/Panic DoS) in github.com/xuri/excelize
+  More info: https://pkg.go.dev/vuln/GO-2026-5960
+  Module: github.com/xuri/excelize/v2
+    Found in: github.com/xuri/excelize/v2@v2.10.0
+    Fixed in: github.com/xuri/excelize/v2@v2.11.0
+    Example traces found:
+      #1: pkg/commands/tasks.go:1047:18: commands.TasksMigrateCommand.RunIntoGlazeProcessor calls middlewares.TableProcessor.AddRow, which eventually calls excelize.File.NewSheet
+      #2: cmd/docmgr/main.go:22:27: docmgr.main calls cobra.Command.Execute, which eventually calls excelize.File.SetActiveSheet
+      #3: pkg/commands/tasks.go:1047:18: commands.TasksMigrateCommand.RunIntoGlazeProcessor calls middlewares.TableProcessor.AddRow, which eventually calls excelize.File.SetCellStyle
+      #4: pkg/commands/tasks.go:1047:18: commands.TasksMigrateCommand.RunIntoGlazeProcessor calls middlewares.TableProcessor.AddRow, which eventually calls excelize.File.SetCellValue
+      #5: pkg/commands/tasks.go:1047:18: commands.TasksMigrateCommand.RunIntoGlazeProcessor calls middlewares.TableProcessor.AddRow, which eventually calls excelize.NewFile
+
+Vulnerability #8: GO-2026-5856
+    Invoking Encrypted Client Hello privacy leak in crypto/tls
+  More info: https://pkg.go.dev/vuln/GO-2026-5856
+  Standard library
+    Found in: crypto/tls@go1.26.4
+    Fixed in: crypto/tls@go1.26.5
+    Example traces found:
+      #1: cmd/docmgr/cmds/api/serve.go:65:29: api.newServeCommand calls http.Server.ListenAndServe, which eventually calls tls.Conn.HandshakeContext
+      #2: internal/operations/store.go:94:25: operations.Read calls io.ReadAll, which eventually calls tls.Conn.Read
+      #3: internal/templates/schema.go:29:24: templates.PrintSchema calls io.WriteString, which calls tls.Conn.Write
+
+Vulnerability #9: GO-2026-4970
+    Root escape via symlink plus trailing slash in os
+  More info: https://pkg.go.dev/vuln/GO-2026-4970
+  Standard library
+    Found in: os@go1.26.4
+    Fixed in: os@go1.26.5
+    Example traces found:
+      #1: internal/operations/store.go:149:21: operations.Records calls os.Root.Open
+
+Your code is affected by 9 vulnerabilities from 2 modules and the Go standard library.
+This scan also found 4 vulnerabilities in packages you import and 18
+vulnerabilities in modules you require, but your code doesn't appear to call
+these vulnerabilities.
+Use '-show verbose' for more details.
+make: *** [Makefile:24: govulncheck] Error 3

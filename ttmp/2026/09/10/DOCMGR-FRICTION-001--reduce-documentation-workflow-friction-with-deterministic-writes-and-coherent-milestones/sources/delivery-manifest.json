@@ -1,0 +1,20 @@
+{
+  "ticket": "DOCMGR-FRICTION-001",
+  "doctor": "passed",
+  "delivery": "uploaded and listed",
+  "diagrams": 2,
+  "scope": "Research and delivery complete; implementation tasks remain open.",
+  "log_policy": "Human CLI display captures normalized for trailing presentation whitespace; experiment and selected transcript JSON unchanged.",
+  "sha256": {
+    "index.md": "4df0c1fcc0881d100c26c1188358be81398866d6b97c357e7f645b6ee7b8a920",
+    "design-doc/01-intern-guide-to-deterministic-document-mutation-and-milestone-workflows.md": "87d322dfb9c6f7162b0a4338a544cb42a8b2eced1c1589ff5f4990c76e1a4f04",
+    "reference/01-investigation-diary.md": "b85bf603e4e7987f8c329c97db251a17a1bcea55b1b34b37aa7b543189e344b1",
+    "sources/print/diary.md": "8f60307a0cb539d0838dca0ed84acb6d955bb2ce15065c58aa2e5b8bcfc4ca7f",
+    "sources/print/figure-2.png": "d9ad61abf7646d5e64b0930f9d599b1a5c9e2afe781c84848afe198b567b8b41",
+    "sources/print/render.json": "fd0db32878798b03cfb32659c617453ceaa44a067aace5bc2ab3a622581f2052",
+    "sources/print/figure-1.png": "36645c08bcdb9c1bdf1c578134b7d95a1c300d5b9dc80f424495d02435047331",
+    "sources/print/guide.md": "cd305db430e3f60176bfdb8fa262383f520c4057b7865a0f7bec15f24ebd8a00",
+    "sources/remarkable-upload.log": "3811c9fd62798e664f2c259440a673994575f3fd1f40f02cebfc7b17a1b9a6c8",
+    "sources/remarkable-verification.log": "116bab86009434e80b2ed3feae2fb44b63461827939760ae3ee83bd3d418b0e4"
+  }
+}

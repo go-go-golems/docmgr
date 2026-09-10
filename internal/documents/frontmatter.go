@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -48,14 +47,19 @@ func readDocumentWithFrontmatterBytes(path string, raw []byte) (*models.Document
 		return nil, "", core.WrapWithCause(err, tax)
 	}
 
-	// Auto-quote risky scalars before decode to reduce YAML failures.
-	fm = frontmatter.PreprocessYAML(fm)
+	// Preserve valid YAML semantics (including anchors). Repair risky scalars
+	// only when parsing fails; preprocessing valid YAML would turn aliases into text.
 
 	lines := strings.Split(string(raw), "\n")
 
 	var node yaml.Node
 	dec := yaml.NewDecoder(bytes.NewReader(fm))
-	if err := dec.Decode(&node); err != nil {
+	decodeErr := dec.Decode(&node)
+	if decodeErr != nil {
+		dec = yaml.NewDecoder(bytes.NewReader(frontmatter.PreprocessYAML(fm)))
+		decodeErr = dec.Decode(&node)
+	}
+	if err := decodeErr; err != nil {
 		line, col := extractLineCol(err.Error(), fmStartLine)
 		snippet := buildSnippet(lines, line, col)
 		problem := classifyYAMLError(err.Error())
@@ -76,8 +80,8 @@ func readDocumentWithFrontmatterBytes(path string, raw []byte) (*models.Document
 	return &doc, string(body), nil
 }
 
-// WriteDocumentWithFrontmatter writes the provided document metadata and body
-// to the target markdown path using YAML frontmatter.
+// WriteDocumentWithFrontmatter preserves body bytes exactly. Framing uses LF;
+// creation callers supply their initial separator with CreationBody.
 func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string, force bool) error {
 	if !force {
 		if _, err := os.Stat(path); err == nil {
@@ -85,52 +89,77 @@ func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string
 		}
 	}
 
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(dir, ".docmgr-*")
+	data, err := SerializeDocument(doc, body)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = os.Remove(tmp.Name())
-	}()
+	_, err = WriteFileIfChanged(path, data)
+	return err
+}
 
+// CreationBody supplies one initial blank separator, without trimming authored text.
+func CreationBody(body string) string {
+	if body == "" || strings.HasPrefix(body, "\n") || strings.HasPrefix(body, "\r\n") {
+		return body
+	}
+	return "\n" + body
+}
+
+// SerializeDocument canonicalizes typed YAML metadata, not Markdown body bytes.
+// Unknown YAML fields survive; YAML comments and original scalar styling do not.
+func SerializeDocument(doc *models.Document, body string) ([]byte, error) {
+	if doc == nil {
+		return nil, fmt.Errorf("nil document")
+	}
+	budget := 10000
+	copyDoc := *doc
+	copyDoc.Extra = make(map[string]yaml.Node, len(doc.Extra))
+	for key, node := range doc.Extra {
+		expanded, err := expandMetadataNode(&node, 0, &budget)
+		if err != nil {
+			return nil, fmt.Errorf("metadata %s: %w", key, err)
+		}
+		copyDoc.Extra[key] = *expanded
+	}
 	var fmBuf bytes.Buffer
 	enc := yaml.NewEncoder(&fmBuf)
-	if err := enc.Encode(doc); err != nil {
-		_ = tmp.Close()
-		return err
+	if err := enc.Encode(&copyDoc); err != nil {
+		return nil, err
 	}
 	if err := enc.Close(); err != nil {
-		_ = tmp.Close()
-		return err
+		return nil, err
 	}
 	fmBytes := frontmatter.PreprocessYAML(fmBuf.Bytes())
+	return []byte("---\n" + string(fmBytes) + "---\n" + body), nil
+}
 
-	if _, err := tmp.WriteString("---\n"); err != nil {
-		_ = tmp.Close()
-		return err
+// Expand aliases because their anchor may belong to a known field that is
+// re-encoded without the original YAML node. Recursive aliases fail before writing.
+func expandMetadataNode(node *yaml.Node, depth int, budget *int) (*yaml.Node, error) {
+	if node == nil || depth > 64 || *budget <= 0 {
+		return nil, fmt.Errorf("invalid alias or metadata expansion exceeds depth 64 / 10000 nodes")
 	}
-	if _, err := tmp.Write(fmBytes); err != nil {
-		_ = tmp.Close()
-		return err
+	*budget -= 1
+	if node.Kind == yaml.AliasNode {
+		return expandMetadataNode(node.Alias, depth+1, budget)
 	}
-	if _, err := tmp.WriteString("---\n\n"); err != nil {
-		_ = tmp.Close()
-		return err
+	copyNode := *node
+	copyNode.Anchor = ""
+	// Comments on unknown metadata nodes would be reinterpreted as scalar
+	// content by PreprocessYAML; canonical serialization deliberately drops
+	// YAML comments while preserving values and structure.
+	copyNode.HeadComment = ""
+	copyNode.LineComment = ""
+	copyNode.FootComment = ""
+	copyNode.Content = nil
+	for _, child := range node.Content {
+		expanded, err := expandMetadataNode(child, depth+1, budget)
+		if err != nil {
+			return nil, err
+		}
+		copyNode.Content = append(copyNode.Content, expanded)
 	}
-	if _, err := tmp.WriteString(body); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-
-	return os.Rename(tmp.Name(), path)
+	return &copyNode, nil
 }
 
 // extractFrontmatter returns the frontmatter bytes, body bytes, and the starting line number (1-based) of the YAML block.

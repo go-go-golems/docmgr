@@ -72,5 +72,5 @@ Don't add backwards compatibility layers or adapters unless explicitly asked. If
 
 If it looks like your edits aren't applied, stop immediately and say "STOPPING BECAUSE EDITING ISN'T WORKING".
 
-Run the format_file tool at the end of each response.
+Use the repository formatter on changed files before validation. If a format_file tool is available it may be used; otherwise run the documented equivalent (gofmt for Go). Do not invent unavailable tool calls or reformat unrelated files.
 </generalGuidelines>

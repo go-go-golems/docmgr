@@ -4,11 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
-	"time"
 
-	"github.com/go-go-golems/docmgr/internal/documents"
 	"github.com/go-go-golems/docmgr/internal/workspace"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/fields"
@@ -18,305 +14,70 @@ import (
 	"github.com/go-go-golems/glazed/pkg/types"
 )
 
-// TicketCloseCommand closes a ticket by updating status, optional intent, and changelog
-type TicketCloseCommand struct {
-	*cmds.CommandDescription
-}
-
-// TicketCloseSettings holds the parameters for the ticket close command
+type TicketCloseCommand struct{ *cmds.CommandDescription }
 type TicketCloseSettings struct {
 	Ticket         string `glazed:"ticket"`
 	Root           string `glazed:"root"`
 	Status         string `glazed:"status"`
 	Intent         string `glazed:"intent"`
 	ChangelogEntry string `glazed:"changelog-entry"`
+	OperationID    string `glazed:"operation-id"`
 }
 
 func NewTicketCloseCommand() (*TicketCloseCommand, error) {
-	return &TicketCloseCommand{
-		CommandDescription: cmds.NewCommandDescription(
-			"close",
-			cmds.WithShort("Close a ticket by updating status, optional intent, and changelog"),
-			cmds.WithLong(`Atomically closes a ticket by:
-  • Updating Status (default: "complete", override with --status)
-  • Optionally updating Intent (via --intent)
-  • Appending a changelog entry (default: "Ticket closed")
-  • Updating LastUpdated timestamp
-
-The command checks if all tasks are done and warns if not, but does not fail.
-
-Examples:
-  # Close with defaults
-  docmgr ticket close --ticket DOCMGR-CLOSE
-
-  # Close with custom status
-  docmgr ticket close --ticket DOCMGR-CLOSE --status archived
-
-  # Close with intent and custom changelog message
-  docmgr ticket close --ticket DOCMGR-CLOSE --intent long-term --changelog-entry "All tasks completed, ready for review"
-
-  # Structured output for automation
-  docmgr ticket close --ticket DOCMGR-CLOSE --with-glaze-output --output json
-`),
-			cmds.WithFlags(
-				fields.New(
-					"ticket",
-					fields.TypeString,
-					fields.WithHelp("Ticket identifier"),
-					fields.WithRequired(true),
-				),
-				fields.New(
-					"root",
-					fields.TypeString,
-					fields.WithHelp("Root directory for docs"),
-					fields.WithDefault("ttmp"),
-				),
-				fields.New(
-					"status",
-					fields.TypeString,
-					fields.WithHelp("Status value (default: 'complete')"),
-					fields.WithDefault("complete"),
-				),
-				fields.New(
-					"intent",
-					fields.TypeString,
-					fields.WithHelp("Intent value (optional, defaults from config or omitted)"),
-					fields.WithDefault(""),
-				),
-				fields.New(
-					"changelog-entry",
-					fields.TypeString,
-					fields.WithHelp("Changelog entry message (default: 'Ticket closed')"),
-					fields.WithDefault("Ticket closed"),
-				),
-			),
-		),
-	}, nil
+	return &TicketCloseCommand{cmds.NewCommandDescription("close",
+		cmds.WithShort("Close a ticket with recoverable status and changelog projections"),
+		cmds.WithLong(`Preflights both files and journals the operation before writing history, then status.
+This is recoverable, not atomic multi-file visibility. Cooperating close/milestone
+operations share a ticket lock. Other editors do not participate in that lock.
+An already matching status/intent is a no-op unless an explicit operation ID is supplied.
+Use --operation-id for retry identity. After an interrupted default close, retry
+with the reported ID and original options. Conflicting human edits stop recovery.
+Open tasks produce a warning, not a failure. See: docmgr help milestone-workflows.`),
+		cmds.WithFlags(fields.New("ticket", fields.TypeString, fields.WithRequired(true)), fields.New("root", fields.TypeString, fields.WithDefault("ttmp")), fields.New("status", fields.TypeString, fields.WithDefault("complete")), fields.New("intent", fields.TypeString), fields.New("changelog-entry", fields.TypeString, fields.WithDefault("Ticket closed")), fields.New("operation-id", fields.TypeString, fields.WithHelp("Stable retry ID; otherwise generated and reported"))))}, nil
 }
-
-func (c *TicketCloseCommand) RunIntoGlazeProcessor(
-	ctx context.Context,
-	parsedValues *values.Values,
-	gp middlewares.Processor,
-) error {
+func operationTicketDir(ctx context.Context, root, ticket string) (string, error) {
 	if ctx == nil {
-		return fmt.Errorf("nil context")
+		return "", fmt.Errorf("nil context")
 	}
-	settings := &TicketCloseSettings{}
-	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
-		return fmt.Errorf("failed to parse settings: %w", err)
-	}
-
-	// Resolve root
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
-	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: workspace.ResolveRoot(root)})
 	if err != nil {
-		return fmt.Errorf("failed to discover workspace: %w", err)
+		return "", err
 	}
-	settings.Root = ws.Context().Root
 	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-		return fmt.Errorf("failed to initialize workspace index: %w", err)
+		return "", err
 	}
-
-	// Find ticket directory (Workspace+QueryDocs-backed)
-	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
-	if err != nil {
-		return fmt.Errorf("failed to find ticket directory: %w", err)
-	}
-
-	// Check if all tasks are done
-	openTasks, doneTasks := countTasksInTicket(ticketDir)
-	allTasksDone := openTasks == 0 && (openTasks+doneTasks) > 0
-
-	// Read current index.md
-	indexPath := filepath.Join(ticketDir, "index.md")
-	doc, content, err := documents.ReadDocumentWithFrontmatter(indexPath)
-	if err != nil {
-		return fmt.Errorf("failed to read ticket index: %w", err)
-	}
-
-	// Track what was updated
-	operations := map[string]bool{
-		"status_updated":    false,
-		"intent_updated":    false,
-		"changelog_updated": false,
-	}
-
-	// Update status
-	if settings.Status != "" {
-		doc.Status = settings.Status
-		operations["status_updated"] = true
-	}
-
-	// Update intent if provided
-	if settings.Intent != "" {
-		doc.Intent = settings.Intent
-		operations["intent_updated"] = true
-	}
-
-	// Update LastUpdated
-	doc.LastUpdated = time.Now()
-
-	// Write updated index.md
-	if err := documents.WriteDocumentWithFrontmatter(indexPath, doc, content, true); err != nil {
-		return fmt.Errorf("failed to write ticket index: %w", err)
-	}
-
-	// Update changelog
-	changelogPath := filepath.Join(ticketDir, "changelog.md")
-	changelogEntry := settings.ChangelogEntry
-	if changelogEntry == "" {
-		changelogEntry = "Ticket closed"
-	}
-
-	// Ensure changelog exists
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		_ = os.MkdirAll(filepath.Dir(changelogPath), 0755)
-		_ = os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0644)
-	}
-
-	// Append changelog entry
-	today := time.Now().Format("2006-01-02")
-	entryText := fmt.Sprintf("\n## %s\n\n%s\n\n", today, changelogEntry)
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open changelog: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(entryText); err != nil {
-		return fmt.Errorf("failed to write changelog entry: %w", err)
-	}
-	operations["changelog_updated"] = true
-
-	// Emit structured output
-	row := types.NewRow(
-		types.MRP("ticket", settings.Ticket),
-		types.MRP("all_tasks_done", allTasksDone),
-		types.MRP("open_tasks", openTasks),
-		types.MRP("done_tasks", doneTasks),
-		types.MRP("status", doc.Status),
-		types.MRP("intent", doc.Intent),
-		types.MRP("operations", operations),
-		types.MRP("status_updated", operations["status_updated"]),
-		types.MRP("intent_updated", operations["intent_updated"]),
-		types.MRP("changelog_updated", operations["changelog_updated"]),
-	)
-	return gp.AddRow(ctx, row)
+	return resolveTicketDirViaWorkspace(ctx, ws, ticket)
 }
-
-var _ cmds.GlazeCommand = &TicketCloseCommand{}
-
-// Run implements BareCommand for human-friendly output
-func (c *TicketCloseCommand) Run(
-	ctx context.Context,
-	parsedValues *values.Values,
-) error {
-	if ctx == nil {
-		return fmt.Errorf("nil context")
+func (c *TicketCloseCommand) execute(ctx context.Context, parsed *values.Values) (CloseResult, error) {
+	s := TicketCloseSettings{}
+	if err := parsed.DecodeSectionInto(schema.DefaultSlug, &s); err != nil {
+		return CloseResult{}, err
 	}
-	settings := &TicketCloseSettings{}
-	if err := parsedValues.DecodeSectionInto(schema.DefaultSlug, settings); err != nil {
-		return fmt.Errorf("failed to parse settings: %w", err)
-	}
-
-	// Resolve root
-	settings.Root = workspace.ResolveRoot(settings.Root)
-
-	ws, err := workspace.DiscoverWorkspace(ctx, workspace.DiscoverOptions{RootOverride: settings.Root})
+	dir, err := operationTicketDir(ctx, s.Root, s.Ticket)
 	if err != nil {
-		return fmt.Errorf("failed to discover workspace: %w", err)
+		return CloseResult{}, err
 	}
-	settings.Root = ws.Context().Root
-	if err := ws.InitIndex(ctx, workspace.BuildIndexOptions{IncludeBody: false}); err != nil {
-		return fmt.Errorf("failed to initialize workspace index: %w", err)
-	}
-
-	// Find ticket directory (Workspace+QueryDocs-backed)
-	ticketDir, err := resolveTicketDirViaWorkspace(ctx, ws, settings.Ticket)
+	return CloseTicket(ctx, dir, s.OperationID, CloseRequest{Ticket: s.Ticket, Status: s.Status, Intent: s.Intent, Entry: s.ChangelogEntry})
+}
+func (c *TicketCloseCommand) RunIntoGlazeProcessor(ctx context.Context, parsed *values.Values, gp middlewares.Processor) error {
+	r, err := c.execute(ctx, parsed)
 	if err != nil {
-		return fmt.Errorf("failed to find ticket directory: %w", err)
+		return err
 	}
-
-	// Check if all tasks are done
-	openTasks, doneTasks := countTasksInTicket(ticketDir)
-	allTasksDone := openTasks == 0 && (openTasks+doneTasks) > 0
-
-	// Warn if not all tasks are done
-	if !allTasksDone && (openTasks+doneTasks) > 0 {
-		fmt.Fprintf(os.Stderr, "Warning: Not all tasks are done (%d open, %d done). Closing anyway.\n", openTasks, doneTasks)
-	}
-
-	// Read current index.md
-	indexPath := filepath.Join(ticketDir, "index.md")
-	doc, content, err := documents.ReadDocumentWithFrontmatter(indexPath)
+	return gp.AddRow(ctx, types.NewRow(types.MRP("status", r.Status), types.MRP("intent", r.Intent), types.MRP("open_tasks", r.OpenTasks), types.MRP("done_tasks", r.DoneTasks), types.MRP("all_tasks_done", r.OpenTasks == 0 && r.DoneTasks > 0), types.MRP("receipt", r.Receipt)))
+}
+func (c *TicketCloseCommand) Run(ctx context.Context, parsed *values.Values) error {
+	r, err := c.execute(ctx, parsed)
 	if err != nil {
-		return fmt.Errorf("failed to read ticket index: %w", err)
+		return err
 	}
-
-	oldStatus := doc.Status
-	oldIntent := doc.Intent
-
-	// Update status
-	if settings.Status != "" {
-		doc.Status = settings.Status
+	if r.OpenTasks > 0 {
+		fmt.Fprintf(os.Stderr, "Warning: Not all tasks are done (%d open, %d done). Closing anyway.\n", r.OpenTasks, r.DoneTasks)
 	}
-
-	// Update intent if provided
-	if settings.Intent != "" {
-		doc.Intent = settings.Intent
-	}
-
-	// Update LastUpdated
-	doc.LastUpdated = time.Now()
-
-	// Write updated index.md
-	if err := documents.WriteDocumentWithFrontmatter(indexPath, doc, content, true); err != nil {
-		return fmt.Errorf("failed to write ticket index: %w", err)
-	}
-
-	// Update changelog
-	changelogPath := filepath.Join(ticketDir, "changelog.md")
-	changelogEntry := settings.ChangelogEntry
-	if changelogEntry == "" {
-		changelogEntry = "Ticket closed"
-	}
-
-	// Ensure changelog exists
-	if _, err := os.Stat(changelogPath); os.IsNotExist(err) {
-		_ = os.MkdirAll(filepath.Dir(changelogPath), 0755)
-		_ = os.WriteFile(changelogPath, []byte("# Changelog\n\n"), 0644)
-	}
-
-	// Append changelog entry
-	today := time.Now().Format("2006-01-02")
-	entryText := fmt.Sprintf("\n## %s\n\n%s\n\n", today, changelogEntry)
-	fp, err := os.OpenFile(changelogPath, os.O_APPEND|os.O_WRONLY, 0o600)
-	if err != nil {
-		return fmt.Errorf("failed to open changelog: %w", err)
-	}
-	defer func() { _ = fp.Close() }()
-	if _, err := fp.WriteString(entryText); err != nil {
-		return fmt.Errorf("failed to write changelog entry: %w", err)
-	}
-
-	// Print human-friendly output
-	var changes []string
-	if oldStatus != doc.Status {
-		changes = append(changes, fmt.Sprintf("Status: %s → %s", oldStatus, doc.Status))
-	}
-	if settings.Intent != "" && oldIntent != doc.Intent {
-		changes = append(changes, fmt.Sprintf("Intent: %s → %s", oldIntent, doc.Intent))
-	}
-	changes = append(changes, "Changelog updated", "LastUpdated refreshed")
-
-	fmt.Printf("Ticket %s closed successfully.\n", settings.Ticket)
-	if len(changes) > 0 {
-		fmt.Printf("Changes: %s\n", strings.Join(changes, ", "))
-	}
-	fmt.Printf("Changelog: %s\n", changelogPath)
-
+	fmt.Printf("Ticket status: %s; operation: %s (%s)\n", r.Status, r.Receipt.OperationID, r.Receipt.State)
 	return nil
 }
 
+var _ cmds.GlazeCommand = &TicketCloseCommand{}
 var _ cmds.BareCommand = &TicketCloseCommand{}

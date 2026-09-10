@@ -48,7 +48,7 @@ func TestBodyStability(t *testing.T) {
 }
 func TestUnknownMetadataAndCRLF(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "doc.md")
-	mustTest(t, os.WriteFile(path, []byte("---\r\nTitle: old\r\nCustom: {nested: [one, two]}\r\n---\r\n\r\nBody  \r\n"), 0644))
+	mustTest(t, os.WriteFile(path, []byte("---\r\nTitle: &heading old\r\nAlias: *heading\r\nCustom: {nested: [one, two]}\r\n---\r\n\r\nBody  \r\n"), 0644))
 	doc, body, err := ReadDocumentWithFrontmatter(path)
 	mustTest(t, err)
 	if body != "\r\nBody  \r\n" {
@@ -60,6 +60,9 @@ func TestUnknownMetadataAndCRLF(t *testing.T) {
 	mustTest(t, err)
 	if body != got {
 		t.Fatal("body changed")
+	}
+	if next.Extra["Alias"].Value != "old" {
+		t.Fatal("lost anchored metadata value")
 	}
 	var custom map[string][]string
 	node := next.Extra["Custom"]

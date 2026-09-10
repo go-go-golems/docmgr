@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/go-go-golems/docmgr/internal/documents"
 
 	"github.com/go-go-golems/docmgr/internal/templates"
 )
 
 // writeFileIfNotExists writes content to a file only if it doesn't exist,
-// unless force is true. Returns an error if file exists and force is false.
+// unless force is true. Existing files are left untouched without force.
+// Generated scaffolding has one final LF; internal authored whitespace is retained.
 func writeFileIfNotExists(path string, content []byte, force bool) error {
 	if !force {
 		if _, err := os.Stat(path); err == nil {
@@ -17,7 +21,8 @@ func writeFileIfNotExists(path string, content []byte, force bool) error {
 			return nil
 		}
 	}
-	return os.WriteFile(path, content, 0644)
+	_, err := documents.WriteFileIfChanged(path, []byte(strings.TrimRight(string(content), "\r\n")+"\n"))
+	return err
 }
 
 // scaffoldTemplatesAndGuidelines creates the _templates/ and _guidelines/ directories

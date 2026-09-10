@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -76,8 +75,8 @@ func readDocumentWithFrontmatterBytes(path string, raw []byte) (*models.Document
 	return &doc, string(body), nil
 }
 
-// WriteDocumentWithFrontmatter writes the provided document metadata and body
-// to the target markdown path using YAML frontmatter.
+// WriteDocumentWithFrontmatter preserves body bytes exactly. Framing uses LF;
+// creation callers supply their initial separator with CreationBody.
 func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string, force bool) error {
 	if !force {
 		if _, err := os.Stat(path); err == nil {
@@ -85,52 +84,35 @@ func WriteDocumentWithFrontmatter(path string, doc *models.Document, body string
 		}
 	}
 
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(dir, ".docmgr-*")
+	data, err := SerializeDocument(doc, body)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = os.Remove(tmp.Name())
-	}()
+	_, err = WriteFileIfChanged(path, data)
+	return err
+}
 
+// CreationBody supplies one initial blank separator, without trimming authored text.
+func CreationBody(body string) string {
+	if body == "" || strings.HasPrefix(body, "\n") || strings.HasPrefix(body, "\r\n") {
+		return body
+	}
+	return "\n" + body
+}
+
+// SerializeDocument canonicalizes typed YAML metadata, not Markdown body bytes.
+// Unknown YAML fields survive; YAML comments and original scalar styling do not.
+func SerializeDocument(doc *models.Document, body string) ([]byte, error) {
 	var fmBuf bytes.Buffer
 	enc := yaml.NewEncoder(&fmBuf)
 	if err := enc.Encode(doc); err != nil {
-		_ = tmp.Close()
-		return err
+		return nil, err
 	}
 	if err := enc.Close(); err != nil {
-		_ = tmp.Close()
-		return err
+		return nil, err
 	}
 	fmBytes := frontmatter.PreprocessYAML(fmBuf.Bytes())
-
-	if _, err := tmp.WriteString("---\n"); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if _, err := tmp.Write(fmBytes); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if _, err := tmp.WriteString("---\n\n"); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if _, err := tmp.WriteString(body); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-
-	return os.Rename(tmp.Name(), path)
+	return []byte("---\n" + string(fmBytes) + "---\n" + body), nil
 }
 
 // extractFrontmatter returns the frontmatter bytes, body bytes, and the starting line number (1-based) of the YAML block.

@@ -67,19 +67,20 @@ import (
 //	# API Design
 //	...content...
 type Document struct {
-	Title           string       `yaml:"Title" json:"title"`
-	Ticket          string       `yaml:"Ticket" json:"ticket"`
-	Status          string       `yaml:"Status" json:"status"`
-	Topics          []string     `yaml:"Topics" json:"topics"`
-	DocType         string       `yaml:"DocType" json:"docType"`
-	Intent          string       `yaml:"Intent" json:"intent"`
-	Owners          []string     `yaml:"Owners" json:"owners"`
-	RelatedFiles    RelatedFiles `yaml:"RelatedFiles" json:"relatedFiles"`
-	ExternalSources []string     `yaml:"ExternalSources" json:"externalSources"`
-	Summary         string       `yaml:"Summary" json:"summary"`
-	LastUpdated     time.Time    `yaml:"LastUpdated" json:"lastUpdated"`
-	WhatFor         string       `yaml:"WhatFor" json:"whatFor"`
-	WhenToUse       string       `yaml:"WhenToUse" json:"whenToUse"`
+	Extra           map[string]yaml.Node `yaml:",inline" json:"-"`
+	Title           string               `yaml:"Title" json:"title"`
+	Ticket          string               `yaml:"Ticket" json:"ticket"`
+	Status          string               `yaml:"Status" json:"status"`
+	Topics          []string             `yaml:"Topics" json:"topics"`
+	DocType         string               `yaml:"DocType" json:"docType"`
+	Intent          string               `yaml:"Intent" json:"intent"`
+	Owners          []string             `yaml:"Owners" json:"owners"`
+	RelatedFiles    RelatedFiles         `yaml:"RelatedFiles" json:"relatedFiles"`
+	ExternalSources []string             `yaml:"ExternalSources" json:"externalSources"`
+	Summary         string               `yaml:"Summary" json:"summary"`
+	LastUpdated     time.Time            `yaml:"LastUpdated" json:"lastUpdated"`
+	WhatFor         string               `yaml:"WhatFor" json:"whatFor"`
+	WhenToUse       string               `yaml:"WhenToUse" json:"whenToUse"`
 }
 
 // Validate checks that the document has all required fields populated.

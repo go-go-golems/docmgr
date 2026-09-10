@@ -1,0 +1,23 @@
+[info] Using DOCMGR_PATH=/tmp/docmgr-friction-local
+[info] SCENARIOLOG_PATH is not set; building scenariolog: /home/manuel/code/wesen/go-go-golems/docmgr/scenariolog -> /tmp/scenariolog-local
+[info] Using SCENARIOLOG_PATH=/tmp/scenariolog-local
+[ok] Reset to /tmp/docmgr-friction-final-scenarios
+[info] scenariolog run_id=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-01 exit=0 duration_ms=66 stdout=.logs/step-01-stdout.txt stderr=.logs/step-01-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-02 exit=0 duration_ms=517 stdout=.logs/step-02-stdout.txt stderr=.logs/step-02-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-03 exit=0 duration_ms=1762 stdout=.logs/step-03-stdout.txt stderr=.logs/step-03-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-04 exit=0 duration_ms=330 stdout=.logs/step-04-stdout.txt stderr=.logs/step-04-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-05 exit=0 duration_ms=1991 stdout=.logs/step-05-stdout.txt stderr=.logs/step-05-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-06 exit=0 duration_ms=794 stdout=.logs/step-06-stdout.txt stderr=.logs/step-06-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-07 exit=0 duration_ms=395 stdout=.logs/step-07-stdout.txt stderr=.logs/step-07-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-08 exit=0 duration_ms=107 stdout=.logs/step-08-stdout.txt stderr=.logs/step-08-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-09 exit=0 duration_ms=127 stdout=.logs/step-09-stdout.txt stderr=.logs/step-09-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-10 exit=0 duration_ms=138 stdout=.logs/step-10-stdout.txt stderr=.logs/step-10-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-11 exit=0 duration_ms=164 stdout=.logs/step-11-stdout.txt stderr=.logs/step-11-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-12 exit=0 duration_ms=102 stdout=.logs/step-12-stdout.txt stderr=.logs/step-12-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-13 exit=0 duration_ms=873 stdout=.logs/step-13-stdout.txt stderr=.logs/step-13-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-14 exit=0 duration_ms=641 stdout=.logs/step-14-stdout.txt stderr=.logs/step-14-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-19 exit=0 duration_ms=213 stdout=.logs/step-19-stdout.txt stderr=.logs/step-19-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-20 exit=0 duration_ms=2318 stdout=.logs/step-20-stdout.txt stderr=.logs/step-20-stderr.txt
+[scenariolog] step=2026-09-10T19:44:43.192502318Z-pid-2318569-8049e3985a5b188b-step-21 exit=0 duration_ms=235 stdout=.logs/step-21-stdout.txt stderr=.logs/step-21-stderr.txt
+[ok] Scenario completed at /tmp/docmgr-friction-final-scenarios/acme-chat-app

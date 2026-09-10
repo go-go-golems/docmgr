@@ -1,0 +1,27 @@
+[
+{
+  "all_tasks_done": true,
+  "done_tasks": 6,
+  "intent": "long-term",
+  "open_tasks": 0,
+  "receipt": {
+    "sequence": 2,
+    "operation_id": "implementation-closed",
+    "state": "committed",
+    "created_at": "2026-09-10T19:58:52.605075991Z",
+    "changed_paths": [
+      "changelog.md",
+      "index.md"
+    ],
+    "before": {
+      "changelog.md": "0ed296c6df5bb07713403227f5cdbd376c98f5bffc33cd6c809b617ddac1eaa3",
+      "index.md": "b24be99a9bde3825aef7705feaf95024e5cd1c5b2ab26affe52da1225c3bf93c"
+    },
+    "after": {
+      "changelog.md": "0b3c8741d0dc17d884cec6f707a9fe1fc5fbcd6766328aa942d16c391a292c18",
+      "index.md": "f7176f9a5a30f6fe55d61d5a4c3ca18438a221446e45a1d8a1e1827cedd1605d"
+    }
+  },
+  "status": "complete"
+}
+]

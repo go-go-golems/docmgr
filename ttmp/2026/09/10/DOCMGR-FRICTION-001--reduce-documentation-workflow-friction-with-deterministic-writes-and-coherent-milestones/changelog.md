@@ -12,3 +12,13 @@ Researched source and actual session; reproduced newline growth and partial clos
 ## 2026-09-10
 
 Step 2: byte-stable document persistence, unknown metadata preservation and canonical changelog boundaries (commit 91e0603). Full Go tests and lint pass.
+
+## 2026-09-10
+
+Implemented and validated persistence, recovery and CLI/HTTP workflows; code through 1d0710d.
+
+Operation: `implementation-verified`
+
+## 2026-09-10
+
+Implementation complete and validated; detailed diary and scoped evidence retained.

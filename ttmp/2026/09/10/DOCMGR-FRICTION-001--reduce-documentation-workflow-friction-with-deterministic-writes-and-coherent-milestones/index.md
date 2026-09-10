@@ -1,7 +1,7 @@
 ---
 Title: Reduce documentation workflow friction with deterministic writes and coherent milestones
 Ticket: DOCMGR-FRICTION-001
-Status: active
+Status: complete
 Topics:
     - docmgr
     - cli
@@ -13,8 +13,8 @@ RelatedFiles:
     - Path: repo://internal/documents/write.go
       Note: Permission-preserving no-op writer, commit 91e0603
 ExternalSources: []
-Summary: Research delivered; implementation remains open for stable persistence, recoverable close, explicit milestone identities and resume views.
-LastUpdated: 2026-09-10T15:37:22Z
+Summary: Implemented stable persistence, recoverable close and milestone projections, CLI/HTTP resume, regression coverage and patched dependencies.
+LastUpdated: 2026-09-10T15:58:52.605009986-04:00
 WhatFor: Turn verified Video Observatory workflow friction into implementable docmgr improvements.
 WhenToUse: Starting the implementation phases or reviewing session evidence.
 ---
@@ -32,10 +32,10 @@ The research reproduces accumulating frontmatter whitespace, noncanonical change
 
 ## Scope and status
 
-The requested research documents are complete. Product changes are not implemented; the ticket remains active with explicit implementation phases. Reproduction scripts only mutate temporary fixtures. No production Go code was changed.
+The requested implementation is complete and validated: stable framing and generated EOFs, recoverable close/milestones, derived resume, CLI/HTTP parity and typed frontend API hooks. Code checkpoints: `91e0603`, `582171f`, `7de2ea4`, `b1f53fc`, `1516abc`, `1d0710d`. See the detailed diary and `sources/implementation-validation.json` for evidence and limits. Research captures remain historical; new tests establish current behavior. The locally built CLI is `/tmp/docmgr-friction-local`; the global installed binary was not replaced.
 
 Companion: **SKILLS-FRICTION-001**, rooted at `/home/manuel/.pi/agent/skills/ttmp/2026/09/10/SKILLS-FRICTION-001--make-skills-phase-aware-proportional-and-consistent-across-long-sessions`. It owns instruction conflicts, diary proportionality and resume/validation conventions.
 
 ## Delivery
 
-The reMarkable bundle destination is `/ai/2026/09/10/DOCMGR-FRICTION-001`. Dry-run, upload and verification receipts are retained under `sources/`; the upload result is authoritative for delivery status. The bundle contains this guide and its investigation diary, with rendered diagrams.
+The original research delivery (not a new implementation upload) used the reMarkable bundle destination `/ai/2026/09/10/DOCMGR-FRICTION-001`. Dry-run, upload and verification receipts are retained under `sources/`; the upload result is authoritative for delivery status. The bundle contains this guide and its investigation diary, with rendered diagrams.

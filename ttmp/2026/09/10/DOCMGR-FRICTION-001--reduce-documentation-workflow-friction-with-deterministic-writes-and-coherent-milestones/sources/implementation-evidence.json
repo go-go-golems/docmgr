@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "validation",
+    "path": "doc://sources/implementation-validation.json",
+    "revision": "8a7bafde25ac244e30d82b77d40682c43ba71640912bdac2dfa2186a685ea314",
+    "claim": "Implementation checks and declared limitations reviewed; observational follow-up is explicitly separate."
+  }
+]

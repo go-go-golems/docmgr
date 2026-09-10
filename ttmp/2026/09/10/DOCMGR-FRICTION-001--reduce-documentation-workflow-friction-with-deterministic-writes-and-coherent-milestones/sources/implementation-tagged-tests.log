@@ -1,0 +1,48 @@
+?   	github.com/go-go-golems/docmgr	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/api	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/changelog	[no test files]
+ok  	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/common	(cached)
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/configcmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/doc	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ignorecmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/importcmd	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/list	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/meta	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/milestone	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/skill	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/tasks	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/template	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/ticket	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/validate/validator	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/vocab	[no test files]
+?   	github.com/go-go-golems/docmgr/cmd/docmgr/cmds/workspace	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/documents	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/httpapi	0.076s
+ok  	github.com/go-go-golems/docmgr/internal/ignore	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/operations	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/paths	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/searchsvc	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/skills	(cached)
+?   	github.com/go-go-golems/docmgr/internal/tasksmd	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/templates	(cached)
+?   	github.com/go-go-golems/docmgr/internal/ticketgraph	[no test files]
+ok  	github.com/go-go-golems/docmgr/internal/tickets	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/web	(cached)
+ok  	github.com/go-go-golems/docmgr/internal/workspace	(cached)
+?   	github.com/go-go-golems/docmgr/pkg	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/commands	4.881s
+?   	github.com/go-go-golems/docmgr/pkg/completion	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/core	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgr	(cached)
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrctx	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/diagnostics/docmgrrules	(cached)
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/render	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/diagnostics/rules	[no test files]
+?   	github.com/go-go-golems/docmgr/pkg/doc	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/frontmatter	(cached)
+?   	github.com/go-go-golems/docmgr/pkg/models	[no test files]
+ok  	github.com/go-go-golems/docmgr/pkg/utils	(cached)
+?   	github.com/go-go-golems/docmgr/ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/scripts	[no test files]

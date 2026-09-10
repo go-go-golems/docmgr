@@ -16,20 +16,34 @@ RelatedFiles:
       Note: Ten-cycle, CRLF and unknown metadata regressions
     - Path: repo://internal/documents/write.go
       Note: Atomic no-op writer and permission preservation
+    - Path: repo://internal/httpapi/milestones.go
+      Note: HTTP service parity
+    - Path: repo://internal/operations/store.go
+      Note: Prepared journals and cooperative recovery
     - Path: repo://pkg/commands/add.go
       Note: Explicit creation separator
     - Path: repo://pkg/commands/changelog_entries.go
       Note: Pure canonical entry builder
     - Path: repo://pkg/commands/changelog_stability_test.go
       Note: Boundary regression matrix
+    - Path: repo://pkg/commands/close_service.go
+      Note: Shared close planning
     - Path: repo://pkg/commands/create_ticket.go
       Note: Explicit index creation separator
+    - Path: repo://pkg/commands/milestone_commands.go
+      Note: CLI adapters
+    - Path: repo://pkg/commands/milestone_service.go
+      Note: Milestone and resume projections
+    - Path: repo://pkg/doc/milestone-workflows.md
+      Note: Public contracts and limitations
     - Path: repo://pkg/models/document.go
       Note: Unknown YAML node retention
     - Path: repo://ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/design-doc/01-intern-guide-to-deterministic-document-mutation-and-milestone-workflows.md
       Note: Primary research handoff
     - Path: repo://ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/scripts/03-render-guides.cjs
       Note: Reproducible diagram and print export
+    - Path: repo://ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/sources/implementation-validation.json
+      Note: Full committed code inventory and validation evidence
     - Path: repo://ttmp/2026/09/10/DOCMGR-FRICTION-001--reduce-documentation-workflow-friction-with-deterministic-writes-and-coherent-milestones/sources/remarkable-upload.log
       Note: Verified delivery result
 ExternalSources: []
@@ -44,7 +58,7 @@ WhenToUse: Resuming this ticket or reviewing the reproductions.
 
 ## Goal
 
-Explain session friction through inspected docmgr source and reproducible experiments, then deliver an intern guide without modifying product behavior.
+The original research explained session friction and delivered an intern guide without modifying product behavior. Steps 2 onward record the subsequently authorized implementation, commits, validation and limits.
 
 ## Step 1: Investigate persistence and lifecycle behavior
 
@@ -127,6 +141,8 @@ The original research captures and uploaded snapshots remain historical evidence
 
 **Inferred user intent:** Replace the identified friction with tested tooling and coherent instructions, not another proposal.
 
+**Commit (code):** `91e0603` — "fix: preserve document bodies and stabilize generated write boundaries"
+
 ### What I did
 - Added a pure document serializer and an atomic, permission-preserving write-if-changed primitive.
 - Retained unknown YAML fields through an inline node map; comments/style remain outside the fidelity guarantee.
@@ -166,3 +182,183 @@ The original research captures and uploaded snapshots remain historical evidence
 ### Technical details
 - Metadata framing uses LF; supplied body bytes, including CRLF and hard-break spaces, are untouched.
 - New files default to 0644; existing permission bits survive replacement. Identical canonical bytes are not rewritten.
+
+## Step 3: Recoverable operations, shared close and milestone services
+
+The next layer replaces the misleading multi-file atomicity claim with a concrete recovery protocol. A prepared record stores intended projection bytes and before/after hashes; operations apply under a cooperative ticket-directory lock and return explicit recovery information on failure. Close writes history before status and both output modes call one service.
+
+Milestones use the same store to complete stable task IDs and append history. Resume derives remaining tasks, evidence staleness and pending-operation warnings rather than creating another independently maintained current-state document.
+
+### Prompt Context
+**User prompt (verbatim):** (see Step 2)
+
+**Assistant interpretation:** Build the accepted operation, milestone and resume phases with explicit consistency semantics and tests.
+
+**Inferred user intent:** Eliminate manual reconciliation while retaining truthful error reporting and reviewable evidence.
+
+**Commit (code):** `582171f` — "feat: recover ticket projections and share close and milestone operations"
+
+### What I did
+- Added a bounded operation journal, request identity checking, dry-run planning, cooperative locking and hash-checked recovery.
+- Shared close planning between human and structured output; retained warnings for unfinished tasks.
+- Added milestone services with stable-ID checks and ticket-contained evidence revisions, plus derived resume state.
+- Started CLI/HTTP adapters against the repository's pinned Glazed v1.3.6 API rather than blindly applying the newer global skill's v1.4 output surface.
+- Tested each journal/projection write boundary, replay identity, cancellation, concurrent duplicate requests, symlinks, human edits and status preflight failures.
+
+### Why
+- A sequence of renames is not atomic across paths. A recoverable plan provides inspectable intent without pretending external readers see a snapshot.
+- Artifact SHA256 and stable task IDs prevent identity from depending on textual coincidence or mutable task positions.
+
+### What worked
+- `go test ./internal/operations ./pkg/commands` and `go test -race ./internal/operations` pass.
+- Existing HTTP and command tests pass with the shared services and new registrations.
+- Every selected interrupted stage recovers by retrying the same request; different payloads under an existing ID fail.
+
+### What didn't work
+- One cleanup edit was rejected before application: `Found 2 occurrences of edits[2]`. The repeated append line required surrounding context; a targeted unique replacement succeeded. No source changes were lost.
+- The installed embedded verb-authoring help still contains removed layers/parameters examples. Current first-party command sources and the pinned module were used for actual API calls instead.
+
+### What I learned
+- Pretty-printing a journal reformats embedded raw JSON. Request identity must compact that JSON before hashing on replay, not hash incidental indentation.
+- An interrupted default close must report its generated operation ID so the caller can explicitly recover it.
+
+### What was tricky to build
+- Locking the existing ticket directory avoids creating files during dry-run/resume and releases the lock on process exit. Supported platforms are Linux/macOS/FreeBSD; other builds return an explicit capability error.
+- Recovery preflights every projection against before/after hashes, then checks each write again. Conflicts stop rather than overwrite an unrelated edit. External editors still have a narrow check/rename race and do not participate in the lock.
+- Committed replay returns historical evidence rather than claiming files are still unchanged; resume separately reports staleness.
+
+### What warrants a second pair of eyes
+- Cooperative consistency only: legacy mutation commands and external editors are not globally locked.
+- Process-crash recovery is not a power-loss durability guarantee; journals retain bounded projection bytes and should not contain secrets.
+- HTTP must preserve committed receipts if a later index refresh fails.
+
+### What should be done in the future
+- Complete entry-point parity, public help, composed skills and final scenario validation in subsequent steps.
+
+### Code review instructions
+- Start with `internal/operations/store.go` and its fault matrix, then `close_service.go`, `milestone_service.go` and their tests.
+- Review request/receipt bounds and filesystem containment independently from command rendering.
+
+### Technical details
+- Projection allowlist: index.md, tasks.md, changelog.md. Record IDs: 1–64 alphanumeric/underscore/hyphen characters, beginning alphanumeric.
+- Bounded files/journals: 4 MiB each; history: 1024 records and 64 MiB; requests: 64 KiB; evidence: 64 refs; completed tasks: 128.
+
+## Step 4: Finish API integration, harden review findings and validate the implementation
+
+The new services are now exposed through registered dual-mode CLI commands, strict bounded HTTP requests, typed frontend hooks and embedded help. A pinned-binary smoke script exercises real CLI parsing, dry-run, bare/JSON replay, resume and close no-op behavior; HTTP tests compare the same persisted receipt against the service.
+
+Review also uncovered two persistence edge cases and a relevant security baseline issue. Valid YAML must be parsed before scalar repair to preserve aliases, generated scaffolding needs the same EOF discipline as changelog entries, and the new os.Root containment code must run on a patched Go version. Those fixes were committed separately from the API integration.
+
+### Prompt Context
+**User prompt (verbatim):** (see Step 2)
+
+**Assistant interpretation:** Finish the implemented interfaces, test integration and record evidence without confusing future adoption measurement with completed code.
+
+**Inferred user intent:** Obtain usable, tested changes with a reviewable implementation history.
+
+**Commit (code):** `7de2ea4` — "security: require patched Go and update reachable vulnerable dependencies"
+
+**Commit (code):** `b1f53fc` — "fix: preserve valid YAML aliases and canonicalize generated scaffolds"
+
+**Commit (code):** `1516abc` — "feat: expose milestone and resume workflows through CLI and HTTP"
+
+### What I did
+- Added milestone record and ticket resume adapters, HTTP routes, typed RTK Query endpoints and embedded help.
+- Added actual CLI smoke and HTTP/service parity tests, and monotonic operation sequence numbers so wall-clock rollback cannot select an older checkpoint as latest.
+- Tested scaffold EOF and no-op mtime, and aliases referring to known metadata fields. Scalar repair now runs only after YAML parse failure; alias expansion is bounded and avoids dangling anchors.
+- Required Go 1.26.6 and upgraded the two reachable vulnerable dependency families identified by govulncheck, including their selected transitive updates.
+- Wired the pinned-version Glazed analyzer into aggregate lint, generated the new command package's logcopter file and corrected the unavailable-formatter instruction in AGENT.md.
+- Completed the companion skill implementation at `112f8aa`, with a detailed diary and nine policy/dependency tests.
+
+### Why
+- Real entry-point tests catch parsing and projection integration that pure service tests cannot establish.
+- The scanner's os.Root finding concerns the precise containment primitive introduced here, so leaving the old toolchain preference was not appropriate.
+- A controlled future-session study cannot be fabricated from deterministic helper fixtures.
+
+### What worked
+- Full Go tests with and without sqlite_fts5, race tests for operations/commands/HTTP, go vet, go build, aggregate lint and logcopter checks pass.
+- The pinned-binary scenario suite completes successfully, as does the new CLI smoke.
+- Frontend `pnpm exec tsc -b` and targeted ESLint pass; no UI component or rendering behavior was changed.
+- Post-update govulncheck reports zero reachable vulnerabilities. It still reports one imported-package and five module-level advisories without reachable calls; this is not a claim that every dependency has no advisory.
+- The skills checker and nine tests pass, and both pre-existing go-minitrace file hashes remain unchanged.
+
+### What didn't work
+- Alias regression initially failed: `stability_test.go:65: lost anchored metadata value`. The preprocessor had quoted valid `&heading`/`*heading` syntax into literal text. Parsing valid YAML first and expanding unknown-field aliases fixed the regression; the focused suite then passed.
+- A source-discovery command guessed a nonexistent helper: `rg: pkg/commands/init_helpers.go: No such file or directory (os error 2)`. Located the actual `scaffold.go` before editing.
+- The first `make govulncheck` failed with `Your code is affected by 9 vulnerabilities from 2 modules and the Go standard library.` The retained before-log includes GO-2026-4970 (os.Root), x/text and Excelize findings. After the listed fixed versions, the scan reports zero reachable findings.
+- UI node_modules was absent (`ls: cannot access 'ui/node_modules/.bin/tsc': No such file or directory`); installed the unchanged lockfile with `pnpm install --frozen-lockfile --ignore-scripts`, then typechecked successfully.
+
+### What I learned
+- A content hash alone cannot order checkpoints if wall time moves backward; sequence numbers under the cooperative lock provide that ordering.
+- Unknown YAML preservation requires retaining values, not simply storing a raw alias node whose anchor may be discarded by typed serialization.
+- Routine docs-only commits now skip Go hooks, while code commits run full tests and both analyzers; there is no need to manufacture extra validation receipts for every prose edit.
+
+### What was tricky to build
+- HTTP mutation success must survive a later index-refresh error: return the committed receipt with a warning, not an apparent failed mutation that invites duplicate work.
+- The original design assumed future command names; skill guidance now checks actual binary capabilities and uses the pinned Glazed output surface. The global binary was intentionally not overwritten with a CLI-only build that could discard its embedded UI.
+- Research delivery manifests describe the earlier uploaded snapshots; they are not rolling hashes of documents subsequently updated with implementation notes.
+
+### What warrants a second pair of eyes
+- The documented cooperative-lock/external-editor boundary and journal archival/idempotency lifetime.
+- The intentional close output-contract change and no-op policy for already matching status/intent.
+- Lower-administration workflow claims require real post-adoption evidence, not just passing policy fixtures.
+
+### What should be done in the future
+- SKILLS-FRICTION-001 task vewh remains open for equivalent real sessions. Non-reachable dependency advisories remain a dependency-maintenance concern, not an ignored reachable scan failure.
+
+### Code review instructions
+- Review the five code commits separately, then run the commands recorded in `sources/implementation-validation.json`.
+- Use `/tmp/docmgr-friction-local` for the verified CLI. `scripts/04-milestone-smoke.py` and the repository scenario suite write only isolated temporary workspaces.
+- Inspect both ticket diaries for evidence and limits; unrelated skills files and original research uploads were preserved.
+
+### Technical details
+- Final toolchain used: `go version go1.26.6 linux/amd64`.
+- HTTP: POST /api/v1/tickets/milestone, GET /api/v1/tickets/resume; CLI: milestone record, ticket resume, shared ticket close.
+- New journal directories use 0700. File hashes are evidence revisions, not authorization or automatic proof of a claim.
+
+## Step 5: Reconcile recorded closure without false stale warnings
+
+Before using the new commands on their own tickets, review showed that resume compared projections only with the last milestone. A subsequent recorded close legitimately updates history and status, so it should become the latest known owner of those projection hashes without replacing the milestone's narrative checkpoint.
+
+Resume now derives each projection's expected hash from the latest committed operation, while retaining the latest milestone's phase, next action and evidence. Unrecorded edits still trigger warnings.
+
+### Prompt Context
+**User prompt (verbatim):** (see Step 2)
+
+**Assistant interpretation:** Validate the combined milestone-then-close lifecycle before final ticket bookkeeping.
+
+**Inferred user intent:** Make the new workflow coherent in actual use, not merely correct as isolated commands.
+
+**Commit (code):** `1d0710d` — "fix: reconcile resume against the latest recorded projections"
+
+### What I did
+- Derived current projection expectations from all committed records.
+- Added a regression covering milestone, close, clean resume, then an unrecorded edit.
+
+### Why
+- A known, recorded state transition should not create a false stale-evidence alarm.
+
+### What worked
+- Focused command/HTTP tests and full commit-hook tests/lint pass. Recorded closure is clean; subsequent unrecorded history changes are still detected.
+
+### What didn't work
+- No failed test run in this step; the edge case was identified during lifecycle review.
+
+### What I learned
+- Checkpoint identity and projection ownership are related but distinct views of the same journal.
+
+### What was tricky to build
+- Updating expected projection hashes must not discard the milestone's evidence revisions or mask genuinely unrecorded changes. A stable projection-name iteration also keeps warning order deterministic.
+
+### What warrants a second pair of eyes
+- Review combined operations, not only each endpoint separately.
+
+### What should be done in the future
+- No additional implementation follow-up from this step; the independent real-session skills comparison remains open.
+
+### Code review instructions
+- Read `milestone_service.go` and `resume_projection_test.go`; run `go test ./pkg/commands ./internal/httpapi`.
+
+### Technical details
+- Latest milestone remains the source of phase/next/evidence. Latest committed projection owner supplies current expected hashes.
+- Used the new milestone service to complete this ticket's remaining implementation tasks, then closed it with explicit operation ID `implementation-closed`. The real resume view reports complete, zero remaining tasks and zero conflicts; doctor passes. Receipts and the bounded journals are retained in this ticket. The companion skills ticket reports only vewh remaining and also passes doctor. Both real resume outputs pass the new helper's shape check.

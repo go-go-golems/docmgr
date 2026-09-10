@@ -1,0 +1,24 @@
+[
+{
+  "operation_id": "implementation-verified",
+  "receipt": {
+    "sequence": 1,
+    "operation_id": "implementation-verified",
+    "state": "committed",
+    "created_at": "2026-09-10T19:58:52.216809132Z",
+    "changed_paths": [
+      "tasks.md",
+      "changelog.md"
+    ],
+    "before": {
+      "changelog.md": "c7e9946b5a29b8588bb6b69bde63bfc8fb6f219f8fff601435f1b71f796dafc6",
+      "tasks.md": "5f560f92acfa46a9c885364fa9f21913dadc5fd06c7ecb8a00b0730fba24b3f0"
+    },
+    "after": {
+      "changelog.md": "0ed296c6df5bb07713403227f5cdbd376c98f5bffc33cd6c809b617ddac1eaa3",
+      "tasks.md": "b0e5122d6127a5ca902f7bde7e39bbdd0214fb3e02c83635b73dc32bb8bf49a4"
+    }
+  },
+  "state": "committed"
+}
+]

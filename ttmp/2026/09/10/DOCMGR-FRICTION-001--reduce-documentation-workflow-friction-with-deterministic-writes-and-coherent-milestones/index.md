@@ -2,11 +2,16 @@
 Title: Reduce documentation workflow friction with deterministic writes and coherent milestones
 Ticket: DOCMGR-FRICTION-001
 Status: active
-Topics: [docmgr, cli, usability]
+Topics:
+    - docmgr
+    - cli
+    - usability
 DocType: index
 Intent: long-term
 Owners: []
-RelatedFiles: []
+RelatedFiles:
+    - Path: repo://internal/documents/write.go
+      Note: Permission-preserving no-op writer, commit 91e0603
 ExternalSources: []
 Summary: Research delivered; implementation remains open for stable persistence, recoverable close, explicit milestone identities and resume views.
 LastUpdated: 2026-09-10T15:37:22Z

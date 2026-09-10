@@ -53,6 +53,8 @@ func NewServer(mgr *IndexManager, opts ServerOptions) *Server {
 	s.mux.HandleFunc("/api/v1/files/raw", s.wrap(s.handleFilesRaw))
 	s.mux.HandleFunc("/api/v1/workspace/doctor", s.wrap(s.handleWorkspaceDoctor))
 	s.mux.HandleFunc("/api/v1/tickets/get", s.wrap(s.handleTicketsGet))
+	s.mux.HandleFunc("/api/v1/tickets/milestone", s.wrap(s.handleTicketMilestone))
+	s.mux.HandleFunc("/api/v1/tickets/resume", s.wrap(s.handleTicketResume))
 	s.mux.HandleFunc("/api/v1/tickets/changelog", s.wrap(s.handleTicketsChangelog))
 	s.mux.HandleFunc("/api/v1/tickets/docs", s.wrap(s.handleTicketsDocs))
 	s.mux.HandleFunc("/api/v1/tickets/tasks", s.wrap(s.handleTicketsTasks))

@@ -50,7 +50,11 @@ Examples:
 		return err
 	}
 
-	ticketCmd.AddCommand(createCmd, listCmd, showCmd, renameCmd, closeCmd, moveCmd, graphCmd)
+	resumeCmd, err := newResumeCommand()
+	if err != nil {
+		return err
+	}
+	ticketCmd.AddCommand(createCmd, listCmd, showCmd, renameCmd, closeCmd, moveCmd, graphCmd, resumeCmd)
 	root.AddCommand(ticketCmd)
 	return nil
 }

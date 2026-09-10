@@ -361,6 +361,40 @@ export type DocRelateResponse = {
   status: string
 }
 
+export type MilestoneEvidence = { kind: string; path: string; revision: string; claim: string }
+export type MutationReceipt = {
+  sequence: number
+  operation_id: string
+  state: 'prepared' | 'committed' | 'dry-run' | 'unchanged'
+  created_at: string
+  changed_paths: string[]
+  before: Record<string, string>
+  after: Record<string, string>
+}
+export type MilestoneRequest = {
+  ticket: string
+  operation_id: string
+  summary: string
+  phase: 'start' | 'implement' | 'validate' | 'checkpoint' | 'resume' | 'close'
+  next?: string
+  task_ids?: string[]
+  evidence?: MilestoneEvidence[]
+  expected?: Record<string, string>
+}
+export type TicketResume = {
+  schema_version: number
+  ticket: string
+  status: string
+  phase: string
+  next: string
+  latest_milestone: MutationReceipt | null
+  remaining: TicketTasksItem[]
+  revisions: Record<string, string>
+  documents: string[]
+  evidence: MilestoneEvidence[] | null
+  conflicts: string[]
+}
+
 export type ChangelogEntry = {
   date: string
   title: string
@@ -692,6 +726,22 @@ export const docmgrApi = createApi({
       invalidatesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }, 'Workspace'],
     }),
 
+    getTicketResume: builder.query<TicketResume, { ticket: string }>({
+      query: (args) => ({ url: '/tickets/resume', params: args }),
+      providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
+    }),
+
+    recordMilestone: builder.mutation<
+      { receipt: MutationReceipt; warnings: string[] },
+      { request: MilestoneRequest; dryRun?: boolean }
+    >({
+      query: ({ request, dryRun }) => ({
+        url: '/tickets/milestone', method: 'POST', body: request,
+        params: { dry_run: dryRun === true },
+      }),
+      invalidatesTags: (_r, _e, args) => args.dryRun ? [] : [{ type: 'Ticket', id: args.request.ticket }, 'Workspace', 'Doctor'],
+    }),
+
     getTicketChangelog: builder.query<TicketChangelogResponse, { ticket: string }>({
       query: (args) => ({ url: '/tickets/changelog', params: { ticket: args.ticket } }),
       providesTags: (_r, _e, args) => [{ type: 'Ticket', id: args.ticket }],
@@ -765,6 +815,8 @@ export const {
   useGetTicketTasksQuery,
   useCheckTicketTasksMutation,
   useAddTicketTaskMutation,
+  useGetTicketResumeQuery,
+  useRecordMilestoneMutation,
   useGetTicketChangelogQuery,
   useAppendTicketChangelogMutation,
   useGetWorkspaceDoctorQuery,

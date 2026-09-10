@@ -9,6 +9,7 @@ import (
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/importcmd"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/list"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/meta"
+	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/milestone"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/skill"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/tasks"
 	"github.com/go-go-golems/docmgr/cmd/docmgr/cmds/template"
@@ -59,6 +60,9 @@ Helpful docs (built-in):
 		return nil, err
 	}
 	if err := workspace.Attach(rootCmd); err != nil {
+		return nil, err
+	}
+	if err := milestone.Attach(rootCmd); err != nil {
 		return nil, err
 	}
 	if err := ticket.Attach(rootCmd); err != nil {

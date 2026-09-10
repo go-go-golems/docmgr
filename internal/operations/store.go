@@ -31,6 +31,7 @@ type Change struct {
 	After  []byte `json:"after"`
 }
 type Receipt struct {
+	Sequence     uint64            `json:"sequence"`
 	OperationID  string            `json:"operation_id"`
 	State        string            `json:"state"`
 	CreatedAt    time.Time         `json:"created_at"`
@@ -185,15 +186,12 @@ func Records(dir string) ([]Record, error) {
 	}
 	sort.Slice(out, func(i, j int) bool {
 		a, b := out[i].Receipt, out[j].Receipt
-		if a.CreatedAt.Equal(b.CreatedAt) {
-			return a.OperationID < b.OperationID
-		}
-		return a.CreatedAt.Before(b.CreatedAt)
+		return a.Sequence < b.Sequence
 	})
 	return out, nil
 }
 func validateRecord(rec Record) error {
-	if rec.Version != 1 || !idPattern.MatchString(rec.Receipt.OperationID) || requestHash(rec.Request) != rec.Digest {
+	if rec.Version != 1 || rec.Receipt.Sequence == 0 || !idPattern.MatchString(rec.Receipt.OperationID) || requestHash(rec.Request) != rec.Digest {
 		return fmt.Errorf("invalid operation record")
 	}
 	if rec.Receipt.State != "prepared" && rec.Receipt.State != "committed" {
@@ -273,6 +271,12 @@ func (s Store) Execute(ctx context.Context, dir, id string, request any, dry boo
 			now = s.Now().UTC()
 		}
 		rec := Record{Version: 1, Digest: Hash(payload), Request: payload, Changes: changes, Receipt: Receipt{OperationID: id, State: "prepared", CreatedAt: now, ChangedPaths: []string{}, Before: map[string]string{}, After: map[string]string{}}}
+		rec.Receipt.Sequence = 1
+		for _, r := range records {
+			if r.Receipt.Sequence >= rec.Receipt.Sequence {
+				rec.Receipt.Sequence = r.Receipt.Sequence + 1
+			}
+		}
 		for _, c := range changes {
 			rec.Receipt.ChangedPaths = append(rec.Receipt.ChangedPaths, c.Path)
 			rec.Receipt.Before[c.Path] = c.Before
@@ -372,7 +376,7 @@ func (s Store) save(dir string, rec Record) error {
 		return err
 	}
 	defer func() { _ = root.Close() }()
-	if err := root.Mkdir(directory, 0755); err != nil && !os.IsExist(err) {
+	if err := root.Mkdir(directory, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
 	return s.write(dir, filepath.Join(directory, rec.Receipt.OperationID+".json"), append(data, '\n'))

@@ -145,6 +145,12 @@ func expandMetadataNode(node *yaml.Node, depth int, budget *int) (*yaml.Node, er
 	}
 	copyNode := *node
 	copyNode.Anchor = ""
+	// Comments on unknown metadata nodes would be reinterpreted as scalar
+	// content by PreprocessYAML; canonical serialization deliberately drops
+	// YAML comments while preserving values and structure.
+	copyNode.HeadComment = ""
+	copyNode.LineComment = ""
+	copyNode.FootComment = ""
 	copyNode.Content = nil
 	for _, child := range node.Content {
 		expanded, err := expandMetadataNode(child, depth+1, budget)

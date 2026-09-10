@@ -71,6 +71,21 @@ func TestUnknownMetadataAndCRLF(t *testing.T) {
 		t.Fatalf("lost unknown key: %v", custom)
 	}
 }
+func TestUnknownMetadataCommentsDoNotChangeValues(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "doc.md")
+	mustTest(t, os.WriteFile(path, []byte("---\nTitle: old\nCustom: safe # note\n---\n\nBody\n"), 0644))
+	doc, body, err := ReadDocumentWithFrontmatter(path)
+	mustTest(t, err)
+	doc.Title = "new"
+	mustTest(t, WriteDocumentWithFrontmatter(path, doc, body, true))
+
+	next, _, err := ReadDocumentWithFrontmatter(path)
+	mustTest(t, err)
+	if got := next.Extra["Custom"].Value; got != "safe" {
+		t.Fatalf("custom metadata changed: %q", got)
+	}
+}
+
 func TestCreationAndPermissionPreservation(t *testing.T) {
 	if CreationBody("# Body") != "\n# Body" || CreationBody("\n\nBody") != "\n\nBody" {
 		t.Fatal("creation separator")

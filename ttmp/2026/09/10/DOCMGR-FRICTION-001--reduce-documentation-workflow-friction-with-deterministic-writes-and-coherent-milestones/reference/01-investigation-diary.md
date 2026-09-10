@@ -362,3 +362,55 @@ Resume now derives each projection's expected hash from the latest committed ope
 ### Technical details
 - Latest milestone remains the source of phase/next/evidence. Latest committed projection owner supplies current expected hashes.
 - Used the new milestone service to complete this ticket's remaining implementation tasks, then closed it with explicit operation ID `implementation-closed`. The real resume view reports complete, zero remaining tasks and zero conflicts; doctor passes. Receipts and the bounded journals are retained in this ticket. The companion skills ticket reports only vewh remaining and also passes doctor. Both real resume outputs pass the new helper's shape check.
+
+## Step 6: Install the full local binary and assess PR readiness
+
+The implementation checkpoint deliberately left the global executable unchanged. The user now requested installation. I built the embedded-UI/FTS5 executable from clean revision e607822, backed up the previous executable and atomically replaced the PATH-resolved local binary. This supersedes the earlier not-installed checkpoint; the skills already reside in the live shared skill directory.
+
+The installed CLI smoke and embedded-package tests pass. Fresh remote comparisons show both branches ahead without divergence. Exact CI-pinned lint and the CI GoSec command also pass locally, so the changes are ready to open as two repository-specific PRs, subject to actual remote checks.
+
+### Prompt Context
+**User prompt (verbatim):**
+> install locally, and are we ready for a PR?
+>
+> [REMINDER] Output a <summary>...</summary> block at the VERY END of your response. This is mandatory.
+
+**Assistant interpretation:** Install the complete local executable and assess readiness without pushing or opening PRs.
+
+**Inferred user intent:** Start using the changes locally and decide whether review can begin.
+
+### What I did
+- Ran `make build-embed`, backed up the old binary, and installed `/home/manuel/.local/bin/docmgr` via a temporary file and rename.
+- Verified Go 1.26.6, sqlite_fts5/embed tags, clean build revision and installed-binary smoke behavior.
+- Fetched both origins, checked ancestry and committed diff whitespace, and inspected CI configuration/current base runs.
+- Ran golangci-lint v2.12.2 and GoSec with the repository's CI exclusions using temporary tool installations.
+
+### Why
+- Installing the earlier CLI-only test build could discard the existing embedded web UI.
+- Local aggregate lint alone is not proof that the exact GitHub lint configuration passes.
+
+### What worked
+- Full build, installed smoke, tagged web/HTTP tests, pinned lint and GoSec pass.
+- Docmgr was nine commits ahead/zero behind; skills four ahead/zero behind before this installation note. No push or PR creation occurred.
+
+### What didn't work
+- `git -C /home/manuel/.pi/agent/skills symbolic-ref refs/remotes/origin/HEAD` returned `fatal: ref refs/remotes/origin/HEAD is not a symbolic ref`, interrupting the first combined preflight command. `git ls-remote --symref origin HEAD` confirmed main; explicit origin/main comparison succeeded. No repository configuration change was necessary.
+
+### What I learned
+- The skills repository lacks a local remote-HEAD symbolic ref despite having a valid remote default branch.
+
+### What was tricky to build
+- Preserve the full local installation while keeping unrelated skills edits and existing processes untouched.
+
+### What warrants a second pair of eyes
+- Review the operation recovery contract and API changes; local success does not replace remote CI or human review. Scheduled dependency checks on the unchanged remote base are failing; the previously recorded local vulnerability check passes after our dependency updates.
+
+### What should be done in the future
+- Create/push topic branches and open one PR per repository when requested. Real post-adoption efficiency measurement remains a nonblocking follow-up.
+
+### Code review instructions
+- Review origin/main...HEAD in each repository and the focused implementation commits. Installation identity and preflight results are in `sources/local-installation.json`.
+
+### Technical details
+- Installed SHA256: `449999482b7fbe9f1bc265a341b7e956bf4f699da50ede6a2aea73b76f462766`.
+- Backup: `/tmp/docmgr-before-friction-install`. Build/install generated no tracked product changes.

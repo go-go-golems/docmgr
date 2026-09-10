@@ -22,3 +22,9 @@ Operation: `implementation-verified`
 ## 2026-09-10
 
 Implementation complete and validated; detailed diary and scoped evidence retained.
+
+## 2026-09-10
+
+Installed full embedded UI/FTS5 build locally; installed smoke and exact CI lint/GoSec checks pass.
+
+Operation: `local-installation-verified`

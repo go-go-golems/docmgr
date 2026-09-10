@@ -1,0 +1,49 @@
+{
+  "binary_sha256": "e23407e984ae570b0706d142ab245eaa1f55878d01181d7d45bfa0db25bf43ae",
+  "results": [
+    {
+      "ticket": "REPEAT-PROBE",
+      "first": {
+        "args": [
+          "ticket",
+          "close",
+          "--ticket",
+          "REPEAT-PROBE"
+        ],
+        "exit": 0,
+        "stdout": "Ticket REPEAT-PROBE closed successfully.\nChanges: Status: active \u2192 complete, Changelog updated, LastUpdated refreshed\nChangelog: /tmp/docmgr-close-probe-xg8xa7fn/ttmp/2026/09/10/REPEAT-PROBE--repeat-probe/changelog.md\n",
+        "stderr": ""
+      },
+      "status_after": "complete",
+      "second": {
+        "args": [
+          "ticket",
+          "close",
+          "--ticket",
+          "REPEAT-PROBE"
+        ],
+        "exit": 0,
+        "stdout": "Ticket REPEAT-PROBE closed successfully.\nChanges: Changelog updated, LastUpdated refreshed\nChangelog: /tmp/docmgr-close-probe-xg8xa7fn/ttmp/2026/09/10/REPEAT-PROBE--repeat-probe/changelog.md\n",
+        "stderr": ""
+      },
+      "index_bytes_changed_again": true,
+      "closing_entries": 2,
+      "trailing_newlines": 2
+    },
+    {
+      "ticket": "FAIL-PROBE",
+      "first": {
+        "args": [
+          "ticket",
+          "close",
+          "--ticket",
+          "FAIL-PROBE"
+        ],
+        "exit": 1,
+        "stdout": "",
+        "stderr": "Error: failed to open changelog: open /tmp/docmgr-close-probe-xg8xa7fn/ttmp/2026/09/10/FAIL-PROBE--fail-probe/changelog.md: is a directory\n"
+      },
+      "status_after": "complete"
+    }
+  ]
+}
